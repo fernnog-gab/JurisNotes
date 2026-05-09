@@ -4,29 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mapeamento de Inteiro Teor</title>
-    
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
-        // Configuração do worker do PDF.js
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     </script>
 
     <style>
-        /* =========================================
-           CSS INLINE - IDENTIDADE VISUAL E LAYOUT
-           ========================================= */
+        /* ================================================
+           VARIÁVEIS E RESET
+           ================================================ */
         :root {
-            --trt-blue: #1a3a5c;
+            --trt-blue:     #1a3a5c;
+            --trt-blue-mid: #25527f;
             --trt-light-bg: #f4f7f9;
-            --text-dark: #333333;
-            --border-color: #e0e0e0;
+            --text-dark:    #2c2c2c;
+            --border-color: #dde3ea;
+            --shadow-sm:    0 2px 6px rgba(0,0,0,0.07);
+            --shadow-md:    0 4px 16px rgba(0,0,0,0.12);
         }
 
-        * {
+        *, *::before, *::after {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
 
         body {
@@ -34,287 +36,925 @@
             height: 100vh;
             background-color: var(--trt-light-bg);
             color: var(--text-dark);
-            flex-direction: column; /* Mobile first: empilha os elementos */
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            flex-direction: column;
         }
 
         @media (min-width: 768px) {
-            body {
-                flex-direction: row; /* Desktop: lado a lado */
-            }
+            body { flex-direction: row; }
         }
 
-        /* Barra Lateral (Controles e Ferramentas) */
+        /* ================================================
+           BARRA LATERAL
+           ================================================ */
         .sidebar {
             background-color: var(--trt-blue);
             color: white;
             padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
             width: 100%;
+            flex-shrink: 0;
         }
 
         @media (min-width: 768px) {
             .sidebar {
-                width: 300px;
+                width: 280px;
                 height: 100vh;
+                overflow-y: auto;
             }
         }
 
-        .sidebar h2 {
-            font-size: 1.2rem;
-            margin-bottom: 10px;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
-            padding-bottom: 10px;
+        .sidebar-title {
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+            margin-bottom: 4px;
         }
 
-        button {
-            background-color: white;
-            color: var(--trt-blue);
-            border: none;
-            padding: 10px 15px;
-            border-radius: 4px;
+        .sidebar-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 2px;
+        }
+
+        /* Botões da sidebar */
+        .sidebar-btn {
+            background: rgba(255,255,255,0.08);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.18);
+            padding: 10px 14px;
+            border-radius: 6px;
             cursor: pointer;
-            font-weight: bold;
-            transition: background 0.2s;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-align: left;
             width: 100%;
+            transition: background 0.2s, border-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        button:hover {
-            background-color: #e0e0e0;
+        .sidebar-btn:hover:not(:disabled) {
+            background: rgba(255,255,255,0.16);
+            border-color: rgba(255,255,255,0.35);
         }
 
-        /* Área Principal (Leitura e Histórico) */
+        .sidebar-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* Label que age como botão de upload */
+        .sidebar-upload-label {
+            background: rgba(255,255,255,0.08);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.18);
+            padding: 10px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-align: left;
+            width: 100%;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sidebar-upload-label:hover {
+            background: rgba(255,255,255,0.16);
+        }
+
+        /* Botão de recorte — estado ativo */
+        #btn-ferramenta-recorte.ativo {
+            background: rgba(255, 193, 7, 0.2);
+            border-color: #ffc107;
+            color: #ffd54f;
+        }
+
+        .sidebar-divider {
+            border: none;
+            border-top: 1px solid rgba(255,255,255,0.12);
+            margin: 4px 0;
+        }
+
+        .status-box {
+            background: rgba(0,0,0,0.2);
+            border-radius: 6px;
+            padding: 10px 12px;
+            font-size: 0.82rem;
+        }
+
+        .status-box strong { font-weight: 600; }
+
+        #status-backup { color: rgba(255,255,255,0.6); }
+        #status-backup.ativa { color: #a5d6a7; }
+
+        /* ================================================
+           ÁREA PRINCIPAL
+           ================================================ */
         .main-content {
             flex: 1;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            min-width: 0;
         }
 
+        /* Abas */
         .tabs {
             display: flex;
-            background-color: white;
-            border-bottom: 1px solid var(--border-color);
+            background: white;
+            border-bottom: 2px solid var(--border-color);
+            flex-shrink: 0;
         }
 
         .tab-btn {
             flex: 1;
             background: none;
-            color: var(--text-dark);
-            border-radius: 0;
-            padding: 15px;
+            border: none;
+            color: #888;
+            padding: 14px 10px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
             border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: color 0.2s, border-color 0.2s;
+            text-align: center;
+            width: auto;
+            border-radius: 0;
         }
 
+        .tab-btn:hover { color: var(--trt-blue); }
+
         .tab-btn.active {
-            border-bottom: 3px solid var(--trt-blue);
             color: var(--trt-blue);
-            font-weight: bold;
+            border-bottom-color: var(--trt-blue);
         }
 
         /* Container do PDF */
         #pdf-container {
             flex: 1;
             overflow: auto;
-            padding: 20px;
+            padding: 24px;
             display: flex;
             justify-content: center;
-            position: relative;
+            align-items: flex-start;
         }
 
-        /* Container do Histórico */
+        #pdf-placeholder {
+            color: #aab;
+            text-align: center;
+            margin-top: 60px;
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+
+        #pdf-placeholder svg {
+            display: block;
+            margin: 0 auto 16px;
+            opacity: 0.3;
+        }
+
+        /*
+         * ================================================
+         * PDF WRAPPER — núcleo do sistema de camadas
+         *
+         * Estrutura (de baixo para cima):
+         *   1. #pdf-canvas    → pixels visuais do PDF (HD)
+         *   2. #text-layer    → spans de texto invisíveis e selecionáveis
+         *   3. #crop-overlay  → área de captura (apenas no modo recorte)
+         * ================================================
+         */
+        #pdf-wrapper {
+            position: relative;
+            display: none;       /* JS define display:block após carregamento */
+            flex-shrink: 0;
+            /* width e height são definidos dinamicamente pelo JS */
+        }
+
+        /* O canvas NÃO tem borda inline — a borda fica no wrapper
+           para não criar offset de coordenadas no recorte */
+        #pdf-canvas {
+            display: block;
+            box-shadow: var(--shadow-md);
+            border-radius: 2px;
+            /* width e height CSS são definidos pelo JS (pixels lógicos) */
+        }
+
+        /* ================================================
+           CAMADA DE TEXTO (PDF.js Text Layer)
+           ================================================ */
+        .textLayer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+            line-height: 1;
+            pointer-events: auto;  /* Habilitado por padrão */
+            user-select: text;
+        }
+
+        /* Spans posicionados pelo PDF.js com transform absoluto */
+        .textLayer span {
+            color: transparent;
+            position: absolute;
+            white-space: pre;
+            cursor: text;
+            transform-origin: 0% 0%;
+        }
+
+        /* Cor de seleção: azul TRT com transparência */
+        .textLayer ::selection {
+            background: rgba(26, 58, 92, 0.28);
+        }
+
+        /* ================================================
+           OVERLAY DE RECORTE
+           ================================================ */
+        #crop-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+            display: none;        /* JS exibe ao ativar o modo recorte */
+            z-index: 10;
+        }
+
+        /* Caixa de seleção visual durante o drag */
+        #crop-box {
+            position: absolute;
+            border: 2px dashed var(--trt-blue);
+            background: rgba(26, 58, 92, 0.08);
+            pointer-events: none; /* Não interfere nos eventos do overlay */
+        }
+
+        /* ================================================
+           POPUP DE CLASSIFICAÇÃO (CHIPS)
+           Substitui o confirm() bloqueante
+           ================================================ */
+        #classification-popup {
+            position: fixed;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 14px;
+            box-shadow: var(--shadow-md);
+            z-index: 2000;
+            display: none;        /* JS exibe via flex */
+            flex-direction: column;
+            gap: 8px;
+            min-width: 210px;
+        }
+
+        .popup-label {
+            font-size: 0.74rem;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        .chip-btn {
+            padding: 9px 14px;
+            border-radius: 22px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.84rem;
+            width: 100%;
+            border: 1.5px solid;
+            text-align: center;
+            transition: opacity 0.15s, transform 0.1s;
+            background: none;
+        }
+
+        .chip-btn:hover:not(:disabled) {
+            opacity: 0.78;
+            transform: translateY(-1px);
+        }
+
+        .chip-autora {
+            color: #2e7d32;
+            border-color: #81c784;
+            background: #f1f8f1;
+        }
+
+        .chip-re {
+            color: #b71c1c;
+            border-color: #ef9a9a;
+            background: #fff5f5;
+        }
+
+        .chip-cancelar {
+            color: #999;
+            border-color: #e0e0e0;
+            background: #fafafa;
+            font-weight: 500;
+        }
+
+        /* ================================================
+           ABA DE HISTÓRICO
+           ================================================ */
         #history-container {
             flex: 1;
             overflow: auto;
-            padding: 20px;
-            display: none; /* Oculto por padrão */
+            padding: 20px 24px;
+            display: none;
+        }
+
+        .history-header {
+            margin-bottom: 18px;
+        }
+
+        .history-header h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--trt-blue);
+        }
+
+        .history-header p {
+            font-size: 0.82rem;
+            color: #aaa;
+            margin-top: 3px;
         }
 
         .annotation-card {
             background: white;
             border: 1px solid var(--border-color);
-            border-left: 5px solid var(--trt-blue);
-            padding: 15px;
+            border-left: 4px solid var(--trt-blue);
+            padding: 14px 16px;
             margin-bottom: 10px;
-            border-radius: 4px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-radius: 6px;
+            box-shadow: var(--shadow-sm);
         }
 
-        .tag-autora { color: #2e7d32; font-weight: bold; }
-        .tag-re { color: #c62828; font-weight: bold; }
+        .annotation-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .annotation-card img {
+            max-width: 100%;
+            margin-top: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            display: block;
+        }
+
+        .annotation-card p {
+            font-size: 0.88rem;
+            color: #444;
+            line-height: 1.55;
+            font-style: italic;
+            margin-top: 6px;
+        }
+
+        .tag-autora  { color: #2e7d32; font-weight: 700; font-size: 0.82rem; }
+        .tag-re      { color: #b71c1c; font-weight: 700; font-size: 0.82rem; }
+        .tag-timestamp {
+            font-size: 0.72rem;
+            color: #bbb;
+            font-weight: 400;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #bbb;
+            font-size: 0.88rem;
+            line-height: 1.7;
+        }
     </style>
 </head>
 <body>
 
+    <!-- ================================================
+         BARRA LATERAL
+         ================================================ -->
     <div class="sidebar">
-        <h2>Painel de Controle</h2>
-        
-        <button id="btn-iniciar-sessao" onclick="iniciarSessaoSalvamento()">1. Iniciar Sessão de Análise</button>
-        
-        <label for="pdf-upload" style="cursor: pointer; background: white; color: var(--trt-blue); padding: 10px 15px; border-radius: 4px; text-align: center; font-weight: bold;">
-            2. Abrir Inteiro Teor (PDF)
-        </label>
-        <input type="file" id="pdf-upload" accept="application/pdf" style="display: none;" onchange="carregarPDF(event)">
+        <p class="sidebar-title">Painel de Controle</p>
 
-        <hr style="border: 1px solid rgba(255,255,255,0.2); margin: 10px 0;">
-        
-        <p style="font-size: 0.9rem;"><strong>Status do Backup:</strong> <span id="status-backup">Aguardando sessão...</span></p>
+        <div>
+            <p class="sidebar-label">Sessão</p>
+            <button class="sidebar-btn" id="btn-iniciar-sessao" onclick="iniciarSessaoSalvamento()">
+                <span>📂</span> Iniciar Sessão de Análise
+            </button>
+        </div>
+
+        <div>
+            <p class="sidebar-label">Documento</p>
+            <label for="pdf-upload" class="sidebar-upload-label">
+                <span>📄</span> Abrir Inteiro Teor (PDF)
+            </label>
+            <input type="file" id="pdf-upload" accept="application/pdf"
+                   style="display:none;" onchange="carregarPDF(event)">
+        </div>
+
+        <div>
+            <p class="sidebar-label">Ferramentas</p>
+            <!--
+                Desabilitado até que um PDF seja carregado.
+                O atributo 'disabled' é removido por JS em renderizarPagina().
+            -->
+            <button class="sidebar-btn" id="btn-ferramenta-recorte"
+                    onclick="alternarModoRecorte()" disabled>
+                <span>✂️</span> Ativar Modo Recorte
+            </button>
+        </div>
+
+        <hr class="sidebar-divider">
+
+        <div class="status-box">
+            <strong>Status do Backup:</strong><br>
+            <span id="status-backup">Aguardando sessão...</span>
+        </div>
     </div>
 
+    <!-- ================================================
+         ÁREA PRINCIPAL
+         ================================================ -->
     <div class="main-content">
+
+        <!-- Abas de navegação -->
         <div class="tabs">
-            <button class="tab-btn active" id="tab-leitura" onclick="trocarAba('leitura')">Aba 1: Leitura</button>
-            <button class="tab-btn" id="tab-historico" onclick="trocarAba('historico')">Aba 2: Histórico</button>
+            <button class="tab-btn active" id="tab-leitura"
+                    onclick="trocarAba('leitura')">Aba 1: Leitura</button>
+            <button class="tab-btn" id="tab-historico"
+                    onclick="trocarAba('historico')">Aba 2: Histórico</button>
         </div>
 
+        <!-- ── ABA LEITURA ── -->
         <div id="pdf-container">
-            <p style="color: #666; text-align: center; margin-top: 50px;">
-                Carregue um arquivo PDF para iniciar a leitura.
+
+            <!-- Placeholder visível antes de carregar o PDF -->
+            <p id="pdf-placeholder">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="9" y1="15" x2="15" y2="15"/>
+                    <line x1="9" y1="11" x2="11" y2="11"/>
+                </svg>
+                Carregue um arquivo PDF para iniciar a leitura.<br>
+                <span style="font-size:0.82rem; color:#ccc;">Use o painel à esquerda.</span>
             </p>
-            <canvas id="pdf-canvas" style="border: 1px solid #ccc; display: none;"></canvas>
+
+            <!--
+                PDF WRAPPER — estrutura de camadas (NUNCA destruída por JS)
+                ┌─────────────────────────────────┐
+                │  #crop-overlay  (z-index: 10)   │  ← modo recorte
+                │  .textLayer                     │  ← texto selecionável
+                │  #pdf-canvas                    │  ← imagem renderizada
+                └─────────────────────────────────┘
+                width/height definidos dinamicamente em renderizarPagina()
+            -->
+            <div id="pdf-wrapper">
+                <canvas id="pdf-canvas"></canvas>
+                <div id="text-layer" class="textLayer"></div>
+                <div id="crop-overlay"></div>
+            </div>
+
         </div>
 
+        <!-- ── ABA HISTÓRICO ── -->
         <div id="history-container">
-            <h3>Marcações Extraídas</h3>
-            <p style="color: #666; margin-bottom: 20px;">Classificações salvas automaticamente.</p>
-            
+            <div class="history-header">
+                <h3>Marcações Extraídas</h3>
+                <p>Classificações salvas automaticamente.</p>
+            </div>
             <div id="lista-marcacoes">
+                <!-- Cards de exemplo (demonstração visual) -->
                 <div class="annotation-card">
-                    <span class="tag-autora">[Parte Autora]</span>
-                    <p style="margin-top: 5px;">"Alegou o reclamante labor em condições insalubres..."</p>
+                    <div class="annotation-card-header">
+                        <span class="tag-autora">[Parte Autora]</span>
+                        <span class="tag-timestamp">Exemplo — Pág. 1</span>
+                    </div>
+                    <p>"Alegou o reclamante labor em condições insalubres sem o devido fornecimento de EPI..."</p>
                 </div>
                 <div class="annotation-card">
-                    <span class="tag-re">[Parte Ré]</span>
-                    <p style="margin-top: 5px;">"A reclamada impugnou os pedidos afirmando o fornecimento de EPIs..."</p>
+                    <div class="annotation-card-header">
+                        <span class="tag-re">[Parte Ré]</span>
+                        <span class="tag-timestamp">Exemplo — Pág. 3</span>
+                    </div>
+                    <p>"A reclamada impugnou os pedidos afirmando o fornecimento regular de equipamentos de proteção..."</p>
                 </div>
             </div>
         </div>
+
+    </div>
+
+    <!-- ================================================
+         POPUP DE CLASSIFICAÇÃO (substitui confirm())
+         Posicionado via JS próximo ao cursor do usuário
+         ================================================ -->
+    <div id="classification-popup">
+        <p class="popup-label">Classificar como:</p>
+        <button class="chip-btn chip-autora"
+                onclick="classificarESalvar('Parte Autora')">✔ Parte Autora</button>
+        <button class="chip-btn chip-re"
+                onclick="classificarESalvar('Parte Ré')">✔ Parte Ré</button>
+        <button class="chip-btn chip-cancelar"
+                onclick="fecharPopupClassificacao()">✕ Cancelar</button>
     </div>
 
     <script>
-        /* =========================================
-           JAVASCRIPT INLINE - LÓGICA E ESTADOS
-           ========================================= */
+        /* ================================================
+           ESTADO GLOBAL DA APLICAÇÃO
+           ================================================ */
+        let fileHandleBackup  = null;   // Handle do arquivo .json de backup
+        let historicoAnotacoes = [];    // Array persistido no backup
+        let pdfDoc             = null;  // Instância do documento PDF.js
+        let currentPage        = 1;     // Página atual (base para metadata dos cards)
 
-        // Variáveis de Estado Global
-        let fileHandleBackup = null; // Guardará a permissão contínua do arquivo .json
-        let historicoAnotacoes = []; // Array em memória com as anotações
-        let pdfDoc = null; // Instância do documento PDF atual
+        // Estado do modo recorte
+        let modoRecorteAtivo = false;
+        let startX, startY;
+        let cropBox = null;
 
-        // -----------------------------------------
-        // 1. GERENCIAMENTO DE INTERFACE (ABAS)
-        // -----------------------------------------
+        // Buffer de conteúdo aguardando classificação no popup
+        let pendingTipo     = null;
+        let pendingConteudo = null;
+
+        /* ================================================
+           1. GERENCIAMENTO DE INTERFACE (ABAS)
+           ================================================ */
         function trocarAba(aba) {
-            document.getElementById('pdf-container').style.display = aba === 'leitura' ? 'flex' : 'none';
-            document.getElementById('history-container').style.display = aba === 'historico' ? 'block' : 'none';
-            
+            document.getElementById('pdf-container').style.display =
+                aba === 'leitura' ? 'flex' : 'none';
+            document.getElementById('history-container').style.display =
+                aba === 'historico' ? 'block' : 'none';
             document.getElementById('tab-leitura').classList.toggle('active', aba === 'leitura');
             document.getElementById('tab-historico').classList.toggle('active', aba === 'historico');
         }
 
-        // -----------------------------------------
-        // 2. API DE SISTEMA DE ARQUIVOS (BACKUP CONTÍNUO)
-        // -----------------------------------------
+        /* ================================================
+           2. API DE SISTEMA DE ARQUIVOS (BACKUP CONTÍNUO)
+           ================================================ */
         async function iniciarSessaoSalvamento() {
             try {
-                // Abre a janela para o usuário criar/selecionar o arquivo de backup na pasta do processo
                 const options = {
                     suggestedName: 'backup_anotacoes.json',
                     types: [{
                         description: 'Arquivo de Backup JSON',
-                        accept: { 'application/json': ['.json'] },
-                    }],
+                        accept: { 'application/json': ['.json'] }
+                    }]
                 };
                 fileHandleBackup = await window.showSaveFilePicker(options);
-                
-                document.getElementById('status-backup').innerText = "Sessão Ativa (Sincronizando)";
-                document.getElementById('status-backup').style.color = "#a5d6a7"; // Verde claro
-                
-                // Alerta Pedagógico de sucesso
-                alert("Sessão iniciada! Todas as novas marcações de Parte Autora e Parte Ré serão salvas automaticamente neste arquivo.");
+
+                const statusEl = document.getElementById('status-backup');
+                statusEl.textContent = 'Sessão Ativa ✓';
+                statusEl.classList.add('ativa');
+
+                alert('Sessão iniciada! Todas as marcações serão salvas automaticamente neste arquivo.');
             } catch (err) {
-                console.error("Erro ao iniciar sessão de salvamento:", err);
-                if(err.name !== 'AbortError') {
-                    alert("Erro ao criar arquivo de backup. Verifique as permissões do navegador.");
+                if (err.name !== 'AbortError') {
+                    alert('Erro ao criar arquivo de backup. Verifique as permissões do navegador.');
                 }
             }
         }
 
-        // Função que será chamada sempre que uma nova marcação for feita
         async function salvarBackupAutomatico() {
             if (!fileHandleBackup) {
-                console.warn("Nenhuma sessão de salvamento ativa. Os dados estão apenas na memória RAM.");
+                console.warn('Nenhuma sessão ativa. Dados apenas na memória RAM.');
                 return;
             }
             try {
-                // Cria um fluxo de gravação no arquivo autorizado
                 const writable = await fileHandleBackup.createWritable();
                 await writable.write(JSON.stringify(historicoAnotacoes, null, 2));
                 await writable.close();
-                console.log("Backup atualizado silenciosamente no disco rígido.");
+                console.log('Backup atualizado silenciosamente.');
             } catch (err) {
-                console.error("Falha ao salvar silenciosamente:", err);
+                console.error('Falha no backup automático:', err);
             }
         }
 
-        // -----------------------------------------
-        // 3. RENDERIZAÇÃO DO PDF (ESQUELETO)
-        // -----------------------------------------
+        /* ================================================
+           3. CARREGAMENTO DO PDF
+
+           IMPORTANTE: Esta função APENAS lê o arquivo e
+           inicializa pdfDoc. NÃO manipula o DOM — essa
+           responsabilidade é exclusiva de renderizarPagina().
+           ================================================ */
         function carregarPDF(event) {
             const file = event.target.files[0];
             if (!file) return;
 
             if (file.type !== 'application/pdf') {
-                alert("Por favor, selecione um arquivo PDF válido.");
+                alert('Por favor, selecione um arquivo PDF válido.');
                 return;
             }
 
             const fileReader = new FileReader();
-            
-            fileReader.onload = function() {
+            fileReader.onload = function () {
                 const typedarray = new Uint8Array(this.result);
-                
-                // Limpa o container para a nova renderização
-                const container = document.getElementById('pdf-container');
-                container.innerHTML = '<canvas id="pdf-canvas"></canvas>';
-                const canvas = document.getElementById('pdf-canvas');
-                const ctx = canvas.getContext('2d');
 
-                // Carrega o documento usando PDF.js
-                pdfjsLib.getDocument(typedarray).promise.then(pdf => {
-                    pdfDoc = pdf;
-                    console.log("PDF carregado na memória. Páginas:", pdf.numPages);
-                    
-                    // Renderiza a página 1 como prova de conceito
-                    pdf.getPage(1).then(page => {
-                        const viewport = page.getViewport({ scale: 1.5 });
-                        canvas.height = viewport.height;
-                        canvas.width = viewport.width;
-
-                        const renderContext = {
-                            canvasContext: ctx,
-                            viewport: viewport
-                        };
-                        page.render(renderContext);
+                pdfjsLib.getDocument(typedarray).promise
+                    .then(pdf => {
+                        pdfDoc = pdf;
+                        console.log('PDF carregado. Total de páginas:', pdf.numPages);
+                        // Habilita o botão de recorte somente após PDF carregado
+                        document.getElementById('btn-ferramenta-recorte').disabled = false;
+                        renderizarPagina(1);
+                    })
+                    .catch(err => {
+                        console.error('Erro ao processar PDF:', err);
+                        alert('Ocorreu um erro ao ler o Inteiro Teor. Verifique se o arquivo não está protegido por senha.');
                     });
-                }).catch(error => {
-                    console.error("Erro ao processar PDF: ", error);
-                    alert("Ocorreu um erro ao ler o Inteiro Teor.");
-                });
             };
-
-            // Lê o arquivo do disco para a memória como um ArrayBuffer
             fileReader.readAsArrayBuffer(file);
         }
 
-        // -----------------------------------------
-        // 4. LÓGICA DE SELEÇÃO E CLASSIFICAÇÃO (Próximo Passo)
-        // -----------------------------------------
-        /* O próximo alvo de Substituição Cirúrgica será injetar a camada
-           de texto (Text Layer) invisível sobre este Canvas e adicionar 
-           os listeners de 'mouseup' para extrair os textos grifados.
-        */
+        /* ================================================
+           4. RENDERIZAÇÃO DE PÁGINA (COM CORREÇÃO DE DPR)
+
+           Princípio: NUNCA destruir #pdf-wrapper ou seus
+           filhos via innerHTML. Apenas atualizar dimensões
+           e conteúdo dos elementos existentes.
+
+           Dois viewports são criados:
+           • viewportHD  → escala física (para canvas HD)
+           • viewportCSS → escala lógica (para layout e text layer)
+           ================================================ */
+        async function renderizarPagina(num) {
+            if (!pdfDoc) return;
+            currentPage = num;
+
+            const page = await pdfDoc.getPage(num);
+
+            // devicePixelRatio: 1 em monitores comuns, 2+ em Retina/HiDPI
+            const dpr = window.devicePixelRatio || 1;
+
+            // viewportHD: dimensões físicas (pixels reais da tela)
+            const viewportHD  = page.getViewport({ scale: 1.5 * dpr });
+            // viewportCSS: dimensões lógicas (o que o usuário vê)
+            const viewportCSS = page.getViewport({ scale: 1.5 });
+
+            const canvas = document.getElementById('pdf-canvas');
+            const ctx    = canvas.getContext('2d');
+
+            // Define os pixels internos do canvas (resolução física)
+            canvas.width  = viewportHD.width;
+            canvas.height = viewportHD.height;
+
+            // Define o tamanho CSS do canvas (resolução lógica)
+            // Sem isso, o canvas ficaria ampliado/borrado em telas HiDPI
+            canvas.style.width  = viewportCSS.width  + 'px';
+            canvas.style.height = viewportCSS.height + 'px';
+
+            // O wrapper DEVE ter exatamente as dimensões CSS do canvas.
+            // Isso garante que text-layer e crop-overlay se sobreponham
+            // com perfeição pixel-a-pixel em todos os dispositivos.
+            const wrapper = document.getElementById('pdf-wrapper');
+            wrapper.style.width  = viewportCSS.width  + 'px';
+            wrapper.style.height = viewportCSS.height + 'px';
+
+            // Renderiza a camada visual em alta resolução
+            await page.render({ canvasContext: ctx, viewport: viewportHD }).promise;
+
+            // Renderiza a camada de texto em coordenadas CSS (não HD)
+            // O text layer usa posicionamento CSS, não pixels de canvas
+            const textContent = await page.getTextContent();
+            const textLayer   = document.getElementById('text-layer');
+            textLayer.innerHTML = ''; // Limpa conteúdo da página anterior
+
+            pdfjsLib.renderTextLayer({
+                textContent: textContent,
+                container:   textLayer,
+                viewport:    viewportCSS,   // ← coordenadas lógicas = alinhado ao CSS
+                textDivs:    []
+            });
+
+            // Exibe o wrapper e oculta o placeholder
+            document.getElementById('pdf-placeholder').style.display = 'none';
+            wrapper.style.display = 'block';
+        }
+
+        /* ================================================
+           5. MODO RECORTE (CAPTURA DE IMAGEM)
+           ================================================ */
+        function alternarModoRecorte() {
+            modoRecorteAtivo = !modoRecorteAtivo;
+
+            const overlay   = document.getElementById('crop-overlay');
+            const textLayer = document.getElementById('text-layer');
+            const btn       = document.getElementById('btn-ferramenta-recorte');
+
+            // Exibe/oculta a superfície de captura
+            overlay.style.display = modoRecorteAtivo ? 'block' : 'none';
+
+            // Desabilita o text-layer enquanto o recorte está ativo
+            // (evita conflito entre seleção de texto e drag do recorte)
+            textLayer.style.pointerEvents = modoRecorteAtivo ? 'none' : 'auto';
+
+            // Feedback visual no botão
+            btn.classList.toggle('ativo', modoRecorteAtivo);
+            btn.innerHTML = modoRecorteAtivo
+                ? '<span>✂️</span> Modo Recorte ATIVO (clique para sair)'
+                : '<span>✂️</span> Ativar Modo Recorte';
+        }
+
+        /* ================================================
+           6. POPUP DE CLASSIFICAÇÃO (CHIPS)
+           Exibido próximo ao cursor após seleção de texto
+           ou após captura de imagem.
+           ================================================ */
+        function exibirPopupClassificacao(tipo, conteudo, clientX, clientY) {
+            pendingTipo     = tipo;
+            pendingConteudo = conteudo;
+
+            const popup   = document.getElementById('classification-popup');
+            popup.style.display = 'flex';
+
+            // Posiciona próximo ao cursor sem sair dos limites da tela
+            const W = 220, H = 130;
+            const x = Math.min(clientX + 12, window.innerWidth  - W - 12);
+            const y = Math.min(clientY + 12, window.innerHeight - H - 12);
+            popup.style.left = x + 'px';
+            popup.style.top  = y + 'px';
+        }
+
+        function classificarESalvar(polo) {
+            if (pendingTipo && pendingConteudo) {
+                salvarAnotacao(pendingTipo, pendingConteudo, polo);
+            }
+            fecharPopupClassificacao();
+        }
+
+        function fecharPopupClassificacao() {
+            document.getElementById('classification-popup').style.display = 'none';
+            pendingTipo     = null;
+            pendingConteudo = null;
+            if (window.getSelection) window.getSelection().removeAllRanges();
+        }
+
+        /* ================================================
+           7. PERSISTÊNCIA DE ANOTAÇÕES
+           ================================================ */
+        function salvarAnotacao(tipo, conteudo, polo) {
+            const lista      = document.getElementById('lista-marcacoes');
+            const classePolo = polo === 'Parte Autora' ? 'tag-autora' : 'tag-re';
+            const timestamp  = new Date().toLocaleTimeString('pt-BR', {
+                hour: '2-digit', minute: '2-digit'
+            });
+
+            const card = document.createElement('div');
+            card.className = 'annotation-card';
+
+            const htmlConteudo = tipo === 'texto'
+                ? `<p>"${conteudo}"</p>`
+                : `<img src="${conteudo}" alt="Recorte capturado do processo — Pág. ${currentPage}">`;
+
+            card.innerHTML = `
+                <div class="annotation-card-header">
+                    <span class="${classePolo}">[${polo}]</span>
+                    <span class="tag-timestamp">${timestamp} — Pág. ${currentPage}</span>
+                </div>
+                ${htmlConteudo}
+            `;
+
+            lista.prepend(card); // Mais recente no topo
+
+            // Persiste no array (base64 de imagem omitido do log para performance)
+            historicoAnotacoes.push({
+                tipo,
+                polo,
+                pagina:    currentPage,
+                timestamp: Date.now(),
+                conteudo:  tipo === 'texto' ? conteudo : '[imagem_base64]'
+            });
+
+            salvarBackupAutomatico();
+        }
+
+        /* ================================================
+           8. EVENT LISTENERS
+           ─────────────────────────────────────────────
+           REGRA ARQUITETURAL CRÍTICA:
+           Todos os listeners são registrados UMA ÚNICA VEZ,
+           aqui no final do script, sobre os elementos
+           permanentes do DOM. Nenhuma função deste código
+           destrói ou recria esses elementos — portanto os
+           listeners nunca ficam orphaned (fantasmas).
+           ================================================ */
+
+        // 8a. Seleção de texto na text-layer
+        document.getElementById('text-layer').addEventListener('mouseup', function (e) {
+            // Evita duplo-trigger se o popup já está visível
+            if (document.getElementById('classification-popup').style.display === 'flex') return;
+
+            const selecao = window.getSelection().toString().trim();
+            if (selecao.length > 5) {
+                exibirPopupClassificacao('texto', selecao, e.clientX, e.clientY);
+            }
+        });
+
+        // 8b–8d. Lógica de drag do recorte sobre o crop-overlay
+        const overlay = document.getElementById('crop-overlay');
+
+        // Início do drag: registra ponto de origem e cria a caixa visual
+        overlay.addEventListener('mousedown', function (e) {
+            const rect = overlay.getBoundingClientRect();
+            startX = e.clientX - rect.left;
+            startY = e.clientY - rect.top;
+
+            if (cropBox) cropBox.remove(); // Garante estado limpo
+            cropBox = document.createElement('div');
+            cropBox.id = 'crop-box';
+            cropBox.style.cssText =
+                `left:${startX}px; top:${startY}px; width:0px; height:0px;`;
+            overlay.appendChild(cropBox);
+        });
+
+        // Durante o drag: atualiza posição e dimensões da caixa visual
+        overlay.addEventListener('mousemove', function (e) {
+            if (!cropBox) return;
+            const rect   = overlay.getBoundingClientRect();
+            const curX   = e.clientX - rect.left;
+            const curY   = e.clientY - rect.top;
+            cropBox.style.width  = Math.abs(curX - startX) + 'px';
+            cropBox.style.height = Math.abs(curY - startY) + 'px';
+            cropBox.style.left   = Math.min(startX, curX) + 'px';
+            cropBox.style.top    = Math.min(startY, curY) + 'px';
+        });
+
+        // Fim do drag: captura a região do canvas e abre o popup
+        overlay.addEventListener('mouseup', function (e) {
+            if (!cropBox) return;
+
+            const cropW = parseInt(cropBox.style.width);
+            const cropH = parseInt(cropBox.style.height);
+
+            // Cancela cliques sem arrasto real (menos de 5px)
+            if (cropW < 5 || cropH < 5) {
+                cropBox.remove();
+                cropBox = null;
+                return;
+            }
+
+            const canvas = document.getElementById('pdf-canvas');
+            const dpr    = window.devicePixelRatio || 1;
+
+            /*
+             * CORREÇÃO CRÍTICA DE COORDENADAS:
+             * O usuário arrasta sobre o overlay em coordenadas CSS (pixels lógicos).
+             * O canvas, porém, foi renderizado em pixels físicos (CSS × DPR).
+             * Precisamos multiplicar as coordenadas CSS pelo DPR para mapear
+             * corretamente para os pixels internos do canvas ao chamar drawImage().
+             *
+             * Sem essa conversão, em telas HiDPI (DPR=2), o recorte extrairia
+             * apenas um quarto da área selecionada — no canto superior esquerdo.
+             */
+            const sx = parseInt(cropBox.style.left) * dpr;
+            const sy = parseInt(cropBox.style.top)  * dpr;
+            const sw = cropW * dpr;
+            const sh = cropH * dpr;
+
+            const recorteCanvas = document.createElement('canvas');
+            recorteCanvas.width  = sw;
+            recorteCanvas.height = sh;
+            recorteCanvas.getContext('2d').drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+
+            const imageDataUrl = recorteCanvas.toDataURL('image/png');
+
+            cropBox.remove();
+            cropBox = null;
+
+            alternarModoRecorte(); // Desativa o modo automaticamente após a captura
+
+            exibirPopupClassificacao('imagem', imageDataUrl, e.clientX, e.clientY);
+        });
+
+        // 8e. Fechar popup ao clicar fora dele
+        document.addEventListener('click', function (e) {
+            const popup = document.getElementById('classification-popup');
+            if (popup.style.display === 'flex' && !popup.contains(e.target)) {
+                fecharPopupClassificacao();
+            }
+        });
+
+        // 8f. Fechar popup com tecla Escape
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                fecharPopupClassificacao();
+                if (modoRecorteAtivo) alternarModoRecorte();
+            }
+        });
+
     </script>
 </body>
 </html>
