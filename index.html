@@ -21,22 +21,53 @@
 
         <div class="sidebar-tools">
             <div class="toolbar-icons">
-                <button class="icon-btn" id="btn-iniciar-sessao" onclick="iniciarSessaoSalvamento()" title="Iniciar Sessão de Análise (Backup)">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                </button>
 
-                <label for="pdf-upload" class="icon-btn" title="Abrir Inteiro Teor (PDF)">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                <!-- 1. NOVO PROCESSO: carrega PDF + dispara criação do backup -->
+                <label for="pdf-upload" class="icon-btn" title="Novo Processo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="12" y1="18" x2="12" y2="12"></line>
+                        <line x1="9" y1="15" x2="15" y2="15"></line>
+                    </svg>
                 </label>
-                <input type="file" id="pdf-upload" accept="application/pdf" style="display:none;" onchange="carregarPDF(event)">
+                <input type="file" id="pdf-upload" accept="application/pdf" style="display:none;" onchange="novoProcesso(event)">
 
-                <button class="icon-btn" id="btn-ferramenta-texto" onmousedown="event.preventDefault()" onclick="capturarTrechoSelecionado()" title="Extrair Texto Selecionado para o Histórico" disabled>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>
+                <!-- 2. RETOMAR PROCESSO: abre backup JSON e recarrega PDF vinculado -->
+                <button class="icon-btn" id="btn-retomar-sessao" onclick="retomarProcesso()" title="Retomar Processo Já em Análise">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                    </svg>
                 </button>
 
+                <!-- 3. CRIAR TÓPICO RECURSAL -->
+                <button class="icon-btn" id="btn-novo-topico" onclick="criarTopicoPrompt()" title="Criar Tópico Recursal" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </button>
+
+                <!-- 4. GERAR ANOTAÇÃO A PARTIR DE TEXTO SELECIONADO -->
+                <button class="icon-btn" id="btn-ferramenta-texto" onmousedown="event.preventDefault()" onclick="capturarTrechoSelecionado()" title="Gerar Anotação a Partir de Texto" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="4 7 4 4 20 4 20 7"></polyline>
+                        <line x1="9" y1="20" x2="15" y2="20"></line>
+                        <line x1="12" y1="4" x2="12" y2="20"></line>
+                    </svg>
+                </button>
+
+                <!-- 5. MODO RECORTE DE IMAGEM -->
                 <button class="icon-btn" id="btn-ferramenta-recorte" onclick="alternarModoRecorte()" title="Ativar Modo Recorte de Imagem" disabled>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="6" cy="6" r="3"></circle>
+                        <circle cx="6" cy="18" r="3"></circle>
+                        <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
+                        <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
+                        <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
+                    </svg>
                 </button>
+
             </div>
         </div>
     </div>
@@ -44,8 +75,8 @@
     <div class="main-content">
 
         <div class="tabs">
-            <button class="tab-btn active" id="tab-leitura" onclick="trocarAba('leitura')">Processo</button>
-            <button class="tab-btn" id="tab-historico" onclick="trocarAba('historico')">Anotações</button>
+            <button class="tab-btn active" id="tab-leitura"   onclick="trocarAba('leitura')">Processo</button>
+            <button class="tab-btn"         id="tab-historico" onclick="trocarAba('historico')">Anotações</button>
         </div>
 
         <div id="pdf-container">
@@ -61,27 +92,37 @@
             </p>
 
             <div id="pdf-wrapper"></div>
-            
+
             <div id="crop-overlay"></div>
         </div>
 
         <div id="history-container">
             <div class="history-header">
-                <h3>Marcações Extraídas</h3>
-                <p>Classificações salvas automaticamente.</p>
+                <h3>Tópicos Recursais</h3>
+                <p>Anotações organizadas por tópico e salvas automaticamente.</p>
             </div>
-            <div id="lista-marcacoes">
-            </div>
+            <div id="lista-marcacoes"></div>
         </div>
 
     </div>
 
+    <!--
+        POPUP DE CLASSIFICAÇÃO
+        ATENÇÃO: o #seletor-topico está DENTRO do popup.
+        O select é populado dinamicamente por exibirPopupClassificacao().
+    -->
     <div id="classification-popup">
         <p class="popup-label">Classificar como:</p>
+        <select id="seletor-topico" class="topic-select">
+            <option value="">Selecione o Tópico...</option>
+        </select>
         <button class="chip-btn chip-autora" onclick="classificarESalvar('Parte Autora')">✔ Parte Autora</button>
-        <button class="chip-btn chip-re" onclick="classificarESalvar('Parte Ré')">✔ Parte Ré</button>
+        <button class="chip-btn chip-re"     onclick="classificarESalvar('Parte Ré')">✔ Parte Ré</button>
         <button class="chip-btn chip-cancelar" onclick="fecharPopupClassificacao()">✕ Cancelar</button>
     </div>
+
+    <!-- TOAST DE FEEDBACK NÃO-INTRUSIVO -->
+    <div id="toast-feedback" class="toast-feedback"></div>
 
     <script src="app.js"></script>
 </body>
