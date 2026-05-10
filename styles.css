@@ -46,7 +46,7 @@ body {
 
 @media (min-width: 768px) {
     .sidebar {
-        width: 80px; 
+        width: 80px;
         height: 100vh;
         overflow-y: auto;
         align-items: center;
@@ -81,6 +81,7 @@ body {
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
+    text-decoration: none;
 }
 
 .icon-btn svg {
@@ -132,7 +133,7 @@ body {
 
 .tabs {
     display: flex;
-    background: #dde3ea; 
+    background: #dde3ea;
     border-bottom: 2px solid var(--trt-blue);
     flex-shrink: 0;
 }
@@ -153,8 +154,8 @@ body {
     margin-right: 2px;
 }
 
-.tab-btn:hover { 
-    color: var(--trt-blue); 
+.tab-btn:hover {
+    color: var(--trt-blue);
     background: #e8ecef;
 }
 
@@ -196,7 +197,6 @@ body {
     display: none;
     flex-shrink: 0;
     width: 100%;
-    display: flex;
     flex-direction: column;
     align-items: center;
 }
@@ -257,7 +257,7 @@ body {
     display: none;
     flex-direction: column;
     gap: 8px;
-    min-width: 210px;
+    min-width: 220px;
 }
 
 .popup-label {
@@ -266,6 +266,26 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.05em;
     font-weight: 600;
+}
+
+/* Seletor de tópico dentro do popup */
+.topic-select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.84rem;
+    color: var(--text-dark);
+    background: #fafafa;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.topic-select:focus {
+    border-color: var(--trt-blue-mid);
+    background: white;
 }
 
 .chip-btn {
@@ -371,3 +391,105 @@ body {
     color: #bbb;
     font-weight: 400;
 }
+
+/* ================================================
+   ACORDEÃO DE TÓPICOS RECURSAIS
+   ================================================ */
+.topic-accordion {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.topic-header {
+    padding: 14px 16px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--trt-light-bg);
+    font-weight: 600;
+    color: var(--trt-blue);
+    /* A cor da borda esquerda é injetada via JS (style="border-left-color: ...") */
+    border-left: 6px solid var(--trt-blue-mid);
+    transition: background 0.2s;
+    user-select: none;
+}
+
+.topic-header:hover {
+    background: #e8ecef;
+}
+
+.topic-content {
+    padding: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease, padding 0.25s ease;
+    border-top: 0px solid var(--border-color);
+}
+
+.topic-content.open {
+    max-height: 4000px; /* Valor alto o suficiente para qualquer conteúdo */
+    padding: 16px;
+    border-top-width: 1px;
+}
+
+.badge-count {
+    background: var(--trt-blue);
+    color: white;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 12px;
+    min-width: 24px;
+    text-align: center;
+}
+
+/* Estado vazio da lista de tópicos */
+.empty-state {
+    text-align: center;
+    color: #aab;
+    font-size: 0.88rem;
+    line-height: 1.7;
+    margin-top: 40px;
+    padding: 0 20px;
+}
+
+.empty-state strong {
+    color: var(--trt-blue-mid);
+    font-size: 1.1rem;
+}
+
+/* ================================================
+   TOAST DE FEEDBACK NÃO-INTRUSIVO
+   ================================================ */
+.toast-feedback {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--trt-blue);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    box-shadow: var(--shadow-md);
+    z-index: 3000;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    pointer-events: none;
+    max-width: 320px;
+}
+
+.toast-feedback.visivel {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast-feedback.toast-sucesso { background: #2e7d32; }
+.toast-feedback.toast-aviso   { background: #f57c00; }
+.toast-feedback.toast-erro    { background: #b71c1c; }
