@@ -15,11 +15,11 @@
 <body>
 
     <div class="sidebar">
-        <p class="sidebar-title">Painel de Controle</p>
+        <div class="status-box" title="Status do Backup Automático">
+            <span id="status-backup">Aguardando...</span>
+        </div>
 
         <div class="sidebar-tools">
-            <p class="sidebar-label">Ferramentas Juris Canvas</p>
-            
             <div class="toolbar-icons">
                 <button class="icon-btn" id="btn-iniciar-sessao" onclick="iniciarSessaoSalvamento()" title="Iniciar Sessão de Análise (Backup)">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
@@ -39,20 +39,13 @@
                 </button>
             </div>
         </div>
-
-        <hr class="sidebar-divider">
-
-        <div class="status-box">
-            <strong>Status do Backup:</strong><br>
-            <span id="status-backup">Aguardando sessão...</span>
-        </div>
     </div>
 
     <div class="main-content">
 
         <div class="tabs">
-            <button class="tab-btn active" id="tab-leitura" onclick="trocarAba('leitura')">Aba 1: Leitura</button>
-            <button class="tab-btn" id="tab-historico" onclick="trocarAba('historico')">Aba 2: Histórico</button>
+            <button class="tab-btn active" id="tab-leitura" onclick="trocarAba('leitura')">Processo</button>
+            <button class="tab-btn" id="tab-historico" onclick="trocarAba('historico')">Anotações</button>
         </div>
 
         <div id="pdf-container">
@@ -67,11 +60,9 @@
                 <span style="font-size:0.82rem; color:#ccc;">Use o painel à esquerda.</span>
             </p>
 
-            <div id="pdf-wrapper">
-                <canvas id="pdf-canvas"></canvas>
-                <div id="text-layer" class="textLayer"></div>
-                <div id="crop-overlay"></div>
-            </div>
+            <div id="pdf-wrapper"></div>
+            
+            <div id="crop-overlay"></div>
         </div>
 
         <div id="history-container">
@@ -80,7 +71,7 @@
                 <p>Classificações salvas automaticamente.</p>
             </div>
             <div id="lista-marcacoes">
-                </div>
+            </div>
         </div>
 
     </div>
