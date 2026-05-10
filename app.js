@@ -17,19 +17,9 @@ let pendingConteudo  = null;   // Conteúdo bruto da extração pendente
 let pdfObserver      = null;   // IntersectionObserver para lazy loading
 
 /* ================================================
-   PALETA DE CORES DOS TÓPICOS
-   Cores sequenciais para identificação visual rápida.
-   Podem ser expandidas sem quebrar a lógica (módulo pelo comprimento).
+   PALETA DE CORES E RENDERIZAÇÃO
+   Gerenciada pelo módulo isolado TopicsManager (topics-manager.js)
    ================================================ */
-const CORES_TOPICOS = [
-    '#25527f', // Azul institucional
-    '#2e7d32', // Verde
-    '#b71c1c', // Vermelho
-    '#f57c00', // Laranja
-    '#6a1b9a', // Roxo
-    '#00695c', // Verde-azulado
-    '#4e342e'  // Marrom
-];
 
 /* ================================================
    GERENCIAMENTO DE INTERFACE (ABAS)
@@ -455,7 +445,7 @@ function criarTopicoPrompt() {
         return;
     }
 
-    const cor = CORES_TOPICOS[topicos.length % CORES_TOPICOS.length];
+   const cor = TopicsManager.obterCor(topicos.length);
     topicos.push({
         id:       'topico-' + Date.now(),
         nome:     nomeLimpo,
@@ -470,90 +460,13 @@ function criarTopicoPrompt() {
 }
 
 /**
- * Re-renderiza completamente a lista de tópicos na aba Anotações.
- *
- * CORREÇÃO CRÍTICA: Captura o estado open/closed de cada accordion
- * ANTES de limpar o DOM e o restaura após a reconstrução.
- * Isso evita que rerenders colapem painéis abertos pelo usuário.
+ * Delega a renderização do fichário para o módulo gestor isolado.
  */
 function renderizarTopicos() {
-    const lista = document.getElementById('lista-marcacoes');
-
-    // Captura o estado open/closed ANTES de limpar o DOM
-    const jaRenderizado = lista.querySelector('.topic-accordion') !== null;
-    const openIds = new Set(
-        [...lista.querySelectorAll('.topic-content.open')].map(el => el.id)
-    );
-
-    lista.innerHTML = '';
-
-    if (topicos.length === 0) {
-        lista.innerHTML = `
-            <p class="empty-state">
-                Nenhum tópico criado.<br>
-                Use o botão <strong>+</strong> na barra lateral para criar um Tópico Recursal.
-            </p>
-        `;
-        return;
-    }
-
-    topicos.forEach(t => {
-        const contentId = `content-${t.id}`;
-
-        // Lógica de abertura inicial vs. rerenders:
-        // - Primeiro render: abre tópicos que já têm anotações (ex.: restauração de backup).
-        // - Rerenders subsequentes: preserva exatamente o estado anterior.
-        const isOpen = jaRenderizado ? openIds.has(contentId) : t.anotacoes.length > 0;
-
-        const acc = document.createElement('div');
-        acc.className = 'topic-accordion';
-        acc.dataset.topicoId = t.id;
-        acc.innerHTML = `
-            <div class="topic-header" style="border-left-color: ${t.cor}" onclick="toggleTopico('${t.id}')">
-                <span>${t.nome}</span>
-                <span class="badge-count" id="badge-${t.id}">${t.anotacoes.length}</span>
-            </div>
-            <div class="topic-content ${isOpen ? 'open' : ''}" id="${contentId}"></div>
-        `;
-        lista.appendChild(acc);
-
-        const contentEl = document.getElementById(contentId);
-        t.anotacoes.forEach(a => contentEl.appendChild(criarCardAnotacao(a)));
-    });
+    TopicsManager.renderizarFichario(topicos);
 }
 
-/**
- * Alterna a classe 'open' do conteúdo de um accordion pelo ID do tópico.
- */
-function toggleTopico(id) {
-    document.getElementById(`content-${id}`).classList.toggle('open');
-}
-
-/**
- * Fábrica de cards de anotação — separa a criação do DOM da lógica de renderização.
- * Reutilizado tanto na renderização completa quanto futuramente em appends incrementais.
- */
-function criarCardAnotacao(anotacao) {
-    const card = document.createElement('div');
-    card.className = 'annotation-card';
-
-    const classePolo   = anotacao.polo === 'Parte Autora' ? 'tag-autora' : 'tag-re';
-    const ts           = new Date(anotacao.timestamp).toLocaleTimeString('pt-BR', {
-        hour: '2-digit', minute: '2-digit'
-    });
-    const htmlConteudo = anotacao.tipo === 'texto'
-        ? `<p>"${anotacao.conteudo}"</p>`
-        : `<img src="${anotacao.conteudo}" alt="Recorte capturado — Pág. ${anotacao.pagina}">`;
-
-    card.innerHTML = `
-        <div class="annotation-card-header">
-            <span class="${classePolo}">[${anotacao.polo}]</span>
-            <span class="tag-timestamp">${ts} — Pág. ${anotacao.pagina}</span>
-        </div>
-        ${htmlConteudo}
-    `;
-    return card;
-}
+// Funções de UI antigas removidas. Lógica assumida pelo TopicsManager.
 
 /* ================================================
    CAPTURA MANUAL DE TEXTO SELECIONADO
