@@ -12,6 +12,7 @@ let cropBox = null;
 
 let pendingTipo     = null;
 let pendingConteudo = null;
+let pdfObserver     = null;
 
 /* ================================================
    GERENCIAMENTO DE INTERFACE (ABAS)
@@ -65,7 +66,7 @@ async function salvarBackupAutomatico() {
 }
 
 /* ================================================
-   CARREGAMENTO DO PDF
+   CARREGAMENTO DO PDF E LAZY LOADING
    ================================================ */
 function carregarPDF(event) {
     const file = event.target.files[0];
@@ -81,30 +82,71 @@ function carregarPDF(event) {
         const typedarray = new Uint8Array(this.result);
 
         pdfjsLib.getDocument(typedarray).promise
-            .then(pdf => {
+            .then(async pdf => {
                 pdfDoc = pdf;
                 console.log('PDF carregado. Total de páginas:', pdf.numPages);
                 
-                // Habilita as ferramentas na barra lateral
                 document.getElementById('btn-ferramenta-recorte').disabled = false;
                 document.getElementById('btn-ferramenta-texto').disabled = false;
                 
-                renderizarPagina(1);
+                const wrapper = document.getElementById('pdf-wrapper');
+                wrapper.innerHTML = ''; 
+                wrapper.style.display = 'flex';
+                document.getElementById('pdf-placeholder').style.display = 'none';
+
+                if (pdfObserver) pdfObserver.disconnect();
+                pdfObserver = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        const pageNum = parseInt(entry.target.dataset.pageNumber);
+                        
+                        if (entry.isIntersecting && entry.intersectionRatio > 0.4) {
+                            currentPage = pageNum;
+                        }
+
+                        if (entry.isIntersecting && entry.target.dataset.loaded === 'false') {
+                            renderizarPaginaElemento(pageNum, entry.target);
+                            entry.target.dataset.loaded = 'true';
+                        }
+                    });
+                }, { 
+                    root: document.getElementById('pdf-container'), 
+                    rootMargin: '600px 0px', 
+                    threshold: [0, 0.5] 
+                });
+
+                const firstPage = await pdf.getPage(1);
+                const viewportCSS = firstPage.getViewport({ scale: 1.5 });
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const pageContainer = document.createElement('div');
+                    pageContainer.className = 'pdf-page-container';
+                    pageContainer.dataset.pageNumber = i;
+                    pageContainer.dataset.loaded = 'false';
+                    
+                    pageContainer.style.width = viewportCSS.width + 'px';
+                    pageContainer.style.height = viewportCSS.height + 'px';
+                    pageContainer.style.position = 'relative';
+                    pageContainer.style.marginBottom = '24px';
+                    pageContainer.style.backgroundColor = 'white';
+                    pageContainer.style.boxShadow = 'var(--shadow-md)';
+
+                    wrapper.appendChild(pageContainer);
+                    pdfObserver.observe(pageContainer);
+                }
             })
             .catch(err => {
                 console.error('Erro ao processar PDF:', err);
-                alert('Ocorreu um erro ao ler o Inteiro Teor. Verifique se o arquivo não está protegido por senha.');
+                alert('Ocorreu um erro ao ler o Inteiro Teor. Verifique a integridade do arquivo.');
             });
     };
     fileReader.readAsArrayBuffer(file);
 }
 
 /* ================================================
-   RENDERIZAÇÃO DE PÁGINA
+   RENDERIZAÇÃO DINÂMICA (PÁGINA INDIVIDUAL)
    ================================================ */
-async function renderizarPagina(num) {
+async function renderizarPaginaElemento(num, container) {
     if (!pdfDoc) return;
-    currentPage = num;
 
     const page = await pdfDoc.getPage(num);
     const dpr = window.devicePixelRatio || 1;
@@ -112,33 +154,35 @@ async function renderizarPagina(num) {
     const viewportHD  = page.getViewport({ scale: 1.5 * dpr });
     const viewportCSS = page.getViewport({ scale: 1.5 });
 
-    const canvas = document.getElementById('pdf-canvas');
+    container.style.width = viewportCSS.width + 'px';
+    container.style.height = viewportCSS.height + 'px';
+
+    const canvas = document.createElement('canvas');
     const ctx    = canvas.getContext('2d');
 
     canvas.width  = viewportHD.width;
     canvas.height = viewportHD.height;
-    canvas.style.width  = viewportCSS.width  + 'px';
-    canvas.style.height = viewportCSS.height + 'px';
+    canvas.style.width  = '100%';
+    canvas.style.height = '100%';
+    canvas.style.display = 'block';
 
-    const wrapper = document.getElementById('pdf-wrapper');
-    wrapper.style.width  = viewportCSS.width  + 'px';
-    wrapper.style.height = viewportCSS.height + 'px';
+    const textLayer = document.createElement('div');
+    textLayer.className = 'textLayer';
+    textLayer.style.width = viewportCSS.width + 'px';
+    textLayer.style.height = viewportCSS.height + 'px';
+
+    container.appendChild(canvas);
+    container.appendChild(textLayer);
 
     await page.render({ canvasContext: ctx, viewport: viewportHD }).promise;
 
     const textContent = await page.getTextContent();
-    const textLayer   = document.getElementById('text-layer');
-    textLayer.innerHTML = ''; 
-
     pdfjsLib.renderTextLayer({
         textContent: textContent,
         container:   textLayer,
         viewport:    viewportCSS,
         textDivs:    []
     });
-
-    document.getElementById('pdf-placeholder').style.display = 'none';
-    wrapper.style.display = 'block';
 }
 
 /* ================================================
@@ -149,11 +193,9 @@ function capturarTrechoSelecionado() {
     const selecaoTexto = selection.toString().trim();
     
     if (selecaoTexto.length > 5) {
-        // Calcula as coordenadas exatas da seleção do usuário
         const range = selection.getRangeAt(0);
         const rect = range.getBoundingClientRect();
         
-        // Posiciona o popup ligeiramente abaixo da seleção
         const posX = rect.left; 
         const posY = rect.bottom + 10; 
         
@@ -170,11 +212,15 @@ function alternarModoRecorte() {
     modoRecorteAtivo = !modoRecorteAtivo;
 
     const overlay   = document.getElementById('crop-overlay');
-    const textLayer = document.getElementById('text-layer');
     const btn       = document.getElementById('btn-ferramenta-recorte');
+    
+    const textLayers = document.querySelectorAll('.textLayer');
 
     overlay.style.display = modoRecorteAtivo ? 'block' : 'none';
-    textLayer.style.pointerEvents = modoRecorteAtivo ? 'none' : 'auto';
+    
+    textLayers.forEach(layer => {
+        layer.style.pointerEvents = modoRecorteAtivo ? 'none' : 'auto';
+    });
 
     btn.classList.toggle('ativo', modoRecorteAtivo);
 }
@@ -289,9 +335,17 @@ overlay.addEventListener('mouseup', function (e) {
         return;
     }
 
-    const canvas = document.getElementById('pdf-canvas');
-    const dpr    = window.devicePixelRatio || 1;
+    // Lógica provisória: capturará o que está visível na tela em relação à área
+    // Será aprimorada na próxima atualização matemática
+    const container = document.querySelector(`.pdf-page-container[data-page-number="${currentPage}"] canvas`);
+    if(!container) {
+         cropBox.remove();
+         cropBox = null;
+         alternarModoRecorte();
+         return;
+    }
 
+    const dpr    = window.devicePixelRatio || 1;
     const sx = parseInt(cropBox.style.left) * dpr;
     const sy = parseInt(cropBox.style.top)  * dpr;
     const sw = cropW * dpr;
@@ -300,15 +354,18 @@ overlay.addEventListener('mouseup', function (e) {
     const recorteCanvas = document.createElement('canvas');
     recorteCanvas.width  = sw;
     recorteCanvas.height = sh;
-    recorteCanvas.getContext('2d').drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
-
-    const imageDataUrl = recorteCanvas.toDataURL('image/png');
+    
+    try {
+        recorteCanvas.getContext('2d').drawImage(container, sx, sy, sw, sh, 0, 0, sw, sh);
+        const imageDataUrl = recorteCanvas.toDataURL('image/png');
+        exibirPopupClassificacao('imagem', imageDataUrl, e.clientX, e.clientY);
+    } catch(err) {
+        console.warn("Ajuste de coordenadas em desenvolvimento para rolagem infinita.", err);
+    }
 
     cropBox.remove();
     cropBox = null;
-
     alternarModoRecorte();
-    exibirPopupClassificacao('imagem', imageDataUrl, e.clientX, e.clientY);
 });
 
 document.addEventListener('click', function (e) {
