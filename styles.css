@@ -335,62 +335,7 @@ body {
     display: none;
 }
 
-.history-header {
-    margin-bottom: 18px;
-}
-
-.history-header h3 {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--trt-blue);
-}
-
-.history-header p {
-    font-size: 0.82rem;
-    color: #aaa;
-    margin-top: 3px;
-}
-
-.annotation-card {
-    background: white;
-    border: 1px solid var(--border-color);
-    border-left: 4px solid var(--trt-blue);
-    padding: 14px 16px;
-    margin-bottom: 10px;
-    border-radius: 6px;
-    box-shadow: var(--shadow-sm);
-}
-
-.annotation-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 4px;
-}
-
-.annotation-card img {
-    max-width: 100%;
-    margin-top: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    display: block;
-}
-
-.annotation-card p {
-    font-size: 0.88rem;
-    color: #444;
-    line-height: 1.55;
-    font-style: italic;
-    margin-top: 6px;
-}
-
-.tag-autora  { color: #2e7d32; font-weight: 700; font-size: 0.82rem; }
-.tag-re      { color: #b71c1c; font-weight: 700; font-size: 0.82rem; }
-.tag-timestamp {
-    font-size: 0.72rem;
-    color: #bbb;
-    font-weight: 400;
-}
+/* Classes legadas removidas com segurança para não afetar o #history-container */
 
 /* ================================================
    ACORDEÃO DE TÓPICOS RECURSAIS
@@ -571,52 +516,122 @@ body {
 }
 
 /* ================================================
-   CARDS MINIMALISTAS DAS PARTES
+   TIMELINE VISUAL — LINHA DO TEMPO DE ANOTAÇÕES
    ================================================ */
+
+.timeline-container {
+    position: relative;
+    padding-left: 50px; 
+}
+
+.timeline-container::before {
+    content: '';
+    position: absolute;
+    left: 13px;   
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: #d32f2f;
+    z-index: 0;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 24px;
+    width: 65%; 
+}
+
+@media (max-width: 480px) {
+    .timeline-item { width: 100%; }
+}
+
+.timeline-number {
+    position: absolute;
+    left: -50px;  
+    top: 8px;
+    width: 28px;
+    height: 28px;
+    background-color: #fff9c4;
+    border: 2px solid #fbc02d;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #424242;
+    z-index: 2;   
+    box-shadow: var(--shadow-sm);
+    flex-shrink: 0;
+}
+
 .annotation-card {
-    padding: 14px 16px;
-    margin-bottom: 14px;
-    border-radius: 6px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    background-color: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 0 12px 12px 12px; 
+    padding: 14px 18px;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
+    color: var(--text-dark);
     font-size: 0.9rem;
-    border: 1px solid transparent;
+    position: relative;
+    z-index: 1;
 }
 
 .card-header {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     margin-bottom: 8px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    letter-spacing: 0.3px;
+    flex-wrap: wrap;
+    gap: 4px;
 }
 
-/* Polo: Parte Autora (Azul claro/cinza com texto escuro) */
-.card-autora {
-    background-color: #f1f5f9;
-    border-color: #cbd5e1;
-    color: #1e293b;
-}
-.card-autora .card-meta { color: #64748b; font-weight: 500; }
-
-/* Polo: Parte Ré (Azul escuro com texto branco) */
-.card-re {
-    background-color: #1a365d;
-    border-color: #1e40af;
-    color: #f8fafc;
-}
-.card-re .card-meta { color: #93c5fd; font-weight: 500; }
-
-/* Elementos Internos do Card */
-.card-texto { 
-    line-height: 1.6; 
-    font-style: italic; 
-    margin-top: 6px; 
+.card-meta {
+    font-size: 0.75rem;
+    color: #888;
+    font-weight: 400;
 }
 
-.card-imagem { 
-    max-width: 100%; 
-    border-radius: 4px; 
-    margin-top: 10px; 
-    border: 1px solid rgba(0,0,0,0.15);
+.card-texto {
+    font-size: 0.88rem;
+    color: #333;
+    line-height: 1.6;
+    font-style: italic;
+    margin-top: 4px;
 }
+
+.card-imagem {
+    max-width: 100%;
+    border-radius: 6px;
+    margin-top: 10px;
+    border: 1px solid var(--border-color);
+    display: block;
+}
+
+/* ================================================
+   SISTEMA DE TAGS COLORIDAS (POLOS E DOCUMENTOS)
+   ================================================ */
+.polo-tag {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.70rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    display: inline-block;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+
+.tag-parte-autora   { background: #e8f5e9; color: #1b5e20; }
+.tag-parte-re       { background: #c62828; color: #ffffff; }
+.tag-sentenca       { background: #e3f2fd; color: #0d47a1; }
+.tag-sentenca-de-ed { background: #f3e5f5; color: #6a1b9a; }
+.tag-laudo-pericial { background: #fff8e1; color: #e65100; }
+
+/* ================================================
+   BOTÕES NOVOS DO POPUP DE CLASSIFICAÇÃO
+   ================================================ */
+.chip-sentenca      { color: #0d47a1; border-color: #90caf9; background: #e3f2fd; }
+.chip-sentenca-ed   { color: #6a1b9a; border-color: #ce93d8; background: #f3e5f5; }
+.chip-perito        { color: #e65100; border-color: #ffcc80; background: #fff8e1; }
