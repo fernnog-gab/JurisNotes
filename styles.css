@@ -493,3 +493,19 @@ body {
 .toast-feedback.toast-sucesso { background: #2e7d32; }
 .toast-feedback.toast-aviso   { background: #f57c00; }
 .toast-feedback.toast-erro    { background: #b71c1c; }
+
+/* ================================================
+   BOTÃO ENCERRAR SESSÃO — ESTADO DE CONFIRMAÇÃO
+   Ativado pela classe .confirmando via JavaScript.
+   ================================================ */
+#btn-encerrar-sessao.confirmando {
+    background: rgba(183, 28, 28, 0.22);
+    border-color: rgba(239, 83, 80, 0.65);
+    color: #ef9a9a;
+    animation: pulse-encerrar 0.9s ease-in-out infinite;
+}
+
+@keyframes pulse-encerrar {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(183, 28, 28, 0.5); }
+    50%       { box-shadow: 0 0 0 8px rgba(183, 28, 28, 0); }
+}

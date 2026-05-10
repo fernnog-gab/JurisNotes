@@ -1,11 +1,12 @@
 /* ================================================
    ESTADO GLOBAL DA APLICAÇÃO
    ================================================ */
-let fileHandleBackup = null;   // Handle do File System Access API para escrita do backup
-let topicos          = [];     // Array primário: [{ id, nome, cor, anotacoes: [] }]
-let pdfDoc           = null;   // Documento PDF carregado pelo PDF.js
-let currentPage      = 1;      // Página visível atual (atualizada pelo IntersectionObserver)
-let modoRetomada     = false;  // Flag: true quando restaurando sessão existente (evita recriar backup)
+let topicos              = [];     // Array primário: [{ id, nome, cor, anotacoes: [] }]
+let pdfDoc               = null;   // Documento PDF carregado pelo PDF.js
+let currentPage          = 1;      // Página visível atual (atualizada pelo IntersectionObserver)
+let modoRetomada         = false;  // Flag: true quando restaurando sessão existente (evita recriar backup)
+let _encerrarTimer       = null;   // ID do setTimeout de confirmação do botão Encerrar
+let _encerrarConfirmando = false;  // Flag: aguardando segundo clique para confirmar encerramento
 
 let modoRecorteAtivo = false;
 let startX, startY;
@@ -64,91 +65,160 @@ function atualizarStatusBackup(texto, ativa = false) {
 
 /* ================================================
    UTILITÁRIO: HABILITAR FERRAMENTAS APÓS PDF CARREGADO
+   Inclui o botão Encerrar Sessão, que permanece
+   desabilitado até que uma sessão esteja ativa.
    ================================================ */
 function habilitarFerramentasDeTrabalho() {
     document.getElementById('btn-ferramenta-recorte').disabled = false;
     document.getElementById('btn-ferramenta-texto').disabled   = false;
     document.getElementById('btn-novo-topico').disabled        = false;
+    document.getElementById('btn-encerrar-sessao').disabled    = false;
+}
+
+/* ================================================
+   ENCERRAR SESSÃO
+   Padrão de confirmação em dois cliques (sem confirm()):
+   - 1º clique: estado "confirmando" — botão pulsa, toast orienta,
+     timer de 3s cancela automaticamente se não houver 2º clique.
+   - 2º clique (dentro de 3s): executa o encerramento completo.
+   ================================================ */
+function encerrarSessao() {
+    const btn = document.getElementById('btn-encerrar-sessao');
+
+    if (!_encerrarConfirmando) {
+        // — Primeiro clique: solicitar confirmação ——
+        _encerrarConfirmando = true;
+        btn.classList.add('confirmando');
+        btn.title = 'Clique novamente para confirmar';
+        exibirToast('Clique novamente no botão para confirmar o encerramento da sessão.', 'aviso');
+
+        _encerrarTimer = setTimeout(() => {
+            _encerrarConfirmando = false;
+            btn.classList.remove('confirmando');
+            btn.title = 'Encerrar Sessão';
+        }, 3000);
+        return;
+    }
+
+    // — Segundo clique: executar encerramento ———————
+    clearTimeout(_encerrarTimer);
+    _encerrarConfirmando = false;
+
+    // Desativar modo recorte se estiver ativo
+    if (modoRecorteAtivo) alternarModoRecorte();
+
+    // Fechar popup de classificação se aberto
+    fecharPopupClassificacao();
+
+    // Reset de estado
+    topicos      = [];
+    pdfDoc       = null;
+    modoRetomada = false;
+    BackupManager.encerrar();
+
+    if (pdfObserver) {
+        pdfObserver.disconnect();
+        pdfObserver = null;
+    }
+
+    // Reset visual
+    const wrapper = document.getElementById('pdf-wrapper');
+    wrapper.innerHTML    = '';
+    wrapper.style.display = 'none';
+    document.getElementById('pdf-placeholder').style.display = 'flex';
+    document.getElementById('pdf-upload').value              = '';
+
+    // Desabilitar todas as ferramentas de trabalho
+    ['btn-ferramenta-recorte', 'btn-ferramenta-texto', 'btn-novo-topico', 'btn-encerrar-sessao']
+        .forEach(id => {
+            const el = document.getElementById(id);
+            el.disabled = true;
+            el.classList.remove('confirmando', 'ativo');
+        });
+    btn.title = 'Encerrar Sessão';
+
+    renderizarTopicos();
+    atualizarStatusBackup('Aguardando...', false);
+    trocarAba('leitura');
+    exibirToast('Sessão encerrada. Sistema pronto para novo processo.', 'sucesso');
 }
 
 /* ================================================
    API DE SISTEMA DE ARQUIVOS — CRIAR BACKUP (NOVO PROCESSO)
-   Abre o diálogo para escolha do local de salvamento.
-   Chamada automaticamente ao final do carregamento de um novo PDF.
+   Usa o processoId registrado pelo BackupManager para
+   sugerir o nome do arquivo com a nomenclatura padrão.
    ================================================ */
 async function iniciarSessaoSalvamento() {
+    const processoId = BackupManager.getProcessoId();
     try {
         const options = {
-            suggestedName: 'backup_processo.json',
+            suggestedName: `${processoId || 'backup_processo'}.json`,
             types: [{
-                description: 'Arquivo de Backup JSON',
+                description: 'Arquivo de Backup — Mapeamento de Inteiro Teor',
                 accept: { 'application/json': ['.json'] }
             }]
         };
-        fileHandleBackup = await window.showSaveFilePicker(options);
+        const handle = await window.showSaveFilePicker(options);
+        BackupManager.setFileHandle(handle);
         atualizarStatusBackup('Sessão Ativa ✓', true);
-        await salvarBackupAutomatico(); // Salva estrutura inicial (array vazio)
+        await salvarBackupAutomatico(); // Grava estrutura inicial (array vazio)
         exibirToast('Sessão iniciada. Backup automático ativo.');
     } catch (err) {
         if (err.name !== 'AbortError') {
             exibirToast('Erro ao criar o arquivo de backup. Verifique as permissões do navegador.', 'erro');
         }
-        // Se o usuário cancelar o diálogo, a sessão continua sem backup (dados apenas em memória).
     }
 }
 
 /* ================================================
    API DE SISTEMA DE ARQUIVOS — RETOMAR PROCESSO EXISTENTE
    Fluxo:
-   1. Abre o .json de backup e restaura topicos[] em memória.
-   2. Solicita permissão de escrita para o arquivo aberto (auto-save).
-   3. Define a flag modoRetomada para que carregarPDF() não recrie o backup.
-   4. Dispara o input de PDF para o usuário selecionar o Inteiro Teor correspondente.
+   1. Abre o .json de backup via showOpenFilePicker.
+   2. BackupManager.carregarJson() lê, valida e desempacota
+      (suporta formato legado v1.0 e atual v2.x).
+   3. Restaura topicos[] e define modoRetomada = true.
+   4. Dispara o input de PDF para o usuário selecionar o Inteiro Teor.
+   5. carregarPDF() verificará o hash SHA-256 antes de aceitar o PDF.
    ================================================ */
 async function retomarProcesso() {
     try {
-        // Passo 1: Abrir o arquivo de backup JSON
         const [handle] = await window.showOpenFilePicker({
             types: [{
-                description: 'Arquivo de Backup JSON',
+                description: 'Arquivo de Backup — Mapeamento de Inteiro Teor',
                 accept: { 'application/json': ['.json'] }
             }]
         });
 
-        // Passo 2: Ler e parsear os dados
-        const arquivo = await handle.getFile();
-        const texto   = await arquivo.text();
-        let dadosRestaurados;
-
+        // Lê, valida e desempacota o JSON (suporta formatos v1.0 e v2.x)
+        let pacote;
         try {
-            dadosRestaurados = JSON.parse(texto);
+            pacote = await BackupManager.carregarJson(handle);
         } catch {
-            exibirToast('O arquivo selecionado não é um backup válido.', 'erro');
+            exibirToast('O arquivo selecionado não é um backup válido ou está corrompido.', 'erro');
             return;
         }
 
-        if (!Array.isArray(dadosRestaurados)) {
-            exibirToast('Formato de backup inválido. O arquivo pode estar corrompido.', 'erro');
-            return;
-        }
-
-        // Passo 3: Solicitar permissão de escrita para continuar o auto-save
+        // Solicitar permissão de escrita para continuar o auto-save
         const permissao = await handle.requestPermission({ mode: 'readwrite' });
 
-        // Passo 4: Restaurar estado em memória
-        topicos          = dadosRestaurados;
-        fileHandleBackup = handle;
-        modoRetomada     = true;
+        // Restaurar estado em memória
+        topicos      = pacote.dados;
+        modoRetomada = true;
+
+        const isLegado = pacote.metadata.versaoApp === '1.0';
+        const msgHash  = isLegado
+            ? ' Backup legado: PDF aceito sem verificação de integridade.'
+            : ' O PDF será validado por assinatura digital SHA-256.';
 
         atualizarStatusBackup(
-            permissao === 'granted' ? 'Sessão Restaurada ✓' : 'Restaurada (somente leitura)',
+            permissao === 'granted' ? 'Sessão Restaurada ✓' : 'Restaurada (sem auto-save)',
             true
         );
 
         renderizarTopicos();
         habilitarFerramentasDeTrabalho();
         trocarAba('historico');
-        exibirToast('Anotações restauradas. Selecione agora o PDF do processo.');
+        exibirToast(`Anotações restauradas.${msgHash} Selecione agora o PDF do processo.`);
 
         // Passo 5: Solicitar o PDF correspondente ao backup
         document.getElementById('pdf-upload').click();
@@ -163,44 +233,37 @@ async function retomarProcesso() {
 
 /* ================================================
    API DE SISTEMA DE ARQUIVOS — SALVAR BACKUP AUTOMÁTICO
-   Serializa exclusivamente topicos[] (estado primário).
-   Chamada silenciosamente após cada nova anotação ou criação de tópico.
+   Delega toda a lógica de serialização e escrita ao
+   BackupManager, que mantém a referência ao arquivo.
    ================================================ */
 async function salvarBackupAutomatico() {
-    if (!fileHandleBackup) {
-        console.warn('Nenhum arquivo de backup ativo. Dados apenas em memória.');
+    if (!BackupManager.isAtivo()) {
+        console.warn('BackupManager: nenhum arquivo de backup ativo. Dados apenas em memória.');
         return;
     }
     try {
-        const writable = await fileHandleBackup.createWritable();
-        await writable.write(JSON.stringify(topicos, null, 2));
-        await writable.close();
+        await BackupManager.salvar(topicos);
         console.log('Backup atualizado silenciosamente.');
     } catch (err) {
         console.error('Falha no backup automático:', err);
+        exibirToast('Não foi possível atualizar o backup automático.', 'aviso');
     }
 }
 
 /* ================================================
    FLUXO: NOVO PROCESSO
-   Ponto de entrada do onchange do input de PDF quando iniciando nova análise.
-   - Pede confirmação se há sessão ativa com dados.
-   - Reseta o estado global.
-   - Chama carregarPDF(), que ao final dispara iniciarSessaoSalvamento().
    ================================================ */
 async function novoProcesso(event) {
-    // Proteção contra perda de dados: confirmar se há sessão ativa
     if ((topicos.length > 0 || pdfDoc) && !modoRetomada) {
         const continuar = confirm(
             'Iniciar um novo processo irá apagar as anotações em memória não salvas.\n\nDeseja continuar?'
         );
         if (!continuar) {
-            event.target.value = ''; // Descarta a seleção do arquivo
+            event.target.value = '';
             return;
         }
-        // Reset do estado
-        topicos          = [];
-        fileHandleBackup = null;
+        topicos = [];
+        BackupManager.encerrar(); // Substitui: fileHandleBackup = null
         renderizarTopicos();
         atualizarStatusBackup('Aguardando...');
     }
@@ -210,12 +273,15 @@ async function novoProcesso(event) {
 
 /* ================================================
    CARREGAMENTO DO PDF E LAZY LOADING
-   Responsabilidades:
-   - Validar o arquivo selecionado.
-   - Inicializar o PDF.js e criar os placeholders de página.
-   - Configurar o IntersectionObserver para lazy rendering.
-   - Ao concluir: se modoRetomada=true, apenas notifica;
-     se novo processo, dispara iniciarSessaoSalvamento().
+   Novidades v2.1:
+   - onload é agora async para suportar await do hash.
+   - NOVO PROCESSO: BackupManager.iniciarSessao() calcula
+     o hash SHA-256 e registra o processoId antes do
+     diálogo de salvamento.
+   - RETOMAR: BackupManager.validarPdf() compara o hash
+     do PDF apresentado com o hash gravado no backup.
+     Hash inválido → toast de erro + nova tentativa automática.
+     Backup legado (sem hash) → aceito em modo de confiança.
    ================================================ */
 function carregarPDF(event) {
     const file = event.target.files[0];
@@ -227,8 +293,37 @@ function carregarPDF(event) {
     }
 
     const fileReader = new FileReader();
-    fileReader.onload = function () {
-        const typedarray = new Uint8Array(this.result);
+
+    fileReader.onload = async function () {
+        const arrayBuffer = this.result;
+
+        // — VALIDAÇÃO CHAVE-CADEADO (apenas na retomada) ——————————
+        if (modoRetomada) {
+            const hashValido = await BackupManager.validarPdf(arrayBuffer);
+
+            if (!hashValido) {
+                const idEsperado = BackupManager.getProcessoId() || 'desconhecido';
+                exibirToast(
+                    `PDF incorreto. Este backup pertence ao processo "${idEsperado}". Selecione o arquivo correto.`,
+                    'erro'
+                );
+                event.target.value = '';
+                // Mantém modoRetomada = true para nova tentativa;
+                // reabre o seletor após 1.5s para o usuário ler o toast.
+                setTimeout(() => document.getElementById('pdf-upload').click(), 1500);
+                return;
+            }
+        }
+
+        // — NOVO PROCESSO: registrar sessão no BackupManager ———————
+        if (!modoRetomada) {
+            await BackupManager.iniciarSessao(file.name, arrayBuffer);
+        }
+
+        // — CARREGAMENTO DO PDF.js ——————————————————————————————————
+        // SubtleCrypto não detacha o ArrayBuffer, portanto a criação
+        // do Uint8Array abaixo é sempre segura após os awaits acima.
+        const typedarray = new Uint8Array(arrayBuffer);
 
         pdfjsLib.getDocument(typedarray).promise
             .then(async pdf => {
@@ -242,12 +337,10 @@ function carregarPDF(event) {
                 wrapper.style.display = 'flex';
                 document.getElementById('pdf-placeholder').style.display = 'none';
 
-                // Configura o IntersectionObserver para lazy rendering e rastreamento de página atual
                 if (pdfObserver) pdfObserver.disconnect();
                 pdfObserver = new IntersectionObserver((entries) => {
                     entries.forEach(entry => {
                         const pageNum = parseInt(entry.target.dataset.pageNumber);
-
                         if (entry.isIntersecting && entry.intersectionRatio > 0.4) {
                             currentPage = pageNum;
                         }
@@ -257,21 +350,20 @@ function carregarPDF(event) {
                         }
                     });
                 }, {
-                    root: document.getElementById('pdf-container'),
+                    root:       document.getElementById('pdf-container'),
                     rootMargin: '600px 0px',
-                    threshold: [0, 0.5]
+                    threshold:  [0, 0.5]
                 });
 
-                // Usa a primeira página para definir as dimensões dos placeholders
-                const firstPage    = await pdf.getPage(1);
-                const viewportCSS  = firstPage.getViewport({ scale: 1.5 });
+                const firstPage   = await pdf.getPage(1);
+                const viewportCSS = firstPage.getViewport({ scale: 1.5 });
 
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const pageContainer = document.createElement('div');
-                    pageContainer.className        = 'pdf-page-container';
+                    pageContainer.className          = 'pdf-page-container';
                     pageContainer.dataset.pageNumber = i;
-                    pageContainer.dataset.loaded   = 'false';
-                    pageContainer.style.cssText    = `
+                    pageContainer.dataset.loaded     = 'false';
+                    pageContainer.style.cssText      = `
                         width: ${viewportCSS.width}px;
                         height: ${viewportCSS.height}px;
                         position: relative;
@@ -283,15 +375,12 @@ function carregarPDF(event) {
                     pdfObserver.observe(pageContainer);
                 }
 
-                // Gestão de sessão pós-carregamento do PDF
+                // — Gestão de sessão pós-carregamento ——————————————
                 if (modoRetomada) {
-                    // Retomada: dados já restaurados, apenas volta para leitura
                     modoRetomada = false;
                     trocarAba('leitura');
-                    exibirToast('PDF carregado. Sessão retomada com sucesso.');
+                    exibirToast('PDF validado e carregado. Sessão retomada com sucesso. ✓');
                 } else {
-                    // Novo processo: forçar criação do arquivo de backup
-                    // Encadeado diretamente no .then(), sem setTimeout
                     exibirToast('PDF carregado! Defina onde salvar o arquivo de backup da sessão.');
                     await iniciarSessaoSalvamento();
                 }
@@ -301,6 +390,7 @@ function carregarPDF(event) {
                 exibirToast('Erro ao ler o PDF. Verifique a integridade do arquivo.', 'erro');
             });
     };
+
     fileReader.readAsArrayBuffer(file);
 }
 
