@@ -90,7 +90,11 @@ window.TopicsManager = (function () {
 
         const card = `
             <div class="timeline-item ${alignClass}">
-                <div class="timeline-number">${numero}</div>
+                <div class="timeline-number"
+                     title="Opções desta anotação"
+                     onclick="abrirMenuAnotacao('${activeTabId}', ${index}, event)">
+                    ${numero}
+                </div>
                 <div class="annotation-card">
                     <div class="card-header">
                         <span class="polo-tag ${tagClass}">${anotacao.polo}</span>

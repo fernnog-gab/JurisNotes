@@ -524,14 +524,39 @@ function exibirPopupClassificacao(tipo, conteudo, clientX, clientY) {
     });
 
     const popup = document.getElementById('classification-popup');
-    popup.style.display = 'flex';
 
-    // Posicionamento: garante que o popup não saia da viewport
-    const W = 230, H = 190;
-    const x = Math.min(clientX + 12, window.innerWidth  - W - 12);
-    const y = Math.min(clientY + 12, window.innerHeight - H - 12);
-    popup.style.left = x + 'px';
-    popup.style.top  = y + 'px';
+    // — Posicionamento Inteligente ——————————————————————————————————————
+    // 1. Renderiza invisível para que o motor de layout calcule as dimensões reais.
+    //    Ordem obrigatória: display ANTES de visibility, pois display:none
+    //    impede qualquer cálculo de layout.
+    popup.style.display    = 'flex';
+    popup.style.visibility = 'hidden';
+
+    // 2. getBoundingClientRect() force-reflui o layout e retorna medidas reais.
+    const { width: popupW, height: popupH } = popup.getBoundingClientRect();
+
+    // 3. Ponto de ancoragem inicial: deslocado 12px do cursor.
+    let x = clientX + 12;
+    let y = clientY + 12;
+
+    // 4. Colisão com borda direita.
+    if (x + popupW > window.innerWidth) {
+        x = window.innerWidth - popupW - 12;
+    }
+
+    // 5. Colisão com borda inferior: joga o popup para CIMA do cursor.
+    if (y + popupH > window.innerHeight) {
+        y = clientY - popupH - 12;
+    }
+
+    // 6. Segurança final: impede que o popup saia pelo topo ou pela esquerda.
+    if (y < 0) y = 8;
+    if (x < 0) x = 8;
+
+    // 7. Aplica posição e torna visível atomicamente.
+    popup.style.left       = x + 'px';
+    popup.style.top        = y + 'px';
+    popup.style.visibility = 'visible';
 }
 
 function classificarESalvar(polo) {
@@ -673,3 +698,140 @@ document.addEventListener('keydown', function (e) {
         if (modoRecorteAtivo) alternarModoRecorte();
     }
 });
+
+/* ================================================
+   GERENCIAMENTO DE ANOTAÇÕES
+   Menu contextual, exclusão e reordenamento.
+   ================================================ */
+
+/** Referência à anotação cujo menu está aberto. */
+let _menuAnotacaoCtx = null;
+
+/**
+ * Abre o menu de ações posicionado junto ao cursor,
+ * com detecção de colisão para não sair da viewport.
+ * Chamado pelo onclick da badge numérica no topics-manager.js.
+ *
+ * @param {string} topicoId  - ID do tópico pai.
+ * @param {number} index     - Índice da anotação no array anotacoes[].
+ * @param {MouseEvent} event - Evento de clique nativo.
+ */
+function abrirMenuAnotacao(topicoId, index, event) {
+    // Impede que o clique feche o menu imediatamente via o listener global abaixo.
+    event.stopPropagation();
+
+    _menuAnotacaoCtx = { topicoId, index };
+
+    const menu = document.getElementById('annotation-context-menu');
+
+    // Renderiza invisível para medir as dimensões reais antes de posicionar.
+    menu.style.display    = 'flex';
+    menu.style.visibility = 'hidden';
+
+    const { width: mW, height: mH } = menu.getBoundingClientRect();
+
+    let x = event.clientX + 10;
+    let y = event.clientY - 10;
+
+    // Colisão com borda direita.
+    if (x + mW > window.innerWidth)  x = window.innerWidth  - mW - 8;
+    // Colisão com borda inferior.
+    if (y + mH > window.innerHeight) y = window.innerHeight - mH - 8;
+    // Segurança: não sai pelo topo ou pela esquerda.
+    if (y < 0) y = 8;
+    if (x < 0) x = 8;
+
+    menu.style.left       = x + 'px';
+    menu.style.top        = y + 'px';
+    menu.style.visibility = 'visible';
+}
+
+/** Fecha o menu ao clicar em qualquer ponto fora dele. */
+document.addEventListener('click', function () {
+    const menu = document.getElementById('annotation-context-menu');
+    if (menu) menu.style.display = 'none';
+});
+
+/**
+ * Remove a anotação referenciada pelo contexto do menu,
+ * renumerando automaticamente as subsequentes.
+ */
+function excluirAnotacao() {
+    if (!_menuAnotacaoCtx) return;
+
+    const { topicoId, index } = _menuAnotacaoCtx;
+    const topico = topicos.find(t => t.id === topicoId);
+
+    // Guarda nula: o tópico pode ter sido excluído enquanto o menu estava aberto.
+    if (!topico) {
+        exibirToast('Tópico não encontrado. Recarregue a sessão.', 'erro');
+        return;
+    }
+
+    // Confirmação em dois cliques: reutiliza o padrão já estabelecido
+    // no botão "Encerrar Sessão" do app, sem alert() bloqueante.
+    // Para exclusão de anotação, um confirm() é aceitável dado o volume
+    // reduzido de frequência dessa ação.
+    if (!confirm('Excluir esta anotação? A ação não pode ser desfeita.')) return;
+
+    topico.anotacoes.splice(index, 1);
+
+    renderizarTopicos();
+    salvarBackupAutomatico();
+    exibirToast('Anotação excluída. Lista renumerada automaticamente.', 'sucesso');
+    _menuAnotacaoCtx = null;
+}
+
+/**
+ * Move a anotação para uma nova posição dentro do mesmo tópico,
+ * deslocando os itens intermediários para preencher a lacuna.
+ */
+function reordenarAnotacao() {
+    if (!_menuAnotacaoCtx) return;
+
+    const { topicoId, index } = _menuAnotacaoCtx;
+    const topico = topicos.find(t => t.id === topicoId);
+
+    if (!topico) {
+        exibirToast('Tópico não encontrado. Recarregue a sessão.', 'erro');
+        return;
+    }
+
+    const posAtual = index + 1;
+    const total    = topico.anotacoes.length;
+
+    if (total <= 1) {
+        exibirToast('Este tópico possui apenas uma anotação. Nada a reordenar.', 'aviso');
+        return;
+    }
+
+    const entrada = prompt(
+        `Posição atual: ${posAtual} de ${total}\n\nMover para qual posição? (1 – ${total})`
+    );
+
+    // Usuário cancelou o prompt.
+    if (entrada === null || entrada.trim() === '') return;
+
+    const novaPos = parseInt(entrada, 10);
+
+    if (isNaN(novaPos) || novaPos < 1 || novaPos > total) {
+        exibirToast(`Posição inválida. Digite um número entre 1 e ${total}.`, 'erro');
+        return;
+    }
+
+    // Feedback claro quando a posição solicitada é a atual.
+    if (novaPos === posAtual) {
+        exibirToast('A anotação já se encontra nessa posição.', 'aviso');
+        return;
+    }
+
+    // Array.splice: extrai da posição velha e reinsere na nova.
+    // O índice base-0 da nova posição é `novaPos - 1`.
+    const [item] = topico.anotacoes.splice(index, 1);
+    topico.anotacoes.splice(novaPos - 1, 0, item);
+
+    renderizarTopicos();
+    salvarBackupAutomatico();
+    exibirToast(`Anotação movida da posição ${posAtual} para ${novaPos}.`, 'sucesso');
+    _menuAnotacaoCtx = null;
+}
