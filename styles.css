@@ -280,15 +280,15 @@ body {
     background: rgba(26, 58, 92, 0.28);
 }
 
+/* ================================================
+   OVERLAY DE RECORTE
+   position/left/top/width/height são definidos via JS
+   em alternarModoRecorte() — não declarar aqui.
+   ================================================ */
 #crop-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
     cursor: crosshair;
     display: none;
-    z-index: 10;
+    z-index: 100;
 }
 
 #crop-box {
