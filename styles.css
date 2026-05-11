@@ -682,6 +682,67 @@ body {
 .tag-laudo-pericial { background: #fff8e1; color: #e65100; }
 
 /* ================================================
+   BADGE NUMÉRICA — INTERATIVIDADE (clicável)
+   ================================================ */
+.timeline-number {
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.2s, box-shadow 0.2s;
+}
+.timeline-number:hover {
+    transform: scale(1.15);
+    background-color: #ffe082;
+    box-shadow: var(--shadow-md);
+}
+.timeline-number:active {
+    transform: scale(0.95);
+}
+
+/* ================================================
+   MENU CONTEXTUAL DA ANOTAÇÃO
+   ================================================ */
+.annotation-context-menu {
+    position: fixed;
+    display: none;       /* Controlado por JS */
+    flex-direction: row;
+    gap: 4px;
+    padding: 4px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    z-index: 4000;       /* Acima do popup de classificação (z-index: 2000) */
+}
+
+.ann-action-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dark);
+    transition: background 0.2s, color 0.2s;
+}
+
+.ann-action-btn svg {
+    width: 18px;
+    height: 18px;
+    pointer-events: none; /* Evita que o SVG interno intercepte o clique do botão */
+}
+
+.ann-action-btn:hover {
+    background: var(--trt-light-bg);
+    color: var(--trt-blue);
+}
+
+.ann-action-delete:hover {
+    background: #ffebee;
+    color: #c62828;
+}
+
+/* ================================================
    BOTÕES NOVOS DO POPUP DE CLASSIFICAÇÃO
    ================================================ */
 .chip-sentenca      { color: #0d47a1; border-color: #90caf9; background: #e3f2fd; }
