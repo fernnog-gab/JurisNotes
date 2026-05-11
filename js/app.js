@@ -684,8 +684,8 @@ overlay.addEventListener('mousemove', function (e) {
 overlay.addEventListener('mouseup', function (e) {
     if (!cropBox) return;
 
-    const cropW = parseInt(cropBox.style.width);
-    const cropH = parseInt(cropBox.style.height);
+    const cropW = parseFloat(cropBox.style.width);
+    const cropH = parseFloat(cropBox.style.height);
 
     if (cropW < 5 || cropH < 5) {
         cropBox.remove();
@@ -693,47 +693,62 @@ overlay.addEventListener('mouseup', function (e) {
         return;
     }
 
-    const canvas = document.querySelector(
-        `.pdf-page-container[data-page-number="${currentPage}"] canvas`
-    );
-    if (!canvas) {
+    const overlayRect = overlay.getBoundingClientRect();
+
+    // Converte as coordenadas do cropBox (relativas ao overlay) para viewport.
+    const cropLeft = parseFloat(cropBox.style.left) + overlayRect.left;
+    const cropTop  = parseFloat(cropBox.style.top)  + overlayRect.top;
+
+    // Encontra o container de página pelo centro do retângulo desenhado.
+    // Não depende de currentPage — é determinístico por posição geométrica.
+    const cropCenterX = cropLeft + cropW / 2;
+    const cropCenterY = cropTop  + cropH / 2;
+
+    let targetContainer = null;
+    document.querySelectorAll('.pdf-page-container').forEach(container => {
+        const r = container.getBoundingClientRect();
+        if (cropCenterX >= r.left && cropCenterX <= r.right &&
+            cropCenterY >= r.top  && cropCenterY <= r.bottom) {
+            targetContainer = container;
+        }
+    });
+
+    if (!targetContainer) {
         cropBox.remove();
         cropBox = null;
-        exibirToast('Página não renderizada. Role até ela e tente novamente.', 'aviso');
-        alternarModoRecorte();
+        exibirToast('Selecione uma área dentro de uma página do documento.', 'aviso');
         return;
     }
 
-    // O overlay é position:fixed, então cropBox.style.left/top são relativos
-    // ao canto superior esquerdo do overlay (= canto do #pdf-container).
-    // Para encontrar a posição no canvas, convertemos para coordenadas de viewport.
-    const overlayRect = overlay.getBoundingClientRect();
-    const canvasRect  = canvas.getBoundingClientRect();
+    const canvas = targetContainer.querySelector('canvas');
+    if (!canvas) {
+        cropBox.remove();
+        cropBox = null;
+        exibirToast('Página ainda sendo renderizada. Aguarde um instante e tente novamente.', 'aviso');
+        return;
+    }
 
-    const cropViewX = parseInt(cropBox.style.left) + overlayRect.left;
-    const cropViewY = parseInt(cropBox.style.top)  + overlayRect.top;
+    const canvasRect = canvas.getBoundingClientRect();
 
-    // Posição do recorte relativa ao canvas (em CSS pixels)
-    const relX = cropViewX - canvasRect.left;
-    const relY = cropViewY - canvasRect.top;
+    // Coordenadas do recorte relativas ao canvas (em CSS pixels).
+    const relX = cropLeft - canvasRect.left;
+    const relY = cropTop  - canvasRect.top;
 
-    // Verificar se o recorte intersecta o canvas
-    if (relX + cropW < 0 || relX > canvasRect.width ||
-        relY + cropH < 0 || relY > canvasRect.height) {
+    // Clamp: garante que o recorte não ultrapasse os limites do canvas,
+    // mesmo que o usuário tenha iniciado a seleção fora da página.
+    const srcX = Math.max(0, relX);
+    const srcY = Math.max(0, relY);
+    const srcW = Math.min(cropW - Math.max(0, -relX), canvasRect.width  - srcX);
+    const srcH = Math.min(cropH - Math.max(0, -relY), canvasRect.height - srcY);
+
+    if (srcW <= 0 || srcH <= 0) {
         cropBox.remove();
         cropBox = null;
         exibirToast('Selecione uma área dentro da página do documento.', 'aviso');
         return;
     }
 
-    // Clamp: recorte não pode ultrapassar as bordas do canvas
-    const srcX = Math.max(0, relX);
-    const srcY = Math.max(0, relY);
-    const srcW = Math.min(cropW, canvasRect.width  - Math.max(0, relX));
-    const srcH = Math.min(cropH, canvasRect.height - Math.max(0, relY));
-
-    // Escalar de CSS pixels para pixels internos do canvas (renderizado em HD)
-    // canvas.width é o tamanho interno (HD); canvasRect.width é o tamanho CSS exibido.
+    // Escala de CSS pixels para pixels internos do canvas (renderizado em HD).
     const scaleX = canvas.width  / canvasRect.width;
     const scaleY = canvas.height / canvasRect.height;
 
@@ -750,6 +765,10 @@ overlay.addEventListener('mouseup', function (e) {
             recorteCanvas.width,       recorteCanvas.height
         );
         const imageDataUrl = recorteCanvas.toDataURL('image/png');
+
+        // Sincroniza currentPage com a página efetivamente fotografada.
+        currentPage = parseInt(targetContainer.dataset.pageNumber);
+
         exibirPopupClassificacao('imagem', imageDataUrl, e.clientX, e.clientY);
     } catch (err) {
         console.error('Erro ao processar recorte:', err);
