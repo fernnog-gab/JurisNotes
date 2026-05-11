@@ -568,8 +568,11 @@ function classificarESalvar(polo) {
         return;
     }
     if (pendingTipo && pendingConteudo) {
+        // Dispara a promessa sem bloquear a execução (Fire and Forget)
         salvarAnotacao(pendingTipo, pendingConteudo, polo, topicoId);
     }
+    
+    // UI responde instantaneamente (UX fluida)
     fecharPopupClassificacao();
 }
 
@@ -585,9 +588,12 @@ function fecharPopupClassificacao() {
    CORREÇÃO: não troca de aba automaticamente (evita regressão de UX).
    Usa toast não-intrusivo como feedback.
    ================================================ */
-function salvarAnotacao(tipo, conteudo, polo, topicoId) {
+async function salvarAnotacao(tipo, conteudo, polo, topicoId) {
     const topicoAlvo = topicos.find(t => t.id === topicoId);
     if (!topicoAlvo) return;
+
+    // Extração invisível em background
+    const pjeId = await extrairIdPjeDaPagina(currentPage);
 
     topicoAlvo.anotacoes.push({
         tipo,
@@ -595,7 +601,8 @@ function salvarAnotacao(tipo, conteudo, polo, topicoId) {
         pagina:    currentPage,
         timestamp: Date.now(),
         // Para imagens, armazena o data URL base64 completo
-        conteudo:  conteudo
+        conteudo:  conteudo,
+        pjeId:     pjeId // Identificador gravado na persistência
     });
 
     renderizarTopicos();      // Re-render com preservação do estado dos accordions
@@ -834,4 +841,58 @@ function reordenarAnotacao() {
     salvarBackupAutomatico();
     exibirToast(`Anotação movida da posição ${posAtual} para ${novaPos}.`, 'sucesso');
     _menuAnotacaoCtx = null;
+}
+
+/* ================================================
+   NAVEGAÇÃO DIRETA DE PÁGINA
+   ================================================ */
+function irParaPagina() {
+    const input = document.getElementById('goto-page-input');
+    const pageNum = parseInt(input.value, 10);
+    
+    if (!pdfDoc) {
+        exibirToast('Carregue um documento primeiro.', 'aviso');
+        return;
+    }
+    
+    if (isNaN(pageNum) || pageNum < 1 || pageNum > pdfDoc.numPages) {
+        exibirToast(`Página inválida. Digite um número entre 1 e ${pdfDoc.numPages}.`, 'erro');
+        return;
+    }
+
+    const pageContainer = document.querySelector(`.pdf-page-container[data-page-number="${pageNum}"]`);
+    if (pageContainer) {
+        pageContainer.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+// Suporte para acionamento via tecla Enter
+document.getElementById('goto-page-input')?.addEventListener('keypress', function (e) {
+    if (e.key === 'Enter') irParaPagina();
+});
+
+/* ================================================
+   EXTRATOR DE IDENTIFICADOR PJe (BACKGROUND)
+   ================================================ */
+const _pjeIdCache = {}; // Cache de processamento
+
+async function extrairIdPjeDaPagina(pageNum) {
+    if (_pjeIdCache[pageNum]) return _pjeIdCache[pageNum];
+    
+    try {
+        const page = await pdfDoc.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        const fullText = textContent.items.map(item => item.str).join(' ');
+        
+        // Regex aprimorada: captura 7 ou mais caracteres alfanuméricos após a hora
+        const regexPje = /\d{2}:\d{2}:\d{2}\s*-\s*([a-f0-9]{7,})\b/i;
+        const match = fullText.match(regexPje);
+        
+        const id = match ? match[1].toLowerCase() : null;
+        _pjeIdCache[pageNum] = id;
+        return id;
+    } catch (err) {
+        console.error('Falha ao extrair texto para ID do PJe:', err);
+        return null;
+    }
 }
