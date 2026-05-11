@@ -5,6 +5,22 @@
 window.TopicsManager = (function () {
     'use strict';
 
+    /**
+     * Sanitizador de HTML — previne XSS ao interpolar dados do usuário
+     * em template literals. Escapa os 5 metacaracteres fundamentais do HTML.
+     * @param {string} str - String bruta (input do usuário ou dado de backup).
+     * @returns {string} String segura para inserção em innerHTML.
+     */
+    function escaparHTML(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     // Paleta de 25 cores suaves para as abas de tópicos
     const CORES_TOPICOS = [
         '#E3F2FD', '#F3E5F5', '#FBE9E7', '#E8F5E9', '#FFF3E0',
@@ -82,8 +98,16 @@ window.TopicsManager = (function () {
         const metaTexto   = `(${idFormatado}fl. ${anotacao.pagina})`;
 
         const htmlConteudo = anotacao.tipo === 'texto'
-            ? `<p class="card-texto">"${anotacao.conteudo}"</p>`
+            ? `<p class="card-texto">"${escaparHTML(anotacao.conteudo)}"</p>`
             : `<img class="card-imagem" src="${anotacao.conteudo}" alt="Recorte — Pág. ${anotacao.pagina}">`;
+
+        // Renderiza o bloco de comentário apenas para imagens que possuam texto.
+        // Backups antigos sem a chave 'comentario' retornam undefined → escaparHTML('')
+        // retorna '' → a condição falha → nenhum elemento espúrio é renderizado.
+        const comentarioSeguro = escaparHTML(anotacao.comentario);
+        const htmlComentario = (anotacao.tipo === 'imagem' && comentarioSeguro)
+            ? `<div class="card-comentario"><strong>Descrição:</strong> ${comentarioSeguro}</div>`
+            : '';
 
         // Pares (0, 2, 4…) ficam à esquerda; ímpares (1, 3, 5…) à direita.
         const isLeft      = index % 2 === 0;
@@ -103,6 +127,7 @@ window.TopicsManager = (function () {
                         <span class="card-meta" style="cursor: copy;" title="Clique para copiar" onclick="navigator.clipboard.writeText('${metaTexto}')">${metaTexto}</span>
                     </div>
                     ${htmlConteudo}
+                    ${htmlComentario}
                 </div>
             </div>`;
 

@@ -556,28 +556,55 @@ function exibirPopupClassificacao(tipo, conteudo, clientX, clientY) {
     // 7. Aplica posição e torna visível atomicamente.
     popup.style.left       = x + 'px';
     popup.style.top        = y + 'px';
+
+    // Controla visibilidade do campo de comentário conforme o tipo de anotação.
+    // Apenas recortes de imagem exibem o textarea — anotações de texto não o utilizam.
+    const txtArea = document.getElementById('comentario-input');
+    txtArea.value = '';
+    if (tipo === 'imagem') {
+        txtArea.style.display = 'block';
+        // requestAnimationFrame duplo: garante que o layout foi calculado
+        // pelo browser antes do focus() (compatível com Firefox e Safari).
+        requestAnimationFrame(() => requestAnimationFrame(() => txtArea.focus()));
+    } else {
+        txtArea.style.display = 'none';
+    }
+
     popup.style.visibility = 'visible';
 }
 
 function classificarESalvar(polo) {
-    const select   = document.getElementById('seletor-topico');
-    const topicoId = select.value;
+    const select     = document.getElementById('seletor-topico');
+    const topicoId   = select.value;
 
     if (!topicoId) {
         exibirToast('Selecione o tópico de destino antes de salvar.', 'aviso');
         return;
     }
+
     if (pendingTipo && pendingConteudo) {
+        // Captura o comentário do usuário. Para anotações de texto,
+        // o textarea está oculto e seu valor é '' por garantia do fechar().
+        const comentario = document.getElementById('comentario-input').value.trim();
+
         // Dispara a promessa sem bloquear a execução (Fire and Forget)
-        salvarAnotacao(pendingTipo, pendingConteudo, polo, topicoId);
+        salvarAnotacao(pendingTipo, pendingConteudo, polo, topicoId, comentario);
     }
-    
+
     // UI responde instantaneamente (UX fluida)
     fecharPopupClassificacao();
 }
 
 function fecharPopupClassificacao() {
     document.getElementById('classification-popup').style.display = 'none';
+
+    // Oculta e limpa o textarea para não vazar estado na próxima abertura.
+    const txtArea = document.getElementById('comentario-input');
+    if (txtArea) {
+        txtArea.style.display = 'none';
+        txtArea.value = '';
+    }
+
     pendingTipo     = null;
     pendingConteudo = null;
     if (window.getSelection) window.getSelection().removeAllRanges();
@@ -588,7 +615,7 @@ function fecharPopupClassificacao() {
    CORREÇÃO: não troca de aba automaticamente (evita regressão de UX).
    Usa toast não-intrusivo como feedback.
    ================================================ */
-async function salvarAnotacao(tipo, conteudo, polo, topicoId) {
+async function salvarAnotacao(tipo, conteudo, polo, topicoId, comentario = '') {
     const topicoAlvo = topicos.find(t => t.id === topicoId);
     if (!topicoAlvo) return;
 
@@ -598,11 +625,12 @@ async function salvarAnotacao(tipo, conteudo, polo, topicoId) {
     topicoAlvo.anotacoes.push({
         tipo,
         polo,
-        pagina:    currentPage,
-        timestamp: Date.now(),
+        pagina:     currentPage,
+        timestamp:  Date.now(),
         // Para imagens, armazena o data URL base64 completo
-        conteudo:  conteudo,
-        pjeId:     pjeId // Identificador gravado na persistência
+        conteudo:   conteudo,
+        pjeId:      pjeId, // Identificador gravado na persistência
+        comentario: comentario // Nova propriedade. Ausente em backups antigos = '' por default.
     });
 
     renderizarTopicos();      // Re-render com preservação do estado dos accordions
