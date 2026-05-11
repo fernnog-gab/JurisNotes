@@ -76,8 +76,10 @@ window.TopicsManager = (function () {
         const total    = arr.length;
         const numero   = index + 1;
         const tagClass = poloParaClasse(anotacao.polo);
-        const hora     = new Date(anotacao.timestamp)
-            .toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        
+        // Substituição do horário pela meta-informação inteligente do PJe
+        const idFormatado = anotacao.pjeId ? `Id. ${anotacao.pjeId} - ` : '';
+        const metaTexto   = `(${idFormatado}fl. ${anotacao.pagina})`;
 
         const htmlConteudo = anotacao.tipo === 'texto'
             ? `<p class="card-texto">"${anotacao.conteudo}"</p>`
@@ -98,7 +100,7 @@ window.TopicsManager = (function () {
                 <div class="annotation-card">
                     <div class="card-header">
                         <span class="polo-tag ${tagClass}">${anotacao.polo}</span>
-                        <span class="card-meta">${hora} — Pág. ${anotacao.pagina}</span>
+                        <span class="card-meta" style="cursor: copy;" title="Clique para copiar" onclick="navigator.clipboard.writeText('${metaTexto}')">${metaTexto}</span>
                     </div>
                     ${htmlConteudo}
                 </div>
