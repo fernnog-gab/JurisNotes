@@ -120,6 +120,61 @@ body {
 #status-backup { color: rgba(255,255,255,0.6); }
 #status-backup.ativa { color: #a5d6a7; }
 
+.page-nav-box {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    padding: 0 8px;
+    margin-bottom: 20px;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.page-nav-box:focus-within {
+    border-color: rgba(255, 255, 255, 0.6);
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.nav-icon {
+    width: 16px;
+    height: 16px;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: color 0.2s;
+}
+
+.nav-icon:hover {
+    color: #ffffff;
+}
+
+#goto-page-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: white;
+    padding: 10px 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    outline: none;
+}
+
+#goto-page-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: 400;
+}
+
+/* Remove as setas de incremento do input numérico */
+#goto-page-input::-webkit-outer-spin-button,
+#goto-page-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+#goto-page-input[type=number] {
+    appearance: textfield;
+}
+
 /* ================================================
    ÁREA PRINCIPAL E ABAS
    ================================================ */
