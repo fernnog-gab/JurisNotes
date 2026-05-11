@@ -803,3 +803,47 @@ body {
 .chip-sentenca      { color: #0d47a1; border-color: #90caf9; background: #e3f2fd; }
 .chip-sentenca-ed   { color: #6a1b9a; border-color: #ce93d8; background: #f3e5f5; }
 .chip-perito        { color: #e65100; border-color: #ffcc80; background: #fff8e1; }
+
+/* ================================================
+   POPUP — CAMPO DE COMENTÁRIO DO RECORTE DE IMAGEM
+   Inicia oculto; exibido via JS apenas para tipo 'imagem'.
+   ================================================ */
+.popup-textarea {
+    display: none; /* Estado inicial: oculto. Controlado por JS. */
+    width: 100%;
+    min-height: 72px;
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.84rem;
+    color: var(--text-dark);
+    background: #fafafa;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+    line-height: 1.5;
+}
+
+.popup-textarea:focus {
+    border-color: var(--trt-blue-mid);
+    background: #ffffff;
+}
+
+/* ================================================
+   CARD — BLOCO DE DESCRIÇÃO ABAIXO DA MINIATURA
+   Separador tracejado cria divisão sutil sem peso visual.
+   ================================================ */
+.card-comentario {
+    font-size: 0.84rem;
+    color: #444;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border-color);
+    line-height: 1.6;
+}
+
+.card-comentario strong {
+    color: var(--trt-blue-mid);
+    font-weight: 600;
+}
