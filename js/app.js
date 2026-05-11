@@ -494,7 +494,21 @@ function alternarModoRecorte() {
     const btn        = document.getElementById('btn-ferramenta-recorte');
     const textLayers = document.querySelectorAll('.textLayer');
 
-    overlay.style.display = modoRecorteAtivo ? 'block' : 'none';
+    if (modoRecorteAtivo) {
+        // Posiciona o overlay como fixed cobrindo exatamente a área do visualizador.
+        // position:fixed não depende do scroll do container — o overlay sempre
+        // acompanha a janela, independentemente de quantas páginas foram roladas.
+        const r = document.getElementById('pdf-container').getBoundingClientRect();
+        overlay.style.position = 'fixed';
+        overlay.style.left     = r.left   + 'px';
+        overlay.style.top      = r.top    + 'px';
+        overlay.style.width    = r.width  + 'px';
+        overlay.style.height   = r.height + 'px';
+        overlay.style.display  = 'block';
+    } else {
+        overlay.style.display = 'none';
+    }
+
     textLayers.forEach(l => { l.style.pointerEvents = modoRecorteAtivo ? 'none' : 'auto'; });
     btn.classList.toggle('ativo', modoRecorteAtivo);
 }
@@ -685,28 +699,61 @@ overlay.addEventListener('mouseup', function (e) {
     if (!canvas) {
         cropBox.remove();
         cropBox = null;
+        exibirToast('Página não renderizada. Role até ela e tente novamente.', 'aviso');
         alternarModoRecorte();
         return;
     }
 
-    const dpr = window.devicePixelRatio || 1;
-    const sx  = parseInt(cropBox.style.left) * dpr;
-    const sy  = parseInt(cropBox.style.top)  * dpr;
-    const sw  = cropW * dpr;
-    const sh  = cropH * dpr;
+    // O overlay é position:fixed, então cropBox.style.left/top são relativos
+    // ao canto superior esquerdo do overlay (= canto do #pdf-container).
+    // Para encontrar a posição no canvas, convertemos para coordenadas de viewport.
+    const overlayRect = overlay.getBoundingClientRect();
+    const canvasRect  = canvas.getBoundingClientRect();
+
+    const cropViewX = parseInt(cropBox.style.left) + overlayRect.left;
+    const cropViewY = parseInt(cropBox.style.top)  + overlayRect.top;
+
+    // Posição do recorte relativa ao canvas (em CSS pixels)
+    const relX = cropViewX - canvasRect.left;
+    const relY = cropViewY - canvasRect.top;
+
+    // Verificar se o recorte intersecta o canvas
+    if (relX + cropW < 0 || relX > canvasRect.width ||
+        relY + cropH < 0 || relY > canvasRect.height) {
+        cropBox.remove();
+        cropBox = null;
+        exibirToast('Selecione uma área dentro da página do documento.', 'aviso');
+        return;
+    }
+
+    // Clamp: recorte não pode ultrapassar as bordas do canvas
+    const srcX = Math.max(0, relX);
+    const srcY = Math.max(0, relY);
+    const srcW = Math.min(cropW, canvasRect.width  - Math.max(0, relX));
+    const srcH = Math.min(cropH, canvasRect.height - Math.max(0, relY));
+
+    // Escalar de CSS pixels para pixels internos do canvas (renderizado em HD)
+    // canvas.width é o tamanho interno (HD); canvasRect.width é o tamanho CSS exibido.
+    const scaleX = canvas.width  / canvasRect.width;
+    const scaleY = canvas.height / canvasRect.height;
 
     const recorteCanvas = document.createElement('canvas');
-    recorteCanvas.width  = sw;
-    recorteCanvas.height = sh;
+    recorteCanvas.width  = Math.round(srcW * scaleX);
+    recorteCanvas.height = Math.round(srcH * scaleY);
 
     try {
-        recorteCanvas.getContext('2d').drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+        recorteCanvas.getContext('2d').drawImage(
+            canvas,
+            Math.round(srcX * scaleX), Math.round(srcY * scaleY),
+            recorteCanvas.width,       recorteCanvas.height,
+            0, 0,
+            recorteCanvas.width,       recorteCanvas.height
+        );
         const imageDataUrl = recorteCanvas.toDataURL('image/png');
         exibirPopupClassificacao('imagem', imageDataUrl, e.clientX, e.clientY);
     } catch (err) {
-        // Coordenadas relativas ao scroll do container serão corrigidas no Roadmap v3
-        console.warn('Ajuste de coordenadas em desenvolvimento para scroll do container.', err);
-        exibirToast('Recorte fora do canvas renderizado. Role a página e tente novamente.', 'aviso');
+        console.error('Erro ao processar recorte:', err);
+        exibirToast('Erro ao processar o recorte. Tente novamente.', 'erro');
     }
 
     cropBox.remove();
