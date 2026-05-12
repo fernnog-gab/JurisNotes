@@ -286,9 +286,13 @@ body {
    em alternarModoRecorte() — não declarar aqui.
    ================================================ */
 #crop-overlay {
-    cursor: crosshair;
     display: none;
     z-index: 100;
+    /* background mínimo: força captura de eventos em Firefox/Safari.
+       Um elemento 100% transparente pode silenciosamente ignorar o mouse
+       em certos contextos de renderização. rgba com alpha > 0 resolve. */
+    background: rgba(0, 0, 0, 0.001);
+    cursor: crosshair;
 }
 
 #crop-box {
@@ -766,6 +770,81 @@ body {
     border-radius: 8px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
     z-index: 4000;       /* Acima do popup de classificação (z-index: 2000) */
+}
+
+/* ================================================
+   WIZARD DE RECORTE DE IMAGEM
+   ================================================ */
+
+/* Fundo de bloqueio semitransparente — impede interações
+   acidentais com a página enquanto o wizard está aberto.   */
+#wizard-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;                         /* top/right/bottom/left = 0 */
+    background: rgba(0, 0, 0, 0.40);
+    z-index: 2999;
+}
+
+/* Container base das duas etapas do wizard */
+.crop-wizard-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.28);
+    z-index: 3000;                    /* Acima do backdrop (2999) */
+    min-width: 360px;
+    max-width: 90vw;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.wizard-header {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--trt-blue);
+    border-bottom: 2px solid var(--trt-light-bg);
+    padding-bottom: 8px;
+    margin-bottom: 4px;
+}
+
+.wizard-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px solid #eee;
+}
+
+/* Container da pré-visualização do recorte no Passo 2 */
+.crop-preview-container {
+    text-align: center;
+    background: var(--trt-light-bg);
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 12px;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.crop-preview-container img {
+    max-width: 100%;
+    border-radius: 4px;
+    box-shadow: var(--shadow-sm);
+}
+
+/* Grade 2 colunas para os botões de polo */
+.wizard-polo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
 }
 
 .ann-action-btn {
