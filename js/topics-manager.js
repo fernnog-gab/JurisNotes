@@ -135,7 +135,11 @@ window.TopicsManager = (function () {
                     <div class="sub-annotation-item">
                         <div class="sub-connector-line"></div>
                         <div class="sub-annotation-card">
-                            <div class="sub-badge">${label}</div>
+                            <div class="sub-badge"
+                                 title="Opções desta ideia secundária"
+                                 onclick="abrirMenuSubAnotacao('${activeTabId}', ${index}, ${sIdx}, event)">
+                                ${label}
+                            </div>
                             ${escaparHTML(sub.texto)}
                         </div>
                     </div>`;

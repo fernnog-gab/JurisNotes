@@ -8,17 +8,6 @@ let modoRetomada         = false;  // Flag: true quando restaurando sessão exis
 let _encerrarTimer       = null;   // ID do setTimeout de confirmação do botão Encerrar
 let _encerrarConfirmando = false;  // Flag: aguardando segundo clique para confirmar encerramento
 
-let modoRecorteAtivo         = false;
-let startX, startY;
-let cropBox                  = null;
-
-// — Estado do Wizard de Recorte ——————————————————————————————
-let _wizardTopicoSelecionado = null;  // ID do tópico confirmado no Passo 1
-let _wizardImagemCapturada   = null;  // Data URL base64 do recorte confirmado
-let _ultimoTopicoUsadoId     = null;  // Memória inteligente: pré-seleciona na próxima abertura
-
-let pendingTipo      = null;   // Tipo da extração pendente: 'texto' | 'imagem'
-let pendingConteudo  = null;   // Conteúdo bruto da extração pendente
 let pdfObserver      = null;   // IntersectionObserver para lazy loading
 
 /* ================================================
@@ -491,244 +480,6 @@ function capturarTrechoSelecionado() {
 }
 
 /* ================================================
-   MODO RECORTE (CAPTURA DE IMAGEM DE CANVAS)
-   ================================================ */
-/* ================================================
-   WIZARD DE RECORTE DE IMAGEM
-   State-machine de 3 estados:
-   IDLE → PASSO_1 (seleção de tópico) →
-   RECORTANDO (overlay ativo) → PASSO_2 (confirmação)
-   ================================================ */
-
-/**
- * PASSO 0 — Ponto de entrada.
- * Abre o Passo 1 do wizard (seleção de tópico).
- * Bloqueia a interface com o backdrop.
- */
-function iniciarRecorteWizard() {
-    if (topicos.length === 0) {
-        exibirToast('Crie pelo menos um Tópico Recursal antes de realizar recortes.', 'aviso');
-        return;
-    }
-
-    const select = document.getElementById('crop-topic-select');
-    select.innerHTML = '<option value="">Selecione o Tópico...</option>';
-    topicos.forEach(t => select.appendChild(new Option(t.nome, t.id)));
-
-    // Memória inteligente: pré-seleciona o último tópico utilizado
-    if (_ultimoTopicoUsadoId) select.value = _ultimoTopicoUsadoId;
-
-    document.getElementById('wizard-backdrop').style.display = 'block';
-    document.getElementById('crop-wizard-step1').style.display = 'flex';
-}
-
-/**
- * PASSO 1 → RECORTANDO.
- * Valida o tópico selecionado, fecha o Passo 1 e ativa o overlay de recorte.
- */
-function avancarParaRecorte() {
-    const topicoId = document.getElementById('crop-topic-select').value;
-    if (!topicoId) {
-        exibirToast('Selecione um tópico para continuar.', 'aviso');
-        return;
-    }
-
-    _wizardTopicoSelecionado = topicoId;
-    document.getElementById('crop-wizard-step1').style.display = 'none';
-    document.getElementById('wizard-backdrop').style.display  = 'none'; // backdrop some: usuário vê o PDF
-
-    // Ativa o overlay de recorte (usa a referência global 'overlay' já declarada abaixo)
-    modoRecorteAtivo = true;
-    const r = document.getElementById('pdf-container').getBoundingClientRect();
-    overlay.style.position = 'fixed';
-    overlay.style.left     = r.left   + 'px';
-    overlay.style.top      = r.top    + 'px';
-    overlay.style.width    = r.width  + 'px';
-    overlay.style.height   = r.height + 'px';
-    overlay.style.display  = 'block';
-
-    document.querySelectorAll('.textLayer').forEach(l => l.style.pointerEvents = 'none');
-    document.getElementById('btn-ferramenta-recorte').classList.add('ativo');
-    exibirToast('Tópico confirmado. Arraste o mouse sobre o documento para recortar.', 'sucesso');
-}
-
-/**
- * RECORTANDO → IDLE.
- * Esconde o overlay e restaura os event listeners do texto.
- * Usada internamente pelo wizard e externamente pelo encerramento de sessão/Escape.
- */
-function desativarOverlayRecorte() {
-    modoRecorteAtivo = false;
-    overlay.style.display = 'none';
-    document.getElementById('btn-ferramenta-recorte').classList.remove('ativo');
-    document.querySelectorAll('.textLayer').forEach(l => l.style.pointerEvents = 'auto');
-}
-
-/**
- * RECORTANDO → PASSO_2.
- * Chamada pelo handler mouseup após a geração bem-sucedida do canvas.
- * Desativa o overlay e exibe o Passo 2 com a pré-visualização da imagem.
- */
-function abrirConfirmacaoRecorteWizard() {
-    desativarOverlayRecorte();
-    document.getElementById('crop-preview-img').src    = _wizardImagemCapturada;
-    document.getElementById('crop-comment-input').value = '';
-    document.getElementById('wizard-backdrop').style.display   = 'block';
-    document.getElementById('crop-wizard-step2').style.display = 'flex';
-}
-
-/**
- * PASSO_2 → IDLE.
- * Salva a anotação com o polo selecionado e encerra o wizard.
- */
-function finalizarRecorteWizard(polo) {
-    const comentario = document.getElementById('crop-comment-input').value.trim();
-    _ultimoTopicoUsadoId = _wizardTopicoSelecionado; // Persiste memória para próxima abertura
-    salvarAnotacao('imagem', _wizardImagemCapturada, polo, _wizardTopicoSelecionado, comentario);
-    fecharTudoWizard();
-}
-
-/**
- * PASSO_2 → RECORTANDO.
- * Volta ao overlay sem retornar ao Passo 1: o tópico já foi escolhido.
- */
-function refazerRecorteArea() {
-    document.getElementById('crop-wizard-step2').style.display = 'none';
-    document.getElementById('wizard-backdrop').style.display   = 'none';
-    avancarParaRecorte();
-}
-
-/**
- * QUALQUER ESTADO → IDLE.
- * Cancela o wizard por completo, fechando todos os painéis e limpando o estado.
- * Chamada pelo botão Cancelar, pela tecla Escape e pelo clique no backdrop.
- */
-function cancelarRecorteWizard() {
-    fecharTudoWizard();
-    desativarOverlayRecorte();
-}
-
-/** Utilitário interno: fecha os painéis visuais e zera as variáveis de estado. */
-function fecharTudoWizard() {
-    document.getElementById('crop-wizard-step1').style.display = 'none';
-    document.getElementById('crop-wizard-step2').style.display = 'none';
-    document.getElementById('wizard-backdrop').style.display   = 'none';
-    _wizardTopicoSelecionado = null;
-    _wizardImagemCapturada   = null;
-}
-
-/* ================================================
-   POPUP DE CLASSIFICAÇÃO
-   Exibe o popup com o seletor de tópico populado dinamicamente.
-   CORREÇÃO: seletor-topico está DENTRO do popup no HTML.
-   ================================================ */
-function exibirPopupClassificacao(tipo, conteudo, clientX, clientY) {
-    if (topicos.length === 0) {
-        exibirToast('Crie pelo menos um Tópico Recursal antes de extrair informações.', 'aviso');
-        return;
-    }
-
-    pendingTipo     = tipo;
-    pendingConteudo = conteudo;
-
-    // Popula o seletor com os tópicos atuais
-    const select = document.getElementById('seletor-topico');
-    select.innerHTML = '<option value="">Selecione o Tópico...</option>';
-    topicos.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value       = t.id;
-        opt.textContent = t.nome;
-        select.appendChild(opt);
-    });
-
-    const popup = document.getElementById('classification-popup');
-
-    // — Posicionamento Inteligente ——————————————————————————————————————
-    // 1. Renderiza invisível para que o motor de layout calcule as dimensões reais.
-    //    Ordem obrigatória: display ANTES de visibility, pois display:none
-    //    impede qualquer cálculo de layout.
-    popup.style.display    = 'flex';
-    popup.style.visibility = 'hidden';
-
-    // 2. getBoundingClientRect() force-reflui o layout e retorna medidas reais.
-    const { width: popupW, height: popupH } = popup.getBoundingClientRect();
-
-    // 3. Ponto de ancoragem inicial: deslocado 12px do cursor.
-    let x = clientX + 12;
-    let y = clientY + 12;
-
-    // 4. Colisão com borda direita.
-    if (x + popupW > window.innerWidth) {
-        x = window.innerWidth - popupW - 12;
-    }
-
-    // 5. Colisão com borda inferior: joga o popup para CIMA do cursor.
-    if (y + popupH > window.innerHeight) {
-        y = clientY - popupH - 12;
-    }
-
-    // 6. Segurança final: impede que o popup saia pelo topo ou pela esquerda.
-    if (y < 0) y = 8;
-    if (x < 0) x = 8;
-
-    // 7. Aplica posição e torna visível atomicamente.
-    popup.style.left       = x + 'px';
-    popup.style.top        = y + 'px';
-
-    // Controla visibilidade do campo de comentário conforme o tipo de anotação.
-    // Apenas recortes de imagem exibem o textarea — anotações de texto não o utilizam.
-    const txtArea = document.getElementById('comentario-input');
-    txtArea.value = '';
-    if (tipo === 'imagem') {
-        txtArea.style.display = 'block';
-        // requestAnimationFrame duplo: garante que o layout foi calculado
-        // pelo browser antes do focus() (compatível com Firefox e Safari).
-        requestAnimationFrame(() => requestAnimationFrame(() => txtArea.focus()));
-    } else {
-        txtArea.style.display = 'none';
-    }
-
-    popup.style.visibility = 'visible';
-}
-
-function classificarESalvar(polo) {
-    const select     = document.getElementById('seletor-topico');
-    const topicoId   = select.value;
-
-    if (!topicoId) {
-        exibirToast('Selecione o tópico de destino antes de salvar.', 'aviso');
-        return;
-    }
-
-    if (pendingTipo && pendingConteudo) {
-        // Captura o comentário do usuário. Para anotações de texto,
-        // o textarea está oculto e seu valor é '' por garantia do fechar().
-        const comentario = document.getElementById('comentario-input').value.trim();
-
-        // Dispara a promessa sem bloquear a execução (Fire and Forget)
-        salvarAnotacao(pendingTipo, pendingConteudo, polo, topicoId, comentario);
-    }
-
-    // UI responde instantaneamente (UX fluida)
-    fecharPopupClassificacao();
-}
-
-function fecharPopupClassificacao() {
-    document.getElementById('classification-popup').style.display = 'none';
-
-    // Oculta e limpa o textarea para não vazar estado na próxima abertura.
-    const txtArea = document.getElementById('comentario-input');
-    if (txtArea) {
-        txtArea.style.display = 'none';
-        txtArea.value = '';
-    }
-
-    pendingTipo     = null;
-    pendingConteudo = null;
-    if (window.getSelection) window.getSelection().removeAllRanges();
-}
-
-/* ================================================
    PERSISTÊNCIA DE ANOTAÇÕES
    CORREÇÃO: não troca de aba automaticamente (evita regressão de UX).
    Usa toast não-intrusivo como feedback.
@@ -756,149 +507,6 @@ async function salvarAnotacao(tipo, conteudo, polo, topicoId, comentario = '') {
     exibirToast(`Anotação salva em "${topicoAlvo.nome}".`);
     // Não troca de aba: o usuário permanece na leitura para continuar a análise.
 }
-
-/* ================================================
-   EVENT LISTENERS PERMANENTES (DOM)
-   ================================================ */
-const overlay = document.getElementById('crop-overlay');
-
-overlay.addEventListener('mousedown', function (e) {
-    const rect = overlay.getBoundingClientRect();
-    startX = e.clientX - rect.left;
-    startY = e.clientY - rect.top;
-
-    if (cropBox) cropBox.remove();
-    cropBox = document.createElement('div');
-    cropBox.id = 'crop-box';
-    cropBox.style.cssText = `left:${startX}px; top:${startY}px; width:0; height:0;`;
-    overlay.appendChild(cropBox);
-});
-
-overlay.addEventListener('mousemove', function (e) {
-    if (!cropBox) return;
-    const rect = overlay.getBoundingClientRect();
-    const curX = e.clientX - rect.left;
-    const curY = e.clientY - rect.top;
-    cropBox.style.width  = Math.abs(curX - startX) + 'px';
-    cropBox.style.height = Math.abs(curY - startY) + 'px';
-    cropBox.style.left   = Math.min(startX, curX)  + 'px';
-    cropBox.style.top    = Math.min(startY, curY)  + 'px';
-});
-
-overlay.addEventListener('mouseup', function (e) {
-    if (!cropBox) return;
-
-    const cropW = parseFloat(cropBox.style.width);
-    const cropH = parseFloat(cropBox.style.height);
-
-    if (cropW < 5 || cropH < 5) {
-        cropBox.remove();
-        cropBox = null;
-        return;
-    }
-
-    const overlayRect = overlay.getBoundingClientRect();
-
-    // Converte as coordenadas do cropBox (relativas ao overlay) para viewport.
-    const cropLeft = parseFloat(cropBox.style.left) + overlayRect.left;
-    const cropTop  = parseFloat(cropBox.style.top)  + overlayRect.top;
-
-    // Encontra o container de página pelo centro do retângulo desenhado.
-    const cropCenterX = cropLeft + cropW / 2;
-    const cropCenterY = cropTop  + cropH / 2;
-
-    let targetContainer = null;
-    document.querySelectorAll('.pdf-page-container').forEach(container => {
-        const r = container.getBoundingClientRect();
-        if (cropCenterX >= r.left && cropCenterX <= r.right &&
-            cropCenterY >= r.top  && cropCenterY <= r.bottom) {
-            targetContainer = container;
-        }
-    });
-
-    if (!targetContainer) {
-        cropBox.remove();
-        cropBox = null;
-        exibirToast('Selecione uma área dentro de uma página do documento.', 'aviso');
-        desativarOverlayRecorte(); // ← cancela o modo sem fechar o wizard inteiro
-        return;
-    }
-
-    const canvas = targetContainer.querySelector('canvas');
-    if (!canvas) {
-        cropBox.remove();
-        cropBox = null;
-        exibirToast('Página ainda sendo renderizada. Aguarde um instante e tente novamente.', 'aviso');
-        return;
-    }
-
-    const canvasRect = canvas.getBoundingClientRect();
-
-    // Coordenadas do recorte relativas ao canvas (em CSS pixels).
-    const relX = cropLeft - canvasRect.left;
-    const relY = cropTop  - canvasRect.top;
-
-    // Clamp: garante que o recorte não ultrapasse os limites do canvas.
-    const srcX = Math.max(0, relX);
-    const srcY = Math.max(0, relY);
-    const srcW = Math.min(cropW - Math.max(0, -relX), canvasRect.width  - srcX);
-    const srcH = Math.min(cropH - Math.max(0, -relY), canvasRect.height - srcY);
-
-    if (srcW <= 0 || srcH <= 0) {
-        cropBox.remove();
-        cropBox = null;
-        exibirToast('Selecione uma área dentro da página do documento.', 'aviso');
-        desativarOverlayRecorte();
-        return;
-    }
-
-    // Escala de CSS pixels para pixels internos do canvas (renderizado em HD).
-    const scaleX = canvas.width  / canvasRect.width;
-    const scaleY = canvas.height / canvasRect.height;
-
-    const recorteCanvas = document.createElement('canvas');
-    recorteCanvas.width  = Math.round(srcW * scaleX);
-    recorteCanvas.height = Math.round(srcH * scaleY);
-
-    try {
-        recorteCanvas.getContext('2d').drawImage(
-            canvas,
-            Math.round(srcX * scaleX), Math.round(srcY * scaleY),
-            recorteCanvas.width,       recorteCanvas.height,
-            0, 0,
-            recorteCanvas.width,       recorteCanvas.height
-        );
-        const imageDataUrl = recorteCanvas.toDataURL('image/png');
-
-        // Sincroniza currentPage com a página efetivamente fotografada.
-        currentPage = parseInt(targetContainer.dataset.pageNumber);
-
-        // — MUDANÇA PRINCIPAL: entrega a imagem ao wizard, não ao popup antigo —
-        _wizardImagemCapturada = imageDataUrl;
-        abrirConfirmacaoRecorteWizard(); // Desativa overlay e abre Passo 2
-    } catch (err) {
-        console.error('Erro ao processar recorte:', err);
-        exibirToast('Erro ao processar o recorte. Tente novamente.', 'erro');
-    }
-
-    cropBox.remove();
-    cropBox = null;
-    // desativarOverlayRecorte() já foi chamado por abrirConfirmacaoRecorteWizard()
-    // em caso de sucesso; em caso de erro no catch, desfaz o modo igualmente.
-    desativarOverlayRecorte();
-});
-
-// Fechar popup ao clicar fora dele
-document.addEventListener('click', function (e) {
-    const popup = document.getElementById('classification-popup');
-    if (
-        popup.style.display === 'flex' &&
-        !popup.contains(e.target) &&
-        !e.target.closest('.icon-btn')
-    ) {
-        fecharPopupClassificacao();
-    }
-});
 
 // Fechar popup e desativar modo recorte com Escape
 document.addEventListener('keydown', function (e) {
@@ -969,10 +577,30 @@ function acionarNovoNoIdeia() {
     adicionarSubAnotacao(topicoId, index);
 }
 
-/** Fecha o menu ao clicar em qualquer ponto fora dele. */
-document.addEventListener('click', function () {
+/**
+ * Handler global de clique — fecha todos os menus e popups flutuantes.
+ * Centralizado aqui para evitar múltiplos listeners no document.
+ */
+document.addEventListener('click', function (e) {
+    // 1. Fecha o popup de classificação se o clique foi fora dele
+    const popup = document.getElementById('classification-popup');
+    if (
+        popup &&
+        popup.style.display === 'flex' &&
+        !popup.contains(e.target) &&
+        !e.target.closest('.icon-btn')
+    ) {
+        // Usa chamada global (fecharPopupClassificacao está em interaction-tools.js)
+        if (typeof fecharPopupClassificacao === 'function') fecharPopupClassificacao();
+    }
+
+    // 2. Fecha o menu contextual das anotações principais
     const menu = document.getElementById('annotation-context-menu');
     if (menu) menu.style.display = 'none';
+
+    // 3. Fecha o menu contextual das sub-anotações
+    const menuSub = document.getElementById('sub-annotation-context-menu');
+    if (menuSub) menuSub.style.display = 'none';
 });
 
 /**
@@ -1057,6 +685,117 @@ function reordenarAnotacao() {
     salvarBackupAutomatico();
     exibirToast(`Anotação movida da posição ${posAtual} para ${novaPos}.`, 'sucesso');
     _menuAnotacaoCtx = null;
+}
+
+/* ================================================
+   GERENCIAMENTO DE SUB-ANOTAÇÕES (NÓS DE IDEIA)
+   Menu contextual, exclusão e reordenamento.
+   ================================================ */
+
+/** Referência à sub-anotação cujo menu está aberto. */
+let _menuSubAnotacaoCtx = null;
+
+/**
+ * Abre o menu de ações para sub-anotações (nós de ideia secundários).
+ * Posicionamento inteligente com detecção de colisão idêntica ao menu principal.
+ *
+ * @param {string} topicoId    - ID do tópico pai.
+ * @param {number} parentIndex - Índice do card raiz no array anotacoes[].
+ * @param {number} subIndex    - Índice da sub-anotação no array subAnotacoes[].
+ * @param {MouseEvent} event   - Evento de clique nativo para posicionamento.
+ */
+function abrirMenuSubAnotacao(topicoId, parentIndex, subIndex, event) {
+    event.stopPropagation();
+
+    _menuSubAnotacaoCtx = { topicoId, parentIndex, subIndex };
+
+    const menu = document.getElementById('sub-annotation-context-menu');
+
+    menu.style.display    = 'flex';
+    menu.style.visibility = 'hidden';
+
+    const { width: mW, height: mH } = menu.getBoundingClientRect();
+
+    let x = event.clientX + 10;
+    let y = event.clientY - 10;
+
+    if (x + mW > window.innerWidth)  x = window.innerWidth  - mW - 8;
+    if (y + mH > window.innerHeight) y = window.innerHeight - mH - 8;
+    if (y < 0) y = 8;
+    if (x < 0) x = 8;
+
+    menu.style.left       = x + 'px';
+    menu.style.top        = y + 'px';
+    menu.style.visibility = 'visible';
+}
+
+/**
+ * Remove a sub-anotação referenciada e dispara re-render + backup.
+ */
+function excluirSubAnotacao() {
+    if (!_menuSubAnotacaoCtx) return;
+
+    const { topicoId, parentIndex, subIndex } = _menuSubAnotacaoCtx;
+    const topico = topicos.find(t => t.id === topicoId);
+    if (!topico) return;
+
+    if (!confirm('Excluir esta ideia secundária? A ação não pode ser desfeita.')) return;
+
+    topico.anotacoes[parentIndex].subAnotacoes.splice(subIndex, 1);
+
+    renderizarTopicos();
+    salvarBackupAutomatico();
+    exibirToast('Ideia secundária excluída.', 'sucesso');
+    _menuSubAnotacaoCtx = null;
+    document.getElementById('sub-annotation-context-menu').style.display = 'none';
+}
+
+/**
+ * Reordena a sub-anotação dentro do mesmo card pai.
+ * Usa prompt() para manter consistência com reordenarAnotacao().
+ */
+function reordenarSubAnotacao() {
+    if (!_menuSubAnotacaoCtx) return;
+
+    const { topicoId, parentIndex, subIndex } = _menuSubAnotacaoCtx;
+    const topico = topicos.find(t => t.id === topicoId);
+    if (!topico) return;
+
+    const subAnotacoes = topico.anotacoes[parentIndex].subAnotacoes;
+    const posAtual     = subIndex + 1;
+    const total        = subAnotacoes.length;
+
+    if (total <= 1) {
+        exibirToast('Existe apenas uma ideia secundária neste nó.', 'aviso');
+        return;
+    }
+
+    const entrada = prompt(
+        `Posição atual: ${posAtual} de ${total}\n\nMover para qual posição? (1 – ${total})`
+    );
+
+    if (entrada === null || entrada.trim() === '') return;
+
+    const novaPos = parseInt(entrada, 10);
+
+    if (isNaN(novaPos) || novaPos < 1 || novaPos > total) {
+        exibirToast(`Posição inválida. Digite um número entre 1 e ${total}.`, 'erro');
+        return;
+    }
+
+    if (novaPos === posAtual) {
+        exibirToast('A ideia secundária já se encontra nessa posição.', 'aviso');
+        return;
+    }
+
+    const [item] = subAnotacoes.splice(subIndex, 1);
+    subAnotacoes.splice(novaPos - 1, 0, item);
+
+    renderizarTopicos();
+    salvarBackupAutomatico();
+    exibirToast(`Ideia secundária movida para a posição ${novaPos}.`, 'sucesso');
+    _menuSubAnotacaoCtx = null;
+    document.getElementById('sub-annotation-context-menu').style.display = 'none';
 }
 
 /* ================================================
