@@ -19,18 +19,10 @@
             <span id="status-backup">Aguardando...</span>
         </div>
         
-        <div class="page-nav-box" title="Ir para a página (Pressione Enter)">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" onclick="irParaPagina()">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input type="number" id="goto-page-input" placeholder="Pág." min="1">
-        </div>
-        
         <div class="sidebar-tools">
             <div class="toolbar-icons">
                 
-                <!-- 1. NOVO PROCESSO: carrega PDF + dispara criação do backup -->
+                <!-- ── GRUPO 1: Ferramentas de Sistema ───────────────── -->
                 <label for="pdf-upload" class="icon-btn" title="Novo Processo">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -41,7 +33,6 @@
                 </label>
                 <input type="file" id="pdf-upload" accept="application/pdf" style="display:none;" onchange="novoProcesso(event)">
                 
-                <!-- 2. RETOMAR PROCESSO: abre backup JSON e recarrega PDF vinculado -->
                 <button class="icon-btn" id="btn-retomar-sessao" onclick="retomarProcesso()" title="Retomar Processo Já em Análise">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
@@ -51,32 +42,6 @@
                     </svg>
                 </button>
                 
-                <!-- 3. CRIAR TÓPICO RECURSAL -->
-                <button class="icon-btn" id="btn-novo-topico" onclick="criarTopicoPrompt()" title="Criar Tópico Recursal" disabled>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                </button>
-                
-                <!-- 4. GERAR ANOTAÇÃO A PARTIR DE TEXTO SELECIONADO -->
-                <button class="icon-btn" id="btn-ferramenta-texto" onmousedown="event.preventDefault()" onclick="capturarTrechoSelecionado()" title="Gerar Anotação a Partir de Texto" disabled>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                        <polyline points="16 17 21 12 16 7"></polyline>
-                        <line x1="21" y1="12" x2="9" y2="12"></line>
-                    </svg>
-                </button>
-                
-                <!-- 5. MODO RECORTE DE IMAGEM -->
-                <button class="icon-btn" id="btn-ferramenta-recorte" onclick="iniciarRecorteWizard()" title="Ativar Modo Recorte de Imagem" disabled>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                        <circle cx="12" cy="13" r="4"></circle>
-                    </svg>
-                </button>
-                
-                <!-- 6. ENCERRAR SESSÃO -->
                 <button class="icon-btn" id="btn-encerrar-sessao" onclick="encerrarSessao()" title="Encerrar Sessão" disabled>
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -85,6 +50,42 @@
                         <line x1="9" y1="11" x2="11" y2="11"/>
                     </svg>
                 </button>
+
+                <!-- ── Separador Delicado ─────────────────────────────── -->
+                <hr class="toolbar-separator">
+
+                <!-- ── GRUPO 2: Ferramentas de Trabalho Diário ───────── -->
+                <button class="icon-btn" id="btn-novo-topico" onclick="criarTopicoPrompt()" title="Criar Tópico Recursal" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </button>
+                
+                <button class="icon-btn" id="btn-ferramenta-texto" onmousedown="event.preventDefault()" onclick="capturarTrechoSelecionado()" title="Gerar Anotação a Partir de Texto" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                </button>
+                
+                <button class="icon-btn" id="btn-ferramenta-recorte" onclick="iniciarRecorteWizard()" title="Ativar Modo Recorte de Imagem" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                        <circle cx="12" cy="13" r="4"></circle>
+                    </svg>
+                </button>
+
+                <!-- Botão de impressão: inicia oculto, aparece via JS apenas na aba Anotações -->
+                <button class="icon-btn" id="btn-imprimir-topico" onclick="imprimirTopicoAtivo()" title="Gerar PDF do Tópico Ativo" style="display: none;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                        <rect x="6" y="14" width="12" height="8"></rect>
+                    </svg>
+                </button>
+                
             </div>
         </div>
     </div>
@@ -96,6 +97,21 @@
         </div>
         
         <div id="pdf-container">
+            
+            <!-- Painel flutuante sticky: paginador + indicador de página atual -->
+            <div class="floating-page-panel" id="floating-page-panel" style="display: none;">
+                <div class="current-page-badge" title="Página sendo visualizada">
+                    Pág. <span id="current-page-display">1</span>
+                </div>
+                <div class="page-nav-box floating-nav" title="Digite o número e pressione Enter">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" onclick="irParaPagina()">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="number" id="goto-page-input" placeholder="Ir p/" min="1">
+                </div>
+            </div>
+
             <p id="pdf-placeholder">
                 Carregue um arquivo PDF para iniciar a leitura.<br>
                 <span style="font-size:0.82rem; color:#ccc;">Use o painel à esquerda.</span>
