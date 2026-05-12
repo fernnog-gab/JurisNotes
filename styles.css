@@ -622,16 +622,21 @@ body {
     flex-shrink: 0;
 }
 
-/* ── Conector SVG entre os cards ── */
-
+/* =================================================
+   1. LINHA VERMELHA DINÂMICA (Conector Elástico)
+   ================================================= */
 .connector-wrapper {
+    position: absolute;
+    top: 50px; /* Começa um pouco abaixo do topo do card atual */
+    bottom: -30px; /* Estica até o início visual do card seguinte */
+    left: 0;
     width: 100%;
-    height: 48px;
-    z-index: 1;
-    /* Sem margin negativo: o stroke-linecap="round" do SVG garante
-       a continuidade visual nas extremidades sem magic numbers. */
+    height: auto; /* A altura passa a ser controlada pelo top/bottom */
+    z-index: 0;
+    pointer-events: none; /* Garante que a linha não bloqueie cliques acidentais */
 }
 
+/* Força a visibilidade da curva SVG nas extremidades */
 .connector-wrapper svg {
     width: 100%;
     height: 100%;
@@ -675,12 +680,28 @@ body {
     }
 
     .connector-wrapper {
-        display: none; /* Oculta conectores — sem alternância, não fazem sentido */
+        display: none !important; /* Oculta conectores — sem alternância, não fazem sentido */
     }
 
     /* Em mobile sem conector, reintroduz espaçamento entre cards */
     .timeline-item {
         margin-bottom: 28px;
+    }
+
+    /* Oculta o sistema de ramificação em telas pequenas, preservando legibilidade */
+    .main-card-wrapper::after,
+    .sub-annotations-wrapper::before,
+    .sub-connector-line {
+        display: none !important;
+    }
+    
+    .timeline-item-master {
+        flex-direction: column !important; /* Empilha os cards */
+        gap: 16px;
+    }
+    
+    .main-card-wrapper, .sub-annotations-wrapper {
+        width: 100% !important;
     }
 }
 
@@ -928,13 +949,13 @@ body {
    ================================================ */
 /* Container pai da linha inteira */
 .timeline-item-master {
-    position: relative;
+    position: relative; /* Define a âncora para o conector absoluto */
     z-index: 2;
     display: flex;
     gap: 24px;
     width: 100%;
     margin-bottom: 0;
-    align-items: center; 
+    /* Removemos restrições de align-items aqui para que a altura flexível dite o espaço */
     overflow: visible; /* Proteção de recorte para badges */
 }
 
@@ -947,6 +968,7 @@ body {
     width: 60%;
     flex-shrink: 0;
     overflow: visible;
+    z-index: 2;
 }
 
 .sub-annotations-wrapper {
@@ -955,6 +977,7 @@ body {
     gap: 16px;
     width: 40%;
     position: relative;
+    z-index: 2;
 }
 
 /* Conector tracejado fúcsia lateral */
@@ -969,29 +992,59 @@ body {
     flex-direction: row-reverse;
 }
 
-/* O gradiente da linha fúcsia */
+/* =================================================
+   2. CONEXÕES DO MAPA MENTAL (Linhas Fúcsia)
+   ================================================= */
+/* A. Toco horizontal: Ancorado no centro geométrico exato (50%) do Card Principal */
+.main-card-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%); /* Ajuste fino matemático para o centro real */
+    left: 100%;
+    width: 12px;
+    border-top: 1.5px dashed #d500f9;
+}
+.timeline-item-master.align-right .main-card-wrapper::after {
+    left: auto;
+    right: 100%;
+}
+
+/* B. Tronco vertical centralizado na coluna de nós de ideia */
+.sub-annotations-wrapper::before {
+    content: '';
+    position: absolute;
+    top: 25px; /* Margem interna para não ultrapassar a borda superior do primeiro nó */
+    bottom: 25px; /* Margem interna para não ultrapassar a borda inferior do último nó */
+    left: -12px;
+    border-left: 1.5px dashed #d500f9;
+}
+.timeline-item-master.align-right .sub-annotations-wrapper::before {
+    left: auto;
+    right: -12px;
+    border-left: none;
+    border-right: 1.5px dashed #d500f9;
+}
+
+/* C. Galhos horizontais ligando o tronco a cada sub-card */
 .sub-connector-line {
-    width: 24px;
-    height: 2px;
-    background-image: linear-gradient(to right, #d500f9 50%, transparent 50%);
-    background-size: 8px 10px;
-    background-position: bottom;
-    background-repeat: repeat-x;
-    flex-shrink: 0;
+    width: 12px;
+    height: 0; /* Remove comportamento de bloco */
+    border-top: 1.5px dashed #d500f9; /* Traço fúcsia nativo em vez de gradiente */
+    background: none; 
+    margin: 0;
 }
 
-/* CRÍTICO: Inverter visualmente o fluxo do tracejado para o lado direito */
-.timeline-item-master.align-right .sub-connector-line {
-    background-image: linear-gradient(to left, #d500f9 50%, transparent 50%);
-}
-
+/* =================================================
+   3. ESTILIZAÇÃO DO CARD: NÓ DE IDEIA
+   ================================================= */
 /* Card do nó de ideia */
 .sub-annotation-card {
     background-color: #fffdf2;
-    border: 1px solid #e8e2c8;
+    border: 1px solid #d500f9; /* Contorno sólido elegante */
     border-radius: 8px;
     padding: 14px 16px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 8px rgba(213, 0, 249, 0.06); /* Glow fúcsia muito sutil */
     font-size: 0.85rem;
     color: #3a3520;
     line-height: 1.6;
