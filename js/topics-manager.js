@@ -30,6 +30,18 @@ window.TopicsManager = (function () {
         '#CDEBFA', '#D9E0F2', '#EAE5D9', '#F5D0A9', '#D1E8E2'
     ];
 
+    /**
+     * Converte um índice numérico (base-0) em identificador alfabético.
+     * Suporta overflow: 0→A, 25→Z, 26→AA, 27→AB, etc.
+     * @param {number} idx - Índice da sub-anotação.
+     * @returns {string} Identificador de 1 ou 2 letras.
+     */
+    function gerarLetra(idx) {
+        const ABC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        if (idx < 26) return ABC[idx];
+        return ABC[Math.floor(idx / 26) - 1] + ABC[idx % 26];
+    }
+
     let activeTabId = null;
 
     /**
@@ -81,19 +93,15 @@ window.TopicsManager = (function () {
 
     /**
      * Fábrica de cards no formato de fluxograma alternado.
-     * Assinatura compatível com Array.prototype.map — não requer alteração
-     * na chamada .map(criarCard) existente em renderizarFichario().
-     *
-     * @param {Object} anotacao - Objeto da anotação.
-     * @param {number} index    - Índice corrente (fornecido pelo .map).
-     * @param {Array}  arr      - Array completo (fornecido pelo .map).
+     * Retorna: card + bloco de sub-anotações (se houver) + conector SVG.
+     * Os três fragmentos são irmãos diretos no .timeline-container,
+     * garantindo que align-self funcione corretamente nas sub-anotações.
      */
     function criarCard(anotacao, index, arr) {
         const total    = arr.length;
         const numero   = index + 1;
         const tagClass = poloParaClasse(anotacao.polo);
-        
-        // Substituição do horário pela meta-informação inteligente do PJe
+
         const idFormatado = anotacao.pjeId ? `Id. ${anotacao.pjeId} - ` : '';
         const metaTexto   = `(${idFormatado}fl. ${anotacao.pagina})`;
 
@@ -101,40 +109,72 @@ window.TopicsManager = (function () {
             ? `<p class="card-texto">"${escaparHTML(anotacao.conteudo)}"</p>`
             : `<img class="card-imagem" src="${anotacao.conteudo}" alt="Recorte — Pág. ${anotacao.pagina}">`;
 
-        // Renderiza o bloco de comentário apenas para imagens que possuam texto.
-        // Backups antigos sem a chave 'comentario' retornam undefined → escaparHTML('')
-        // retorna '' → a condição falha → nenhum elemento espúrio é renderizado.
         const comentarioSeguro = escaparHTML(anotacao.comentario);
-        const htmlComentario = (anotacao.tipo === 'imagem' && comentarioSeguro)
+        const htmlComentario   = (anotacao.tipo === 'imagem' && comentarioSeguro)
             ? `<div class="card-comentario"><strong>Descrição:</strong> ${comentarioSeguro}</div>`
             : '';
 
-        // Pares (0, 2, 4…) ficam à esquerda; ímpares (1, 3, 5…) à direita.
-        const isLeft      = index % 2 === 0;
-        const alignClass  = isLeft ? 'align-left' : 'align-right';
-        const isLast      = index === total - 1;
+        const isLeft     = index % 2 === 0;
+        const alignClass = isLeft ? 'align-left' : 'align-right';
+        const isLast     = index === total - 1;
 
+        // Botão "+" ancorado dentro do wrapper do número
+        const btnAddSub = `
+            <button class="btn-add-sub"
+                    title="Adicionar observação secundária"
+                    onclick="adicionarSubAnotacao('${activeTabId}', ${index}, this)">+</button>`;
+
+        // Monta o card principal — o wrapper .annotation-number-area
+        // herda o posicionamento absoluto que antes estava em .timeline-number
         const card = `
             <div class="timeline-item ${alignClass}">
-                <div class="timeline-number"
-                     title="Opções desta anotação"
-                     onclick="abrirMenuAnotacao('${activeTabId}', ${index}, event)">
-                    ${numero}
+                <div class="annotation-number-area">
+                    <div class="timeline-number"
+                         title="Opções desta anotação"
+                         onclick="abrirMenuAnotacao('${activeTabId}', ${index}, event)">
+                        ${numero}
+                    </div>
+                    ${btnAddSub}
                 </div>
                 <div class="annotation-card">
                     <div class="card-header">
                         <span class="polo-tag ${tagClass}">${anotacao.polo}</span>
-                        <span class="card-meta" style="cursor: copy;" title="Clique para copiar" onclick="navigator.clipboard.writeText('${metaTexto}')">${metaTexto}</span>
+                        <span class="card-meta" style="cursor:copy;" title="Clique para copiar"
+                              onclick="navigator.clipboard.writeText('${metaTexto}')">
+                            ${metaTexto}
+                        </span>
                     </div>
                     ${htmlConteudo}
                     ${htmlComentario}
                 </div>
             </div>`;
 
-        // O conector só é gerado entre cards consecutivos; o último não tem.
+        // Bloco de sub-anotações — irmão direto do .timeline-item no flex column.
+        // align-self funciona aqui porque o pai é .timeline-container (display:flex).
+        // align-left → sub no lado DIREITO (flex-end)
+        // align-right → sub no lado ESQUERDO (flex-start)
+        let htmlSubAnotacoes = '';
+        if (anotacao.subAnotacoes && anotacao.subAnotacoes.length > 0) {
+            const subCardsHTML = anotacao.subAnotacoes.map((sub, sIdx) => {
+                const label = `${numero}.${gerarLetra(sIdx)}`;
+                return `
+                    <div class="sub-annotation-item">
+                        <div class="sub-badge">${label}</div>
+                        <div class="sub-annotation-card">${escaparHTML(sub.texto)}</div>
+                    </div>`;
+            }).join('');
+
+            htmlSubAnotacoes = `
+                <div class="sub-annotations-container ${alignClass}">
+                    ${subCardsHTML}
+                </div>`;
+        }
+
+        // Conector SVG entre cards consecutivos (o último não tem)
         const conector = isLast ? '' : gerarSVGConector(isLeft);
 
-        return card + conector;
+        // Ordem: card → sub-anotações (branch de card atual) → conector para o próximo
+        return card + htmlSubAnotacoes + conector;
     }
 
     /**

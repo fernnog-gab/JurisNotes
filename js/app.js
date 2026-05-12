@@ -1098,3 +1098,86 @@ async function extrairIdPjeDaPagina(pageNum) {
         return null;
     }
 }
+
+/* ================================================
+   MAPA MENTAL — ENTRADA E CONFIRMAÇÃO DE SUB-ANOTAÇÕES
+   Substitui prompt() por painel inline não-bloqueante,
+   consistente com o padrão visual da aplicação.
+   ================================================ */
+
+/**
+ * Abre (ou fecha, se já aberto para o mesmo card) o painel
+ * de entrada de sub-anotação inline, logo abaixo do card clicado.
+ * @param {string} topicoId      - ID do tópico ativo.
+ * @param {number} anotacaoIndex - Índice do card principal no array.
+ * @param {Element} btn          - Referência ao botão clicado (via 'this').
+ */
+function adicionarSubAnotacao(topicoId, anotacaoIndex, btn) {
+    const existing = document.getElementById('sub-input-active');
+
+    // Toggle: clique no mesmo "+" fecha o painel
+    if (existing) {
+        const mesmoCont = existing.dataset.forTopico === topicoId &&
+                          existing.dataset.forIndex  === String(anotacaoIndex);
+        existing.remove();
+        if (mesmoCont) return;
+    }
+
+    const painel = document.createElement('div');
+    painel.id                   = 'sub-input-active';
+    painel.className            = 'sub-input-panel';
+    painel.dataset.forTopico    = topicoId;
+    painel.dataset.forIndex     = anotacaoIndex;
+    painel.innerHTML = `
+        <textarea id="sub-input-text"
+                  class="sub-input-textarea"
+                  placeholder="Digite a observação secundária..."
+                  rows="3"></textarea>
+        <div class="sub-input-actions">
+            <button class="sub-input-btn-confirm"
+                    onclick="confirmarSubAnotacao('${topicoId}', ${anotacaoIndex})">
+                ✔ Confirmar
+            </button>
+            <button class="sub-input-btn-cancel"
+                    onclick="document.getElementById('sub-input-active').remove()">
+                ✕ Cancelar
+            </button>
+        </div>`;
+
+    // Insere o painel imediatamente após o .timeline-item do card clicado.
+    // Se já houver .sub-annotations-container após o item, o painel entra antes do conector.
+    const timelineItem = btn.closest('.timeline-item');
+    timelineItem.parentNode.insertBefore(painel, timelineItem.nextSibling);
+
+    document.getElementById('sub-input-text').focus();
+}
+
+/**
+ * Lê o texto do painel inline, salva no array de estado e re-renderiza.
+ * @param {string} topicoId      - ID do tópico ativo.
+ * @param {number} anotacaoIndex - Índice do card principal no array.
+ */
+function confirmarSubAnotacao(topicoId, anotacaoIndex) {
+    const textarea = document.getElementById('sub-input-text');
+    const texto    = textarea ? textarea.value.trim() : '';
+
+    if (!texto) {
+        exibirToast('Digite uma observação antes de confirmar.', 'aviso');
+        return;
+    }
+
+    const topico   = topicos.find(t => t.id === topicoId);
+    if (!topico) return;
+
+    const anotacao = topico.anotacoes[anotacaoIndex];
+
+    // Retrocompatibilidade: backups anteriores não têm a chave subAnotacoes
+    if (!anotacao.subAnotacoes) anotacao.subAnotacoes = [];
+
+    anotacao.subAnotacoes.push({ texto, timestamp: Date.now() });
+
+    document.getElementById('sub-input-active').remove();
+    renderizarTopicos();
+    salvarBackupAutomatico();
+    exibirToast('Observação secundária vinculada com sucesso.', 'sucesso');
+}
