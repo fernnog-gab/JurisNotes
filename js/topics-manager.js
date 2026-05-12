@@ -69,28 +69,19 @@ window.TopicsManager = (function () {
      * @returns {string} HTML do bloco conector.
      */
     function gerarSVGConector(isLeft) {
-        // Curva de Bézier cúbica.
-        // Âncoras calculadas para cards de 70% de largura:
-        //   Card esquerdo: ocupa 0–70% → centro em x=35
-        //   Card direito:  ocupa 30–100% → centro em x=65
+        // Curva de Bézier cúbica remapeada para proporção 60% (card) / 40% (nós).
+        // Card à esquerda: centro em x=30. Card à direita: centro em x=70.
         const pathD = isLeft
-            ? 'M 35,0 C 35,50 65,50 65,100'  // Esquerda → Direita
-            : 'M 65,0 C 65,50 35,50 35,100'; // Direita → Esquerda
+            ? 'M 30,0 C 30,50 70,50 70,100'  
+            : 'M 70,0 C 70,50 30,50 30,100'; 
 
         return `
             <div class="connector-wrapper" aria-hidden="true">
                 <svg viewBox="0 0 100 100" preserveAspectRatio="none">
-                    <path
-                        d="${pathD}"
-                        stroke="#d32f2f"
-                        stroke-width="2.5"
-                        fill="none"
-                        stroke-linecap="round"
-                    />
+                    <path d="${pathD}" stroke="#d32f2f" stroke-width="2.5" fill="none" stroke-linecap="round" />
                 </svg>
             </div>`;
     }
-
     /**
      * Fábrica de cards no formato de fluxograma alternado.
      * Retorna: card + bloco de sub-anotações (se houver) + conector SVG.
@@ -101,7 +92,6 @@ window.TopicsManager = (function () {
         const total    = arr.length;
         const numero   = index + 1;
         const tagClass = poloParaClasse(anotacao.polo);
-
         const idFormatado = anotacao.pjeId ? `Id. ${anotacao.pjeId} - ` : '';
         const metaTexto   = `(${idFormatado}fl. ${anotacao.pagina})`;
 
@@ -118,63 +108,52 @@ window.TopicsManager = (function () {
         const alignClass = isLeft ? 'align-left' : 'align-right';
         const isLast     = index === total - 1;
 
-        // Botão "+" ancorado dentro do wrapper do número
-        const btnAddSub = `
-            <button class="btn-add-sub"
-                    title="Adicionar observação secundária"
-                    onclick="adicionarSubAnotacao('${activeTabId}', ${index}, this)">+</button>`;
-
-        // Monta o card principal — o wrapper .annotation-number-area
-        // herda o posicionamento absoluto que antes estava em .timeline-number
-        const card = `
-            <div class="timeline-item ${alignClass}">
+        // Card Principal (O wrapper interno)
+        const cardPrincipal = `
+            <div class="main-card-wrapper">
                 <div class="annotation-number-area">
-                    <div class="timeline-number"
-                         title="Opções desta anotação"
-                         onclick="abrirMenuAnotacao('${activeTabId}', ${index}, event)">
+                    <div class="timeline-number" title="Opções desta anotação" onclick="abrirMenuAnotacao('${activeTabId}', ${index}, event)">
                         ${numero}
                     </div>
-                    ${btnAddSub}
                 </div>
                 <div class="annotation-card">
                     <div class="card-header">
                         <span class="polo-tag ${tagClass}">${anotacao.polo}</span>
-                        <span class="card-meta" style="cursor:copy;" title="Clique para copiar"
-                              onclick="navigator.clipboard.writeText('${metaTexto}')">
-                            ${metaTexto}
-                        </span>
+                        <span class="card-meta" style="cursor:copy;" title="Clique para copiar" onclick="navigator.clipboard.writeText('${metaTexto}')">${metaTexto}</span>
                     </div>
                     ${htmlConteudo}
                     ${htmlComentario}
                 </div>
             </div>`;
 
-        // Bloco de sub-anotações — irmão direto do .timeline-item no flex column.
-        // align-self funciona aqui porque o pai é .timeline-container (display:flex).
-        // align-left → sub no lado DIREITO (flex-end)
-        // align-right → sub no lado ESQUERDO (flex-start)
+        // Nós de Ideia (Sub-anotações)
         let htmlSubAnotacoes = '';
         if (anotacao.subAnotacoes && anotacao.subAnotacoes.length > 0) {
             const subCardsHTML = anotacao.subAnotacoes.map((sub, sIdx) => {
                 const label = `${numero}.${gerarLetra(sIdx)}`;
                 return `
                     <div class="sub-annotation-item">
-                        <div class="sub-badge">${label}</div>
-                        <div class="sub-annotation-card">${escaparHTML(sub.texto)}</div>
+                        <div class="sub-connector-line"></div>
+                        <div class="sub-annotation-card">
+                            <div class="sub-badge">${label}</div>
+                            ${escaparHTML(sub.texto)}
+                        </div>
                     </div>`;
             }).join('');
 
-            htmlSubAnotacoes = `
-                <div class="sub-annotations-container ${alignClass}">
-                    ${subCardsHTML}
-                </div>`;
+            htmlSubAnotacoes = `<div class="sub-annotations-wrapper">${subCardsHTML}</div>`;
         }
 
-        // Conector SVG entre cards consecutivos (o último não tem)
+        // Wrapper Master Flex (O pai da linha toda) - Sem inline styles
+        const wrapperMaster = `
+            <div class="timeline-item-master ${alignClass}" id="timeline-wrapper-${index}">
+                ${cardPrincipal}
+                ${htmlSubAnotacoes}
+            </div>`;
+
         const conector = isLast ? '' : gerarSVGConector(isLeft);
 
-        // Ordem: card → sub-anotações (branch de card atual) → conector para o próximo
-        return card + htmlSubAnotacoes + conector;
+        return wrapperMaster + conector;
     }
 
     /**

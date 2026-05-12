@@ -955,6 +955,20 @@ function abrirMenuAnotacao(topicoId, index, event) {
     menu.style.visibility = 'visible';
 }
 
+/**
+ * Acionada pelo menu de contexto para criar um novo nó de ideia.
+ */
+function acionarNovoNoIdeia() {
+    if (!_menuAnotacaoCtx) return;
+    const { topicoId, index } = _menuAnotacaoCtx;
+    
+    // Fecha o menu de contexto
+    document.getElementById('annotation-context-menu').style.display = 'none';
+    
+    // Dispara a criação do painel
+    adicionarSubAnotacao(topicoId, index);
+}
+
 /** Fecha o menu ao clicar em qualquer ponto fora dele. */
 document.addEventListener('click', function () {
     const menu = document.getElementById('annotation-context-menu');
@@ -1112,10 +1126,9 @@ async function extrairIdPjeDaPagina(pageNum) {
  * @param {number} anotacaoIndex - Índice do card principal no array.
  * @param {Element} btn          - Referência ao botão clicado (via 'this').
  */
-function adicionarSubAnotacao(topicoId, anotacaoIndex, btn) {
+function adicionarSubAnotacao(topicoId, anotacaoIndex) {
     const existing = document.getElementById('sub-input-active');
 
-    // Toggle: clique no mesmo "+" fecha o painel
     if (existing) {
         const mesmoCont = existing.dataset.forTopico === topicoId &&
                           existing.dataset.forIndex  === String(anotacaoIndex);
@@ -1129,27 +1142,19 @@ function adicionarSubAnotacao(topicoId, anotacaoIndex, btn) {
     painel.dataset.forTopico    = topicoId;
     painel.dataset.forIndex     = anotacaoIndex;
     painel.innerHTML = `
-        <textarea id="sub-input-text"
-                  class="sub-input-textarea"
-                  placeholder="Digite a observação secundária..."
-                  rows="3"></textarea>
+        <textarea id="sub-input-text" class="sub-input-textarea" placeholder="Digite a ideia secundária..." rows="3"></textarea>
         <div class="sub-input-actions">
-            <button class="sub-input-btn-confirm"
-                    onclick="confirmarSubAnotacao('${topicoId}', ${anotacaoIndex})">
-                ✔ Confirmar
-            </button>
-            <button class="sub-input-btn-cancel"
-                    onclick="document.getElementById('sub-input-active').remove()">
-                ✕ Cancelar
-            </button>
+            <button class="sub-input-btn-confirm" onclick="confirmarSubAnotacao('${topicoId}', ${anotacaoIndex})">✔ Confirmar</button>
+            <button class="sub-input-btn-cancel" onclick="document.getElementById('sub-input-active').remove()">✕ Cancelar</button>
         </div>`;
 
-    // Insere o painel imediatamente após o .timeline-item do card clicado.
-    // Se já houver .sub-annotations-container após o item, o painel entra antes do conector.
-    const timelineItem = btn.closest('.timeline-item');
-    timelineItem.parentNode.insertBefore(painel, timelineItem.nextSibling);
-
-    document.getElementById('sub-input-text').focus();
+    // Localiza estritamente o wrapper do card principal alvo
+    const mainCardWrapper = document.querySelector(`#timeline-wrapper-${anotacaoIndex} .main-card-wrapper`);
+    if (mainCardWrapper) {
+        // Anexa O painel DENTRO do wrapper do card principal, logo abaixo da anotação
+        mainCardWrapper.appendChild(painel);
+        document.getElementById('sub-input-text').focus();
+    }
 }
 
 /**
