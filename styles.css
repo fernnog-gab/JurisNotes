@@ -604,12 +604,9 @@ body {
     align-self: flex-end;
 }
 
-/* ── Badge numérica — 50% maior que o original (28px → 42px) ── */
+/* ── Badge numérica — MODIFICADO: position/left/top/z-index migram para .annotation-number-area ── */
 
 .timeline-number {
-    position: absolute;
-    left: -15px; /* Sai da borda esquerda do card */
-    top:  -15px; /* Sai da borda superior do card  */
     width:  42px;
     height: 42px;
     background-color: #fff9c4;
@@ -621,7 +618,6 @@ body {
     font-size: 1.1rem;
     font-weight: 800;
     color: #424242;
-    z-index: 3;
     box-shadow: var(--shadow-sm);
     flex-shrink: 0;
 }
@@ -925,4 +921,224 @@ body {
 .card-comentario strong {
     color: var(--trt-blue-mid);
     font-weight: 600;
+}
+
+/* ================================================
+   MAPA MENTAL: SUB-ANOTAÇÕES
+   ================================================ */
+
+/* Wrapper para o círculo numérico e o botão "+".
+   Assume o posicionamento absoluto que estava no .timeline-number. */
+.annotation-number-area {
+    position: absolute;
+    left: -15px;
+    top:  -15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    z-index: 3;
+}
+
+/* Botão "+" fúcsia posicionado semanticamente abaixo do número */
+.btn-add-sub {
+    width: 28px;
+    height: 28px;
+    background: #d500f9;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(213, 0, 249, 0.35);
+    transition: transform 0.2s ease, background 0.2s;
+    flex-shrink: 0;
+    padding: 0;
+}
+
+.btn-add-sub:hover {
+    transform: scale(1.15);
+    background: #aa00cc;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Container das sub-anotações.
+   É filho DIRETO do .timeline-container (display:flex column),
+   portanto align-self funciona corretamente aqui.
+   O width: 28% ocupa a faixa oposta ao card principal (70%).
+   ───────────────────────────────────────────────────────────── */
+.sub-annotations-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 28%;
+    padding: 8px 0;
+    border-left: 2px dashed #d500f9;
+    position: relative;
+    margin-top: -4px;
+    margin-bottom: 4px;
+}
+
+/* Card principal à ESQUERDA → sub-anotações vão para a DIREITA */
+.sub-annotations-container.align-left {
+    align-self: flex-end;
+}
+
+/* Card principal à DIREITA → sub-anotações vão para a ESQUERDA */
+.sub-annotations-container.align-right {
+    align-self: flex-start;
+    border-left: none;
+    border-right: 2px dashed #d500f9;
+}
+
+/* Item individual de sub-anotação.
+   position: relative é OBRIGATÓRIO para ancorar o .sub-badge */
+.sub-annotation-item {
+    position: relative;
+    padding-left: 28px; /* Cria espaço interno para a badge sobrepor a linha */
+}
+
+.sub-annotations-container.align-right .sub-annotation-item {
+    padding-left: 0;
+    padding-right: 28px;
+}
+
+/* Badge alfanumérica preta (ex: 1.A, 1.B).
+   Centralizada verticalmente e posicionada sobre a linha fúcsia. */
+.sub-badge {
+    position: absolute;
+    left: -15px;   /* Centro da badge alinha com a borda-left do container */
+    top: 50%;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 30px;
+    background-color: #1a1a1a;
+    color: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;   /* Compacto para acomodar até 4 chars (ex: 1.AA) */
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    z-index: 3;
+    box-shadow: var(--shadow-sm);
+}
+
+/* Espelha para o lado direito (containers .align-right) */
+.sub-annotations-container.align-right .sub-badge {
+    left: auto;
+    right: -15px;
+}
+
+/* Card de sub-anotação — fundo creme, distinto do card principal branco */
+.sub-annotation-card {
+    background-color: #fffdf2;
+    border: 1px solid #e8e2c8;
+    border-radius: 8px;
+    padding: 10px 14px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    font-size: 0.85rem;
+    color: #3a3520;
+    line-height: 1.6;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Painel de entrada inline — substitui o prompt() bloqueante.
+   Injetado e removido dinamicamente pelo JavaScript.
+   ───────────────────────────────────────────────────────────── */
+.sub-input-panel {
+    width: 68%;
+    align-self: flex-start;
+    background: #fdf8ff;
+    border: 1px dashed #d500f9;
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 4px 12px rgba(213, 0, 249, 0.10);
+    margin-bottom: 4px;
+}
+
+.sub-input-textarea {
+    width: 100%;
+    min-height: 68px;
+    padding: 8px 10px;
+    border: 1px solid #e0b0ff;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.87rem;
+    color: var(--text-dark);
+    background: white;
+    resize: vertical;
+    outline: none;
+    line-height: 1.5;
+    transition: border-color 0.2s;
+}
+
+.sub-input-textarea:focus {
+    border-color: #d500f9;
+}
+
+.sub-input-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.sub-input-btn-confirm {
+    background: #d500f9;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 14px;
+    font-size: 0.83rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.sub-input-btn-confirm:hover { opacity: 0.85; }
+
+.sub-input-btn-cancel {
+    background: transparent;
+    color: #999;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 7px 14px;
+    font-size: 0.83rem;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.sub-input-btn-cancel:hover { background: #f5f5f5; }
+
+/* ─────────────────────────────────────────────────────────────
+   Mobile: sem espaço para zigzag lateral, sub-anotações colapsam
+   para baixo do card na coluna principal.
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+    .sub-annotations-container {
+        width: 85%;
+        align-self: flex-start !important;
+        border-left: 2px dashed #d500f9;
+        border-right: none;
+        padding-right: 0;
+        margin-left: 8px;
+    }
+
+    .sub-annotations-container .sub-badge {
+        left: -15px;
+        right: auto;
+    }
+
+    .sub-annotations-container .sub-annotation-item {
+        padding-left: 28px;
+        padding-right: 0;
+    }
 }
