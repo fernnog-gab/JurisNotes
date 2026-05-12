@@ -1063,3 +1063,83 @@ body {
     align-items: center;
     z-index: 3;
 }
+
+/* ================================================
+   SEPARADOR DA BARRA DE FERRAMENTAS
+   ================================================ */
+.toolbar-separator {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    width: 55%;
+    margin: 4px auto;
+}
+
+/* ================================================
+   PAINEL FLUTUANTE DE PAGINAÇÃO
+   Usa position: sticky para permanecer visível
+   durante a rolagem dentro do #pdf-container
+   (overflow: auto), sem usar position: fixed que
+   exigiria compensar a largura da sidebar.
+   ================================================ */
+.floating-page-panel {
+    position: sticky;
+    top: 16px;
+    align-self: flex-end;       /* Ancora à direita no flex-column */
+    margin-right: 8px;
+    z-index: 1000;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.92);
+    padding: 6px 8px;
+    border-radius: 10px;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.current-page-badge {
+    background: var(--trt-blue);
+    color: white;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 7px 12px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 72px;
+    white-space: nowrap;
+    user-select: none;
+}
+
+/* Versão do page-nav-box para o painel flutuante (tema claro) */
+.page-nav-box.floating-nav {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    margin-bottom: 0;
+}
+
+.page-nav-box.floating-nav:focus-within {
+    border-color: var(--trt-blue-mid);
+    background: white;
+}
+
+.page-nav-box.floating-nav .nav-icon {
+    color: #999;
+}
+
+.page-nav-box.floating-nav .nav-icon:hover {
+    color: var(--trt-blue);
+}
+
+.page-nav-box.floating-nav #goto-page-input {
+    color: var(--text-dark);
+    width: 62px;
+}
+
+.page-nav-box.floating-nav #goto-page-input::placeholder {
+    color: #bbb;
+    font-weight: 400;
+}
