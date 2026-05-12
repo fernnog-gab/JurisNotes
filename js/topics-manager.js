@@ -229,7 +229,9 @@ window.TopicsManager = (function () {
     // API pública do módulo
     return {
         obterCor,
-        renderizarFichario
+        renderizarFichario,
+        getActiveTabId: () => activeTabId,
+        escaparHTML
     };
 
 })();

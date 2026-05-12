@@ -19,10 +19,16 @@ let pdfObserver      = null;   // IntersectionObserver para lazy loading
    GERENCIAMENTO DE INTERFACE (ABAS)
    ================================================ */
 function trocarAba(aba) {
-    document.getElementById('pdf-container').style.display    = aba === 'leitura'   ? 'flex'  : 'none';
+    document.getElementById('pdf-container').style.display     = aba === 'leitura'   ? 'flex'  : 'none';
     document.getElementById('history-container').style.display = aba === 'historico' ? 'block' : 'none';
     document.getElementById('tab-leitura').classList.toggle('active',   aba === 'leitura');
     document.getElementById('tab-historico').classList.toggle('active', aba === 'historico');
+
+    // Botão de impressão: visível apenas na aba Anotações e somente se houver tópicos
+    const btnImprimir = document.getElementById('btn-imprimir-topico');
+    if (btnImprimir) {
+        btnImprimir.style.display = (aba === 'historico' && topicos.length > 0) ? 'flex' : 'none';
+    }
 }
 
 /* ================================================
@@ -108,10 +114,13 @@ function encerrarSessao() {
 
     // Reset visual
     const wrapper = document.getElementById('pdf-wrapper');
-    wrapper.innerHTML    = '';
+    wrapper.innerHTML     = '';
     wrapper.style.display = 'none';
     document.getElementById('pdf-placeholder').style.display = 'flex';
-    document.getElementById('pdf-upload').value              = '';
+    document.getElementById('floating-page-panel').style.display = 'none';
+    document.getElementById('btn-imprimir-topico').style.display = 'none';
+    document.getElementById('current-page-display').textContent  = '1';
+    document.getElementById('pdf-upload').value = '';
 
     // Desabilitar todas as ferramentas de trabalho
     ['btn-ferramenta-recorte', 'btn-ferramenta-texto', 'btn-novo-topico', 'btn-encerrar-sessao']
@@ -321,6 +330,7 @@ function carregarPDF(event) {
                 wrapper.innerHTML = '';
                 wrapper.style.display = 'flex';
                 document.getElementById('pdf-placeholder').style.display = 'none';
+                document.getElementById('floating-page-panel').style.display = 'flex';
 
                 if (pdfObserver) pdfObserver.disconnect();
                 pdfObserver = new IntersectionObserver((entries) => {
@@ -328,6 +338,7 @@ function carregarPDF(event) {
                         const pageNum = parseInt(entry.target.dataset.pageNumber);
                         if (entry.isIntersecting && entry.intersectionRatio > 0.4) {
                             currentPage = pageNum;
+                            document.getElementById('current-page-display').textContent = currentPage;
                         }
                         if (entry.isIntersecting && entry.target.dataset.loaded === 'false') {
                             renderizarPaginaElemento(pageNum, entry.target);
@@ -924,4 +935,172 @@ function confirmarSubAnotacao(topicoId, anotacaoIndex) {
     renderizarTopicos();
     salvarBackupAutomatico();
     exibirToast('Observação secundária vinculada com sucesso.', 'sucesso');
+}
+
+/* ================================================
+   GERAÇÃO DE RELATÓRIO PDF (IMPRESSÃO NATIVA)
+   Usa window.open + document.write para gerar um
+   documento HTML limpo e acionar o diálogo de
+   impressão nativo do navegador (Salvar como PDF).
+   Não requer bibliotecas externas.
+   ================================================ */
+function imprimirTopicoAtivo() {
+    const activeId = TopicsManager.getActiveTabId();
+
+    if (!activeId) {
+        exibirToast('Selecione um tópico antes de gerar o documento.', 'aviso');
+        return;
+    }
+
+    const topico = topicos.find(t => t.id === activeId);
+
+    if (!topico) {
+        exibirToast('Tópico não encontrado. Tente novamente.', 'erro');
+        return;
+    }
+
+    if (topico.anotacoes.length === 0) {
+        exibirToast('Este tópico está vazio. Adicione anotações antes de imprimir.', 'aviso');
+        return;
+    }
+
+    const janela = window.open('', '_blank');
+    if (!janela) {
+        exibirToast('O navegador bloqueou o pop-up. Libere pop-ups para este site e tente novamente.', 'erro');
+        return;
+    }
+
+    // Alias local para o sanitizador exposto pelo módulo
+    const esc = TopicsManager.escaparHTML;
+
+    // ── Construção do documento de impressão ──────────────
+    let html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Minuta — ${esc(topico.nome)}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #222;
+            padding: 28px 36px;
+            max-width: 820px;
+            margin: 0 auto;
+            font-size: 14px;
+        }
+        h1 {
+            font-size: 1.3rem;
+            color: #1a3a5c;
+            border-bottom: 3px solid ${esc(topico.cor)};
+            padding-bottom: 10px;
+            margin-bottom: 24px;
+        }
+        .anotacao {
+            border: 1px solid #ddd;
+            border-left: 5px solid ${esc(topico.cor)};
+            padding: 14px 16px;
+            margin-bottom: 18px;
+            border-radius: 4px;
+            page-break-inside: avoid;
+            background: #fafafa;
+        }
+        .meta {
+            font-size: 0.78em;
+            color: #555;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .texto {
+            font-style: italic;
+            line-height: 1.7;
+            color: #333;
+        }
+        .comentario {
+            margin-top: 12px;
+            font-size: 0.88em;
+            background: #f0f4f8;
+            padding: 8px 10px;
+            border-radius: 4px;
+            line-height: 1.6;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            margin-top: 8px;
+            display: block;
+        }
+        .sub-anotacao {
+            margin-top: 12px;
+            padding: 8px 12px;
+            border-left: 3px dashed #aaa;
+            font-size: 0.88em;
+            color: #444;
+            background: #fff;
+            border-radius: 0 4px 4px 0;
+        }
+        .sub-label {
+            font-weight: 700;
+            color: #1a3a5c;
+            margin-right: 6px;
+        }
+        .rodape {
+            margin-top: 40px;
+            padding-top: 12px;
+            border-top: 1px solid #ddd;
+            font-size: 0.76em;
+            color: #999;
+            text-align: right;
+        }
+        @media print {
+            body { padding: 0; }
+            .anotacao { border-left-width: 4px; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Tópico: ${esc(topico.nome)}</h1>`;
+
+    topico.anotacoes.forEach((an, index) => {
+        const num         = index + 1;
+        const idFormatado = an.pjeId ? `Id. ${esc(an.pjeId)} — ` : '';
+        const meta        = `[Item ${num}] &nbsp;|&nbsp; Polo: ${esc(an.polo)} &nbsp;|&nbsp; ${idFormatado}Fl. ${esc(String(an.pagina))}`;
+
+        html += `\n    <div class="anotacao">
+        <div class="meta">${meta}</div>`;
+
+        if (an.tipo === 'texto') {
+            html += `\n        <div class="texto">"${esc(an.conteudo)}"</div>`;
+        } else if (an.tipo === 'imagem') {
+            html += `\n        <img src="${an.conteudo}" alt="Recorte — Pág. ${esc(String(an.pagina))}">`;
+            if (an.comentario) {
+                html += `\n        <div class="comentario"><strong>Descrição:</strong> ${esc(an.comentario)}</div>`;
+            }
+        }
+
+        if (an.subAnotacoes && an.subAnotacoes.length > 0) {
+            const ABC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            an.subAnotacoes.forEach((sub, sIdx) => {
+                const label = `${num}.${sIdx < 26 ? ABC[sIdx] : ABC[Math.floor(sIdx/26)-1] + ABC[sIdx%26]}`;
+                html += `\n        <div class="sub-anotacao"><span class="sub-label">${label}</span>${esc(sub.texto)}</div>`;
+            });
+        }
+
+        html += `\n    </div>`;
+    });
+
+    const dataGeracao = new Date().toLocaleString('pt-BR');
+    html += `\n    <div class="rodape">Documento gerado em ${dataGeracao} — ${topico.anotacoes.length} item(ns).</div>`;
+
+    // setTimeout é mais confiável que window.onload em documentos criados via document.write,
+    // especialmente no Firefox/Safari onde onload pode não disparar neste contexto.
+    html += `\n    <script>setTimeout(function(){ window.print(); }, 250);<\/script>
+</body>
+</html>`;
+
+    janela.document.write(html);
+    janela.document.close();
 }
