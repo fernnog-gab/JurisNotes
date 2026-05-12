@@ -78,7 +78,7 @@ window.TopicsManager = (function () {
         return `
             <div class="connector-wrapper" aria-hidden="true">
                 <svg viewBox="0 0 100 100" preserveAspectRatio="none">
-                    <path d="${pathD}" stroke="#d32f2f" stroke-width="2.5" fill="none" stroke-linecap="round" />
+                    <path d="${pathD}" stroke="#d32f2f" stroke-width="2.5" fill="none" stroke-linecap="round" vector-effect="non-scaling-stroke" />
                 </svg>
             </div>`;
     }
@@ -144,16 +144,19 @@ window.TopicsManager = (function () {
             htmlSubAnotacoes = `<div class="sub-annotations-wrapper">${subCardsHTML}</div>`;
         }
 
-        // Wrapper Master Flex (O pai da linha toda) - Sem inline styles
+        const conector = isLast ? '' : gerarSVGConector(isLeft);
+
+        // Wrapper Master Flex (O pai da linha toda)
+        // O conector passa a ser renderizado DENTRO do wrapper, permitindo que o CSS 
+        // controle sua altura de forma absoluta e elástica.
         const wrapperMaster = `
             <div class="timeline-item-master ${alignClass}" id="timeline-wrapper-${index}">
                 ${cardPrincipal}
                 ${htmlSubAnotacoes}
+                ${conector}
             </div>`;
 
-        const conector = isLast ? '' : gerarSVGConector(isLeft);
-
-        return wrapperMaster + conector;
+        return wrapperMaster;
     }
 
     /**
