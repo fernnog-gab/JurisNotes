@@ -8,9 +8,14 @@ let modoRetomada         = false;  // Flag: true quando restaurando sessão exis
 let _encerrarTimer       = null;   // ID do setTimeout de confirmação do botão Encerrar
 let _encerrarConfirmando = false;  // Flag: aguardando segundo clique para confirmar encerramento
 
-let modoRecorteAtivo = false;
+let modoRecorteAtivo         = false;
 let startX, startY;
-let cropBox          = null;
+let cropBox                  = null;
+
+// — Estado do Wizard de Recorte ——————————————————————————————
+let _wizardTopicoSelecionado = null;  // ID do tópico confirmado no Passo 1
+let _wizardImagemCapturada   = null;  // Data URL base64 do recorte confirmado
+let _ultimoTopicoUsadoId     = null;  // Memória inteligente: pré-seleciona na próxima abertura
 
 let pendingTipo      = null;   // Tipo da extração pendente: 'texto' | 'imagem'
 let pendingConteudo  = null;   // Conteúdo bruto da extração pendente
@@ -94,8 +99,9 @@ function encerrarSessao() {
     clearTimeout(_encerrarTimer);
     _encerrarConfirmando = false;
 
-    // Desativar modo recorte se estiver ativo
-    if (modoRecorteAtivo) alternarModoRecorte();
+    // Desativar modo recorte e wizard se estiverem ativos
+    if (modoRecorteAtivo) desativarOverlayRecorte();
+    fecharTudoWizard();
 
     // Fechar popup de classificação se aberto
     fecharPopupClassificacao();
@@ -487,30 +493,128 @@ function capturarTrechoSelecionado() {
 /* ================================================
    MODO RECORTE (CAPTURA DE IMAGEM DE CANVAS)
    ================================================ */
-function alternarModoRecorte() {
-    modoRecorteAtivo = !modoRecorteAtivo;
+/* ================================================
+   WIZARD DE RECORTE DE IMAGEM
+   State-machine de 3 estados:
+   IDLE → PASSO_1 (seleção de tópico) →
+   RECORTANDO (overlay ativo) → PASSO_2 (confirmação)
+   ================================================ */
 
-    const overlay    = document.getElementById('crop-overlay');
-    const btn        = document.getElementById('btn-ferramenta-recorte');
-    const textLayers = document.querySelectorAll('.textLayer');
-
-    if (modoRecorteAtivo) {
-        // Posiciona o overlay como fixed cobrindo exatamente a área do visualizador.
-        // position:fixed não depende do scroll do container — o overlay sempre
-        // acompanha a janela, independentemente de quantas páginas foram roladas.
-        const r = document.getElementById('pdf-container').getBoundingClientRect();
-        overlay.style.position = 'fixed';
-        overlay.style.left     = r.left   + 'px';
-        overlay.style.top      = r.top    + 'px';
-        overlay.style.width    = r.width  + 'px';
-        overlay.style.height   = r.height + 'px';
-        overlay.style.display  = 'block';
-    } else {
-        overlay.style.display = 'none';
+/**
+ * PASSO 0 — Ponto de entrada.
+ * Abre o Passo 1 do wizard (seleção de tópico).
+ * Bloqueia a interface com o backdrop.
+ */
+function iniciarRecorteWizard() {
+    if (topicos.length === 0) {
+        exibirToast('Crie pelo menos um Tópico Recursal antes de realizar recortes.', 'aviso');
+        return;
     }
 
-    textLayers.forEach(l => { l.style.pointerEvents = modoRecorteAtivo ? 'none' : 'auto'; });
-    btn.classList.toggle('ativo', modoRecorteAtivo);
+    const select = document.getElementById('crop-topic-select');
+    select.innerHTML = '<option value="">Selecione o Tópico...</option>';
+    topicos.forEach(t => select.appendChild(new Option(t.nome, t.id)));
+
+    // Memória inteligente: pré-seleciona o último tópico utilizado
+    if (_ultimoTopicoUsadoId) select.value = _ultimoTopicoUsadoId;
+
+    document.getElementById('wizard-backdrop').style.display = 'block';
+    document.getElementById('crop-wizard-step1').style.display = 'flex';
+}
+
+/**
+ * PASSO 1 → RECORTANDO.
+ * Valida o tópico selecionado, fecha o Passo 1 e ativa o overlay de recorte.
+ */
+function avancarParaRecorte() {
+    const topicoId = document.getElementById('crop-topic-select').value;
+    if (!topicoId) {
+        exibirToast('Selecione um tópico para continuar.', 'aviso');
+        return;
+    }
+
+    _wizardTopicoSelecionado = topicoId;
+    document.getElementById('crop-wizard-step1').style.display = 'none';
+    document.getElementById('wizard-backdrop').style.display  = 'none'; // backdrop some: usuário vê o PDF
+
+    // Ativa o overlay de recorte (usa a referência global 'overlay' já declarada abaixo)
+    modoRecorteAtivo = true;
+    const r = document.getElementById('pdf-container').getBoundingClientRect();
+    overlay.style.position = 'fixed';
+    overlay.style.left     = r.left   + 'px';
+    overlay.style.top      = r.top    + 'px';
+    overlay.style.width    = r.width  + 'px';
+    overlay.style.height   = r.height + 'px';
+    overlay.style.display  = 'block';
+
+    document.querySelectorAll('.textLayer').forEach(l => l.style.pointerEvents = 'none');
+    document.getElementById('btn-ferramenta-recorte').classList.add('ativo');
+    exibirToast('Tópico confirmado. Arraste o mouse sobre o documento para recortar.', 'sucesso');
+}
+
+/**
+ * RECORTANDO → IDLE.
+ * Esconde o overlay e restaura os event listeners do texto.
+ * Usada internamente pelo wizard e externamente pelo encerramento de sessão/Escape.
+ */
+function desativarOverlayRecorte() {
+    modoRecorteAtivo = false;
+    overlay.style.display = 'none';
+    document.getElementById('btn-ferramenta-recorte').classList.remove('ativo');
+    document.querySelectorAll('.textLayer').forEach(l => l.style.pointerEvents = 'auto');
+}
+
+/**
+ * RECORTANDO → PASSO_2.
+ * Chamada pelo handler mouseup após a geração bem-sucedida do canvas.
+ * Desativa o overlay e exibe o Passo 2 com a pré-visualização da imagem.
+ */
+function abrirConfirmacaoRecorteWizard() {
+    desativarOverlayRecorte();
+    document.getElementById('crop-preview-img').src    = _wizardImagemCapturada;
+    document.getElementById('crop-comment-input').value = '';
+    document.getElementById('wizard-backdrop').style.display   = 'block';
+    document.getElementById('crop-wizard-step2').style.display = 'flex';
+}
+
+/**
+ * PASSO_2 → IDLE.
+ * Salva a anotação com o polo selecionado e encerra o wizard.
+ */
+function finalizarRecorteWizard(polo) {
+    const comentario = document.getElementById('crop-comment-input').value.trim();
+    _ultimoTopicoUsadoId = _wizardTopicoSelecionado; // Persiste memória para próxima abertura
+    salvarAnotacao('imagem', _wizardImagemCapturada, polo, _wizardTopicoSelecionado, comentario);
+    fecharTudoWizard();
+}
+
+/**
+ * PASSO_2 → RECORTANDO.
+ * Volta ao overlay sem retornar ao Passo 1: o tópico já foi escolhido.
+ */
+function refazerRecorteArea() {
+    document.getElementById('crop-wizard-step2').style.display = 'none';
+    document.getElementById('wizard-backdrop').style.display   = 'none';
+    avancarParaRecorte();
+}
+
+/**
+ * QUALQUER ESTADO → IDLE.
+ * Cancela o wizard por completo, fechando todos os painéis e limpando o estado.
+ * Chamada pelo botão Cancelar, pela tecla Escape e pelo clique no backdrop.
+ */
+function cancelarRecorteWizard() {
+    fecharTudoWizard();
+    desativarOverlayRecorte();
+}
+
+/** Utilitário interno: fecha os painéis visuais e zera as variáveis de estado. */
+function fecharTudoWizard() {
+    document.getElementById('crop-wizard-step1').style.display = 'none';
+    document.getElementById('crop-wizard-step2').style.display = 'none';
+    document.getElementById('wizard-backdrop').style.display   = 'none';
+    _wizardTopicoSelecionado = null;
+    _wizardImagemCapturada   = null;
 }
 
 /* ================================================
@@ -700,7 +804,6 @@ overlay.addEventListener('mouseup', function (e) {
     const cropTop  = parseFloat(cropBox.style.top)  + overlayRect.top;
 
     // Encontra o container de página pelo centro do retângulo desenhado.
-    // Não depende de currentPage — é determinístico por posição geométrica.
     const cropCenterX = cropLeft + cropW / 2;
     const cropCenterY = cropTop  + cropH / 2;
 
@@ -717,6 +820,7 @@ overlay.addEventListener('mouseup', function (e) {
         cropBox.remove();
         cropBox = null;
         exibirToast('Selecione uma área dentro de uma página do documento.', 'aviso');
+        desativarOverlayRecorte(); // ← cancela o modo sem fechar o wizard inteiro
         return;
     }
 
@@ -734,8 +838,7 @@ overlay.addEventListener('mouseup', function (e) {
     const relX = cropLeft - canvasRect.left;
     const relY = cropTop  - canvasRect.top;
 
-    // Clamp: garante que o recorte não ultrapasse os limites do canvas,
-    // mesmo que o usuário tenha iniciado a seleção fora da página.
+    // Clamp: garante que o recorte não ultrapasse os limites do canvas.
     const srcX = Math.max(0, relX);
     const srcY = Math.max(0, relY);
     const srcW = Math.min(cropW - Math.max(0, -relX), canvasRect.width  - srcX);
@@ -745,6 +848,7 @@ overlay.addEventListener('mouseup', function (e) {
         cropBox.remove();
         cropBox = null;
         exibirToast('Selecione uma área dentro da página do documento.', 'aviso');
+        desativarOverlayRecorte();
         return;
     }
 
@@ -769,7 +873,9 @@ overlay.addEventListener('mouseup', function (e) {
         // Sincroniza currentPage com a página efetivamente fotografada.
         currentPage = parseInt(targetContainer.dataset.pageNumber);
 
-        exibirPopupClassificacao('imagem', imageDataUrl, e.clientX, e.clientY);
+        // — MUDANÇA PRINCIPAL: entrega a imagem ao wizard, não ao popup antigo —
+        _wizardImagemCapturada = imageDataUrl;
+        abrirConfirmacaoRecorteWizard(); // Desativa overlay e abre Passo 2
     } catch (err) {
         console.error('Erro ao processar recorte:', err);
         exibirToast('Erro ao processar o recorte. Tente novamente.', 'erro');
@@ -777,7 +883,9 @@ overlay.addEventListener('mouseup', function (e) {
 
     cropBox.remove();
     cropBox = null;
-    alternarModoRecorte();
+    // desativarOverlayRecorte() já foi chamado por abrirConfirmacaoRecorteWizard()
+    // em caso de sucesso; em caso de erro no catch, desfaz o modo igualmente.
+    desativarOverlayRecorte();
 });
 
 // Fechar popup ao clicar fora dele
@@ -795,8 +903,8 @@ document.addEventListener('click', function (e) {
 // Fechar popup e desativar modo recorte com Escape
 document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
-        fecharPopupClassificacao();
-        if (modoRecorteAtivo) alternarModoRecorte();
+        fecharPopupClassificacao(); // Fecha o popup de texto, se estiver aberto
+        cancelarRecorteWizard();    // Fecha o wizard e desativa o overlay (seguro chamar mesmo em IDLE)
     }
 });
 
