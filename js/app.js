@@ -10,6 +10,16 @@ let _encerrarConfirmando = false;  // Flag: aguardando segundo clique para confi
 
 let pdfObserver      = null;   // IntersectionObserver para lazy loading
 
+document.addEventListener("DOMContentLoaded", () => {
+    if (window.AudioManager) {
+        AudioManager.init({
+            topicos: topicos,
+            exibirToast: exibirToast,
+            salvarAnotacao: salvarAnotacao
+        });
+    }
+});
+
 /* ================================================
    PALETA DE CORES E RENDERIZAÇÃO
    Gerenciada pelo módulo isolado TopicsManager (topics-manager.js)
@@ -63,6 +73,7 @@ function habilitarFerramentasDeTrabalho() {
     document.getElementById('btn-ferramenta-texto').disabled   = false;
     document.getElementById('btn-novo-topico').disabled        = false;
     document.getElementById('btn-encerrar-sessao').disabled    = false;
+    document.getElementById('btn-ferramenta-audio').disabled   = false;
 }
 
 /* ================================================
@@ -123,7 +134,7 @@ function encerrarSessao() {
     document.getElementById('pdf-upload').value = '';
 
     // Desabilitar todas as ferramentas de trabalho
-    ['btn-ferramenta-recorte', 'btn-ferramenta-texto', 'btn-novo-topico', 'btn-encerrar-sessao']
+    ['btn-ferramenta-recorte', 'btn-ferramenta-texto', 'btn-novo-topico', 'btn-encerrar-sessao', 'btn-ferramenta-audio']
         .forEach(id => {
             const el = document.getElementById(id);
             el.disabled = true;

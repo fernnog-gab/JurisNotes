@@ -93,16 +93,42 @@ window.TopicsManager = (function () {
         const numero   = index + 1;
         const tagClass = poloParaClasse(anotacao.polo);
         const idFormatado = anotacao.pjeId ? `Id. ${anotacao.pjeId} - ` : '';
-        const metaTexto   = `(${idFormatado}fl. ${anotacao.pagina})`;
+        const metaTexto = anotacao.pagina 
+            ? `(${idFormatado}fl. ${anotacao.pagina})` 
+            : (anotacao.tipo === 'audio' ? `(Oitiva)` : '');
 
-        const htmlConteudo = anotacao.tipo === 'texto'
-            ? `<p class="card-texto">"${escaparHTML(anotacao.conteudo)}"</p>`
-            : `<img class="card-imagem" src="${anotacao.conteudo}" alt="Recorte — Pág. ${anotacao.pagina}">`;
+        let htmlConteudo = '';
+        let htmlComentario = '';
+
+        if (anotacao.tipo === 'texto') {
+            htmlConteudo = `<p class="card-texto">"${escaparHTML(anotacao.conteudo)}"</p>`;
+        } else if (anotacao.tipo === 'imagem') {
+            htmlConteudo = `<img class="card-imagem" src="${anotacao.conteudo}" alt="Recorte">`;
+        } else if (anotacao.tipo === 'audio') {
+            try {
+                const dadosAudio = JSON.parse(anotacao.conteudo);
+                htmlConteudo = `
+                    <div class="card-audio">
+                        <div class="audio-icon-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                            </svg>
+                        </div>
+                        <div class="audio-card-meta">
+                            <strong>Orador:</strong> ${escaparHTML(dadosAudio.oradorStr)}<br>
+                            <span>Trecho: ${dadosAudio.labelInicio} a ${dadosAudio.labelFim}</span>
+                        </div>
+                    </div>`;
+            } catch (e) {
+                htmlConteudo = `<p class="card-texto" style="color:#c62828;">[Erro: metadados do áudio corrompidos]</p>`;
+            }
+        }
 
         const comentarioSeguro = escaparHTML(anotacao.comentario);
-        const htmlComentario   = (anotacao.tipo === 'imagem' && comentarioSeguro)
-            ? `<div class="card-comentario"><strong>Descrição:</strong> ${comentarioSeguro}</div>`
-            : '';
+        if (comentarioSeguro && (anotacao.tipo === 'imagem' || anotacao.tipo === 'audio')) {
+            htmlComentario = `<div class="card-comentario"><strong>${anotacao.tipo === 'audio' ? 'Transcrição' : 'Descrição'}:</strong> ${comentarioSeguro}</div>`;
+        }
 
         const isLeft     = index % 2 === 0;
         const alignClass = isLeft ? 'align-left' : 'align-right';
