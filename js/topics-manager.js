@@ -107,6 +107,14 @@ window.TopicsManager = (function () {
         const isLeft     = index % 2 === 0;
         const alignClass = isLeft ? 'align-left' : 'align-right';
         const isLast     = index === total - 1;
+        
+        const docSeguro = anotacao.documento ? escaparHTML(anotacao.documento) : escaparHTML(anotacao.polo);
+        const poloSeguro = (anotacao.documento && anotacao.polo) ? escaparHTML(anotacao.polo) : '';
+        
+        let tagsHtml = `<span class="polo-tag doc-tag">${docSeguro}</span>`;
+        if (poloSeguro && poloSeguro !== docSeguro) {
+            tagsHtml += ` <span class="polo-tag ${poloParaClasse(anotacao.polo)}">${poloSeguro}</span>`;
+        }
 
         // Card Principal (O wrapper interno)
         const cardPrincipal = `
@@ -118,7 +126,7 @@ window.TopicsManager = (function () {
                 </div>
                 <div class="annotation-card">
                     <div class="card-header">
-                        <span class="polo-tag ${tagClass}">${anotacao.polo}</span>
+                        <div style="display:flex; gap:6px;">${tagsHtml}</div>
                         <span class="card-meta" style="cursor:copy;" title="Clique para copiar" onclick="navigator.clipboard.writeText('${metaTexto}')">${metaTexto}</span>
                     </div>
                     ${htmlConteudo}
@@ -179,7 +187,10 @@ window.TopicsManager = (function () {
                             </svg>
                         </button>
                         <div class="card-header">
-                            <span class="polo-tag ${itemTag}">${item.polo}</span>
+                            <div style="display:flex; gap:6px;">
+                                <span class="polo-tag doc-tag">${item.documento ? escaparHTML(item.documento) : escaparHTML(item.polo)}</span>
+                                ${(item.documento && item.polo && item.polo !== item.documento) ? `<span class="polo-tag ${itemTag}">${escaparHTML(item.polo)}</span>` : ''}
+                            </div>
                             <span class="card-meta" style="cursor:copy;" title="Clique para copiar" onclick="navigator.clipboard.writeText('${itemMeta}')">${itemMeta}</span>
                         </div>
                         ${cConteudo}
@@ -200,7 +211,7 @@ window.TopicsManager = (function () {
                     </div>
                     <div class="annotation-card">
                         <div class="card-header">
-                            <span class="polo-tag ${tagClass}">${anotacao.polo}</span>
+                            <div style="display:flex; gap:6px;">${tagsHtml}</div>
                             <span class="card-meta" style="cursor:copy;" title="Clique para copiar" onclick="navigator.clipboard.writeText('${metaTexto}')">${metaTexto}</span>
                         </div>
                         ${htmlConteudo}

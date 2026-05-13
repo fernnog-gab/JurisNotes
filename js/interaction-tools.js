@@ -33,38 +33,117 @@ let _ultimoTopicoUsadoId     = null;  // Memória inteligente: pré-seleciona na
 let pendingTipo     = null;   // Tipo da extração pendente: 'texto' | 'imagem'
 let pendingConteudo = null;   // Conteúdo bruto da extração pendente
 
+// --- CONFIGURAÇÃO CENTRAL DE DOCUMENTOS ---
+const DOC_CONFIG = [
+    { label: 'Petição Inicial',           polo: 'Parte Autora', tipo: 'auto'   },
+    { label: 'Contestação',               polo: 'Parte Ré',     tipo: 'auto'   },
+    { label: 'Impugnação à Contestação',  polo: 'Parte Autora', tipo: 'auto'   },
+    { label: 'Recurso Ordinário',         polo: null,           tipo: 'dual'   },
+    { label: 'Recurso Adesivo',           polo: null,           tipo: 'dual'   },
+    { label: 'Contrarrazões',             polo: null,           tipo: 'dual'   },
+    { label: 'Quesitos',                  polo: null,           tipo: 'dual'   },
+    { label: 'Quesitos Complementares',   polo: null,           tipo: 'dual'   },
+    { label: 'Sentença',                  polo: 'Juízo',        tipo: 'neutro' },
+    { label: 'Sentença de Embargos de Declaração', polo: 'Juízo', tipo: 'neutro' },
+    { label: 'Laudo Pericial',            polo: 'Perito',       tipo: 'neutro' },
+];
+
+let _docSelecionado = null;
+let _isWizardContext = false;
+let _pendingTargetIndex = null;
+
+function renderizarListaDocumentos(containerId, context) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    DOC_CONFIG.forEach(doc => {
+        const btn = document.createElement('button');
+        btn.className = `doc-btn ${doc.tipo === 'dual' ? 'dual' : doc.tipo === 'neutro' ? 'neutro' : ''}`;
+        btn.textContent = doc.label;
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            selecionarDocumento(doc.label, doc.polo || 'DUAL', context);
+        };
+        container.appendChild(btn);
+    });
+}
+
 function toggleAgruparPopup() {
     const agrupar = document.querySelector('input[name="modo_agrupar_popup"]:checked').value === 'agrupar';
-    document.getElementById('seletor-ideia-popup').style.display = agrupar ? 'block' : 'none';
+    const input = document.getElementById('input-ideia-popup');
+    input.style.display = agrupar ? 'block' : 'none';
+    if(agrupar) input.focus();
 }
 
 function toggleAgruparWizard() {
     const agrupar = document.querySelector('input[name="modo_agrupar_wizard"]:checked').value === 'agrupar';
-    document.getElementById('seletor-ideia-wizard').style.display = agrupar ? 'block' : 'none';
+    const input = document.getElementById('input-ideia-wizard');
+    input.style.display = agrupar ? 'block' : 'none';
+    if(agrupar) input.focus();
 }
 
-function popularSelectIdeias(topicoId, selectId, radioName) {
-    const select = document.getElementById(selectId);
-    select.innerHTML = '';
-    const topico = topicos.find(t => t.id === topicoId);
-    const radios = document.querySelectorAll(`input[name="${radioName}"]`);
+function processarAgrupamento(topicoId, inputId) {
+    const isWizard = inputId.includes('wizard');
+    const radioName = isWizard ? 'modo_agrupar_wizard' : 'modo_agrupar_popup';
     
-    if (!topico || !topico.anotacoes || topico.anotacoes.length === 0) {
-        select.innerHTML = '<option value="">(Nenhuma ideia criada ainda)</option>';
-        radios[0].checked = true;
-        radios[1].disabled = true;
-        select.style.display = 'none';
-        return;
+    if (document.querySelector(`input[name="${radioName}"]:checked`).value === 'agrupar') {
+        const topico = topicos.find(t => t.id === topicoId);
+        const numero = parseInt(document.getElementById(inputId).value, 10);
+        
+        if (isNaN(numero) || numero < 1 || numero > topico.anotacoes.length) {
+            exibirToast(`Número inválido. O tópico tem ${topico.anotacoes.length} ideia(s).`, 'erro');
+            return false;
+        }
+        return numero - 1; // Retorna índice base 0
     }
-    
-    radios[1].disabled = false;
-    topico.anotacoes.forEach((an, idx) => {
-        const opt = document.createElement('option');
-        opt.value = idx;
-        const prev = an.tipo === 'texto' ? an.conteudo.substring(0, 35) + '...' : '[Imagem Recortada]';
-        opt.textContent = `Nº ${idx + 1} — ${an.polo} (fl. ${an.pagina}) — ${prev}`;
-        select.appendChild(opt);
-    });
+    return null;
+}
+
+function selecionarDocumento(docLabel, polo, context) {
+    const topicoId = context === 'popup' ? document.getElementById('seletor-topico').value : _wizardTopicoSelecionado;
+    if (!topicoId) { exibirToast('Selecione o tópico de destino primeiro.', 'aviso'); return; }
+
+    const inputId = context === 'popup' ? 'input-ideia-popup' : 'input-ideia-wizard';
+    const targetIndex = processarAgrupamento(topicoId, inputId);
+    if (targetIndex === false) return;
+
+    _pendingTargetIndex = targetIndex;
+
+    if (polo === 'DUAL') {
+        _docSelecionado = docLabel;
+        _isWizardContext = (context === 'wizard');
+        document.getElementById(`${context}-step-doc`).style.display = 'none';
+        document.getElementById(`${context}-doc-selecionado`).textContent = docLabel;
+        document.getElementById(`${context}-step-polo`).style.display = 'block';
+    } else {
+        executarSalvamento(docLabel, polo, topicoId, _pendingTargetIndex, context);
+    }
+}
+
+function confirmarPolo(polo, event) {
+    if(event) event.stopPropagation();
+    const context = _isWizardContext ? 'wizard' : 'popup';
+    const topicoId = context === 'popup' ? document.getElementById('seletor-topico').value : _wizardTopicoSelecionado;
+    executarSalvamento(_docSelecionado, polo, topicoId, _pendingTargetIndex, context);
+}
+
+function voltarParaDocumentos(context, event) {
+    if(event) event.stopPropagation();
+    document.getElementById(`${context}-step-polo`).style.display = 'none';
+    document.getElementById(`${context}-step-doc`).style.display = 'block';
+    _docSelecionado = null;
+}
+
+function executarSalvamento(docLabel, polo, topicoId, targetIndex, context) {
+    if (context === 'popup') {
+        const comentario = document.getElementById('comentario-input').value.trim();
+        salvarAnotacao(pendingTipo, pendingConteudo, docLabel, polo, topicoId, comentario, targetIndex);
+        fecharPopupClassificacao();
+    } else {
+        _ultimoTopicoUsadoId = topicoId;
+        const comentario = document.getElementById('crop-comment-input').value.trim();
+        salvarAnotacao('imagem', _wizardImagemCapturada, docLabel, polo, topicoId, comentario, targetIndex);
+        fecharTudoWizard();
+    }
 }
 
 /* ================================================
@@ -148,7 +227,8 @@ function abrirConfirmacaoRecorteWizard() {
     // NOVO: Resetar modal e popular seletor com o tópico escolhido no Passo 1
     document.querySelector('input[name="modo_agrupar_wizard"][value="nova"]').checked = true;
     toggleAgruparWizard();
-    popularSelectIdeias(_wizardTopicoSelecionado, 'seletor-ideia-wizard', 'modo_agrupar_wizard');
+    
+    renderizarListaDocumentos('lista-docs-wizard', 'wizard');
 
     document.getElementById('wizard-backdrop').style.display = 'block';
     document.getElementById('crop-wizard-step2').style.display = 'flex';
@@ -203,45 +283,46 @@ function fecharTudoWizard() {
    POPUP DE CLASSIFICAÇÃO DE TEXTO
    ================================================ */
 
-function exibirPopupClassificacao(tipo, conteudo, clientX, clientY) {
-    if (topicos.length === 0) {
-        exibirToast('Crie pelo menos um Tópico Recursal antes de extrair informações.', 'aviso');
-        return;
-    }
+function fecharPopupClassificacao() {
+    const popup = document.getElementById('classification-popup');
+    popup.style.display = 'none';
 
-    pendingTipo     = tipo;
+    document.getElementById('popup-step-polo').style.display = 'none';
+    document.getElementById('popup-step-doc').style.display = 'block';
+    document.getElementById('input-ideia-popup').value = '';
+
+    const txtArea = document.getElementById('comentario-input');
+    if (txtArea) {
+        txtArea.style.display = 'none';
+        txtArea.value = '';
+    }
+    pendingTipo = null;
+    pendingConteudo = null;
+    if (window.getSelection) window.getSelection().removeAllRanges();
+}
+
+function exibirPopupClassificacao(tipo, conteudo) {
+    if (topicos.length === 0) {
+        exibirToast('Crie pelo menos um Tópico Recursal.', 'aviso'); return;
+    }
+    pendingTipo = tipo;
     pendingConteudo = conteudo;
 
     const select = document.getElementById('seletor-topico');
     select.innerHTML = '<option value="">Selecione o Tópico...</option>';
-    topicos.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value       = t.id;
-        opt.textContent = t.nome;
-        select.appendChild(opt);
-    });
+    topicos.forEach(t => select.appendChild(new Option(t.nome, t.id)));
 
     document.getElementById('agrupamento-popup-box').style.display = 'none';
     document.querySelector('input[name="modo_agrupar_popup"][value="nova"]').checked = true;
     toggleAgruparPopup();
 
+    renderizarListaDocumentos('lista-docs-popup', 'popup');
+
     const popup = document.getElementById('classification-popup');
-
-    popup.style.display    = 'flex';
-    popup.style.visibility = 'hidden';
-
-    const { width: popupW, height: popupH } = popup.getBoundingClientRect();
-
-    let x = clientX + 12;
-    let y = clientY + 12;
-
-    if (x + popupW > window.innerWidth)  x = window.innerWidth  - popupW - 12;
-    if (y + popupH > window.innerHeight) y = clientY - popupH - 12;
-    if (y < 0) y = 8;
-    if (x < 0) x = 8;
-
-    popup.style.left = x + 'px';
-    popup.style.top  = y + 'px';
+    popup.style.display = 'flex';
+    popup.style.left = '50%';
+    popup.style.top = '50%';
+    popup.style.transform = 'translate(-50%, -50%)';
 
     const txtArea = document.getElementById('comentario-input');
     txtArea.value = '';
@@ -251,49 +332,11 @@ function exibirPopupClassificacao(tipo, conteudo, clientX, clientY) {
     } else {
         txtArea.style.display = 'none';
     }
-
-    popup.style.visibility = 'visible';
-}
-
-function classificarESalvar(polo) {
-    const topicoId = document.getElementById('seletor-topico').value;
-    if (!topicoId) { exibirToast('Selecione o tópico de destino.', 'aviso'); return; }
-
-    let targetIndex = null;
-    if (document.querySelector('input[name="modo_agrupar_popup"]:checked').value === 'agrupar') {
-        targetIndex = document.getElementById('seletor-ideia-popup').value;
-    }
-
-    if (pendingTipo && pendingConteudo) {
-        const comentario = document.getElementById('comentario-input').value.trim();
-        salvarAnotacao(pendingTipo, pendingConteudo, polo, topicoId, comentario, targetIndex);
-    }
-    fecharPopupClassificacao();
-}
-
-function fecharPopupClassificacao() {
-    document.getElementById('classification-popup').style.display = 'none';
-
-    const txtArea = document.getElementById('comentario-input');
-    if (txtArea) {
-        txtArea.style.display = 'none';
-        txtArea.value = '';
-    }
-
-    pendingTipo     = null;
-    pendingConteudo = null;
-    if (window.getSelection) window.getSelection().removeAllRanges();
 }
 
 document.getElementById('seletor-topico').addEventListener('change', (e) => {
-    const topicoId = e.target.value;
     const box = document.getElementById('agrupamento-popup-box');
-    if (topicoId) {
-        box.style.display = 'flex';
-        popularSelectIdeias(topicoId, 'seletor-ideia-popup', 'modo_agrupar_popup');
-    } else {
-        box.style.display = 'none';
-    }
+    box.style.display = e.target.value ? 'flex' : 'none';
 });
 
 /* ================================================

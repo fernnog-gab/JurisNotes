@@ -495,13 +495,14 @@ function capturarTrechoSelecionado() {
    CORREÇÃO: não troca de aba automaticamente (evita regressão de UX).
    Usa toast não-intrusivo como feedback.
    ================================================ */
-async function salvarAnotacao(tipo, conteudo, polo, topicoId, comentario = '', targetParentIndex = null) {
+async function salvarAnotacao(tipo, conteudo, documento, polo, topicoId, comentario = '', targetParentIndex = null) {
     const topicoAlvo = topicos.find(t => t.id === topicoId);
     if (!topicoAlvo) return;
 
     const pjeId = await extrairIdPjeDaPagina(currentPage);
     const novaExtracao = {
         tipo,
+        documento,
         polo,
         pagina: currentPage,
         timestamp: Date.now(),
@@ -1105,7 +1106,8 @@ function imprimirTopicoAtivo() {
     topico.anotacoes.forEach((an, index) => {
         const num         = index + 1;
         const idFormatado = an.pjeId ? `Id. ${esc(an.pjeId)} — ` : '';
-        const meta        = `[Item ${num}] &nbsp;|&nbsp; Polo: ${esc(an.polo)} &nbsp;|&nbsp; ${idFormatado}Fl. ${esc(String(an.pagina))}`;
+        const docFormatado = an.documento ? `Doc: ${esc(an.documento)} &nbsp;|&nbsp; ` : '';
+        const meta = `[Item ${num}] &nbsp;|&nbsp; ${docFormatado}Polo: ${esc(an.polo)} &nbsp;|&nbsp; ${idFormatado}Fl. ${esc(String(an.pagina))}`;
 
         html += `\n    <div class="anotacao">
         <div class="meta">${meta}</div>`;
@@ -1130,8 +1132,8 @@ function imprimirTopicoAtivo() {
         if (an.itensCorrelacionados && an.itensCorrelacionados.length > 0) {
             an.itensCorrelacionados.forEach((item) => {
                 const idFmtItem = item.pjeId ? `Id. ${esc(item.pjeId)} — ` : '';
-                const metaItem  = `[Correlacionado] &nbsp;|&nbsp; Polo: ${esc(item.polo)} &nbsp;|&nbsp; ${idFmtItem}Fl. ${esc(String(item.pagina))}`;
-                
+                const docFmtItem = item.documento ? `Doc: ${esc(item.documento)} &nbsp;|&nbsp; ` : '';
+                const metaItem  = `[Agrupado] &nbsp;|&nbsp; ${docFmtItem}Polo: ${esc(item.polo)} &nbsp;|&nbsp; ${idFmtItem}Fl. ${esc(String(item.pagina))}`;                
                 html += `\n        <div class="anotacao" style="margin-top:10px; margin-left: 20px; border-left-color: #888;">
             <div class="meta">${metaItem}</div>`;
                 
