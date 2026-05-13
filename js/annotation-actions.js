@@ -175,11 +175,23 @@ function adicionarSubAnotacao(topicoId, anotacaoIndex) {
     painel.innerHTML = `
         <textarea id="sub-input-text" class="sub-input-textarea" placeholder="Digite a ideia secundária..." rows="3"></textarea>
         <div class="sub-input-actions">
-            <button class="sub-input-btn-confirm" onclick="confirmarSubAnotacao('${topicoId}', ${anotacaoIndex})">✔ Confirmar</button>
-            <button class="sub-input-btn-cancel" onclick="document.getElementById('sub-input-active').remove()">✕ Cancelar</button>
+            <button class="sub-input-btn-icon confirm" title="Confirmar (Ctrl+Enter)" onclick="confirmarSubAnotacao('${topicoId}', ${anotacaoIndex})">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </button>
+            <button class="sub-input-btn-icon cancel" title="Cancelar (Esc)" onclick="document.getElementById('sub-input-active').remove()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
         </div>`;
     const wrapper = document.querySelector(`#timeline-wrapper-${anotacaoIndex} .main-card-wrapper`);
-    if (wrapper) { wrapper.appendChild(painel); document.getElementById('sub-input-text').focus(); }
+    if (wrapper) { 
+        wrapper.appendChild(painel); 
+        const textarea = document.getElementById('sub-input-text');
+        textarea.focus();
+        textarea.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') document.getElementById('sub-input-active').remove();
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') confirmarSubAnotacao(topicoId, anotacaoIndex);
+        });
+    }
 }
 
 function confirmarSubAnotacao(topicoId, anotacaoIndex) {

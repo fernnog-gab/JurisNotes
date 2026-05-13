@@ -58,9 +58,10 @@ function exibirToast(mensagem, tipo = 'sucesso') {
    UTILITÁRIO: ATUALIZAR INDICADOR DE STATUS DO BACKUP
    ================================================ */
 function atualizarStatusBackup(texto, ativa = false) {
-    const el = document.getElementById('status-backup');
-    el.textContent = texto;
-    el.classList.toggle('ativa', ativa);
+    // Bloqueia poluição visual de status ordinários, emitindo apenas eventos críticos
+    if (texto.includes('Restaurada') || texto.includes('Erro')) {
+        exibirToast(`Sistema: ${texto}`, ativa ? 'sucesso' : 'erro');
+    }
 }
 
 /* ================================================

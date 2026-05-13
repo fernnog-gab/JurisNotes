@@ -26,6 +26,14 @@ window.TopicsManager = (function () {
         return strEscapada.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
     }
 
+    function escurecerCor(hex, fator = 0.65) {
+        const num = parseInt(hex.replace('#', ''), 16);
+        const r = Math.min(255, Math.floor(((num >> 16) & 0xFF) * fator));
+        const g = Math.min(255, Math.floor(((num >> 8) & 0xFF) * fator));
+        const b = Math.min(255, Math.floor((num & 0xFF) * fator));
+        return `rgb(${r},${g},${b})`;
+    }
+
     // Paleta de 25 cores suaves para as abas de tópicos
     const CORES_TOPICOS = [
         '#E3F2FD', '#F3E5F5', '#FBE9E7', '#E8F5E9', '#FFF3E0',
@@ -297,8 +305,15 @@ window.TopicsManager = (function () {
             btn.style.backgroundColor = topico.cor;
 
             if (isActive) {
-                contentEl.style.borderTop       = `3px solid ${topico.cor}`;
+                btn.style.border = `3px solid ${escurecerCor(topico.cor)}`;
+                btn.style.borderBottom = 'none';
+                btn.style.color = escurecerCor(topico.cor, 0.4);
+                contentEl.style.borderTop = `3px solid ${escurecerCor(topico.cor)}`;
                 contentEl.style.backgroundColor = '#ffffff';
+            } else {
+                btn.style.border = '1px solid #dde3ea';
+                btn.style.borderBottom = 'none';
+                btn.style.color = '#555';
             }
 
             btn.onclick = () => {
