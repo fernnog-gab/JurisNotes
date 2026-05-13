@@ -23,16 +23,11 @@ window.TopicsManager = (function () {
 
     // Paleta de 25 cores suaves para as abas de tópicos
     const CORES_TOPICOS = [
-        / Sequência 1
-    '#39FF14', '#FF10F0', '#00FFFF', '#FFFF00', '#B026FF', 
-    // Sequência 2
-    '#CCFF00', '#FF007F', '#0FF0FC', '#DFFF00', '#BD00FF', 
-    // Sequência 3
-    '#00FF9F', '#FF44CC', '#08F7FE', '#E6FB04', '#9D00FF', 
-    // Sequência 4
-    '#00FF41', '#FF6EC7', '#7DF9FF', '#FFD300', '#9400D3', 
-    // Sequência 5
-    '#20FF00', '#FF00FF', '#00CCFF', '#FFEA00', '#7B00FF'
+        '#E3F2FD', '#F3E5F5', '#FBE9E7', '#E8F5E9', '#FFF3E0',
+        '#E0F7FA', '#FCE4EC', '#F1F8E9', '#EFEBE9', '#FFF8E1',
+        '#EDF2F4', '#FADADD', '#D5E8D4', '#FFE6CC', '#E1D5E7',
+        '#DAE8FC', '#FFF2CC', '#F8CECC', '#E6D0DE', '#D0CEE2',
+        '#CDEBFA', '#D9E0F2', '#EAE5D9', '#F5D0A9', '#D1E8E2'
     ];
 
     /**
