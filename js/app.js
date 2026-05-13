@@ -495,28 +495,35 @@ function capturarTrechoSelecionado() {
    CORREÇÃO: não troca de aba automaticamente (evita regressão de UX).
    Usa toast não-intrusivo como feedback.
    ================================================ */
-async function salvarAnotacao(tipo, conteudo, polo, topicoId, comentario = '') {
+async function salvarAnotacao(tipo, conteudo, polo, topicoId, comentario = '', targetParentIndex = null) {
     const topicoAlvo = topicos.find(t => t.id === topicoId);
     if (!topicoAlvo) return;
 
-    // Extração invisível em background
     const pjeId = await extrairIdPjeDaPagina(currentPage);
-
-    topicoAlvo.anotacoes.push({
+    const novaExtracao = {
         tipo,
         polo,
-        pagina:     currentPage,
-        timestamp:  Date.now(),
-        // Para imagens, armazena o data URL base64 completo
-        conteudo:   conteudo,
-        pjeId:      pjeId, // Identificador gravado na persistência
-        comentario: comentario // Nova propriedade. Ausente em backups antigos = '' por default.
-    });
+        pagina: currentPage,
+        timestamp: Date.now(),
+        conteudo: conteudo,
+        pjeId: pjeId,
+        comentario: comentario
+    };
 
-    renderizarTopicos();      // Re-render com preservação do estado dos accordions
-    salvarBackupAutomatico(); // Serializa topicos[] no arquivo de backup
-    exibirToast(`Anotação salva em "${topicoAlvo.nome}".`);
-    // Não troca de aba: o usuário permanece na leitura para continuar a análise.
+    if (targetParentIndex !== null && targetParentIndex !== '') {
+        const parentNode = topicoAlvo.anotacoes[targetParentIndex];
+        if (!parentNode.itensCorrelacionados) parentNode.itensCorrelacionados = [];
+        parentNode.itensCorrelacionados.push(novaExtracao);
+        exibirToast(`Item agrupado à Ideia ${parseInt(targetParentIndex) + 1}.`);
+    } else {
+        novaExtracao.subAnotacoes = [];
+        novaExtracao.itensCorrelacionados = [];
+        topicoAlvo.anotacoes.push(novaExtracao);
+        exibirToast(`Anotação salva em "${topicoAlvo.nome}".`);
+    }
+
+    renderizarTopicos();
+    salvarBackupAutomatico();
 }
 
 // Fechar popup e desativar modo recorte com Escape
@@ -809,6 +816,37 @@ function reordenarSubAnotacao() {
     document.getElementById('sub-annotation-context-menu').style.display = 'none';
 }
 
+function editarSubAnotacao() {
+    if (!_menuSubAnotacaoCtx) return;
+    const { topicoId, parentIndex, subIndex } = _menuSubAnotacaoCtx;
+    const topico = topicos.find(t => t.id === topicoId);
+    if (!topico) return;
+    
+    const sub = topico.anotacoes[parentIndex].subAnotacoes[subIndex];
+    const novoTexto = prompt('Edite a ideia secundária:', sub.texto);
+    
+    if (novoTexto !== null && novoTexto.trim() !== '') {
+        sub.texto = novoTexto.trim();
+        renderizarTopicos();
+        salvarBackupAutomatico();
+        exibirToast('Ideia secundária atualizada com sucesso.', 'sucesso');
+    }
+    
+    _menuSubAnotacaoCtx = null;
+    document.getElementById('sub-annotation-context-menu').style.display = 'none';
+}
+
+function excluirItemCorrelacionado(topicoId, parentIndex, correlacionadoIndex) {
+    if (!confirm('Excluir este item correlacionado?')) return;
+    const topico = topicos.find(t => t.id === topicoId);
+    if (!topico) return;
+    
+    topico.anotacoes[parentIndex].itensCorrelacionados.splice(correlacionadoIndex, 1);
+    renderizarTopicos();
+    salvarBackupAutomatico();
+    exibirToast('Item correlacionado excluído.', 'sucesso');
+}
+
 /* ================================================
    NAVEGAÇÃO DIRETA DE PÁGINA
    ================================================ */
@@ -1086,6 +1124,26 @@ function imprimirTopicoAtivo() {
             an.subAnotacoes.forEach((sub, sIdx) => {
                 const label = `${num}.${sIdx < 26 ? ABC[sIdx] : ABC[Math.floor(sIdx/26)-1] + ABC[sIdx%26]}`;
                 html += `\n        <div class="sub-anotacao"><span class="sub-label">${label}</span>${esc(sub.texto)}</div>`;
+            });
+        }
+        
+        if (an.itensCorrelacionados && an.itensCorrelacionados.length > 0) {
+            an.itensCorrelacionados.forEach((item) => {
+                const idFmtItem = item.pjeId ? `Id. ${esc(item.pjeId)} — ` : '';
+                const metaItem  = `[Correlacionado] &nbsp;|&nbsp; Polo: ${esc(item.polo)} &nbsp;|&nbsp; ${idFmtItem}Fl. ${esc(String(item.pagina))}`;
+                
+                html += `\n        <div class="anotacao" style="margin-top:10px; margin-left: 20px; border-left-color: #888;">
+            <div class="meta">${metaItem}</div>`;
+                
+                if (item.tipo === 'texto') {
+                    html += `\n            <div class="texto">"${esc(item.conteudo)}"</div>`;
+                } else if (item.tipo === 'imagem') {
+                    html += `\n            <img src="${item.conteudo}" alt="Recorte Agrupado — Pág. ${esc(String(item.pagina))}">`;
+                    if (item.comentario) {
+                        html += `\n            <div class="comentario"><strong>Descrição:</strong> ${esc(item.comentario)}</div>`;
+                    }
+                }
+                html += `\n        </div>`;
             });
         }
 

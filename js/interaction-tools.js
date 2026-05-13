@@ -33,6 +33,40 @@ let _ultimoTopicoUsadoId     = null;  // Memória inteligente: pré-seleciona na
 let pendingTipo     = null;   // Tipo da extração pendente: 'texto' | 'imagem'
 let pendingConteudo = null;   // Conteúdo bruto da extração pendente
 
+function toggleAgruparPopup() {
+    const agrupar = document.querySelector('input[name="modo_agrupar_popup"]:checked').value === 'agrupar';
+    document.getElementById('seletor-ideia-popup').style.display = agrupar ? 'block' : 'none';
+}
+
+function toggleAgruparWizard() {
+    const agrupar = document.querySelector('input[name="modo_agrupar_wizard"]:checked').value === 'agrupar';
+    document.getElementById('seletor-ideia-wizard').style.display = agrupar ? 'block' : 'none';
+}
+
+function popularSelectIdeias(topicoId, selectId, radioName) {
+    const select = document.getElementById(selectId);
+    select.innerHTML = '';
+    const topico = topicos.find(t => t.id === topicoId);
+    const radios = document.querySelectorAll(`input[name="${radioName}"]`);
+    
+    if (!topico || !topico.anotacoes || topico.anotacoes.length === 0) {
+        select.innerHTML = '<option value="">(Nenhuma ideia criada ainda)</option>';
+        radios[0].checked = true;
+        radios[1].disabled = true;
+        select.style.display = 'none';
+        return;
+    }
+    
+    radios[1].disabled = false;
+    topico.anotacoes.forEach((an, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        const prev = an.tipo === 'texto' ? an.conteudo.substring(0, 35) + '...' : '[Imagem Recortada]';
+        opt.textContent = `Nº ${idx + 1} — ${an.polo} (fl. ${an.pagina}) — ${prev}`;
+        select.appendChild(opt);
+    });
+}
+
 /* ================================================
    WIZARD DE RECORTE DE IMAGEM
    State-machine de 3 estados:
@@ -108,9 +142,15 @@ function desativarOverlayRecorte() {
  */
 function abrirConfirmacaoRecorteWizard() {
     desativarOverlayRecorte();
-    document.getElementById('crop-preview-img').src     = _wizardImagemCapturada;
+    document.getElementById('crop-preview-img').src = _wizardImagemCapturada;
     document.getElementById('crop-comment-input').value = '';
-    document.getElementById('wizard-backdrop').style.display   = 'block';
+    
+    // NOVO: Resetar modal e popular seletor com o tópico escolhido no Passo 1
+    document.querySelector('input[name="modo_agrupar_wizard"][value="nova"]').checked = true;
+    toggleAgruparWizard();
+    popularSelectIdeias(_wizardTopicoSelecionado, 'seletor-ideia-wizard', 'modo_agrupar_wizard');
+
+    document.getElementById('wizard-backdrop').style.display = 'block';
     document.getElementById('crop-wizard-step2').style.display = 'flex';
 }
 
@@ -121,7 +161,13 @@ function abrirConfirmacaoRecorteWizard() {
 function finalizarRecorteWizard(polo) {
     const comentario = document.getElementById('crop-comment-input').value.trim();
     _ultimoTopicoUsadoId = _wizardTopicoSelecionado;
-    salvarAnotacao('imagem', _wizardImagemCapturada, polo, _wizardTopicoSelecionado, comentario);
+    
+    let targetIndex = null;
+    if (document.querySelector('input[name="modo_agrupar_wizard"]:checked').value === 'agrupar') {
+        targetIndex = document.getElementById('seletor-ideia-wizard').value;
+    }
+
+    salvarAnotacao('imagem', _wizardImagemCapturada, polo, _wizardTopicoSelecionado, comentario, targetIndex);
     fecharTudoWizard();
 }
 
@@ -175,6 +221,10 @@ function exibirPopupClassificacao(tipo, conteudo, clientX, clientY) {
         select.appendChild(opt);
     });
 
+    document.getElementById('agrupamento-popup-box').style.display = 'none';
+    document.querySelector('input[name="modo_agrupar_popup"][value="nova"]').checked = true;
+    toggleAgruparPopup();
+
     const popup = document.getElementById('classification-popup');
 
     popup.style.display    = 'flex';
@@ -207,17 +257,17 @@ function exibirPopupClassificacao(tipo, conteudo, clientX, clientY) {
 
 function classificarESalvar(polo) {
     const topicoId = document.getElementById('seletor-topico').value;
+    if (!topicoId) { exibirToast('Selecione o tópico de destino.', 'aviso'); return; }
 
-    if (!topicoId) {
-        exibirToast('Selecione o tópico de destino antes de salvar.', 'aviso');
-        return;
+    let targetIndex = null;
+    if (document.querySelector('input[name="modo_agrupar_popup"]:checked').value === 'agrupar') {
+        targetIndex = document.getElementById('seletor-ideia-popup').value;
     }
 
     if (pendingTipo && pendingConteudo) {
         const comentario = document.getElementById('comentario-input').value.trim();
-        salvarAnotacao(pendingTipo, pendingConteudo, polo, topicoId, comentario);
+        salvarAnotacao(pendingTipo, pendingConteudo, polo, topicoId, comentario, targetIndex);
     }
-
     fecharPopupClassificacao();
 }
 
@@ -234,6 +284,17 @@ function fecharPopupClassificacao() {
     pendingConteudo = null;
     if (window.getSelection) window.getSelection().removeAllRanges();
 }
+
+document.getElementById('seletor-topico').addEventListener('change', (e) => {
+    const topicoId = e.target.value;
+    const box = document.getElementById('agrupamento-popup-box');
+    if (topicoId) {
+        box.style.display = 'flex';
+        popularSelectIdeias(topicoId, 'seletor-ideia-popup', 'modo_agrupar_popup');
+    } else {
+        box.style.display = 'none';
+    }
+});
 
 /* ================================================
    EVENT LISTENERS PERMANENTES DO OVERLAY DE RECORTE

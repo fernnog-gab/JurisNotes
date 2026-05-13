@@ -148,10 +148,66 @@ window.TopicsManager = (function () {
             htmlSubAnotacoes = `<div class="sub-annotations-wrapper">${subCardsHTML}</div>`;
         }
 
-        // Wrapper Master Flex (O pai da linha toda) - Sem inline styles
+        // NOVO: Processar itens agrupados
+        let htmlCorrelacionados = '';
+        if (anotacao.itensCorrelacionados && anotacao.itensCorrelacionados.length > 0) {
+            htmlCorrelacionados = anotacao.itensCorrelacionados.map((item, cIdx) => {
+                const itemTag = poloParaClasse(item.polo);
+                const idFormt = item.pjeId ? `Id. ${item.pjeId} - ` : '';
+                const itemMeta = `(${idFormt}fl. ${item.pagina})`;
+                
+                const cConteudo = item.tipo === 'texto'
+                    ? `<p class="card-texto">"${escaparHTML(item.conteudo)}"</p>`
+                    : `<img class="card-imagem" src="${item.conteudo}" alt="Recorte de Agrupamento">`;
+                    
+                const cComent = (item.tipo === 'imagem' && item.comentario)
+                    ? `<div class="card-comentario"><strong>Descrição:</strong> ${escaparHTML(item.comentario)}</div>`
+                    : '';
+                    
+                return `
+                <div class="correlated-item-wrapper">
+                    <div class="two-way-arrow-container">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l-4-4m4 4l4-4" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div class="annotation-card correlated-card">
+                        <button class="btn-excluir-correlacionado" title="Remover item agrupado" onclick="excluirItemCorrelacionado('${activeTabId}', ${index}, ${cIdx})">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                        </button>
+                        <div class="card-header">
+                            <span class="polo-tag ${itemTag}">${item.polo}</span>
+                            <span class="card-meta" style="cursor:copy;" title="Clique para copiar" onclick="navigator.clipboard.writeText('${itemMeta}')">${itemMeta}</span>
+                        </div>
+                        ${cConteudo}
+                        ${cComent}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // Wrapper Master Flex atualizado para envelopar a hierarquia inteira
         const wrapperMaster = `
             <div class="timeline-item-master ${alignClass}" id="timeline-wrapper-${index}">
-                ${cardPrincipal}
+                <div class="main-card-wrapper">
+                    <div class="annotation-number-area">
+                        <div class="timeline-number" title="Opções desta anotação" onclick="abrirMenuAnotacao('${activeTabId}', ${index}, event)">
+                            ${numero}
+                        </div>
+                    </div>
+                    <div class="annotation-card">
+                        <div class="card-header">
+                            <span class="polo-tag ${tagClass}">${anotacao.polo}</span>
+                            <span class="card-meta" style="cursor:copy;" title="Clique para copiar" onclick="navigator.clipboard.writeText('${metaTexto}')">${metaTexto}</span>
+                        </div>
+                        ${htmlConteudo}
+                        ${htmlComentario}
+                    </div>
+                    ${htmlCorrelacionados}
+                </div>
                 ${htmlSubAnotacoes}
             </div>`;
 
