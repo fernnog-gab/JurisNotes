@@ -21,6 +21,11 @@ window.TopicsManager = (function () {
             .replace(/'/g, '&#39;');
     }
 
+    function renderizarMarkdownSeguro(strEscapada) {
+        if (!strEscapada) return '';
+        return strEscapada.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+    }
+
     // Paleta de 25 cores suaves para as abas de tópicos
     const CORES_TOPICOS = [
         '#E3F2FD', '#F3E5F5', '#FBE9E7', '#E8F5E9', '#FFF3E0',
@@ -101,7 +106,7 @@ window.TopicsManager = (function () {
         let htmlComentario = '';
 
         if (anotacao.tipo === 'texto') {
-            htmlConteudo = `<p class="card-texto">"${escaparHTML(anotacao.conteudo)}"</p>`;
+            htmlConteudo = `<p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(anotacao.conteudo))}"</p>`;
         } else if (anotacao.tipo === 'imagem') {
             htmlConteudo = `<img class="card-imagem" src="${anotacao.conteudo}" alt="Recorte">`;
         } else if (anotacao.tipo === 'audio') {
@@ -174,7 +179,7 @@ window.TopicsManager = (function () {
                                  onclick="abrirMenuSubAnotacao('${activeTabId}', ${index}, ${sIdx}, event)">
                                 ${label}
                             </div>
-                            ${escaparHTML(sub.texto)}
+                            ${renderizarMarkdownSeguro(escaparHTML(sub.texto))}
                         </div>
                     </div>`;
             }).join('');
@@ -191,7 +196,7 @@ window.TopicsManager = (function () {
                 const itemMeta = `(${idFormt}fl. ${item.pagina})`;
                 
                 const cConteudo = item.tipo === 'texto'
-                    ? `<p class="card-texto">"${escaparHTML(item.conteudo)}"</p>`
+                    ? `<p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(item.conteudo))}"</p>`
                     : `<img class="card-imagem" src="${item.conteudo}" alt="Recorte de Agrupamento">`;
                     
                 const cComent = (item.tipo === 'imagem' && item.comentario)
