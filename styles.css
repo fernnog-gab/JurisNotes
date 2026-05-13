@@ -106,19 +106,19 @@ body {
     color: #ffd54f;
 }
 
-.status-box {
-    background: rgba(0,0,0,0.2);
-    border-radius: 6px;
-    padding: 8px 4px;
-    font-size: 0.70rem;
-    text-align: center;
-    width: 100%;
-    margin-bottom: 20px;
-    font-weight: 600;
+.sidebar-logo-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 16px;
 }
 
-#status-backup { color: rgba(255,255,255,0.6); }
-#status-backup.ativa { color: #a5d6a7; }
+.sidebar-logo {
+    max-width: 48px;
+    height: auto;
+    opacity: 0.9;
+}
 
 .page-nav-box {
     display: flex;
@@ -474,13 +474,14 @@ body {
     position: fixed;
     bottom: 24px;
     right: 24px;
-    background: var(--trt-blue);
-    color: white;
+    background: #455a64;
+    color: #ffffff;
     padding: 12px 20px;
-    border-radius: 8px;
+    border-radius: 24px;
     font-size: 0.85rem;
     font-weight: 500;
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    border: 1px solid #546e7a;
     z-index: 3000;
     opacity: 0;
     transform: translateY(12px);
@@ -494,9 +495,9 @@ body {
     transform: translateY(0);
 }
 
-.toast-feedback.toast-sucesso { background: #2e7d32; }
-.toast-feedback.toast-aviso   { background: #f57c00; }
-.toast-feedback.toast-erro    { background: #b71c1c; }
+.toast-feedback.toast-sucesso { border-left: 4px solid #81c784; }
+.toast-feedback.toast-aviso   { border-left: 4px solid #ffd54f; }
+.toast-feedback.toast-erro    { border-left: 4px solid #e57373; }
 
 /* ================================================
    BOTÃO ENCERRAR SESSÃO — ESTADO DE CONFIRMAÇÃO
@@ -554,11 +555,13 @@ body {
 }
 
 .topic-tab-btn.active {
-    font-weight: 700;
+    font-weight: 800;
     color: #000;
     z-index: 5; /* Eleva acima da borda do content-area */
-    padding-bottom: 11px; /* Estica a aba ativa para fundir com o painel */
-    box-shadow: 0 -3px 6px -2px rgba(0,0,0,0.06);
+    padding-bottom: 12px; /* Estica a aba ativa para fundir com o painel */
+    box-shadow: none;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
 }
 
 /* ================================================
@@ -1049,6 +1052,12 @@ body {
     gap: 10px;
     box-shadow: 0 4px 12px rgba(213, 0, 249, 0.10);
 }
+
+.sub-input-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.sub-input-btn-icon { background: transparent; border: 1px solid transparent; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #888; transition: all 0.2s ease; }
+.sub-input-btn-icon svg { width: 18px; height: 18px; }
+.sub-input-btn-icon.confirm:hover { background: #e8f5e9; color: #2e7d32; border-color: #a5d6a7; }
+.sub-input-btn-icon.cancel:hover { background: #ffebee; color: #c62828; border-color: #ef9a9a; }
 
 /* Limpeza do botão antigo e reajuste da numeração original */
 .btn-add-sub { display: none !important; }
