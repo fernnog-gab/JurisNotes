@@ -137,16 +137,13 @@
          O select é populado dinamicamente por exibirPopupClassificacao().
     -->
     <div id="classification-popup">
-        <p class="popup-label">Classificar como:</p>
+        <p class="popup-label">Tópico de Destino:</p>
         <select id="seletor-topico" class="topic-select">
             <option value="">Selecione o Tópico...</option>
         </select>
-        <textarea
-            id="comentario-input"
-            class="popup-textarea"
-            rows="3"
-            placeholder="Descreva o que esta imagem mostra (opcional)..."
-        ></textarea>
+        
+        <textarea id="comentario-input" class="popup-textarea" rows="2" placeholder="Descreva o que esta imagem mostra (opcional)..."></textarea>
+        
         <div id="agrupamento-popup-box" style="display:none; flex-direction:column; gap:6px; margin-bottom: 8px;">
             <p class="popup-label">Modo de Inserção:</p>
             <div style="display:flex; gap:10px;">
@@ -157,14 +154,24 @@
                     <input type="radio" name="modo_agrupar_popup" value="agrupar" onchange="toggleAgruparPopup()"> Agrupar a Existente
                 </label>
             </div>
-            <select id="seletor-ideia-popup" class="topic-select" style="display:none;"></select>
+            <input type="number" id="input-ideia-popup" class="topic-select" style="display:none;" placeholder="Nº da Ideia (ex: 1)" min="1">
         </div>
-        <button class="chip-btn chip-autora" onclick="classificarESalvar('Parte Autora')">✔ Parte Autora</button>
-        <button class="chip-btn chip-re" onclick="classificarESalvar('Parte Ré')">✔ Parte Ré</button>
-        <button class="chip-btn chip-sentenca" onclick="classificarESalvar('Sentença')">✔ Sentença</button>
-        <button class="chip-btn chip-sentenca-ed" onclick="classificarESalvar('Sentença de ED')">✔ Sentença de Embargos de Declaração</button>
-        <button class="chip-btn chip-perito" onclick="classificarESalvar('Laudo Pericial')">✔ Laudo Pericial</button>
-        <button class="chip-btn chip-cancelar" onclick="fecharPopupClassificacao()">✕ Cancelar</button>
+
+        <div id="popup-step-doc">
+            <p class="popup-label">Tipo de Documento:</p>
+            <div id="lista-docs-popup" class="doc-list-container"></div>
+            <button class="chip-btn chip-cancelar" style="margin-top: 12px;" onclick="fecharPopupClassificacao()">✕ Cancelar</button>
+        </div>
+
+        <div id="popup-step-polo" style="display:none;">
+            <p class="popup-label">De qual parte é este documento?</p>
+            <p id="popup-doc-selecionado" class="doc-highlight"></p>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+                <button class="chip-btn chip-autora" onclick="confirmarPolo('Parte Autora', event)">✔ Parte Autora</button>
+                <button class="chip-btn chip-re" onclick="confirmarPolo('Parte Ré', event)">✔ Parte Ré</button>
+                <button class="chip-btn chip-cancelar" onclick="voltarParaDocumentos('popup', event)">← Voltar</button>
+            </div>
+        </div>
     </div>
     
     <!-- MENU CONTEXTUAL DA ANOTAÇÃO (excluir / reordenar / nó de ideia) -->
@@ -232,18 +239,12 @@
     
     <div id="crop-wizard-step2" class="crop-wizard-popup" style="display:none;">
         <div class="wizard-header">✂️ Passo 2 de 2 — Confirmar Recorte</div>
-        <p class="popup-label">Área capturada — verifique a imagem abaixo:</p>
         <div class="crop-preview-container">
             <img id="crop-preview-img" src="" alt="Prévia do Recorte" />
         </div>
-        <p class="popup-label" style="margin-top: 4px;">Descrição ou observação (opcional):</p>
-        <textarea
-            id="crop-comment-input"
-            class="popup-textarea"
-            rows="3"
-            style="display: block;"
-            placeholder="Ex.: Valor da condenação indicado pelo perito na fl. 302...">
-        </textarea>
+        <p class="popup-label" style="margin-top: 8px;">Descrição (opcional):</p>
+        <textarea id="crop-comment-input" class="popup-textarea" rows="2" style="display: block;" placeholder="Ex.: Valor indicado fl. 302..."></textarea>
+        
         <div id="agrupamento-wizard-box" style="display:flex; flex-direction:column; gap:6px; margin: 8px 0;">
             <p class="popup-label">Modo de Inserção:</p>
             <div style="display:flex; gap:10px;">
@@ -254,19 +255,28 @@
                     <input type="radio" name="modo_agrupar_wizard" value="agrupar" onchange="toggleAgruparWizard()"> Agrupar a Existente
                 </label>
             </div>
-            <select id="seletor-ideia-wizard" class="topic-select" style="display:none;"></select>
+            <input type="number" id="input-ideia-wizard" class="topic-select" style="display:none;" placeholder="Nº da Ideia (ex: 1)" min="1">
         </div>
-        <p class="popup-label">Classificar como:</p>
-        <div class="wizard-polo-grid">
-            <button class="chip-btn chip-autora" onclick="finalizarRecorteWizard('Parte Autora'); event.stopPropagation();">✔ Parte Autora</button>
-            <button class="chip-btn chip-re" onclick="finalizarRecorteWizard('Parte Ré'); event.stopPropagation();">✔ Parte Ré</button>
-            <button class="chip-btn chip-sentenca" onclick="finalizarRecorteWizard('Sentença'); event.stopPropagation();">✔ Sentença</button>
-            <button class="chip-btn chip-sentenca-ed" onclick="finalizarRecorteWizard('Sentença de ED'); event.stopPropagation();">✔ Sentença de ED</button>
-            <button class="chip-btn chip-perito" onclick="finalizarRecorteWizard('Laudo Pericial'); event.stopPropagation();">✔ Laudo Pericial</button>
+
+        <div id="wizard-step-doc">
+            <p class="popup-label">Tipo de Documento:</p>
+            <div id="lista-docs-wizard" class="doc-list-container" style="max-height: 140px;"></div>
+            <div class="wizard-actions">
+                <button class="chip-btn chip-cancelar" onclick="cancelarRecorteWizard(event);">✕ Cancelar</button>
+                <button class="chip-btn chip-cancelar" onclick="refazerRecorteArea(event);">↩ Refazer Área</button>
+            </div>
         </div>
-        <div class="wizard-actions">
-            <button class="chip-btn chip-cancelar" onclick="cancelarRecorteWizard(); event.stopPropagation();">✕ Cancelar</button>
-            <button class="chip-btn chip-cancelar" onclick="refazerRecorteArea(); event.stopPropagation();">↩ Refazer Área</button>
+
+        <div id="wizard-step-polo" style="display:none;">
+            <p class="popup-label">De qual parte é este documento?</p>
+            <p id="wizard-doc-selecionado" class="doc-highlight"></p>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+                <button class="chip-btn chip-autora" onclick="confirmarPolo('Parte Autora', event)">✔ Parte Autora</button>
+                <button class="chip-btn chip-re" onclick="confirmarPolo('Parte Ré', event)">✔ Parte Ré</button>
+                <div class="wizard-actions">
+                    <button class="chip-btn chip-cancelar" onclick="voltarParaDocumentos('wizard', event)">← Voltar</button>
+                </div>
+            </div>
         </div>
     </div>
     

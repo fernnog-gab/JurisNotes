@@ -1197,3 +1197,72 @@ body {
     width: 16px;
     height: 16px;
 }
+
+/* Container de Lista de Documentos */
+.doc-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 6px;
+    background: #fdfdfd;
+}
+
+/* Scrollbar refinada */
+.doc-list-container::-webkit-scrollbar { width: 6px; }
+.doc-list-container::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+
+/* Botões da Lista */
+.doc-btn {
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    padding: 10px 12px;
+    border-radius: 6px;
+    text-align: left;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--trt-blue);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.doc-btn:hover {
+    background: #e8ecef;
+    border-color: var(--trt-blue-mid);
+    transform: translateX(2px);
+}
+
+.doc-btn.dual::after {
+    content: " \2192";
+    float: right;
+    color: #999;
+}
+
+.doc-btn.neutro {
+    color: #455a64;
+    background: #f5f7f8;
+}
+
+.doc-highlight {
+    font-size: 0.9rem;
+    font-weight: 800;
+    margin-bottom: 12px;
+    color: var(--trt-blue-mid);
+    text-align: center;
+    background: var(--trt-light-bg);
+    padding: 6px;
+    border-radius: 4px;
+}
+
+/* Novas Tags do Painel de Anotações */
+.doc-tag {
+    background: #eceff1;
+    color: #37474f;
+    border: 1px solid #cfd8dc;
+}
+.tag-juizo { background: #e3f2fd; color: #0d47a1; }
+.tag-perito { background: #fff8e1; color: #e65100; }
