@@ -1143,3 +1143,57 @@ body {
     color: #bbb;
     font-weight: 400;
 }
+
+/* ================================================
+   ITENS CORRELACIONADOS (AGRUPAMENTO)
+   ================================================ */
+.correlated-item-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    position: relative;
+}
+
+.two-way-arrow-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 6px 0;
+    color: #888;
+}
+
+.two-way-arrow-container svg {
+    width: 20px;
+    height: 20px;
+}
+
+.annotation-card.correlated-card {
+    border-radius: 8px; /* Cantos arredondados uniformes (sem badge numérica) */
+    background-color: #fafafa;
+    border-top: 3px solid #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    width: 100%;
+    position: relative;
+}
+
+.btn-excluir-correlacionado {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: transparent;
+    border: none;
+    color: #bbb;
+    cursor: pointer;
+    transition: color 0.2s;
+    padding: 4px;
+}
+
+.btn-excluir-correlacionado:hover {
+    color: #c62828;
+}
+
+.btn-excluir-correlacionado svg {
+    width: 16px;
+    height: 16px;
+}

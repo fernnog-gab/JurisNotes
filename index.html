@@ -141,6 +141,18 @@
             rows="3"
             placeholder="Descreva o que esta imagem mostra (opcional)..."
         ></textarea>
+        <div id="agrupamento-popup-box" style="display:none; flex-direction:column; gap:6px; margin-bottom: 8px;">
+            <p class="popup-label">Modo de Inserção:</p>
+            <div style="display:flex; gap:10px;">
+                <label style="font-size:0.8rem; cursor:pointer;">
+                    <input type="radio" name="modo_agrupar_popup" value="nova" checked onchange="toggleAgruparPopup()"> Nova Ideia
+                </label>
+                <label style="font-size:0.8rem; cursor:pointer;">
+                    <input type="radio" name="modo_agrupar_popup" value="agrupar" onchange="toggleAgruparPopup()"> Agrupar a Existente
+                </label>
+            </div>
+            <select id="seletor-ideia-popup" class="topic-select" style="display:none;"></select>
+        </div>
         <button class="chip-btn chip-autora" onclick="classificarESalvar('Parte Autora')">✔ Parte Autora</button>
         <button class="chip-btn chip-re" onclick="classificarESalvar('Parte Ré')">✔ Parte Ré</button>
         <button class="chip-btn chip-sentenca" onclick="classificarESalvar('Sentença')">✔ Sentença</button>
@@ -175,6 +187,12 @@
     
     <!-- MENU CONTEXTUAL DAS SUB-ANOTAÇÕES (excluir / reordenar nó de ideia) -->
     <div id="sub-annotation-context-menu" class="annotation-context-menu">
+        <button class="ann-action-btn" title="Editar Ideia Secundária" onclick="editarSubAnotacao()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+        </button>
         <button class="ann-action-btn" title="Reordenar Ideia Secundária" onclick="reordenarSubAnotacao()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="8 17 12 21 16 17"></polyline>
@@ -220,6 +238,18 @@
             style="display: block;"
             placeholder="Ex.: Valor da condenação indicado pelo perito na fl. 302...">
         </textarea>
+        <div id="agrupamento-wizard-box" style="display:flex; flex-direction:column; gap:6px; margin: 8px 0;">
+            <p class="popup-label">Modo de Inserção:</p>
+            <div style="display:flex; gap:10px;">
+                <label style="font-size:0.8rem; cursor:pointer;">
+                    <input type="radio" name="modo_agrupar_wizard" value="nova" checked onchange="toggleAgruparWizard()"> Nova Ideia
+                </label>
+                <label style="font-size:0.8rem; cursor:pointer;">
+                    <input type="radio" name="modo_agrupar_wizard" value="agrupar" onchange="toggleAgruparWizard()"> Agrupar a Existente
+                </label>
+            </div>
+            <select id="seletor-ideia-wizard" class="topic-select" style="display:none;"></select>
+        </div>
         <p class="popup-label">Classificar como:</p>
         <div class="wizard-polo-grid">
             <button class="chip-btn chip-autora" onclick="finalizarRecorteWizard('Parte Autora'); event.stopPropagation();">✔ Parte Autora</button>
