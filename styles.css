@@ -1266,3 +1266,84 @@ body {
 }
 .tag-juizo { background: #e3f2fd; color: #0d47a1; }
 .tag-perito { background: #fff8e1; color: #e65100; }
+
+/* --- INDICADOR DE ÁUDIO PULSANTE CONTEXTUAL --- */
+#active-audio-indicator {
+    margin-left: auto;
+    margin-right: 16px;
+    align-self: center;
+    background: #e53935;
+    color: white;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(229, 57, 53, 0.4);
+    animation: pulse-mic 2s infinite;
+}
+#active-audio-indicator svg { width: 16px; height: 16px; }
+
+@keyframes pulse-mic {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(229, 57, 53, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(229, 57, 53, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(229, 57, 53, 0); }
+}
+
+/* --- PLAYER DE ÁUDIO FLUTUANTE --- */
+#audio-player-panel {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.25);
+    z-index: 2500;
+    border: 1px solid var(--border-color);
+    width: 400px;
+    max-width: 90vw;
+    flex-direction: column;
+    gap: 12px;
+}
+.audio-header {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 700;
+    color: var(--trt-blue);
+    border-bottom: 1px solid #eee;
+    padding-bottom: 8px;
+}
+.audio-header button {
+    background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #999;
+}
+.audio-controls {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+}
+.audio-markers {
+    display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 600;
+    color: #555; background: #f4f7f9; padding: 6px 10px; border-radius: 6px;
+}
+#main-audio-player { width: 100%; height: 40px; outline: none; }
+
+/* --- CARD DE ÁUDIO NA TIMELINE --- */
+.card-audio {
+    background: #fdfaf4;
+    border: 1px solid #f2e3c6;
+    padding: 12px;
+    border-radius: 6px;
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.audio-icon-box {
+    background: #ffe082; color: #d84315; padding: 10px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.audio-icon-box svg { width: 20px; height: 20px; }
+.audio-card-meta { line-height: 1.5; }
+.audio-card-meta strong { color: var(--trt-blue-mid); }
+.audio-card-meta span { font-size: 0.85rem; color: #555; }

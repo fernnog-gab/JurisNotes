@@ -61,6 +61,15 @@
                 <hr class="toolbar-separator">
 
                 <!-- ── GRUPO 2: Ferramentas de Trabalho Diário ───────── -->
+                <button class="icon-btn" id="btn-ferramenta-audio" onclick="AudioManager.iniciarSessao()" title="Analisar Audiência (Áudio)" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="23"></line>
+                        <line x1="8" y1="23" x2="16" y2="23"></line>
+                    </svg>
+                </button>
+
                 <button class="icon-btn" id="btn-novo-topico" onclick="criarTopicoPrompt()" title="Criar Tópico Recursal" disabled>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -100,6 +109,9 @@
         <div class="tabs">
             <button class="tab-btn active" id="tab-leitura" onclick="trocarAba('leitura')">Processo</button>
             <button class="tab-btn" id="tab-historico" onclick="trocarAba('historico')">Anotações</button>
+            <div id="active-audio-indicator" onclick="AudioManager.alternarPlayer()" title="Audiência em andamento (Clique para abrir)" style="display: none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path></svg>
+            </div>
         </div>
         
         <div id="pdf-container">
@@ -280,9 +292,74 @@
         </div>
     </div>
     
+    <div id="audio-player-panel" style="display: none;">
+        <div class="audio-header">
+            <span>🎙️ Oitiva de Audiência</span>
+            <button onclick="AudioManager.fecharPlayer()" title="Minimizar Player">✕</button>
+        </div>
+        <audio id="main-audio-player" controls></audio>
+        <div class="audio-controls">
+            <button class="chip-btn chip-cancelar" onclick="AudioManager.marcarInicio()">⏱️ Marcar Início</button>
+            <button class="chip-btn chip-cancelar" onclick="AudioManager.marcarFim()">⏱️ Marcar Fim e Anotar</button>
+        </div>
+        <div class="audio-markers">
+            <span id="audio-marker-start">Início: --' --''</span>
+            <span id="audio-marker-end">Fim: --' --''</span>
+        </div>
+    </div>
+
+    <div id="audio-classification-popup" class="crop-wizard-popup" style="display:none; z-index: 3001;">
+        <div class="wizard-header">🎙️ Classificar Trecho de Áudio</div>
+        
+        <p class="popup-label">Tópico de Destino:</p>
+        <select id="audio-topic-select" class="topic-select"></select>
+
+        <div id="audio-agrupamento-box" style="margin-top: 8px;">
+            <p class="popup-label">Modo de Inserção:</p>
+            <div style="display:flex; gap:10px;">
+                <label style="font-size:0.8rem; cursor:pointer;">
+                    <input type="radio" name="modo_agrupar_audio" value="nova" checked onchange="AudioManager.toggleAgrupar()"> Nova Ideia
+                </label>
+                <label style="font-size:0.8rem; cursor:pointer;">
+                    <input type="radio" name="modo_agrupar_audio" value="agrupar" onchange="AudioManager.toggleAgrupar()"> Agrupar a Existente
+                </label>
+            </div>
+            <input type="number" id="audio-input-ideia" class="topic-select" style="display:none; margin-top:6px;" placeholder="Nº da Ideia (ex: 1)" min="1">
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 12px 0;">
+
+        <p class="popup-label">Quem está falando?</p>
+        <select id="audio-speaker-role" class="topic-select" onchange="AudioManager.onRoleChange()">
+            <option value="">Selecione o Orador...</option>
+            <option value="Juízo">Juiz / Juíza</option>
+            <option value="Parte Autora">Parte Autora</option>
+            <option value="Preposto">Preposto</option>
+            <option value="Testemunha">Testemunha</option>
+            <option value="Advogado">Advogado(a)</option>
+        </select>
+
+        <div id="audio-speaker-side-box" style="display: none; margin-top: 8px;">
+            <p class="popup-label">De qual parte?</p>
+            <select id="audio-speaker-side" class="topic-select">
+                <option value="Parte Autora">Parte Autora</option>
+                <option value="Parte Ré">Parte Ré</option>
+            </select>
+        </div>
+
+        <p class="popup-label" style="margin-top: 12px;">Transcrição / Resumo (opcional):</p>
+        <textarea id="audio-comment" class="popup-textarea" style="display: block; min-height: 60px;" placeholder="Digite o que foi dito para conferência futura..."></textarea>
+
+        <div class="wizard-actions">
+            <button class="chip-btn chip-cancelar" onclick="AudioManager.cancelarAnotacao()">✕ Cancelar</button>
+            <button class="chip-btn chip-autora" style="background: var(--trt-blue); color: white; border-color: var(--trt-blue);" onclick="AudioManager.salvarRecorte()">✔ Confirmar Anotação</button>
+        </div>
+    </div>
+
     <script src="js/backup-manager.js"></script>
     <script src="js/topics-manager.js"></script>
     <script src="js/interaction-tools.js"></script>
+    <script src="js/audio-manager.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
