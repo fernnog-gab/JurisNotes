@@ -366,7 +366,14 @@ window.TopicsManager = (function () {
 
             subCards.forEach(sub => {
                 const subRect = sub.getBoundingClientRect();
-                const endX = isRightAligned ? subRect.right - containerRect.left : subRect.left - containerRect.left;
+                const endX = isRightAligned
+    ? subRect.right - containerRect.left   // card à direita: entra pela borda direita
+    : subRect.left  - containerRect.left;  // card à esquerda: entra pela borda esquerda
+
+// E o ponto de saída do card principal também precisa ser o lado correto:
+const startX = isRightAligned
+    ? mainRect.left  - containerRect.left  // card à direita: sai pela borda esquerda
+    : mainRect.right - containerRect.left; // card à esquerda: sai pela borda direita
                 const endY = (subRect.top + subRect.height / 2) - containerRect.top;
 
                 // Curva de Bézier suavizada
