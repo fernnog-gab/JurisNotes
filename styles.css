@@ -944,7 +944,7 @@ body {
     position: relative;
     z-index: 2; /* Garante que os cards fiquem ACIMA da linha SVG desenhada no fundo */
     display: flex;
-    gap: 0; /* REMOVIDO o gap de 24px */
+    gap: 32px; /* RESTAURADO: Espaçamento entre ideia central e nó de ideia */
     width: 100%;
     margin-bottom: 32px; /* Restaura o espaçamento vertical entre blocos */
     align-items: stretch; 
@@ -954,19 +954,20 @@ body {
 .timeline-item-master.align-left { flex-direction: row; }
 .timeline-item-master.align-right { flex-direction: row-reverse; }
 
-/* O card principal agora ocupa 60%, garantindo que o SVG (x=30 / x=70) fique centrado nele */
+/* O card principal agora ocupa 60% menos a margem do gap */
 .main-card-wrapper {
     position: relative;
-    width: 60%;
+    width: calc(60% - 16px);
     flex-shrink: 0;
     overflow: visible;
 }
 
+/* Wrapper de sub-anotações ocupa 40% menos a margem do gap */
 .sub-annotations-wrapper {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    width: 40%;
+    width: calc(40% - 16px);
     position: relative;
 }
 
@@ -982,19 +983,7 @@ body {
     flex-direction: row-reverse;
 }
 
-/* ESPAÇADOR INVISÍVEL — mantém o corredor físico para a curva SVG */
-.sub-connector-line {
-    min-width: 72px;   /* largura do "corredor" que a linha percorrerá */
-    height: 2px;       /* altura mínima para não colapsar em alguns layouts */
-    background: transparent;
-    border: none;
-    flex-shrink: 0;
-}
-
-/* CRÍTICO: Inverter visualmente o fluxo do tracejado para o lado direito */
-.timeline-item-master.align-right .sub-connector-line {
-    background-image: none !important; /* Regra sobrescrita pelo novo layout tracejado */
-}
+/* CRÍTICO: .sub-connector-line foi completamente removido conforme o novo layout do motor de SVG */
 
 /* Card do nó de ideia */
 .sub-annotation-card {
@@ -1396,11 +1385,8 @@ body {
 }
 
 /* ================================================
-   2. REMOÇÃO COMPLETA DA LINHA RETA TRACEJADA ANTIGA (Resolve Alerta 7)
+   2. REMOÇÃO COMPLETA DA LINHA RETA TRACEJADA ANTIGA (Limpeza finalizada)
    ================================================ */
-.sub-connector-line {
-    display: none !important;
-}
 
 /* ================================================
    3. ESTILOS PARA O GERENCIADOR DE ABAS
