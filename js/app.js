@@ -11,11 +11,21 @@ let _encerrarConfirmando = false;  // Flag: aguardando segundo clique para confi
 let pdfObserver      = null;   // IntersectionObserver para lazy loading
 
 document.addEventListener("DOMContentLoaded", () => {
+    // Injeção de dependência dinâmica para o gerenciador de áudio
     if (window.AudioManager) {
         AudioManager.init({
-            topicos: topicos,
+            getTopicos: () => topicos, 
             exibirToast: exibirToast,
             salvarAnotacao: salvarAnotacao
+        });
+    }
+
+    // Injeção de dependência padronizada para o exportador
+    if (window.ExportManager) {
+        ExportManager.init({
+            getTopicos: () => topicos,
+            exibirToast: exibirToast,
+            getActiveTabId: () => TopicsManager.getActiveTabId()
         });
     }
 });

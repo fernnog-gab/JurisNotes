@@ -23,7 +23,8 @@ window.AudioManager = (function() {
     }
 
     async function iniciarSessao() {
-        if (!_deps.topicos || _deps.topicos.length === 0) {
+        const topicosAtuais = _deps.getTopicos(); // Correção: uso do getter
+        if (!topicosAtuais || topicosAtuais.length === 0) {
             _deps.exibirToast('Crie pelo menos um Tópico Recursal antes de analisar a audiência.', 'aviso');
             return;
         }
@@ -37,7 +38,6 @@ window.AudioManager = (function() {
             });
             const file = await fileHandle.getFile();
             
-            // Prevenção de Memory Leak: revoga URL anterior se existir
             if (_audioUrl) URL.revokeObjectURL(_audioUrl);
             _audioUrl = URL.createObjectURL(file);
             
@@ -83,10 +83,11 @@ window.AudioManager = (function() {
     }
 
     function abrirModalClassificacao() {
-        // UX: Não fechamos o player aqui para permitir conferência do áudio enquanto digita
         const selectTopico = document.getElementById('audio-topic-select');
         selectTopico.innerHTML = '<option value="">Selecione o Tópico...</option>';
-        _deps.topicos.forEach(t => selectTopico.appendChild(new Option(t.nome, t.id)));
+        
+        const topicosAtuais = _deps.getTopicos(); // Correção: uso do getter
+        topicosAtuais.forEach(t => selectTopico.appendChild(new Option(t.nome, t.id)));
         
         document.getElementById('audio-speaker-role').value = '';
         document.getElementById('audio-speaker-side-box').style.display = 'none';
@@ -122,17 +123,31 @@ window.AudioManager = (function() {
         }
 
         let polo = '';
-        if (role === 'Testemunha' || role === 'Advogado') polo = document.getElementById('audio-speaker-side').value;
-        else if (role === 'Preposto') polo = 'Parte Ré';
-        else if (role === 'Juízo') polo = 'Juízo';
-        else if (role === 'Parte Autora') polo = 'Parte Autora';
+        let oradorFinal = '';
 
-        const oradorFinal = (role === 'Testemunha' || role === 'Advogado') ? `${role} (${polo})` : role;
+        if (role === 'Testemunha' || role === 'Advogado') {
+            polo = document.getElementById('audio-speaker-side').value;
+            oradorFinal = `${role} da ${polo}`;
+        } else if (role === 'Preposto') {
+            polo = 'Parte Ré';
+            oradorFinal = 'Preposto (Parte Ré)';
+        } else if (role === 'Juízo') {
+            polo = 'Juízo';
+            oradorFinal = 'Magistrado / Juízo';
+        } else if (role === 'Parte Autora') {
+            polo = 'Parte Autora';
+            oradorFinal = 'Depoimento Pessoal (Autora)';
+        } else if (role === 'Parte Ré') {
+            polo = 'Parte Ré';
+            oradorFinal = 'Depoimento Pessoal (Ré)';
+        }
         
         let targetIndex = null;
         if (document.querySelector('input[name="modo_agrupar_audio"]:checked').value === 'agrupar') {
             const numero = parseInt(document.getElementById('audio-input-ideia').value, 10);
-            const topico = _deps.topicos.find(t => t.id === topicoId);
+            const topicosAtuais = _deps.getTopicos(); // Correção: uso do getter
+            const topico = topicosAtuais.find(t => t.id === topicoId);
+            
             if (isNaN(numero) || numero < 1 || numero > topico.anotacoes.length) {
                 _deps.exibirToast('Número de agrupamento inválido.', 'erro'); return;
             }
@@ -145,10 +160,10 @@ window.AudioManager = (function() {
             labelInicio: formatTime(_timeStart), labelFim: formatTime(_timeEnd)
         });
 
-        // Chamada segura via Injeção de Dependência
-        _deps.salvarAnotacao('audio', conteudoFormatado, 'Oitiva', polo, topicoId, comment, targetIndex);
+        _deps.salvarAnotacao('audio', conteudoFormatado, 'Ata de Audiência / MP3', polo, topicoId, comment, targetIndex);
         
-        cancelarAnotacao();
+        cancelarAnotacao(); // Fecha o modal
+        fecharPlayer();     // Força o player a minimizar e deixar apenas o ícone pulsando
         _deps.exibirToast('Trecho da oitiva salvo!', 'sucesso');
     }
 
