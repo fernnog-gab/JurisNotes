@@ -157,6 +157,8 @@ window.AudioManager = (function() {
         const conteudoFormatado = JSON.stringify({
             inicio: _timeStart, fim: _timeEnd,
             oradorStr: oradorFinal,
+            role: role,
+            poloTag: polo,
             labelInicio: formatTime(_timeStart), labelFim: formatTime(_timeEnd)
         });
 
@@ -177,9 +179,49 @@ window.AudioManager = (function() {
         document.getElementById('audio-marker-end').innerText = "Fim: --' --''";
     }
 
+    function encerrar() {
+        if (_audioUrl) {
+            URL.revokeObjectURL(_audioUrl);
+            _audioUrl = null;
+        }
+        const player = document.getElementById('main-audio-player');
+        if (player) player.src = '';
+        
+        const activeIndicator = document.getElementById('active-audio-indicator');
+        if (activeIndicator) activeIndicator.style.display = 'none';
+        
+        fecharPlayer();
+        _timeStart = null; 
+        _timeEnd = null;
+    }
+
+    async function solicitarMp3Retomada() {
+        _deps.exibirToast('Anotações de audiência detectadas. Localize o arquivo MP3 correspondente.', 'aviso');
+        try {
+            const [fileHandle] = await window.showOpenFilePicker({
+                types: [{
+                    description: 'Áudio da Audiência (MP3/WAV)',
+                    accept: { 'audio/mpeg': ['.mp3'], 'audio/wav': ['.wav'] }
+                }]
+            });
+            const file = await fileHandle.getFile();
+            if (_audioUrl) URL.revokeObjectURL(_audioUrl);
+            _audioUrl = URL.createObjectURL(file);
+            document.getElementById('main-audio-player').src = _audioUrl;
+            
+            const activeIndicator = document.getElementById('active-audio-indicator');
+            if (activeIndicator) activeIndicator.style.display = 'flex';
+            
+            abrirPlayer();
+            _deps.exibirToast('Áudio restaurado com sucesso!', 'sucesso');
+        } catch (err) {
+            if (err.name !== 'AbortError') _deps.exibirToast('Erro ao carregar o arquivo MP3.', 'erro');
+        }
+    }
+
     return {
         init, iniciarSessao, abrirPlayer, fecharPlayer, alternarPlayer,
         marcarInicio, marcarFim, onRoleChange, toggleAgrupar,
-        salvarRecorte, cancelarAnotacao
+        salvarRecorte, cancelarAnotacao, encerrar, solicitarMp3Retomada
     };
 })();

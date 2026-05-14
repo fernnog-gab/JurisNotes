@@ -9,6 +9,7 @@ let _encerrarTimer       = null;   // ID do setTimeout de confirmação do botã
 let _encerrarConfirmando = false;  // Flag: aguardando segundo clique para confirmar encerramento
 
 let pdfObserver      = null;   // IntersectionObserver para lazy loading
+let _sessaoPossuiAudio = false; // Flag de restauração de áudio na retomada de sessão
 
 document.addEventListener("DOMContentLoaded", () => {
     // Injeção de dependência dinâmica para o gerenciador de áudio
@@ -123,6 +124,8 @@ function encerrarSessao() {
     // Fechar popup de classificação se aberto
     fecharPopupClassificacao();
 
+    if (window.AudioManager) window.AudioManager.encerrar();
+
     // Reset de estado
     topicos      = [];
     pdfDoc       = null;
@@ -220,6 +223,7 @@ async function retomarProcesso() {
         // Restaurar estado em memória
         topicos      = pacote.dados;
         modoRetomada = true;
+        _sessaoPossuiAudio = pacote.metadata.possuiAudio ?? false;
 
         const isLegado = pacote.metadata.versaoApp === '1.0';
         const msgHash  = isLegado
@@ -278,6 +282,7 @@ async function novoProcesso(event) {
             event.target.value = '';
             return;
         }
+        if (window.AudioManager) window.AudioManager.encerrar();
         topicos = [];
         BackupManager.encerrar(); // Substitui: fileHandleBackup = null
         renderizarTopicos();
@@ -398,6 +403,10 @@ function carregarPDF(event) {
                     modoRetomada = false;
                     trocarAba('leitura');
                     exibirToast('PDF validado e carregado. Sessão retomada com sucesso. ✓');
+                    
+                    if (_sessaoPossuiAudio && window.AudioManager) {
+                        window.AudioManager.solicitarMp3Retomada();
+                    }
                 } else {
                     exibirToast('PDF carregado! Defina onde salvar o arquivo de backup da sessão.');
                     await iniciarSessaoSalvamento();

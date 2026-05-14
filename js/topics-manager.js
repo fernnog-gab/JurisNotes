@@ -103,6 +103,17 @@ window.TopicsManager = (function () {
         } else if (anotacao.tipo === 'audio') {
             try {
                 const dadosAudio = JSON.parse(anotacao.conteudo);
+                
+                // Lógica retrocompatível e estilizada
+                const nomePapel = dadosAudio.role || dadosAudio.oradorStr;
+                const classePolo = dadosAudio.poloTag ? poloParaClasse(dadosAudio.poloTag) : 'doc-tag';
+                let tagVisual = `<span class="polo-tag ${classePolo}">${escaparHTML(nomePapel)}</span>`;
+                
+                // Agrupamento de tag (Ex: [Testemunha] [Parte Autora])
+                if ((dadosAudio.role === 'Testemunha' || dadosAudio.role === 'Advogado') && dadosAudio.poloTag) {
+                    tagVisual = `<span class="polo-tag doc-tag">${escaparHTML(dadosAudio.role)}</span> <span class="polo-tag ${classePolo}">${escaparHTML(dadosAudio.poloTag)}</span>`;
+                }
+
                 htmlConteudo = `
                     <div class="card-audio">
                         <div class="audio-icon-box">
@@ -112,8 +123,8 @@ window.TopicsManager = (function () {
                             </svg>
                         </div>
                         <div class="audio-card-meta">
-                            <strong>Orador:</strong> ${escaparHTML(dadosAudio.oradorStr)}<br>
-                            <span>Trecho: ${dadosAudio.labelInicio} a ${dadosAudio.labelFim}</span>
+                            <strong>Trecho da oitiva:</strong> ${tagVisual}<br>
+                            <span style="display:inline-block; margin-top: 4px;">⏱️ ${dadosAudio.labelInicio} a ${dadosAudio.labelFim}</span>
                         </div>
                     </div>`;
             } catch (e) {

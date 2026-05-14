@@ -52,11 +52,18 @@ window.BackupManager = (function () {
      * @returns {string} JSON formatado com 2 espaços de indentação
      */
     function _empacotar(topicos) {
+        const possuiAudio = topicos.some(t =>
+            t.anotacoes.some(a =>
+                a.tipo === 'audio' ||
+                (a.itensCorrelacionados && a.itensCorrelacionados.some(ic => ic.tipo === 'audio'))
+            )
+        );
         return JSON.stringify({
             metadata: {
                 processoId:        _processoId,
                 pdfHash:           _pdfHash,
-                versaoApp:         '2.1',
+                possuiAudio:       possuiAudio,
+                versaoApp:         '2.2',
                 ultimaAtualizacao: Date.now()
             },
             dados: topicos
