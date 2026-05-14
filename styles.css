@@ -1410,3 +1410,48 @@ body {
     display: flex;
     gap: 8px;
 }
+
+/* ================================================
+   NOVO: TRUNCAMENTO E EXPANSÃO DE TEXTOS LONGOS (NÓS DE IDEIA)
+   ================================================ */
+.sub-text-content {
+    display: -webkit-box;
+    -webkit-line-clamp: 10;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.6;
+    max-height: 16em; /* Fallback de segurança para navegadores corporativos antigos (10 linhas * 1.6) */
+}
+
+/* Estado expandido com scrollbar refinada */
+.sub-text-content.expanded {
+    -webkit-line-clamp: unset;
+    display: block; /* Restaura o fluxo normal do navegador para evitar conflitos de overflow */
+    overflow-y: auto;
+    max-height: 350px; /* Altura máxima antes de rolar */
+    padding-right: 6px;
+    margin-right: -6px;
+}
+
+.sub-text-content.expanded::-webkit-scrollbar { width: 6px; }
+.sub-text-content.expanded::-webkit-scrollbar-track { background: transparent; }
+.sub-text-content.expanded::-webkit-scrollbar-thumb { background: #d0cabc; border-radius: 4px; }
+
+.btn-expand-text {
+    background: none;
+    border: none;
+    color: var(--trt-blue-mid);
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 10px;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.btn-expand-text:hover {
+    background: rgba(37, 82, 127, 0.08);
+}
