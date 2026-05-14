@@ -7,6 +7,12 @@
 window.ExportManager = (function() {
     'use strict';
 
+    let _deps = {};
+
+    function init(dependencies) {
+        _deps = dependencies;
+    }
+
     function _formatarCitacao(texto) {
         if (!texto) return '> [Conteúdo não especificado]';
         return texto.split('\n').map(linha => `> ${linha}`).join('\n');
@@ -16,19 +22,11 @@ window.ExportManager = (function() {
         const dataGeracao = new Date().toLocaleString('pt-BR');
         
         let md = `---
-*Arquivo gerado pelo Juris Notes em ${dataGeracao}*
+*Pacote de Dados Extraídos via Juris Notes em ${dataGeracao}*
 ---
 
-# DIRETRIZES DE SISTEMA PARA A INTELIGÊNCIA ARTIFICIAL
-Você atua como assistente judicial de segunda instância. O documento abaixo representa o mapeamento analítico de teses, argumentos e provas extraídos de um processo judicial. 
-Sua tarefa ao receber este documento é analisar a concatenação lógica das extrações abaixo para compreender o **Tópico Recursal** e auxiliar na elaboração da minuta de voto (acórdão). 
-Atenção especial à origem (polo e tipo de documento) de cada alegação e à conexão entre as ideias principais e as secundárias (desdobramentos).
-
----
-
-# ANÁLISE DO TÓPICO RECURSAL: **${topico.nome.toUpperCase()}**
-
-Abaixo constam as extrações do processo relevantes para o julgamento deste tópico processual.
+# ANÁLISE DE TÓPICO RECURSAL: **${topico.nome.toUpperCase()}**
+> *Documento estruturado contendo extrações factuais, recortes e transcrições vinculadas a este tópico.*
 
 `;
 
@@ -39,29 +37,33 @@ Abaixo constam as extrações do processo relevantes para o julgamento deste tó
             const idFormt = an.pjeId ? `(ID PJe: ${an.pjeId})` : '';
             const folha = an.pagina ? `Fl. ${an.pagina}` : '';
             
-            md += `## [Item ${numItem}] Extraído de: ${documento} | Parte: ${polo}\n`;
-            md += `**Localização no Processo:** ${folha} ${idFormt}\n\n`;
+            md += `## [Item ${numItem}] Origem: ${documento} | Parte: ${polo}\n`;
+            md += `**Localização:** ${folha} ${idFormt}\n\n`;
 
-            md += `### 📄 Conteúdo / Evidência:\n`;
             if (an.tipo === 'texto') {
+                md += `### 📄 Fato / Trecho Documental:\n`;
                 md += _formatarCitacao(an.conteudo) + `\n\n`;
-                if (an.comentario) {
-                    md += `> 💬 **Observação do Analista:** ${an.comentario}\n\n`;
-                }
+                if (an.comentario) md += `> 💬 **Nota do Assessor:** ${an.comentario}\n\n`;
             } 
             else if (an.tipo === 'imagem') {
-                md += `> *[NOTA DE SISTEMA: Imagem/Recorte extraído do processo. A descrição visual/contextual feita pelo assistente encontra-se abaixo.]*\n>\n`;
-                const desc = an.comentario ? an.comentario : "Nenhuma descrição fornecida para esta imagem.";
-                md += _formatarCitacao(`**Descrição da Imagem:** ${desc}`) + `\n\n`;
+                md += `### 🖼️ Evidência Visual (Recorte da Peça):\n`;
+                const desc = an.comentario ? an.comentario : "[Imagem anexada aos autos sem descrição fornecida pelo assessor.]";
+                md += _formatarCitacao(`**Descrição/Contexto:** ${desc}`) + `\n\n`;
             }
             else if (an.tipo === 'audio') {
-                md += `> *[NOTA DE SISTEMA: Trecho de arquivo de áudio/audiência.]*\n>\n`;
-                const desc = an.comentario ? an.comentario : "Nenhuma transcrição fornecida para este trecho.";
-                md += _formatarCitacao(`**Transcrição/Resumo:** ${desc}`) + `\n\n`;
+                try {
+                    const audioData = JSON.parse(an.conteudo);
+                    md += `### 🎙️ Registro de Oitiva/Audiência:\n`;
+                    md += `**Orador:** ${audioData.oradorStr} | **Marcação:** ${audioData.labelInicio} a ${audioData.labelFim}\n`;
+                } catch(e) {
+                     md += `### 🎙️ Registro de Oitiva/Audiência:\n`;
+                }
+                const desc = an.comentario ? an.comentario : "[Sem transcrição detalhada.]";
+                md += _formatarCitacao(`**Transcrição/Resumo do Assessor:** ${desc}`) + `\n\n`;
             }
 
             if (an.subAnotacoes && an.subAnotacoes.length > 0) {
-                md += `### 🧠 Desdobramentos / Ideias Secundárias da Análise:\n`;
+                md += `### 🧠 Conclusões / Raciocínio Vinculado:\n`;
                 const ABC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
                 an.subAnotacoes.forEach((sub, sIdx) => {
                     const label = `${numItem}.${sIdx < 26 ? ABC[sIdx] : ABC[Math.floor(sIdx/26)-1] + ABC[sIdx%26]}`;
@@ -71,22 +73,18 @@ Abaixo constam as extrações do processo relevantes para o julgamento deste tó
             }
 
             if (an.itensCorrelacionados && an.itensCorrelacionados.length > 0) {
-                md += `### 🔗 Provas e Argumentos Agrupados a este Item:\n`;
+                md += `### 🔗 Provas e Argumentos Agrupados (Corroboração/Contradição):\n`;
                 an.itensCorrelacionados.forEach((item, cIdx) => {
                     const iDoc = item.documento || 'Doc. não classificado';
                     const iPolo = item.polo || 'Polo não especificado';
-                    const iId = item.pjeId ? `(ID: ${item.pjeId})` : '';
-                    
-                    md += `- **Ref:** ${iDoc} | ${iPolo} | Fl. ${item.pagina} ${iId}\n`;
+                    md += `- **Ref:** ${iDoc} | ${iPolo} | Fl. ${item.pagina}\n`;
                     
                     if (item.tipo === 'texto') {
                         md += `  > *Trecho:* ${item.conteudo.replace(/\n/g, ' ')}\n\n`;
                     } else if (item.tipo === 'imagem') {
-                        const iDesc = item.comentario || "Sem descrição.";
-                        md += `  - *Conteúdo de Imagem Anexada:* ${iDesc.replace(/\n/g, ' ')}\n`;
+                        md += `  - *Descrição de Imagem Agrupada:* ${item.comentario || "Sem descrição."}\n`;
                     } else if (item.tipo === 'audio') {
-                        const iDesc = item.comentario || "Sem transcrição.";
-                        md += `  - *Trecho de Áudio Agrupado:* ${iDesc.replace(/\n/g, ' ')}\n`;
+                        md += `  - *Resumo de Áudio Agrupado:* ${item.comentario || "Sem transcrição."}\n`;
                     }
                 });
                 md += `\n`;
@@ -113,22 +111,22 @@ Abaixo constam as extrações do processo relevantes para o julgamento deste tó
     }
 
     function exportarTopicoAtivo() {
-        const activeId = TopicsManager.getActiveTabId();
-
+        const activeId = _deps.getActiveTabId();
         if (!activeId) {
-            exibirToast('Selecione um tópico antes de gerar o documento.', 'aviso');
+            _deps.exibirToast('Selecione um tópico antes de gerar o documento.', 'aviso');
             return;
         }
 
-        const topico = topicos.find(t => t.id === activeId);
+        const topicosAtuais = _deps.getTopicos();
+        const topico = topicosAtuais.find(t => t.id === activeId);
 
         if (!topico) {
-            exibirToast('Tópico não encontrado. Tente novamente.', 'erro');
+            _deps.exibirToast('Tópico não encontrado. Tente novamente.', 'erro');
             return;
         }
 
         if (topico.anotacoes.length === 0) {
-            exibirToast('Este tópico está vazio. Adicione anotações antes de exportar.', 'aviso');
+            _deps.exibirToast('Este tópico está vazio. Adicione anotações antes de exportar.', 'aviso');
             return;
         }
 
@@ -138,15 +136,16 @@ Abaixo constam as extrações do processo relevantes para o julgamento deste tó
             const nomeArquivo = `Tese_${nomeSanitizado}.md`;
             
             _downloadArquivo(nomeArquivo, markdownConteudo);
-            exibirToast('Tópico exportado com sucesso para IA (.md)!', 'sucesso');
+            _deps.exibirToast('Tópico exportado com sucesso para IA (.md)!', 'sucesso');
             
         } catch (error) {
             console.error(error);
-            exibirToast('Erro ao gerar o arquivo de exportação.', 'erro');
+            _deps.exibirToast('Erro ao gerar o arquivo de exportação.', 'erro');
         }
     }
 
     return {
+        init,
         exportarTopicoAtivo
     };
 })();
