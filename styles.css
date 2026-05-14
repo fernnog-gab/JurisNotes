@@ -982,12 +982,12 @@ body {
     flex-direction: row-reverse;
 }
 
-/* O gradiente da linha fúcsia (Agora Linha Tracejada Fina) */
+/* ESPAÇADOR INVISÍVEL — mantém o corredor físico para a curva SVG */
 .sub-connector-line {
-    width: 24px;
-    height: 0px;
-    background-image: none !important;
-    border-top: 1.5px dashed #555;
+    min-width: 72px;   /* largura do "corredor" que a linha percorrerá */
+    height: 2px;       /* altura mínima para não colapsar em alguns layouts */
+    background: transparent;
+    border: none;
     flex-shrink: 0;
 }
 
