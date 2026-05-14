@@ -1385,3 +1385,42 @@ body {
 .edit-textarea:focus { border-color: var(--trt-blue-mid); }
 .edit-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; padding-top: 12px; border-top: 1px solid #eee; }
 .edit-save-btn { background: var(--trt-blue); color: white; border-color: var(--trt-blue); }
+
+/* ================================================
+   1. DESLOCAMENTO PROPORCIONAL DAS SETAS DE AGRUPAMENTO (Resolve Alerta 6)
+   ================================================ */
+.two-way-arrow-container svg {
+    width: 20px;
+    height: 20px;
+    transform: translateX(45%); /* Deslocamento relativo, não quebra responsividade */
+}
+
+/* ================================================
+   2. REMOÇÃO COMPLETA DA LINHA RETA TRACEJADA ANTIGA (Resolve Alerta 7)
+   ================================================ */
+.sub-connector-line {
+    display: none !important;
+}
+
+/* ================================================
+   3. ESTILOS PARA O GERENCIADOR DE ABAS
+   ================================================ */
+.aba-manager-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: #fafafa;
+    margin-bottom: 6px;
+}
+.aba-manager-nome {
+    font-weight: 600;
+    color: var(--trt-blue);
+    font-size: 0.88rem;
+}
+.aba-manager-actions {
+    display: flex;
+    gap: 8px;
+}
