@@ -1,169 +1,100 @@
-# Mapeamento de Inteiro Teor — Assistente de Elaboração de Minutas de Acórdão
+# Juris Notes — Assistente de Mapeamento Estruturado para Elaboração de Acórdãos
 
 ## 1. Contexto do Domínio
 
-Esta aplicação foi desenvolvida para auxiliar **assistentes judiciais de gabinete em tribunais de segunda instância** (ex.: TRT — Tribunal Regional do Trabalho) na elaboração de minutas de voto de acórdão.
+Esta aplicação foi desenvolvida para revolucionar o trabalho de **assistentes judiciais de gabinete em tribunais de segunda instância** (ex.: TRT), atuando como a ponte ideal entre a leitura do Inteiro Teor e a redação da minuta com auxílio de Inteligência Artificial.
 
-### O Fluxo de Trabalho Judicial
+### O Desafio Atual (Por que não usar a IA diretamente no PDF?)
+Fazer o upload de um processo em PDF de 2.000 páginas diretamente para uma IA (como ChatGPT ou Claude) gera "alucinações", perda de contexto e respostas genéricas. A IA precisa do **recorte exato** dos fatos, focado exclusivamente no **Efeito Devolutivo** (os tópicos que efetivamente foram objeto de recurso).
 
-O processo de elaboração de um acórdão em segunda instância segue uma rotina estruturada:
+### A Solução: O Fluxo de Trabalho Integrado Juris Notes + IA
+O Juris Notes age como um "Fichário Inteligente" que permite ao humano fazer o que ele faz de melhor (interpretação jurídica e curadoria de provas) e prepara o terreno perfeito para a IA fazer o que ela faz de melhor (redação).
 
-1. **Recebimento do recurso**: O processo chega ao gabinete do desembargador/relator já com um recurso interposto (ex.: Recurso Ordinário, Agravo de Instrumento).
-2. **Análise do Inteiro Teor**: O assistente lê integralmente o processo judicial em formato PDF, que pode conter centenas de páginas entre petições, decisões, atas de audiência e provas documentais.
-3. **Delimitação do Efeito Devolutivo**: A análise é guiada pelos **tópicos recursais** — as matérias efetivamente impugnadas pelo recorrente. O tribunal só pode julgar aquilo que foi objeto de recurso (princípio do efeito devolutivo, art. 1.013, CPC). Cada tópico recursal corresponde a uma tese jurídica distinta (ex.: admissibilidade formal do recurso, preliminar de nulidade, mérito — dano moral, mérito — horas extras, honorários advocatícios).
-4. **Extração de Anotações**: Para cada tópico, o assistente extrai do PDF os trechos relevantes: fundamentos da sentença recorrida, argumentos do recorrente, contrarrazões e provas documentais.
-5. **Redação da Minuta**: Com base nas anotações organizadas por tópico, o assistente redige a minuta do voto, que seguirá a estrutura: relatório → admissibilidade → mérito (tópico a tópico) → dispositivo.
-
-### Por que esta aplicação existe
-
-Ferramentas genéricas (Word, PDF readers) não refletem esse modelo mental. A análise de um processo extenso resulta em dezenas de anotações dispersas sem hierarquia. Esta aplicação resolve esse problema ao vincular cada extração a um **tópico recursal** específico, criando um fichário estruturado diretamente do PDF.
+1. **Recepção e Análise**: O assistente carrega o PDF do processo (Inteiro Teor).
+2. **Delimitação (Criação de Abas)**: Com base no recurso, o assistente cria Tópicos Recursais (ex: *Admissibilidade*, *Horas Extras*, *Dano Moral*).
+3. **Extração Factual**: Ao ler o PDF, o assistente captura recortes de texto, imagens de documentos e até marcações de áudio de audiências, vinculando-os ao tópico correto com a identificação do polo (Autor/Réu/Juízo).
+4. **Agrupamento e Mapa Mental**: O sistema permite criar sub-ideias e agrupar provas correlacionadas (ex: uma testemunha que contradiz um cartão de ponto).
+5. **Geração de Contexto para IA (A Magia)**: Com o tópico montado, o usuário clica em **"Exportar para IA"**. O sistema gera um arquivo estruturado em *Markdown* ultra-otimizado.
+6. **Redação Final**: O usuário cola esse arquivo em um LLM externo com um prompt ("Redija o voto deste tópico com base nestas provas..."). O resultado é uma minuta precisa, fundamentada e sem alucinações.
 
 ---
 
 ## 2. Arquitetura da Aplicação
 
-### Stack Técnica
+Aplicação **Client-Side Only (sem backend)**. Toda a lógica de leitura, extração e salvamento roda inteiramente no navegador do usuário, garantindo **Sigilo Judicial Absoluto** (os dados do processo nunca vão para um servidor na nuvem sem o consentimento do usuário via botão de exportação).
 
-A aplicação é intencionalmente **monolítica e sem dependências de servidor**. Toda a lógica roda no navegador, sem backend, sem banco de dados remoto e sem necessidade de deploy além de um servidor de arquivos estáticos (GitHub Pages compatível).
-
-| Arquivo       | Responsabilidade |
-|---------------|------------------|
-| `index.html`  | Estrutura do DOM, declaração de componentes e import dos scripts |
-| `styles.css`  | Toda a apresentação visual: layout, componentes, estados interativos |
-| `app.js`      | Estado global da aplicação, lógica de negócio, event listeners |
-
-### Dependências Externas (CDN)
-
-- **PDF.js v2.16.105** (`cdnjs.cloudflare.com`): renderização de PDFs no canvas com camada de texto selecionável.
-- **File System Access API** (nativa do Chromium): leitura e escrita de arquivos locais sem upload para servidor.
-
-### Compatibilidade de Navegadores
-
-> ⚠️ **Restrição Crítica**: A **File System Access API** (`showSaveFilePicker`, `showOpenFilePicker`) é suportada apenas em navegadores baseados em Chromium (Google Chrome 86+, Microsoft Edge 86+, Opera). **Firefox e Safari não suportam esta API**. A aplicação deve ser utilizada exclusivamente no Chrome ou Edge.
+### Compatibilidade Restrita
+> ⚠️ **Restrição Crítica**: A aplicação usa a **File System Access API** (para backup transparente local). Funciona exclusivamente em navegadores baseados em Chromium (Google Chrome 86+, Microsoft Edge 86+, Opera). **Não suportado no Firefox e Safari.**
 
 ---
 
-## 3. Modelo de Dados
+## 3. Funcionalidades e Evolução do Projeto
 
-O estado central da aplicação é o array `topicos[]`, serializado como JSON no arquivo de backup.
+### v1.0 — Fundação
+- Carregamento assíncrono de PDFs via PDF.js.
+- Camada de texto selecionável e captura automatizada.
+- Recorte de imagens diretamente no canvas do navegador.
+- Backup local via File System Access API.
 
-```json
-[
-  {
-    "id": "topico-1719000000000",
-    "nome": "Admissibilidade",
-    "cor": "#25527f",
-    "anotacoes": [
-      {
-        "tipo": "texto",
-        "polo": "Parte Autora",
-        "pagina": 12,
-        "timestamp": 1719000001000,
-        "conteudo": "O recurso foi interposto tempestivamente, conforme certidão de fl. 320."
-      }
-    ]
-  },
-  {
-    "id": "topico-1719000005000",
-    "nome": "Mérito — Dano Moral",
-    "cor": "#2e7d32",
-    "anotacoes": []
-  }
-]
-```
+### v2.0 — Estruturação Jurídica
+- Identificação por polo processual (Parte Autora, Parte Ré, Juízo, Perito).
+- Painel de Tópicos Recursais (Abas).
+- Ferramenta de Oitiva de Audiência (Mapeamento de MP3 com minutagem).
 
-**Regras do modelo:**
-- `tipo`: `"texto"` (trecho copiado) ou `"imagem"` (base64 de recorte de canvas).
-- `polo`: `"Parte Autora"` ou `"Parte Ré"` — identifica qual lado do processo originou a informação.
-- `pagina`: página corrente do PDF no momento da extração.
-- `conteudo`: para imagens, armazena o data URL base64 completo.
+### v3.0 — Motor de IA e Design Orgânico (Versão Atual)
+- **Integração LLM (Exportação MD)**: Compilação do tópico ativo em Markdown otimizado para leitura por máquinas e IAs generativas.
+- **Visualização em Mapa Mental Sinuoso**: Conexões desenhadas com curvas de Bézier em SVG, criando linhas do tempo fluidas entre ideias principais, provas e sub-anotações.
+- **Menu do Sistema (Gestão de Abas)**: Renomeação e exclusão segura de abas clicando no logo da aplicação.
+- **Edição de Metadados (Shift+Click)**: Permite corrigir assimetrias de numeração de folhas entre o PDF carregado e o visualizado no PJe, garantindo citação precisa na minuta.
+- **Validação Anti-Corrupção (Hash SHA-256)**: Assinatura matemática dos PDFs para garantir que o backup será retomado no documento correto.
 
 ---
 
-## 4. Funcionalidades por Versão
+## 4. Guia de Uso Rápido
 
-### v1.0 — Fundação (Inicial)
-- [x] Carregamento de PDF com lazy loading (IntersectionObserver)
-- [x] Camada de texto selecionável sobre o canvas do PDF (PDF.js TextLayer)
-- [x] Captura de texto selecionado
-- [x] Recorte de área do canvas (modo crop)
-- [x] Popup de classificação por polo processual (Parte Autora / Parte Ré)
-- [x] Histórico de anotações em lista plana
-- [x] Backup automático via File System Access API
+### Iniciando a Extração
+1. Clique em **Novo Processo** (ícone de arquivo) e carregue o PDF.
+2. Salve o arquivo de backup `.json` (ele atualizará sozinho a cada ação).
+3. Clique em **Novo Tópico** (ícone de linhas) para criar as abas das matérias do recurso.
+4. Selecione textos, acione a tesoura para imagens ou o microfone para áudios, classificando os recortes nas abas.
 
-### v2.0 — Gestão de Sessões e Tópicos Recursais (Versão Atual)
-- [x] **Novo Processo**: carrega um PDF e imediatamente força a criação do arquivo de backup vinculado
-- [x] **Retomar Processo**: abre um backup `.json` existente, restaura os tópicos e solicita o PDF correspondente
-- [x] **Tópicos Recursais**: painéis expansíveis (accordion) com sistema de cores automático
-- [x] **Roteamento de anotações**: toda extração é obrigatoriamente vinculada a um tópico
-- [x] **Preservação de estado do accordion**: rerenders não colapsam painéis abertos pelo usuário
-- [x] **Toast de feedback**: notificações não-intrusivas substituem `alert()` e mudanças forçadas de aba
-- [x] **Validação de tópico duplicado**: impede criação de tópicos com o mesmo nome
+### O Fluxo de Exportação para IA
+1. Após finalizar a análise de um tópico (ex: "Dano Moral"), vá para a aba **Anotações**.
+2. Clique no ícone de **Seta para Cima** (Exportar Tópico) na barra lateral.
+3. Um arquivo `.md` será baixado. 
+4. Abra o ChatGPT, Claude ou IA interna do Tribunal, anexe o arquivo `.md` e digite o comando:
+   > *"Atue como Desembargador Relator. Com base nos fatos e provas extraídos neste documento, elabore a fundamentação do voto para este tópico recursal."*
 
-### Roadmap (Funcionalidades Futuras)
-- [ ] **Drag & Drop entre tópicos**: reclassificação visual de anotações erroneamente categorizadas
-- [ ] **Exportador de Esqueleto de Minuta** (`.docx`/`.txt`): compilar tópicos como H1/H2 e anotações como bullet points
-- [ ] **Anotação por imagem em digitalizações**: ajuste de coordenadas do canvas para captura correta em páginas sem texto extraível (OCR ou captura posicional relativa ao container)
-- [ ] **Estado persistente via IndexedDB**: migrar imagens base64 do JSON para IndexedDB, aliviando o tamanho do arquivo de backup
-- [ ] **Edição e exclusão de anotações**: ações contextuais nos cards do histórico
-- [ ] **Contador de tópicos na aba**: badge numérico na aba "Anotações" indicando total de anotações
-
----
-
-## 5. Guia de Uso
-
-### Fluxo: Novo Processo
-
-1. Clique no ícone **Novo Processo** (ícone de documento com `+`) na barra lateral.
-2. Selecione o arquivo PDF do Inteiro Teor.
-3. O sistema carregará o PDF e imediatamente solicitará onde salvar o arquivo de backup (`.json`). **Não pule esta etapa** — é a âncora de toda a sessão.
-4. Na aba **Anotações**, clique no botão **+** para criar os Tópicos Recursais (ex.: "Admissibilidade", "Mérito — Dano Moral", "Honorários").
-5. Na aba **Processo**, selecione um trecho de texto e clique no ícone **T** (Gerar Anotação a Partir de Texto), ou ative o modo de recorte com o ícone de tesoura para capturar imagens.
-6. No popup de classificação, selecione o **Tópico de destino** e o **polo processual**.
-7. A anotação é salva automaticamente no tópico e o backup é atualizado.
-
-### Fluxo: Retomar Processo Existente
-
-1. Clique no ícone **Retomar Processo** (ícone de pasta) na barra lateral.
-2. Selecione o arquivo `.json` de backup da sessão anterior.
-3. O sistema restaurará todos os tópicos e anotações.
-4. Uma segunda solicitação abrirá o seletor de arquivo para você indicar o PDF do Inteiro Teor correspondente.
-5. O trabalho retoma de onde parou.
-
-### Atalhos de Teclado
-
-| Tecla   | Ação |
+### Atalhos de Teclado Essenciais
+| Comando | Ação |
 |---------|------|
-| `Esc`   | Fecha o popup de classificação / desativa o modo de recorte |
+| `Esc` | Cancela modo recorte, fecha modais e menus. |
+| `Ctrl + Enter` | Salva o card de observação secundária. |
+| `Ctrl + B` | Aplica negrito (formatação Markdown) no modal de edição de texto. |
+| `Clique Simples` no N° da Folha | Copia a referência completa para a área de transferência (ex: *Id. a1b2c3d - fl. 45*). |
+| `Shift + Clique` no N° da Folha | Abre o editor de metadados para ajustar/corrigir manualmente a numeração da página daquela extração. |
+
+---
+
+## 5. Estrutura de Arquivos do Repositório (Módulos)
+
+A base de código foi refatorada para um padrão modular isolado, garantindo fácil manutenção:
+
+| Arquivo | Responsabilidade |
+|---------|------------------|
+| `index.html` | Estrutura semântica, importação de dependências e templates de modais. |
+| `styles.css` | UI/UX, variáveis corporativas (Azul TRT), layout flexbox e design responsivo. |
+| `app.js` | Orquestrador global, lazy-loading de PDF.js e gestão de menus. |
+| `topics-manager.js` | Renderização do fichário, cards e motor de curvas de Bézier em SVG. |
+| `backup-manager.js` | Persistência local (API de File System) e cálculo de Hashes Criptográficos. |
+| `export-manager.js` | Formatação algorítmica de arrays JSON para arquivos Markdown de contexto de IA. |
+| `audio-manager.js` | Controle de playback, marcação de tempos (Início/Fim) e classificação de oitivas. |
+| `interaction-tools.js`| Wizards passo-a-passo, state-machine de recorte de canvas e popups flutuantes. |
+| `annotation-actions.js`| CRUD de anotações, modais de edição textual e injeção de Markdown (`**`). |
 
 ---
 
 ## 6. Limitações Conhecidas
 
-| Limitação | Causa | Status |
-|-----------|-------|--------|
-| Não funciona no Firefox/Safari | File System Access API não suportada | Limitação de plataforma — sem solução prevista |
-| Recorte de imagem pode descolar em PDFs com scroll | Coordenadas do canvas não compensam o scroll do container pai | Roadmap v3 |
-| Backup pode ficar grande com muitas imagens | Imagens base64 têm overhead de ~33% sobre o binário | Roadmap: migrar para IndexedDB |
-| Sem autenticação ou controle de acesso | Aplicação local, sem backend | Fora do escopo |
-
----
-
-## 7. Estrutura de Arquivos do Repositório
-
-```
-/
-├── index.html      # Estrutura HTML da aplicação
-├── styles.css      # Estilos visuais
-├── app.js          # Lógica da aplicação
-└── README.md       # Este arquivo
-```
-
----
-
-## 8. Considerações para Desenvolvedores
-
-- **Não há build step**: os arquivos são servidos diretamente. Qualquer editor de texto é suficiente.
-- **GitHub Pages**: basta apontar o Pages para a raiz da branch `main`. Nenhuma configuração adicional.
-- **PDF.js**: a versão 2.16.105 foi fixada intencionalmente para estabilidade. Atualizações devem ser testadas, pois `renderTextLayer` mudou de assinatura na v3.x.
-- **`carregarPDF` é assíncrono interno**: a função usa callbacks do `FileReader` internamente. O fluxo pós-carregamento é encadeado no `.then()` da promise do PDF.js, garantindo ordem de execução correta sem `setTimeout`.
+- **Imagens Pesadas**: Muitos recortes longos de imagens são salvos em Base64 dentro do `.json`, o que pode elevar o tamanho do backup (5MB a 15MB). Um mecanismo futuro migrará imagens para o `IndexedDB`.
+- **Descolamento do Canvas**: Recortes rápidos enquanto o PDF ainda está carregando ou sofrendo scroll intenso podem gerar imagens levemente deslocadas. Aguarde o indicador da página terminar de carregar.
