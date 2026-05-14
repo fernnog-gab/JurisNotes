@@ -145,6 +145,7 @@ window.TopicsManager = (function () {
         if (anotacao.subAnotacoes && anotacao.subAnotacoes.length > 0) {
             const subCardsHTML = anotacao.subAnotacoes.map((sub, sIdx) => {
                 const label = `${numero}.${gerarLetra(sIdx)}`;
+                const textoFormatado = renderizarMarkdownSeguro(escaparHTML(sub.texto));
                 return `
                     <div class="sub-annotation-item">
                         <div class="sub-annotation-card">
@@ -153,7 +154,10 @@ window.TopicsManager = (function () {
                                  onclick="abrirMenuSubAnotacao('${activeTabId}', ${index}, ${sIdx}, event)">
                                 ${label}
                             </div>
-                            ${renderizarMarkdownSeguro(escaparHTML(sub.texto))}
+                            <div class="sub-text-content">${textoFormatado}</div>
+                            <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">
+                                Ler texto completo ▾
+                            </button>
                         </div>
                     </div>`;
             }).join('');
@@ -306,8 +310,17 @@ window.TopicsManager = (function () {
                     ${cardsHTML}
                 </div>`;
                 
-            // Dispara o cálculo de linhas após o DOM renderizar
-            requestAnimationFrame(() => desenharConexoes());
+            // Avalia expansão e redesenha conexões
+            requestAnimationFrame(() => {
+                document.querySelectorAll('.sub-text-content').forEach(el => {
+                    const btn = el.parentElement.querySelector('.btn-expand-text');
+                    // Guarda de segurança para evitar erro caso o DOM perca o botão
+                    if (btn && el.scrollHeight > el.clientHeight) {
+                        btn.style.display = 'inline-flex';
+                    }
+                });
+                desenharConexoes();
+            });
         }
     }
 
@@ -353,15 +366,16 @@ window.TopicsManager = (function () {
         // --- MOTOR DE CURVAS TRACEJADAS PARA NÓS DE IDEIA ---
         const masterItems = container.querySelectorAll('.timeline-item-master');
         masterItems.forEach(master => {
-            const mainCardWrapper = master.querySelector('.main-card-wrapper');
-            const subCards        = master.querySelectorAll('.sub-annotation-card');
+            // CORREÇÃO: Ancorar no '.annotation-card' (card físico) e não no wrapper flexível
+            const mainCard = master.querySelector('.main-card-wrapper .annotation-card');
+            const subCards = master.querySelectorAll('.sub-annotation-card');
 
-            if (!mainCardWrapper || subCards.length === 0) return;
+            if (!mainCard || subCards.length === 0) return;
 
-            const mainRect        = mainCardWrapper.getBoundingClientRect();
-            const isRightAligned  = master.classList.contains('align-right');
+            const mainRect       = mainCard.getBoundingClientRect();
+            const isRightAligned = master.classList.contains('align-right');
 
-            // Ancora vertical: calcula dinamicamente o centro vertical real do card principal
+            // Ancora vertical centralizada no card
             const startY = (mainRect.top + mainRect.height / 2) - containerRect.top;
 
             subCards.forEach(sub => {
@@ -401,12 +415,28 @@ window.TopicsManager = (function () {
         if(historyContainer) resizeObserver.observe(historyContainer);
     });
 
+    /**
+     * Alterna a expansão do texto longo e re-desenha as linhas dinamicamente
+     */
+    function toggleTextExpansion(btn) {
+        const content = btn.parentElement.querySelector('.sub-text-content');
+        if (!content) return;
+
+        const isExpanded = content.classList.toggle('expanded');
+        btn.innerHTML = isExpanded ? 'Ocultar detalhes ▴' : 'Ler texto completo ▾';
+        
+        // Garante que as linhas acompanhem o redesenho pós repintura da scrollbar
+        requestAnimationFrame(() => desenharConexoes());
+        setTimeout(() => desenharConexoes(), 50); 
+    }
+
     // API pública do módulo
     return {
         obterCor,
         renderizarFichario,
         getActiveTabId: () => activeTabId,
-        escaparHTML
+        escaparHTML,
+        toggleTextExpansion
     };
 
 })();
