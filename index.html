@@ -356,15 +356,16 @@
         <p class="popup-label">Quem está falando?</p>
         <select id="audio-speaker-role" class="topic-select" onchange="AudioManager.onRoleChange()">
             <option value="">Selecione o Orador...</option>
-            <option value="Juízo">Juiz / Juíza</option>
-            <option value="Parte Autora">Parte Autora</option>
+            <option value="Parte Autora">Parte Autora (Depoimento)</option>
+            <option value="Parte Ré">Parte Ré (Depoimento)</option>
             <option value="Preposto">Preposto</option>
-            <option value="Testemunha">Testemunha</option>
+            <option value="Juízo">Magistrado / Juízo</option>
             <option value="Advogado">Advogado(a)</option>
+            <option value="Testemunha">Testemunha</option>
         </select>
 
         <div id="audio-speaker-side-box" style="display: none; margin-top: 8px;">
-            <p class="popup-label">De qual parte?</p>
+            <p class="popup-label">Qualificado(a) por qual polo?</p>
             <select id="audio-speaker-side" class="topic-select">
                 <option value="Parte Autora">Parte Autora</option>
                 <option value="Parte Ré">Parte Ré</option>
