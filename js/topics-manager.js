@@ -353,33 +353,36 @@ window.TopicsManager = (function () {
         // --- MOTOR DE CURVAS TRACEJADAS PARA NÓS DE IDEIA ---
         const masterItems = container.querySelectorAll('.timeline-item-master');
         masterItems.forEach(master => {
-            const mainCard = master.querySelector('.main-card-wrapper');
-            const subCards = master.querySelectorAll('.sub-annotation-card');
+            const mainCardWrapper = master.querySelector('.main-card-wrapper');
+            const subCards        = master.querySelectorAll('.sub-annotation-card');
 
-            if(!mainCard || subCards.length === 0) return;
-            const mainRect = mainCard.getBoundingClientRect();
-            const isRightAligned = master.classList.contains('align-right');
+            if (!mainCardWrapper || subCards.length === 0) return;
 
-            // Ancora o início da linha logo abaixo do topo do card principal
-            const startX = isRightAligned ? mainRect.left - containerRect.left : mainRect.right - containerRect.left;
-            const startY = (mainRect.top + 32) - containerRect.top;
+            const mainRect        = mainCardWrapper.getBoundingClientRect();
+            const isRightAligned  = master.classList.contains('align-right');
+
+            // Ancora vertical: calcula dinamicamente o centro vertical real do card principal
+            const startY = (mainRect.top + mainRect.height / 2) - containerRect.top;
 
             subCards.forEach(sub => {
                 const subRect = sub.getBoundingClientRect();
+
+                // startX: borda do card principal que ENFRENTA os sub-cards
+                const startX = isRightAligned
+                    ? mainRect.left  - containerRect.left  // master à direita → sai pela borda esquerda
+                    : mainRect.right - containerRect.left; // master à esquerda → sai pela borda direita
+
+                // endX: borda do sub-card que ENFRENTA o card principal
                 const endX = isRightAligned
-    ? subRect.right - containerRect.left   // card à direita: entra pela borda direita
-    : subRect.left  - containerRect.left;  // card à esquerda: entra pela borda esquerda
+                    ? subRect.right - containerRect.left   // sub-card à esquerda → entra pela borda direita
+                    : subRect.left  - containerRect.left;  // sub-card à direita  → entra pela borda esquerda
 
-// E o ponto de saída do card principal também precisa ser o lado correto:
-const startX = isRightAligned
-    ? mainRect.left  - containerRect.left  // card à direita: sai pela borda esquerda
-    : mainRect.right - containerRect.left; // card à esquerda: sai pela borda direita
-                const endY = (subRect.top + subRect.height / 2) - containerRect.top;
-
-                // Curva de Bézier suavizada
-                const ctrlX = (startX + endX) / 2;
+                // Âncora vertical do sub-card (centro)
+                const endY   = (subRect.top + subRect.height / 2) - containerRect.top;
                 
-                // stroke-dasharray="5 4" cria o visual de linha tracejada elegante
+                // Ponto de controle da curva de Bézier (centro do gap)
+                const ctrlX  = (startX + endX) / 2;
+
                 svgContent += `<path d="M ${startX},${startY} C ${ctrlX},${startY} ${ctrlX},${endY} ${endX},${endY}" stroke="#777" stroke-width="1.5" stroke-dasharray="5 4" fill="none" stroke-linecap="round"/>`;
             });
         });
