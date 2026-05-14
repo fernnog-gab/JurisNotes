@@ -76,25 +76,8 @@ window.TopicsManager = (function () {
             .replace(/^-|-$/g, '');          
     }
 
-    /**
-     * Gera o SVG de conexão sinuosa entre dois cards consecutivos.
-     * @param {boolean} isLeft - true se o card de origem está à esquerda.
-     * @returns {string} HTML do bloco conector.
-     */
-    function gerarSVGConector(isLeft) {
-        // Curva de Bézier cúbica remapeada para proporção 60% (card) / 40% (nós).
-        // Card à esquerda: centro em x=30. Card à direita: centro em x=70.
-        const pathD = isLeft
-            ? 'M 30,0 C 30,50 70,50 70,100'  
-            : 'M 70,0 C 70,50 30,50 30,100'; 
+    // Função estática gerarSVGConector removida (substituída pelo motor dinâmico desenharConexoes)
 
-        return `
-            <div class="connector-wrapper" aria-hidden="true">
-                <svg viewBox="0 0 100 100" preserveAspectRatio="none">
-                    <path d="${pathD}" stroke="#d32f2f" stroke-width="2.5" fill="none" stroke-linecap="round" />
-                </svg>
-            </div>`;
-    }
     /**
      * Fábrica de cards no formato de fluxograma alternado.
      * Retorna: card + bloco de sub-anotações (se houver) + conector SVG.
@@ -261,9 +244,7 @@ window.TopicsManager = (function () {
                 ${htmlSubAnotacoes}
             </div>`;
 
-        const conector = isLast ? '' : gerarSVGConector(isLeft);
-
-        return wrapperMaster + conector;
+        return wrapperMaster; // Sem o conector anexado aqui
     }
 
     /**
@@ -335,9 +316,70 @@ window.TopicsManager = (function () {
                 </p>`;
         } else {
             const cardsHTML = topicoAtivo.anotacoes.map(criarCard).join('');
-            contentEl.innerHTML = `<div class="timeline-container">${cardsHTML}</div>`;
+            // Injetamos o SVG absoluto no fundo do container
+            contentEl.innerHTML = `
+                <div class="timeline-container" id="timeline-container">
+                    <svg id="connections-canvas"></svg>
+                    ${cardsHTML}
+                </div>`;
+                
+            // Dispara o cálculo de linhas após o DOM renderizar
+            requestAnimationFrame(() => desenharConexoes());
         }
     }
+
+    /**
+     * Motor Dinâmico de Conexões Sinuosas
+     * Lê as coordenadas absolutas dos cards e desenha curvas de Bézier SVG entre eles.
+     */
+    function desenharConexoes() {
+        const container = document.getElementById('timeline-container');
+        const svg = document.getElementById('connections-canvas');
+        if (!container || !svg) return;
+
+        const containerRect = container.getBoundingClientRect();
+        // Captura todos os wrappers principais renderizados
+        const wrappers = Array.from(container.querySelectorAll('.main-card-wrapper'));
+        let svgContent = '';
+
+        for (let i = 0; i < wrappers.length - 1; i++) {
+            // Selecionamos o primeiro .annotation-card de cada wrapper (ignora cards correlacionados)
+            const cardAtual = wrappers[i].querySelector('.annotation-card');
+            const cardProx = wrappers[i+1].querySelector('.annotation-card');
+
+            if (!cardAtual || !cardProx) continue;
+
+            const rectAtual = cardAtual.getBoundingClientRect();
+            const rectProx = cardProx.getBoundingClientRect();
+
+            // Ponto de Origem: Centro da borda INFERIOR do Card atual
+            const startX = (rectAtual.left + rectAtual.width / 2) - containerRect.left;
+            const startY = rectAtual.bottom - containerRect.top;
+
+            // Ponto de Destino: Centro da borda SUPERIOR do PRÓXIMO Card
+            const endX = (rectProx.left + rectProx.width / 2) - containerRect.left;
+            const endY = rectProx.top - containerRect.top;
+
+            // Ponto de Controle de Curvatura (suaviza o "S" sinuoso no eixo Y)
+            const ctrlY = (startY + endY) / 2;
+
+            // Gera a Curva de Bézier Cúbica e anexa ao conteúdo do SVG
+            svgContent += `<path d="M ${startX},${startY} C ${startX},${ctrlY} ${endX},${ctrlY} ${endX},${endY}" stroke="#d32f2f" stroke-width="2.5" fill="none" stroke-linecap="round" />`;
+        }
+
+        svg.innerHTML = svgContent;
+    }
+
+    // Listener de Responsividade: Recalcula as linhas se o usuário redimensionar a janela/painel
+    const resizeObserver = new ResizeObserver(() => {
+        requestAnimationFrame(() => desenharConexoes());
+    });
+    
+    // Aguarda o DOM carregar para plugar o observador
+    document.addEventListener("DOMContentLoaded", () => {
+        const historyContainer = document.getElementById('history-container');
+        if(historyContainer) resizeObserver.observe(historyContainer);
+    });
 
     // API pública do módulo
     return {
