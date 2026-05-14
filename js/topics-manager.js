@@ -138,23 +138,7 @@ window.TopicsManager = (function () {
             tagsHtml += ` <span class="polo-tag ${poloParaClasse(anotacao.polo)}">${poloSeguro}</span>`;
         }
 
-        // Card Principal (O wrapper interno)
-        const cardPrincipal = `
-            <div class="main-card-wrapper">
-                <div class="annotation-number-area">
-                    <div class="timeline-number" title="Opções desta anotação" onclick="abrirMenuAnotacao('${activeTabId}', ${index}, event)">
-                        ${numero}
-                    </div>
-                </div>
-                <div class="annotation-card">
-                    <div class="card-header">
-                        <div style="display:flex; gap:6px;">${tagsHtml}</div>
-                        <span class="card-meta" style="cursor:copy;" title="Clique para copiar" onclick="navigator.clipboard.writeText('${metaTexto}')">${metaTexto}</span>
-                    </div>
-                    ${htmlConteudo}
-                    ${htmlComentario}
-                </div>
-            </div>`;
+        // Card Principal (Removido o código morto redundante do wrapper interno)
 
         // Nós de Ideia (Sub-anotações)
         let htmlSubAnotacoes = '';
@@ -163,7 +147,6 @@ window.TopicsManager = (function () {
                 const label = `${numero}.${gerarLetra(sIdx)}`;
                 return `
                     <div class="sub-annotation-item">
-                        <div class="sub-connector-line"></div>
                         <div class="sub-annotation-card">
                             <div class="sub-badge"
                                  title="Opções desta ideia secundária"
@@ -213,7 +196,7 @@ window.TopicsManager = (function () {
                                 <span class="polo-tag doc-tag">${item.documento ? escaparHTML(item.documento) : escaparHTML(item.polo)}</span>
                                 ${(item.documento && item.polo && item.polo !== item.documento) ? `<span class="polo-tag ${itemTag}">${escaparHTML(item.polo)}</span>` : ''}
                             </div>
-                            <span class="card-meta" style="cursor:copy;" title="Clique para copiar" onclick="navigator.clipboard.writeText('${itemMeta}')">${itemMeta}</span>
+                            <span class="card-meta" style="cursor:pointer;" title="Clique p/ copiar | Shift+Clique p/ editar folha" onclick="handleMetaClick(event, '${activeTabId}', ${index}, true, ${cIdx})">${itemMeta}</span>
                         </div>
                         ${cConteudo}
                         ${cComent}
@@ -234,7 +217,7 @@ window.TopicsManager = (function () {
                     <div class="annotation-card">
                         <div class="card-header">
                             <div style="display:flex; gap:6px;">${tagsHtml}</div>
-                            <span class="card-meta" style="cursor:copy;" title="Clique para copiar" onclick="navigator.clipboard.writeText('${metaTexto}')">${metaTexto}</span>
+                            <span class="card-meta" style="cursor:pointer;" title="Clique p/ copiar | Shift+Clique p/ editar folha" onclick="handleMetaClick(event, '${activeTabId}', ${index}, false)">${metaTexto}</span>
                         </div>
                         ${htmlConteudo}
                         ${htmlComentario}
@@ -366,6 +349,33 @@ window.TopicsManager = (function () {
             // Gera a Curva de Bézier Cúbica e anexa ao conteúdo do SVG
             svgContent += `<path d="M ${startX},${startY} C ${startX},${ctrlY} ${endX},${ctrlY} ${endX},${endY}" stroke="#d32f2f" stroke-width="2.5" fill="none" stroke-linecap="round" />`;
         }
+
+        // --- MOTOR DE CURVAS TRACEJADAS PARA NÓS DE IDEIA ---
+        const masterItems = container.querySelectorAll('.timeline-item-master');
+        masterItems.forEach(master => {
+            const mainCard = master.querySelector('.main-card-wrapper');
+            const subCards = master.querySelectorAll('.sub-annotation-card');
+
+            if(!mainCard || subCards.length === 0) return;
+            const mainRect = mainCard.getBoundingClientRect();
+            const isRightAligned = master.classList.contains('align-right');
+
+            // Ancora o início da linha logo abaixo do topo do card principal
+            const startX = isRightAligned ? mainRect.left - containerRect.left : mainRect.right - containerRect.left;
+            const startY = (mainRect.top + 32) - containerRect.top;
+
+            subCards.forEach(sub => {
+                const subRect = sub.getBoundingClientRect();
+                const endX = isRightAligned ? subRect.right - containerRect.left : subRect.left - containerRect.left;
+                const endY = (subRect.top + subRect.height / 2) - containerRect.top;
+
+                // Curva de Bézier suavizada
+                const ctrlX = (startX + endX) / 2;
+                
+                // stroke-dasharray="5 4" cria o visual de linha tracejada elegante
+                svgContent += `<path d="M ${startX},${startY} C ${ctrlX},${startY} ${ctrlX},${endY} ${endX},${endY}" stroke="#777" stroke-width="1.5" stroke-dasharray="5 4" fill="none" stroke-linecap="round"/>`;
+            });
+        });
 
         svg.innerHTML = svgContent;
     }

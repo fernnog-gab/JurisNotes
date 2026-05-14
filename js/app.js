@@ -586,6 +586,12 @@ document.addEventListener('click', function (e) {
     // 3. Fecha o menu contextual das sub-anotações
     const menuSub = document.getElementById('sub-annotation-context-menu');
     if (menuSub) menuSub.style.display = 'none';
+
+    // 4. Fecha o menu Juris Notes
+    const menuJuris = document.getElementById('juris-menu');
+    if (menuJuris && menuJuris.style.display === 'flex' && !menuJuris.contains(e.target) && !e.target.closest('.sidebar-logo-container')) {
+        menuJuris.style.display = 'none';
+    }
 });
 
 /* ================================================
@@ -646,3 +652,120 @@ async function extrairIdPjeDaPagina(pageNum) {
    FUNÇÃO DE IMPRESSÃO REMOVIDA
    A exportação agora é delegada ao módulo ExportManager.
    ================================================ */
+
+/* ================================================
+   MENU JURIS NOTES E GESTÃO DE ABAS (Resolve Alertas 3 e 4)
+   ================================================ */
+function abrirMenuJuris(event) {
+    event.stopPropagation();
+    const menu = document.getElementById('juris-menu');
+    menu.style.display = 'flex';
+    menu.style.left = (event.clientX + 10) + 'px';
+    menu.style.top = (event.clientY + 20) + 'px';
+}
+
+function abrirModalGerenciarAbas() {
+    document.getElementById('juris-menu').style.display = 'none';
+    const container = document.getElementById('lista-abas-gerenciador');
+    container.innerHTML = '';
+
+    if(topicos.length === 0) {
+        container.innerHTML = '<p class="popup-label" style="text-align:center;">Nenhuma aba criada.</p>';
+    } else {
+        // Uso estrito do escaparHTML prevenindo ataques de XSS
+        topicos.forEach(t => {
+            const nomeSeguro = TopicsManager.escaparHTML(t.nome);
+            container.innerHTML += `
+                <div class="aba-manager-item">
+                    <span class="aba-manager-nome" title="${nomeSeguro}">${nomeSeguro}</span>
+                    <div class="aba-manager-actions">
+                        <button class="ann-action-btn" title="Editar Nome" onclick="renomearAba('${t.id}')">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        </button>
+                        <button class="ann-action-btn ann-action-delete" title="Excluir Aba" onclick="solicitarExclusaoAba(this, '${t.id}')">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                    </div>
+                </div>`;
+        });
+    }
+
+    document.getElementById('abas-modal-backdrop').style.display = 'block';
+    document.getElementById('modal-gerenciar-abas').style.display = 'flex';
+}
+
+function fecharModalGerenciarAbas() {
+    document.getElementById('abas-modal-backdrop').style.display = 'none';
+    document.getElementById('modal-gerenciar-abas').style.display = 'none';
+}
+
+function renomearAba(id) {
+    const topico = topicos.find(t => t.id === id);
+    if (!topico) return;
+    const novoNome = prompt('Digite o novo nome para a aba:', topico.nome);
+    if (novoNome && novoNome.trim() !== '') {
+        topico.nome = novoNome.trim();
+        renderizarTopicos();
+        salvarBackupAutomatico();
+        abrirModalGerenciarAbas(); // Atualiza a lista no modal
+        exibirToast('Aba renomeada com sucesso!', 'sucesso');
+    }
+}
+
+// Implementação de exclusão segura em "Dois Cliques" (Resolve Alerta 4)
+function solicitarExclusaoAba(btnEl, id) {
+    if (btnEl.dataset.confirming === "true") {
+        // Segundo clique confirmado
+        topicos = topicos.filter(t => t.id !== id);
+        renderizarTopicos();
+        salvarBackupAutomatico();
+        abrirModalGerenciarAbas(); 
+        exibirToast('Aba excluída.', 'sucesso');
+    } else {
+        // Primeiro clique (Aviso visual)
+        btnEl.dataset.confirming = "true";
+        const svgOriginal = btnEl.innerHTML;
+        btnEl.innerHTML = "<span style='font-size:0.75rem; font-weight:bold;'>Confirma?</span>";
+        btnEl.style.color = "#c62828";
+        btnEl.style.backgroundColor = "#ffebee";
+        
+        // Retorna ao estado original após 3.5 segundos
+        setTimeout(() => {
+            if (document.body.contains(btnEl)) {
+                btnEl.dataset.confirming = "false";
+                btnEl.innerHTML = svgOriginal;
+                btnEl.style.color = "";
+                btnEl.style.backgroundColor = "";
+            }
+        }, 3500);
+    }
+}
+
+/* ================================================
+   EDIÇÃO DE METADADOS (PÁGINA/ID PJe)
+   ================================================ */
+window.handleMetaClick = function(event, topicoId, index, isCorrelated = false, cIdx = null) {
+    const topico = topicos.find(t => t.id === topicoId);
+    if (!topico) return;
+
+    const anotacao = isCorrelated ? topico.anotacoes[index].itensCorrelacionados[cIdx] : topico.anotacoes[index];
+
+    if (event.shiftKey) {
+        // Modo Edição: Altera manualmente a folha
+        const novaPagina = prompt(`Editar folha (Atual: ${anotacao.pagina || 'vazio'}):`, anotacao.pagina || '');
+        if (novaPagina !== null) {
+            anotacao.pagina = novaPagina;
+            renderizarTopicos();
+            salvarBackupAutomatico();
+            exibirToast('Numeração de página atualizada!', 'sucesso');
+        }
+    } else {
+        // Modo Cópia: Mantém o padrão atual (copia exatamente o que é visto, com os parênteses)
+        const textoParaCopiar = event.target.innerText;
+        navigator.clipboard.writeText(textoParaCopiar).then(() => {
+            exibirToast('Referência copiada para a área de transferência.', 'sucesso');
+        }).catch(() => {
+            exibirToast('Falha ao copiar texto.', 'erro');
+        });
+    }
+};
