@@ -1591,6 +1591,7 @@ body.theme-white {
 .sub-badge.intencao-comando { background-color: #c62828; border: 2px solid #ffcdd2; color: #fff; }
 .sub-badge.intencao-texto { background-color: #1565c0; border: 2px solid #bbdefb; color: #fff; }
 .sub-badge.intencao-nota { background-color: #616161; border: 2px solid #e0e0e0; color: #fff; }
+.sub-badge.intencao-premissa { background-color: #7b1fa2; border: 2px solid #e1bee7; color: #fff; }
 
 /* Opacidade gerenciada via CSS para "Nota Interna" */
 .sub-annotation-item.is-nota-interna {
