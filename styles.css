@@ -555,14 +555,18 @@ body {
     filter: brightness(0.95);
 }
 
+/* No arquivo styles.css, encontre ou adicione esta regra */
 .topic-tab-btn.active {
     font-weight: 800;
     color: #000;
-    z-index: 5; /* Eleva acima da borda do content-area */
-    padding-bottom: 12px; /* Estica a aba ativa para fundir com o painel */
+    z-index: 5;
+    padding-bottom: 12px;
     box-shadow: none;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
+    
+    /* ADICIONE ESTA LINHA PARA O EFEITO NEON GLOW */
+    box-shadow: inset 0 0 8px rgba(255, 255, 255, 0.4);
 }
 
 /* ================================================
