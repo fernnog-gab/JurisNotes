@@ -402,6 +402,40 @@
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- NOVOS MODAIS: TESES E SMART MOVE           -->
+    <!-- ========================================== -->
+    
+    <!-- Modal Editar Tese -->
+    <div id="modal-editar-tese" class="crop-wizard-popup" style="display:none; z-index: 4005;">
+        <div class="wizard-header">💡 Nomear Tese (Ideia <span id="tese-ideia-num"></span>)</div>
+        <p class="popup-label">Descreva brevemente a tese jurídica deste grupo de provas:</p>
+        <textarea id="input-texto-tese" class="popup-textarea" style="display:block;" rows="3" placeholder="Ex: Nulidade por cerceamento de defesa..."></textarea>
+        <div class="wizard-actions">
+            <button class="chip-btn chip-cancelar" onclick="fecharModalTese()">✕ Cancelar</button>
+            <button class="chip-btn chip-autora" onclick="salvarTese()">✔ Salvar Tese</button>
+        </div>
+    </div>
+
+    <!-- Modal Smart Move (Reordenar) -->
+    <div id="modal-smart-move" class="crop-wizard-popup" style="display:none; z-index: 4005;">
+        <div class="wizard-header">🔄 Reordenar / Mover Ideia</div>
+        <p class="popup-label">Para onde deseja mover esta prova?</p>
+        <div style="display: flex; gap: 10px; margin-bottom: 12px; margin-top: 8px;">
+            <label style="font-size:0.8rem; cursor:pointer;">
+                <input type="radio" name="smart_move_tipo" value="nova" checked onchange="toggleSmartMoveInput()"> Nova Ideia
+            </label>
+            <label style="font-size:0.8rem; cursor:pointer;">
+                <input type="radio" name="smart_move_tipo" value="existente" onchange="toggleSmartMoveInput()"> Agrupar a Existente
+            </label>
+        </div>
+        <input type="number" id="input-smart-move-destino" class="topic-select" style="display:none;" placeholder="Nº da Ideia Destino (ex: 2)" min="1">
+        <div class="wizard-actions">
+            <button class="chip-btn chip-cancelar" onclick="fecharModalSmartMove()">✕ Cancelar</button>
+            <button class="chip-btn chip-autora" onclick="confirmarSmartMove()">✔ Confirmar</button>
+        </div>
+    </div>
+
     <script src="js/backup-manager.js"></script>
     <script src="js/topics-manager.js"></script>
     <script src="js/interaction-tools.js"></script>
