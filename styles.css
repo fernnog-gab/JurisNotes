@@ -3,6 +3,7 @@
    ================================================ */
 :root {
     --trt-blue:     #1a3a5c;
+    --pdf-bg-color: #FFD580; /* Jasmine Padrão */
     --trt-blue-mid: #25527f;
     --trt-light-bg: #f4f7f9;
     --text-dark:    #2c2c2c;
@@ -1454,4 +1455,54 @@ body {
 
 .btn-expand-text:hover {
     background: rgba(37, 82, 127, 0.08);
+}
+
+/* ================================================
+   TEMAS DO PDF E NOVAS BARRAS DE AÇÃO
+   ================================================ */
+body.theme-white {
+    --pdf-bg-color: #FFFFFF;
+}
+
+.pdf-page-container {
+    background-color: var(--pdf-bg-color) !important;
+    transition: background-color 0.3s ease;
+}
+
+/* Barra de Ações Individual dos Cards (Rodapé do Card) */
+.card-actions-bar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border-color);
+}
+
+.card-actions-bar button {
+    background: transparent; border: none; cursor: pointer; color: #888;
+    display: flex; align-items: center; justify-content: center;
+    padding: 6px; border-radius: 4px; transition: all 0.2s;
+}
+.card-actions-bar button:hover { background: #f0f4f8; color: var(--trt-blue); }
+.card-actions-bar button.delete-btn:hover { background: #ffebee; color: #c62828; }
+.card-actions-bar button svg { width: 16px; height: 16px; pointer-events: none; }
+
+/* Painel de Sumário de Teses (Abaixo da aba ativa) */
+.thesis-summary-panel {
+    display: flex; flex-wrap: wrap; gap: 10px; padding: 10px 16px;
+    background: #fdfdfd; border-bottom: 1px solid var(--border-color);
+    border-radius: 6px 6px 0 0; margin-bottom: 24px;
+}
+.thesis-badge {
+    display: flex; align-items: center; gap: 6px; background: white;
+    border: 1px solid #dde3ea; padding: 6px 12px; border-radius: 16px;
+    font-size: 0.85rem; font-weight: 500; cursor: pointer; color: var(--trt-blue);
+    transition: all 0.2s ease;
+}
+.thesis-badge:hover { background: #f0f4f8; border-color: var(--trt-blue-mid); }
+.thesis-badge .num {
+    background: #1a1a1a; color: white; border-radius: 50%;
+    width: 22px; height: 22px; display: flex; align-items: center;
+    justify-content: center; font-weight: bold; font-size: 0.75rem;
 }
