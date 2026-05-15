@@ -332,7 +332,19 @@ let _smartMoveCtx = null;
 
 function toggleSmartMoveInput() {
     const isExistente = document.querySelector('input[name="smart_move_tipo"]:checked').value === 'existente';
-    document.getElementById('input-smart-move-destino').style.display = isExistente ? 'block' : 'none';
+    const input = document.getElementById('input-smart-move-destino');
+    const hint = document.getElementById('smart-move-hint');
+    
+    input.style.display = 'block'; // Garante que fique visível
+    input.value = ''; // Limpa o valor ao trocar a opção
+    
+    if (isExistente) {
+        input.placeholder = "Nº da Ideia Destino (ex: 2)";
+        hint.innerText = "Digite o número da ideia onde esta prova será agrupada:";
+    } else {
+        input.placeholder = "Nova Posição (opcional)";
+        hint.innerText = "Deixe em branco para ir para o final, ou digite a posição exata:";
+    }
 }
 
 function abrirModalSmartMove(topicoId, parentIndex, correlacionadoIndex = null) {
@@ -354,11 +366,12 @@ function fecharModalSmartMove() {
 function confirmarSmartMove() {
     const topico = topicos.find(t => t.id === _smartMoveCtx.topicoId);
     const isNova = document.querySelector('input[name="smart_move_tipo"]:checked').value === 'nova';
+    const inputVal = document.getElementById('input-smart-move-destino').value;
     let destinoIdx = null;
 
-    // 1. Validação Antecipada (Evita Perda de Dados)
+    // 1. Validação Robusta para ambas as escolhas
     if (!isNova) {
-        const destinoVal = parseInt(document.getElementById('input-smart-move-destino').value, 10);
+        const destinoVal = parseInt(inputVal, 10);
         if (isNaN(destinoVal) || destinoVal < 1 || destinoVal > topico.anotacoes.length) {
             return exibirToast('Número de destino inválido.', 'erro');
         }
@@ -366,24 +379,40 @@ function confirmarSmartMove() {
         if (_smartMoveCtx.correlacionadoIndex === null && destinoIdx === _smartMoveCtx.parentIndex) {
             return exibirToast('Não é possível mover a ideia para ela mesma.', 'erro');
         }
+    } else {
+        // Se escolheu Nova Ideia e digitou um número
+        if (inputVal.trim() !== '') {
+            const destinoVal = parseInt(inputVal, 10);
+            if (isNaN(destinoVal) || destinoVal < 1 || destinoVal > topico.anotacoes.length + 1) {
+                return exibirToast('Posição para a nova ideia é inválida.', 'erro');
+            }
+            destinoIdx = destinoVal - 1;
+        }
     }
 
-    // 2. Extração Segura do Item
+    // 2. Extração da Prova da sua Origem Original
     let itemMovido;
     if (_smartMoveCtx.correlacionadoIndex !== null) {
         itemMovido = topico.anotacoes[_smartMoveCtx.parentIndex].itensCorrelacionados.splice(_smartMoveCtx.correlacionadoIndex, 1)[0];
     } else {
         itemMovido = topico.anotacoes.splice(_smartMoveCtx.parentIndex, 1)[0];
-        // Compensação de índice se a origem foi removida e ficava antes do destino
+        // Compensação matemática caso a ideia se mova para "baixo" após a própria remoção
         if (!isNova && destinoIdx > _smartMoveCtx.parentIndex) destinoIdx--;
+        if (isNova && destinoIdx !== null && destinoIdx > _smartMoveCtx.parentIndex) destinoIdx--; 
     }
 
-    // 3. Inserção Segura e Normalização de Schema
+    // 3. Inserção no Destino Final
     if (isNova) {
         if (!itemMovido.itensCorrelacionados) itemMovido.itensCorrelacionados = [];
         if (!itemMovido.subAnotacoes) itemMovido.subAnotacoes = [];
-        topico.anotacoes.push(itemMovido);
-        exibirToast('Prova transformada em Nova Ideia.', 'sucesso');
+        
+        if (destinoIdx !== null) {
+            topico.anotacoes.splice(destinoIdx, 0, itemMovido); // Insere no meio
+            exibirToast(`Prova transformada em Nova Ideia na posição ${destinoIdx + 1}.`, 'sucesso');
+        } else {
+            topico.anotacoes.push(itemMovido); // Joga pro final
+            exibirToast('Prova transformada em Nova Ideia no final.', 'sucesso');
+        }
     } else {
         const cardDestino = topico.anotacoes[destinoIdx];
         if (!cardDestino.itensCorrelacionados) cardDestino.itensCorrelacionados = [];
