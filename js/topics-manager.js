@@ -149,6 +149,20 @@ window.TopicsManager = (function () {
             tagsHtml += ` <span class="polo-tag ${poloParaClasse(anotacao.polo)}">${poloSeguro}</span>`;
         }
 
+        function gerarBarraAcoes(isCorrelacionado, cIdx) {
+            const paramCtx = isCorrelacionado ? `'${activeTabId}', ${index}, ${cIdx}` : `'${activeTabId}', ${index}`;
+            const btnEditar = anotacao.tipo === 'texto' ? `<button title="Editar Texto" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}}; ${isCorrelacionado ? '' : 'editarAnotacao()'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>` : '';
+            const paramMove = isCorrelacionado ? `'${activeTabId}', ${index}, ${cIdx}` : `'${activeTabId}', ${index}, null`;
+            
+            return `
+            <div class="card-actions-bar">
+                ${btnEditar}
+                <button title="Adicionar Nó de Ideia" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}}; acionarNovoNoIdeia()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                <button title="Mover / Reordenar" onclick="abrirModalSmartMove(${paramMove})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><polyline points="8 7 12 3 16 7"></polyline><line x1="12" y1="12" x2="12" y2="3"></line></svg></button>
+                <button class="delete-btn" title="Excluir" onclick="${isCorrelacionado ? `excluirItemCorrelacionado('${activeTabId}', ${index}, ${cIdx})` : `_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}}; excluirAnotacao()`}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+            </div>`;
+        }
+
         // Card Principal (Removido o código morto redundante do wrapper interno)
 
         // Nós de Ideia (Sub-anotações)
@@ -200,12 +214,6 @@ window.TopicsManager = (function () {
                         </svg>
                     </div>
                     <div class="annotation-card correlated-card">
-                        <button class="btn-excluir-correlacionado" title="Remover item agrupado" onclick="excluirItemCorrelacionado('${activeTabId}', ${index}, ${cIdx})">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="3 6 5 6 21 6"></polyline>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                            </svg>
-                        </button>
                         <div class="card-header">
                             <div style="display:flex; gap:6px;">
                                 <span class="polo-tag doc-tag">${item.documento ? escaparHTML(item.documento) : escaparHTML(item.polo)}</span>
@@ -215,6 +223,7 @@ window.TopicsManager = (function () {
                         </div>
                         ${cConteudo}
                         ${cComent}
+                        ${gerarBarraAcoes(true, cIdx)}
                     </div>
                 </div>`;
             }).join('');
@@ -225,7 +234,7 @@ window.TopicsManager = (function () {
             <div class="timeline-item-master ${alignClass}" id="timeline-wrapper-${index}">
                 <div class="main-card-wrapper">
                     <div class="annotation-number-area">
-                        <div class="timeline-number" title="Opções desta anotação" onclick="abrirMenuAnotacao('${activeTabId}', ${index}, event)">
+                        <div class="timeline-number" title="Nomear Tese / Legenda" onclick="abrirModalTese('${activeTabId}', ${index})">
                             ${numero}
                         </div>
                     </div>
@@ -236,6 +245,7 @@ window.TopicsManager = (function () {
                         </div>
                         ${htmlConteudo}
                         ${htmlComentario}
+                        ${gerarBarraAcoes(false, null)}
                     </div>
                     ${htmlCorrelacionados}
                 </div>
@@ -313,9 +323,25 @@ window.TopicsManager = (function () {
                     Tópico vazio. Adicione extrações do documento.
                 </p>`;
         } else {
+            let sumarioHtml = '';
+            const tesesValidas = topicoAtivo.anotacoes.filter(an => an.tese && an.tese.trim() !== '');
+            if (tesesValidas.length > 0) {
+                sumarioHtml = '<div class="thesis-summary-panel">';
+                topicoAtivo.anotacoes.forEach((an, idx) => {
+                    if (an.tese && an.tese.trim() !== '') {
+                        const txt = escaparHTML(an.tese);
+                        const shortTxt = txt.length > 60 ? txt.substring(0, 60) + '...' : txt;
+                        sumarioHtml += `
+                            <div class="thesis-badge" title="${txt}" onclick="abrirModalTese('${activeTabId}', ${idx})">
+                                <span class="num">${idx + 1}</span> ${shortTxt}
+                            </div>`;
+                    }
+                });
+                sumarioHtml += '</div>';
+            }
             const cardsHTML = topicoAtivo.anotacoes.map(criarCard).join('');
-            // Injetamos o SVG absoluto no fundo do container
-            contentEl.innerHTML = `
+            // Injetamos o SVG absoluto no fundo do container e o sumário acima
+            contentEl.innerHTML = sumarioHtml + `
                 <div class="timeline-container" id="timeline-container">
                     <svg id="connections-canvas"></svg>
                     ${cardsHTML}

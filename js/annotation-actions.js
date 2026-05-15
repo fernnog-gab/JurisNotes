@@ -205,3 +205,100 @@ function confirmarSubAnotacao(topicoId, anotacaoIndex) {
     renderizarTopicos(); salvarBackupAutomatico();
     exibirToast('Observação secundária vinculada.', 'sucesso');
 }
+
+/* --- MODAL DE TESE --- */
+let _ideiaContextoTese = null;
+
+function abrirModalTese(topicoId, index) {
+    _ideiaContextoTese = { topicoId, index };
+    document.getElementById('tese-ideia-num').textContent = index + 1;
+    const anotacao = topicos.find(t => t.id === topicoId).anotacoes[index];
+    document.getElementById('input-texto-tese').value = anotacao.tese || '';
+    
+    document.getElementById('wizard-backdrop').style.display = 'block';
+    document.getElementById('modal-editar-tese').style.display = 'flex';
+}
+
+function fecharModalTese() {
+    document.getElementById('wizard-backdrop').style.display = 'none';
+    document.getElementById('modal-editar-tese').style.display = 'none';
+    _ideiaContextoTese = null;
+}
+
+function salvarTese() {
+    if (!_ideiaContextoTese) return;
+    const teseTxt = document.getElementById('input-texto-tese').value.trim();
+    const topico = topicos.find(t => t.id === _ideiaContextoTese.topicoId);
+    topico.anotacoes[_ideiaContextoTese.index].tese = teseTxt;
+    
+    renderizarTopicos(); salvarBackupAutomatico();
+    exibirToast('Tese salva com sucesso!', 'sucesso');
+    fecharModalTese();
+}
+
+/* --- MODAL DE SMART MOVE (REORDENAÇÃO INTELIGENTE) --- */
+let _smartMoveCtx = null;
+
+function toggleSmartMoveInput() {
+    const isExistente = document.querySelector('input[name="smart_move_tipo"]:checked').value === 'existente';
+    document.getElementById('input-smart-move-destino').style.display = isExistente ? 'block' : 'none';
+}
+
+function abrirModalSmartMove(topicoId, parentIndex, correlacionadoIndex = null) {
+    _smartMoveCtx = { topicoId, parentIndex, correlacionadoIndex };
+    document.getElementById('input-smart-move-destino').value = '';
+    document.querySelector('input[name="smart_move_tipo"][value="nova"]').checked = true;
+    toggleSmartMoveInput();
+    
+    document.getElementById('wizard-backdrop').style.display = 'block';
+    document.getElementById('modal-smart-move').style.display = 'flex';
+}
+
+function fecharModalSmartMove() {
+    document.getElementById('wizard-backdrop').style.display = 'none';
+    document.getElementById('modal-smart-move').style.display = 'none';
+    _smartMoveCtx = null;
+}
+
+function confirmarSmartMove() {
+    const topico = topicos.find(t => t.id === _smartMoveCtx.topicoId);
+    const isNova = document.querySelector('input[name="smart_move_tipo"]:checked').value === 'nova';
+    let destinoIdx = null;
+
+    // 1. Validação Antecipada (Evita Perda de Dados)
+    if (!isNova) {
+        const destinoVal = parseInt(document.getElementById('input-smart-move-destino').value, 10);
+        if (isNaN(destinoVal) || destinoVal < 1 || destinoVal > topico.anotacoes.length) {
+            return exibirToast('Número de destino inválido.', 'erro');
+        }
+        destinoIdx = destinoVal - 1;
+        if (_smartMoveCtx.correlacionadoIndex === null && destinoIdx === _smartMoveCtx.parentIndex) {
+            return exibirToast('Não é possível mover a ideia para ela mesma.', 'erro');
+        }
+    }
+
+    // 2. Extração Segura do Item
+    let itemMovido;
+    if (_smartMoveCtx.correlacionadoIndex !== null) {
+        itemMovido = topico.anotacoes[_smartMoveCtx.parentIndex].itensCorrelacionados.splice(_smartMoveCtx.correlacionadoIndex, 1)[0];
+    } else {
+        itemMovido = topico.anotacoes.splice(_smartMoveCtx.parentIndex, 1)[0];
+        // Compensação de índice se a origem foi removida e ficava antes do destino
+        if (!isNova && destinoIdx > _smartMoveCtx.parentIndex) destinoIdx--;
+    }
+
+    // 3. Inserção Segura e Normalização de Schema
+    if (isNova) {
+        if (!itemMovido.itensCorrelacionados) itemMovido.itensCorrelacionados = [];
+        if (!itemMovido.subAnotacoes) itemMovido.subAnotacoes = [];
+        topico.anotacoes.push(itemMovido);
+        exibirToast('Prova transformada em Nova Ideia.', 'sucesso');
+    } else {
+        const cardDestino = topico.anotacoes[destinoIdx];
+        if (!cardDestino.itensCorrelacionados) cardDestino.itensCorrelacionados = [];
+        cardDestino.itensCorrelacionados.push(itemMovido);
+        exibirToast(`Prova agrupada à Ideia ${destinoIdx + 1}.`, 'sucesso');
+    }
+
+    renderizarTopicos(); salvarBackupAutomatico(); fecharModalSmartMove();
+}
