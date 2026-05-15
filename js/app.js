@@ -799,3 +799,19 @@ window.handleMetaClick = function(event, topicoId, index, isCorrelated = false, 
         });
     }
 };
+
+/* ================================================
+   CONTROLES DO GUIA METODOLÓGICO (AJUDA)
+   ================================================ */
+function abrirModalAjuda() {
+    const menuJuris = document.getElementById('juris-menu');
+    if (menuJuris) menuJuris.style.display = 'none';
+    
+    document.getElementById('ajuda-modal-backdrop').style.display = 'block';
+    document.getElementById('modal-ajuda-intencoes').style.display = 'flex';
+}
+
+function fecharModalAjuda() {
+    document.getElementById('ajuda-modal-backdrop').style.display = 'none';
+    document.getElementById('modal-ajuda-intencoes').style.display = 'none';
+}

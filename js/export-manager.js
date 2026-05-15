@@ -13,6 +13,23 @@ window.ExportManager = (function() {
         _deps = dependencies;
     }
 
+    async function _downloadImagemSegura(base64Data, nomeArquivo) {
+        try {
+            const response = await fetch(base64Data);
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = nomeArquivo + ".png";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error("Falha ao baixar imagem:", e);
+        }
+    }
+
     function _formatarCitacao(texto) {
         if (!texto) return '> [Conteúdo não especificado]';
         return texto.split('\n').map(linha => `> ${linha}`).join('\n');
@@ -161,8 +178,34 @@ window.ExportManager = (function() {
             const nomeArquivo = `Tese_${nomeSanitizado}.md`;
             
             _downloadArquivo(nomeArquivo, markdownConteudo);
-            _deps.exibirToast('Tópico exportado com sucesso para IA (.md)!', 'sucesso');
+            _deps.exibirToast('Tópico exportado com sucesso para IA (.md)! Imagens sendo baixadas...', 'sucesso');
             
+            // Loop para exportar recortes de imagem como PNGs
+            let delayDownload = 500;
+            topico.anotacoes.forEach((an, anIdx) => {
+                if (an.tipo === 'imagem') {
+                    setTimeout(() => {
+                        const folha = an.pagina || 'Folha_Indef';
+                        const id = an.pjeId ? `_ID_${an.pjeId}` : '';
+                        _downloadImagemSegura(an.conteudo, `Imagem_Ideia_${anIdx + 1}_Folha_${folha}${id}`);
+                    }, delayDownload);
+                    delayDownload += 500;
+                }
+                
+                if (an.itensCorrelacionados && an.itensCorrelacionados.length > 0) {
+                    an.itensCorrelacionados.forEach((corr, corrIdx) => {
+                        if (corr.tipo === 'imagem') {
+                            setTimeout(() => {
+                                const folha = corr.pagina || 'Folha_Indef';
+                                const id = corr.pjeId ? `_ID_${corr.pjeId}` : '';
+                                _downloadImagemSegura(corr.conteudo, `Imagem_Agrupada_${anIdx + 1}.${corrIdx + 1}_Folha_${folha}${id}`);
+                            }, delayDownload);
+                            delayDownload += 500;
+                        }
+                    });
+                }
+            });
+
         } catch (error) {
             console.error(error);
             _deps.exibirToast('Erro ao gerar o arquivo de exportação.', 'erro');

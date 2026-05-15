@@ -109,7 +109,10 @@ window.TopicsManager = (function () {
         if (anotacao.tipo === 'texto') {
             htmlConteudo = `<p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(anotacao.conteudo))}"</p>`;
         } else if (anotacao.tipo === 'imagem') {
-            htmlConteudo = `<img class="card-imagem" src="${anotacao.conteudo}" alt="Recorte">`;
+            htmlConteudo = `
+            <div class="image-resize-wrapper" title="Arraste o canto inferior direito para redimensionar">
+                <img class="card-imagem" src="${anotacao.conteudo}" alt="Recorte">
+            </div>`;
         } else if (anotacao.tipo === 'audio') {
             try {
                 const dadosAudio = JSON.parse(anotacao.conteudo);
@@ -182,13 +185,27 @@ window.TopicsManager = (function () {
         let htmlSubAnotacoes = '';
         if (anotacao.subAnotacoes && anotacao.subAnotacoes.length > 0) {
             const subCardsHTML = anotacao.subAnotacoes.map((sub, sIdx) => {
-                const label = `${numero}.${gerarLetra(sIdx)}`;
+                const intencao = sub.intencao || 'premissa';
+                const isHasIntent = intencao !== 'premissa';
+                let iconSVG = '';
+
+                if (intencao === 'comando') {
+                    iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>`;
+                } else if (intencao === 'texto') {
+                    iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`;
+                } else if (intencao === 'nota') {
+                    iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
+                }
+
+                const badgeClass = isHasIntent ? `sub-badge has-intent intencao-${intencao}` : 'sub-badge';
+                const label = isHasIntent ? `${iconSVG} ${numero}.${gerarLetra(sIdx)}` : `${numero}.${gerarLetra(sIdx)}`;
+                
                 const textoFormatado = renderizarMarkdownSeguro(escaparHTML(sub.texto));
                 const sourceRef = sub.sourceRef ?? 'main'; // Recupera a origem do JSON
                 return `
                     <div class="sub-annotation-item" data-source="${sourceRef}">
                         <div class="sub-annotation-card">
-                            <div class="sub-badge"
+                            <div class="${badgeClass}"
                                  title="Opções desta ideia secundária"
                                  onclick="abrirMenuSubAnotacao('${activeTabId}', ${index}, ${sIdx}, event)">
                                 ${label}
@@ -214,7 +231,10 @@ window.TopicsManager = (function () {
                 
                 const cConteudo = item.tipo === 'texto'
                     ? `<p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(item.conteudo))}"</p>`
-                    : `<img class="card-imagem" src="${item.conteudo}" alt="Recorte de Agrupamento">`;
+                    : `
+                    <div class="image-resize-wrapper" title="Arraste o canto inferior direito para redimensionar">
+                        <img class="card-imagem" src="${item.conteudo}" alt="Recorte de Agrupamento">
+                    </div>`;
                     
                 const cComent = (item.tipo === 'imagem' && item.comentario)
                     ? `<div class="card-comentario"><strong>Descrição:</strong> ${escaparHTML(item.comentario)}</div>`
@@ -370,6 +390,13 @@ window.TopicsManager = (function () {
                         btn.style.display = 'inline-flex';
                     }
                 });
+                
+                // Dispara o recálculo dos SVGs durante o redimensionamento nativo das imagens
+                document.querySelectorAll('.image-resize-wrapper').forEach(wrapper => {
+                    wrapper.addEventListener('mouseup', () => desenharConexoes());
+                    wrapper.addEventListener('mouseleave', () => desenharConexoes());
+                });
+
                 desenharConexoes();
             });
         }
