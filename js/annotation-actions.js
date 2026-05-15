@@ -17,7 +17,36 @@ function abrirMenuAnotacao(topicoId, index, event) {
 function abrirMenuSubAnotacao(topicoId, parentIndex, subIndex, event) {
     event.stopPropagation();
     _menuSubAnotacaoCtx = { topicoId, parentIndex, subIndex };
+    
+    // UX: Marca o item ativo no menu com base no estado atual
+    const topico = topicos.find(t => t.id === topicoId);
+    const sub = topico.anotacoes[parentIndex].subAnotacoes[subIndex];
+    const currentIntent = sub.intencao || 'premissa';
+    
+    document.querySelectorAll('#sub-annotation-context-menu .btn-intent').forEach(btn => {
+        btn.classList.toggle('active-intent', btn.dataset.intent === currentIntent);
+    });
+
     _posicionarMenu('sub-annotation-context-menu', event);
+}
+
+function definirIntencaoSubAnotacao(intencaoStr) {
+    if (!_menuSubAnotacaoCtx) return;
+    
+    const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
+    if (!topico) return;
+    
+    const sub = topico.anotacoes[_menuSubAnotacaoCtx.parentIndex].subAnotacoes[_menuSubAnotacaoCtx.subIndex];
+    
+    // Atualiza o estado
+    sub.intencao = intencaoStr;
+    
+    renderizarTopicos(); 
+    salvarBackupAutomatico();
+    
+    const rotulos = { 'comando': 'Comando Direto', 'texto': 'Texto Fixo', 'nota': 'Nota Oculta', 'premissa': 'Premissa Padrão' };
+    exibirToast(`Classificado como: ${rotulos[intencaoStr]}`, 'sucesso');
+    document.getElementById('sub-annotation-context-menu').style.display = 'none';
 }
 
 function _posicionarMenu(menuId, event) {

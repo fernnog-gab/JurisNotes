@@ -18,80 +18,105 @@ window.ExportManager = (function() {
         return texto.split('\n').map(linha => `> ${linha}`).join('\n');
     }
 
+    function _resolverBucketDocumento(docNome) {
+        if (!docNome) return 'provas';
+        const d = docNome.toUpperCase();
+        
+        const isSentenca = ['SENTENÇA', 'ACÓRDÃO', 'DECISÃO'].some(k => d.includes(k));
+        if (isSentenca) return 'sentencas';
+        
+        const isAtaque = ['RECURSO', 'AGRAVO', 'EMBARGOS'].some(k => d.includes(k));
+        if (isAtaque) return 'ataques';
+        
+        const isDefesa = ['CONTESTAÇÃO', 'CONTRARRAZÕES', 'IMPUGNAÇÃO', 'DEFESA'].some(k => d.includes(k));
+        if (isDefesa) return 'defesas';
+        
+        return 'provas';
+    }
+
     function _gerarMarkdown(topico) {
         const dataGeracao = new Date().toLocaleString('pt-BR');
         
         let md = `---
-*Pacote de Dados Extraídos via Juris Notes em ${dataGeracao}*
+*Pacote de Dados Estruturado via Juris Notes em ${dataGeracao}*
 ---
 
-# ANÁLISE DE TÓPICO RECURSAL: **${topico.nome.toUpperCase()}**
-> *Documento estruturado contendo extrações factuais, recortes e transcrições vinculadas a este tópico.*
+# TÓPICO RECURSAL: **${topico.nome.toUpperCase()}**
 
 `;
+        const dialectica = { sentencas: [], ataques: [], defesas: [] };
+        const provas = [];
+        const diretrizes = [];
 
         topico.anotacoes.forEach((an, index) => {
-            const numItem = index + 1;
-            const documento = an.documento || 'Documento não classificado';
-            const polo = an.polo || 'Polo não especificado';
-            const idFormt = an.pjeId ? `(ID PJe: ${an.pjeId})` : '';
-            const folha = an.pagina ? `Fl. ${an.pagina}` : '';
+            const refStr = `(Fl. ${an.pagina || 'não idt.'}${an.pjeId ? `, ID ${an.pjeId}` : ''})`;
             
-            md += `## [Item ${numItem}] Origem: ${documento} | Parte: ${polo}\n`;
-            md += `**Localização:** ${folha} ${idFormt}\n\n`;
-
-            if (an.tipo === 'texto') {
-                md += `### 📄 Fato / Trecho Documental:\n`;
-                md += _formatarCitacao(an.conteudo) + `\n\n`;
-                if (an.comentario) md += `> 💬 **Nota do Assessor:** ${an.comentario}\n\n`;
-            } 
-            else if (an.tipo === 'imagem') {
-                md += `### 🖼️ Evidência Visual (Recorte da Peça):\n`;
-                const desc = an.comentario ? an.comentario : "[Imagem anexada aos autos sem descrição fornecida pelo assessor.]";
-                md += _formatarCitacao(`**Descrição/Contexto:** ${desc}`) + `\n\n`;
-            }
+            // 1. Extração do Fato/Prova Principal
+            let textoBloco = "";
+            if (an.tipo === 'texto') textoBloco = an.conteudo.replace(/\n/g, ' ');
+            else if (an.tipo === 'imagem') textoBloco = `[Imagem/Recorte da Peça] Descrição do Assessor: ${an.comentario || 'Sem descrição.'}`;
             else if (an.tipo === 'audio') {
-                try {
-                    const audioData = JSON.parse(an.conteudo);
-                    md += `### 🎙️ Registro de Oitiva/Audiência:\n`;
-                    md += `**Orador:** ${audioData.oradorStr} | **Marcação:** ${audioData.labelInicio} a ${audioData.labelFim}\n`;
-                } catch(e) {
-                     md += `### 🎙️ Registro de Oitiva/Audiência:\n`;
-                }
-                const desc = an.comentario ? an.comentario : "[Sem transcrição detalhada.]";
-                md += _formatarCitacao(`**Transcrição/Resumo do Assessor:** ${desc}`) + `\n\n`;
+                 try { const ad = JSON.parse(an.conteudo); textoBloco = `[Áudio: ${ad.oradorStr} - ${ad.labelInicio} a ${ad.labelFim}] Resumo: ${an.comentario || 'Sem transcrição.'}`; } 
+                 catch(e) { textoBloco = `[Áudio] Resumo: ${an.comentario}`; }
             }
+
+            // 2. Extraindo Diretrizes e Anexando PREMISSAS DIRETAMENTE ao texto do Bloco pai
+            if (an.tese) diretrizes.push(`* **TESE A ADOTAR:** ${an.tese}`);
 
             if (an.subAnotacoes && an.subAnotacoes.length > 0) {
-                md += `### 🧠 Conclusões / Raciocínio Vinculado:\n`;
-                const ABC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-                an.subAnotacoes.forEach((sub, sIdx) => {
-                    const label = `${numItem}.${sIdx < 26 ? ABC[sIdx] : ABC[Math.floor(sIdx/26)-1] + ABC[sIdx%26]}`;
-                    md += `- **[${label}]** ${sub.texto}\n`;
-                });
-                md += `\n`;
-            }
-
-            if (an.itensCorrelacionados && an.itensCorrelacionados.length > 0) {
-                md += `### 🔗 Provas e Argumentos Agrupados (Corroboração/Contradição):\n`;
-                an.itensCorrelacionados.forEach((item, cIdx) => {
-                    const iDoc = item.documento || 'Doc. não classificado';
-                    const iPolo = item.polo || 'Polo não especificado';
-                    md += `- **Ref:** ${iDoc} | ${iPolo} | Fl. ${item.pagina}\n`;
+                an.subAnotacoes.forEach(sub => {
+                    const intencao = sub.intencao || 'premissa';
                     
-                    if (item.tipo === 'texto') {
-                        md += `  > *Trecho:* ${item.conteudo.replace(/\n/g, ' ')}\n\n`;
-                    } else if (item.tipo === 'imagem') {
-                        md += `  - *Descrição de Imagem Agrupada:* ${item.comentario || "Sem descrição."}\n`;
-                    } else if (item.tipo === 'audio') {
-                        md += `  - *Resumo de Áudio Agrupado:* ${item.comentario || "Sem transcrição."}\n`;
+                    if (intencao === 'comando') {
+                        diretrizes.push(`* **ORDEM DE REDAÇÃO:** ${sub.texto}`);
+                    } 
+                    else if (intencao === 'texto') {
+                        diretrizes.push(`* **UTILIZAR ESTA REDAÇÃO EXATA:**\n  > ${sub.texto}`);
+                    } 
+                    else if (intencao === 'premissa') {
+                        // FUNDAMENTAL: A premissa é "grudada" na string do bloco pai aqui!
+                        textoBloco += `\n    * *Dedução do Assessor:* ${sub.texto}`;
                     }
                 });
-                md += `\n`;
             }
 
-            md += `---\n\n`;
+            // 3. Destinando o Bloco Pai (já com suas premissas coladas) ao Bucket correto
+            const bucketType = _resolverBucketDocumento(an.documento);
+            const prefixoStr = `* **${an.documento || (an.tipo === 'audio' ? 'Oitiva de Audiência' : 'Prova Documental')} (${an.polo || 'Sem polo'}) ${refStr}:** `;
+
+            if (bucketType === 'sentencas') dialectica.sentencas.push(prefixoStr + textoBloco);
+            else if (bucketType === 'ataques') dialectica.ataques.push(prefixoStr + textoBloco);
+            else if (bucketType === 'defesas') dialectica.defesas.push(prefixoStr + textoBloco);
+            else provas.push(prefixoStr + textoBloco);
+
+            // 4. Processando Provas Agrupadas (Itens Correlacionados sempre vão para Provas)
+            if (an.itensCorrelacionados && an.itensCorrelacionados.length > 0) {
+                an.itensCorrelacionados.forEach(item => {
+                    const iRef = `(Fl. ${item.pagina || 'não idt.'}${item.pjeId ? `, ID ${item.pjeId}` : ''})`;
+                    const iText = item.comentario ? item.comentario : (item.conteudo || '').replace(/\n/g, ' ');
+                    provas.push(`  * **Corroboração/Contradição (${item.documento || 'Doc'} - ${item.polo || 'Polo'}) ${iRef}:** ${iText}`);
+                });
+            }
         });
+
+        // --- MONTAGEM DO MARKDOWN OTIMIZADO ---
+        md += `## 1. MATRIZ DIALÉTICA DA LIDE\n`;
+        if (dialectica.sentencas.length) md += dialectica.sentencas.join('\n\n') + '\n\n';
+        if (dialectica.ataques.length) md += dialectica.ataques.join('\n\n') + '\n\n';
+        if (dialectica.defesas.length) md += dialectica.defesas.join('\n\n') + '\n\n';
+        if (!dialectica.sentencas.length && !dialectica.ataques.length && !dialectica.defesas.length) {
+            md += `*Não foram mapeadas peças processuais estritas (Recursos/Sentenças) para compor a dialética.*\n\n`;
+        }
+
+        md += `## 2. MAPEAMENTO PROBATÓRIO E PREMISSAS\n`;
+        if (provas.length > 0) md += provas.join('\n\n') + '\n\n';
+        else md += `*Nenhuma prova específica ou premissa lógica foi mapeada neste tópico.*\n\n`;
+
+        md += `## 3. 🎯 DIRETRIZES DE REDAÇÃO PARA A IA\n`;
+        md += `<comandos_para_a_minuta>\n`; 
+        if (diretrizes.length > 0) md += diretrizes.join('\n\n') + '\n';
+        else md += `* Analise a matriz dialética e as provas acima para construir a fundamentação do voto, seguindo os padrões do tribunal.\n`;
+        md += `</comandos_para_a_minuta>\n`;
 
         return md;
     }
