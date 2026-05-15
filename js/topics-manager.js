@@ -34,13 +34,23 @@ window.TopicsManager = (function () {
         return `rgb(${r},${g},${b})`;
     }
 
-    // Paleta de 25 cores suaves para as abas de tópicos
+    // Paleta Neon / Vibrante para as abas de tópicos e linhas de conexão
     const CORES_TOPICOS = [
-        '#E3F2FD', '#F3E5F5', '#FBE9E7', '#E8F5E9', '#FFF3E0',
-        '#E0F7FA', '#FCE4EC', '#F1F8E9', '#EFEBE9', '#FFF8E1',
-        '#EDF2F4', '#FADADD', '#D5E8D4', '#FFE6CC', '#E1D5E7',
-        '#DAE8FC', '#FFF2CC', '#F8CECC', '#E6D0DE', '#D0CEE2',
-        '#CDEBFA', '#D9E0F2', '#EAE5D9', '#F5D0A9', '#D1E8E2'
+        '#00FFFF', // Ciano Neon
+        '#FF00FF', // Magenta Neon
+        '#39FF14', // Verde Neon
+        '#FF3131', // Vermelho Neon
+        '#FFFF00', // Amarelo Elétrico
+        '#BC13FE', // Roxo Neon
+        '#FF1493', // Rosa Choque (Deep Pink)
+        '#00FF66', // Verde Primavera (Spring Green)
+        '#FF6600', // Laranja Neon
+        '#CCFF00', // Limão Elétrico (Electric Lime)
+        '#08E8DE', // Teal Brilhante
+        '#FF007F', // Rosa Brilhante (Rose Bright)
+        '#8A2BE2', // Violeta Azulado
+        '#00BFFF', // Azul Céu Profundo
+        '#FFD700'  // Ouro Brilhante
     ];
 
     /**
