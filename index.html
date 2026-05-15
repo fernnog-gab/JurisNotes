@@ -448,17 +448,22 @@
 
     <!-- Modal Smart Move (Reordenar) -->
     <div id="modal-smart-move" class="crop-wizard-popup" style="display:none; z-index: 4005;">
-        <div class="wizard-header">🔄 Reordenar / Mover Ideia</div>
+        <div class="wizard-header">🔄 Reordenar / Mover Prova</div>
         <p class="popup-label">Para onde deseja mover esta prova?</p>
-        <div style="display: flex; gap: 10px; margin-bottom: 12px; margin-top: 8px;">
+        
+        <div style="display: flex; gap: 10px; margin-bottom: 8px; margin-top: 8px;">
             <label style="font-size:0.8rem; cursor:pointer;">
-                <input type="radio" name="smart_move_tipo" value="nova" checked onchange="toggleSmartMoveInput()"> Nova Ideia
+                <input type="radio" name="smart_move_tipo" value="nova" checked onchange="toggleSmartMoveInput()"> Transformar em Nova Ideia
             </label>
             <label style="font-size:0.8rem; cursor:pointer;">
-                <input type="radio" name="smart_move_tipo" value="existente" onchange="toggleSmartMoveInput()"> Agrupar a Existente
+                <input type="radio" name="smart_move_tipo" value="existente" onchange="toggleSmartMoveInput()"> Agrupar a Ideia Existente
             </label>
         </div>
-        <input type="number" id="input-smart-move-destino" class="topic-select" style="display:none;" placeholder="Nº da Ideia Destino (ex: 2)" min="1">
+        
+        <!-- Dica textual dinâmica e campo de input que agora não será mais escondido -->
+        <p id="smart-move-hint" style="font-size: 0.75rem; color: #666; margin-bottom: 4px;">Deixe em branco para ir para o final, ou digite a posição exata:</p>
+        <input type="number" id="input-smart-move-destino" class="topic-select" placeholder="Nova Posição (Ex: 1)" min="1">
+        
         <div class="wizard-actions">
             <button class="chip-btn chip-cancelar" onclick="fecharModalSmartMove()">✕ Cancelar</button>
             <button class="chip-btn chip-autora" onclick="confirmarSmartMove()">✔ Confirmar</button>
