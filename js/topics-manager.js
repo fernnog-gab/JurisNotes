@@ -371,10 +371,10 @@ window.TopicsManager = (function () {
                 topicoAtivo.anotacoes.forEach((an, idx) => {
                     if (an.tese && an.tese.trim() !== '') {
                         const txt = escaparHTML(an.tese);
-                        const shortTxt = txt.length > 60 ? txt.substring(0, 60) + '...' : txt;
                         sumarioHtml += `
-                            <div class="thesis-badge" title="${txt}" onclick="abrirModalTese('${activeTabId}', ${idx})">
-                                <span class="num">${idx + 1}</span> ${shortTxt}
+                            <div class="thesis-badge" onclick="abrirModalTese('${activeTabId}', ${idx})">
+                                <span class="num">${idx + 1}</span> 
+                                <span class="texto-tese">${txt}</span>
                             </div>`;
                     }
                 });

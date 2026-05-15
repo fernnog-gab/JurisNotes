@@ -702,12 +702,22 @@ function abrirModalGerenciarAbas() {
     if(topicos.length === 0) {
         container.innerHTML = '<p class="popup-label" style="text-align:center;">Nenhuma aba criada.</p>';
     } else {
-        // Uso estrito do escaparHTML prevenindo ataques de XSS
-        topicos.forEach(t => {
+        let htmlAcumulado = '';
+        topicos.forEach((t, index) => {
             const nomeSeguro = TopicsManager.escaparHTML(t.nome);
-            container.innerHTML += `
-                <div class="aba-manager-item">
-                    <span class="aba-manager-nome" title="${nomeSeguro}">${nomeSeguro}</span>
+            htmlAcumulado += `
+                <div class="aba-manager-item" draggable="true" 
+                     data-index="${index}"
+                     ondragstart="AbaDnD.start(event)"
+                     ondragover="AbaDnD.over(event)"
+                     ondrop="AbaDnD.drop(event)"
+                     ondragenter="AbaDnD.enter(event)"
+                     ondragleave="AbaDnD.leave(event)"
+                     ondragend="AbaDnD.end(event)"
+                     style="cursor: grab; transition: opacity 0.2s;">
+                    <span class="aba-manager-nome" title="${nomeSeguro}">
+                        <span style="color:#ccc; margin-right:6px; font-size:1.1rem; vertical-align: middle;">⋮⋮</span> ${nomeSeguro}
+                    </span>
                     <div class="aba-manager-actions">
                         <button class="ann-action-btn" title="Editar Nome" onclick="renomearAba('${t.id}')">
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
@@ -718,6 +728,7 @@ function abrirModalGerenciarAbas() {
                     </div>
                 </div>`;
         });
+        container.innerHTML = htmlAcumulado;
     }
 
     document.getElementById('abas-modal-backdrop').style.display = 'block';
@@ -815,3 +826,58 @@ function fecharModalAjuda() {
     document.getElementById('ajuda-modal-backdrop').style.display = 'none';
     document.getElementById('modal-ajuda-intencoes').style.display = 'none';
 }
+
+/* ================================================
+   MOTOR DRAG & DROP — GERENCIAMENTO DE ABAS
+   ================================================ */
+window.AbaDnD = {
+    draggedIndex: null,
+    start: function(e) {
+        this.draggedIndex = parseInt(e.currentTarget.dataset.index);
+        e.currentTarget.style.opacity = '0.4';
+        e.dataTransfer.effectAllowed = 'move';
+    },
+    over: function(e) { 
+        e.preventDefault(); 
+        e.dataTransfer.dropEffect = 'move'; 
+    },
+    enter: function(e) { 
+        const item = e.currentTarget;
+        item._dragCount = (item._dragCount || 0) + 1;
+        item.style.borderTop = '3px dashed var(--trt-blue-mid)';
+    },
+    leave: function(e) { 
+        const item = e.currentTarget;
+        item._dragCount = (item._dragCount || 1) - 1;
+        if (item._dragCount <= 0) {
+            item.style.borderTop = '1px solid var(--border-color)';
+            item._dragCount = 0;
+        }
+    },
+    drop: function(e) {
+        e.preventDefault();
+        const targetElement = e.currentTarget.closest('.aba-manager-item');
+        if (!targetElement) return;
+        
+        const targetIndex = parseInt(targetElement.dataset.index);
+        if (this.draggedIndex === targetIndex) return;
+
+        // Reordena o array global de tópicos
+        const [movido] = topicos.splice(this.draggedIndex, 1);
+        topicos.splice(targetIndex, 0, movido);
+
+        // Salva e atualiza o estado em background (sem destruir o DOM ainda)
+        renderizarTopicos();
+        salvarBackupAutomatico();
+        exibirToast('Abas reordenadas com sucesso!', 'sucesso');
+    },
+    end: function(e) {
+        e.currentTarget.style.opacity = '1';
+        document.querySelectorAll('.aba-manager-item').forEach(el => {
+            el.style.borderTop = '1px solid var(--border-color)';
+            el._dragCount = 0;
+        });
+        // Recarrega a interface do modal de forma segura após o encerramento do arrasto
+        if (typeof abrirModalGerenciarAbas === 'function') abrirModalGerenciarAbas(); 
+    }
+};
