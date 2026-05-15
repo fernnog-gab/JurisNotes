@@ -1186,7 +1186,7 @@ body {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
     width: 100%;
     position: relative;
-    padding-bottom: 38px; /* Cria área de escape segura para a lixeira */
+    padding-bottom: 14px; /* Substitui os antigos 38px que deixavam o buraco no final */
 }
 
 .btn-excluir-correlacionado {
@@ -1482,20 +1482,21 @@ body.theme-white {
 .card-actions-bar {
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
-    margin-top: 12px;
-    padding-top: 8px;
+    gap: 4px; /* Mais compactos */
+    margin-top: 6px; 
+    padding-top: 6px; 
     border-top: 1px dashed var(--border-color);
 }
 
 .card-actions-bar button {
     background: transparent; border: none; cursor: pointer; color: #888;
     display: flex; align-items: center; justify-content: center;
-    padding: 6px; border-radius: 4px; transition: all 0.2s;
+    padding: 4px 6px; /* Área de clique enxuta */
+    border-radius: 4px; transition: all 0.2s;
 }
 .card-actions-bar button:hover { background: #f0f4f8; color: var(--trt-blue); }
 .card-actions-bar button.delete-btn:hover { background: #ffebee; color: #c62828; }
-.card-actions-bar button svg { width: 16px; height: 16px; pointer-events: none; }
+.card-actions-bar button svg { width: 14px; height: 14px; pointer-events: none; } /* Ícones mais finos e discretos */
 
 /* Painel de Sumário de Teses (Abaixo da aba ativa) */
 .thesis-summary-panel {
