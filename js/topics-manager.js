@@ -160,14 +160,17 @@ window.TopicsManager = (function () {
         }
 
         function gerarBarraAcoes(isCorrelacionado, cIdx) {
+            // Injeção segura do cIdx no contexto do botão
+            const ctxCidx = isCorrelacionado && cIdx != null ? `, cIdx: ${cIdx}` : '';
             const paramCtx = isCorrelacionado ? `'${activeTabId}', ${index}, ${cIdx}` : `'${activeTabId}', ${index}`;
+            
             const btnEditar = anotacao.tipo === 'texto' ? `<button title="Editar Texto" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}}; ${isCorrelacionado ? '' : 'editarAnotacao()'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>` : '';
             const paramMove = isCorrelacionado ? `'${activeTabId}', ${index}, ${cIdx}` : `'${activeTabId}', ${index}, null`;
             
             return `
             <div class="card-actions-bar">
                 ${btnEditar}
-                <button title="Adicionar Nó de Ideia" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}}; acionarNovoNoIdeia()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                <button title="Adicionar Nó de Ideia" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}${ctxCidx}}; acionarNovoNoIdeia()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
                 <button title="Mover / Reordenar" onclick="abrirModalSmartMove(${paramMove})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><polyline points="8 7 12 3 16 7"></polyline><line x1="12" y1="12" x2="12" y2="3"></line></svg></button>
                 <button class="delete-btn" title="Excluir" onclick="${isCorrelacionado ? `excluirItemCorrelacionado('${activeTabId}', ${index}, ${cIdx})` : `_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}}; excluirAnotacao()`}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
             </div>`;
@@ -181,8 +184,9 @@ window.TopicsManager = (function () {
             const subCardsHTML = anotacao.subAnotacoes.map((sub, sIdx) => {
                 const label = `${numero}.${gerarLetra(sIdx)}`;
                 const textoFormatado = renderizarMarkdownSeguro(escaparHTML(sub.texto));
+                const sourceRef = sub.sourceRef ?? 'main'; // Recupera a origem do JSON
                 return `
-                    <div class="sub-annotation-item">
+                    <div class="sub-annotation-item" data-source="${sourceRef}">
                         <div class="sub-annotation-card">
                             <div class="sub-badge"
                                  title="Opções desta ideia secundária"
@@ -217,7 +221,7 @@ window.TopicsManager = (function () {
                     : '';
                     
                 return `
-                <div class="correlated-item-wrapper">
+                <div class="correlated-item-wrapper" data-cidx="${cIdx}">
                     <div class="two-way-arrow-container">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l-4-4m4 4l4-4" stroke-linecap="round" stroke-linejoin="round"/>
@@ -413,35 +417,44 @@ window.TopicsManager = (function () {
         // --- MOTOR DE CURVAS TRACEJADAS PARA NÓS DE IDEIA ---
         const masterItems = container.querySelectorAll('.timeline-item-master');
         masterItems.forEach(master => {
-            // CORREÇÃO: Ancorar no '.annotation-card' (card físico) e não no wrapper flexível
-            const mainCard = master.querySelector('.main-card-wrapper .annotation-card');
-            const subCards = master.querySelectorAll('.sub-annotation-card');
+            const mainCard = master.querySelector('.main-card-wrapper > .annotation-card');
+            const subItems = master.querySelectorAll('.sub-annotation-item');
 
-            if (!mainCard || subCards.length === 0) return;
+            if (!mainCard || subItems.length === 0) return;
 
-            const mainRect       = mainCard.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
             const isRightAligned = master.classList.contains('align-right');
 
-            // Ancora vertical centralizada no card
-            const startY = (mainRect.top + mainRect.height / 2) - containerRect.top;
+            subItems.forEach(subItem => {
+                const subCard = subItem.querySelector('.sub-annotation-card');
+                const subRect = subCard.getBoundingClientRect();
+                
+                // 1. Identifica a origem baseada no data-source
+                const sourceRef = subItem.dataset.source;
+                let sourceCard = mainCard; 
+                
+                if (sourceRef !== 'main') {
+                    const correlatedWrapper = master.querySelector(`.correlated-item-wrapper[data-cidx="${sourceRef}"]`);
+                    if (correlatedWrapper) {
+                        sourceCard = correlatedWrapper.querySelector('.annotation-card');
+                    }
+                }
+                
+                const sourceRect = sourceCard.getBoundingClientRect();
 
-            subCards.forEach(sub => {
-                const subRect = sub.getBoundingClientRect();
-
-                // startX: borda do card principal que ENFRENTA os sub-cards
+                // 2. Coordenadas X ancoradas na face correspondente
                 const startX = isRightAligned
-                    ? mainRect.left  - containerRect.left  // master à direita → sai pela borda esquerda
-                    : mainRect.right - containerRect.left; // master à esquerda → sai pela borda direita
+                    ? sourceRect.left  - containerRect.left
+                    : sourceRect.right - containerRect.left;
 
-                // endX: borda do sub-card que ENFRENTA o card principal
                 const endX = isRightAligned
-                    ? subRect.right - containerRect.left   // sub-card à esquerda → entra pela borda direita
-                    : subRect.left  - containerRect.left;  // sub-card à direita  → entra pela borda esquerda
+                    ? subRect.right - containerRect.left
+                    : subRect.left  - containerRect.left;
 
-                // Âncora vertical do sub-card (centro)
+                // 3. Âncoras verticais cirúrgicas no centro do card gerador específico
+                const startY = (sourceRect.top + sourceRect.height / 2) - containerRect.top;
                 const endY   = (subRect.top + subRect.height / 2) - containerRect.top;
                 
-                // Ponto de controle da curva de Bézier (centro do gap)
                 const ctrlX  = (startX + endX) / 2;
 
                 svgContent += `<path d="M ${startX},${startY} C ${ctrlX},${startY} ${ctrlX},${endY} ${endX},${endY}" stroke="#777" stroke-width="1.5" stroke-dasharray="5 4" fill="none" stroke-linecap="round"/>`;

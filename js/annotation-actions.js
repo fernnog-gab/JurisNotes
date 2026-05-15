@@ -102,9 +102,12 @@ function salvarEdicaoTexto() {
 /* --- FUNÇÕES INTEGRAIS MIGRADAS DO APP.JS --- */
 function acionarNovoNoIdeia() {
     if (!_menuAnotacaoCtx) return;
+    // Captura segura, assumindo null caso acionado a partir de card principal
     const { topicoId, index } = _menuAnotacaoCtx;
+    const cIdx = _menuAnotacaoCtx.cIdx ?? null; 
+    
     document.getElementById('annotation-context-menu').style.display = 'none';
-    adicionarSubAnotacao(topicoId, index);
+    adicionarSubAnotacao(topicoId, index, cIdx);
 }
 
 function excluirAnotacao() {
@@ -162,47 +165,71 @@ function excluirItemCorrelacionado(topicoId, parentIndex, correlacionadoIndex) {
     exibirToast('Item correlacionado excluído.', 'sucesso');
 }
 
-function adicionarSubAnotacao(topicoId, anotacaoIndex) {
+function adicionarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
     const existing = document.getElementById('sub-input-active');
     if (existing) {
         const mesmoCont = existing.dataset.forTopico === topicoId && existing.dataset.forIndex === String(anotacaoIndex);
         existing.remove();
         if (mesmoCont) return;
     }
+    
     const painel = document.createElement('div');
-    painel.id = 'sub-input-active'; painel.className = 'sub-input-panel';
-    painel.dataset.forTopico = topicoId; painel.dataset.forIndex = anotacaoIndex;
+    painel.id = 'sub-input-active'; 
+    painel.className = 'sub-input-panel';
+    painel.dataset.forTopico = topicoId; 
+    painel.dataset.forIndex = anotacaoIndex;
+    
+    // Tratamento de tipo seguro para injetar como string no HTML
+    const argCidx = cIdx != null ? cIdx : 'null';
+    
     painel.innerHTML = `
         <textarea id="sub-input-text" class="sub-input-textarea" placeholder="Digite a ideia secundária..." rows="3"></textarea>
         <div class="sub-input-actions">
-            <button class="sub-input-btn-icon confirm" title="Confirmar (Ctrl+Enter)" onclick="confirmarSubAnotacao('${topicoId}', ${anotacaoIndex})">
+            <button class="sub-input-btn-icon confirm" title="Confirmar (Ctrl+Enter)" onclick="confirmarSubAnotacao('${topicoId}', ${anotacaoIndex}, ${argCidx})">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
             </button>
             <button class="sub-input-btn-icon cancel" title="Cancelar (Esc)" onclick="document.getElementById('sub-input-active').remove()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
         </div>`;
-    const wrapper = document.querySelector(`#timeline-wrapper-${anotacaoIndex} .main-card-wrapper`);
-    if (wrapper) { 
-        wrapper.appendChild(painel); 
+        
+    // Ancoragem dinâmica: anexa o input logo abaixo do card que gerou a ação
+    const masterWrapper = document.getElementById(`timeline-wrapper-${anotacaoIndex}`);
+    if (masterWrapper) {
+        let mountPoint = masterWrapper.querySelector('.main-card-wrapper');
+        if (cIdx != null) {
+            const correlatedItem = mountPoint.querySelector(`.correlated-item-wrapper[data-cidx="${cIdx}"]`);
+            if (correlatedItem) mountPoint = correlatedItem;
+        }
+        mountPoint.appendChild(painel); 
+        
         const textarea = document.getElementById('sub-input-text');
         textarea.focus();
         textarea.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') document.getElementById('sub-input-active').remove();
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') confirmarSubAnotacao(topicoId, anotacaoIndex);
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') confirmarSubAnotacao(topicoId, anotacaoIndex, cIdx);
         });
     }
 }
 
-function confirmarSubAnotacao(topicoId, anotacaoIndex) {
+function confirmarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
     const textarea = document.getElementById('sub-input-text');
     const texto = textarea ? textarea.value.trim() : '';
     if (!texto) return exibirToast('Digite uma observação.', 'aviso');
+    
     const anotacao = topicos.find(t => t.id === topicoId).anotacoes[anotacaoIndex];
     if (!anotacao.subAnotacoes) anotacao.subAnotacoes = [];
-    anotacao.subAnotacoes.push({ texto, timestamp: Date.now() });
+    
+    // Grava no arquivo .json a referência exata da origem
+    anotacao.subAnotacoes.push({ 
+        texto, 
+        timestamp: Date.now(),
+        sourceRef: cIdx != null ? cIdx : 'main'
+    });
+    
     document.getElementById('sub-input-active').remove();
-    renderizarTopicos(); salvarBackupAutomatico();
+    renderizarTopicos(); 
+    salvarBackupAutomatico();
     exibirToast('Observação secundária vinculada.', 'sucesso');
 }
 
