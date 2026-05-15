@@ -1469,6 +1469,11 @@ body.theme-white {
     transition: background-color 0.3s ease;
 }
 
+/* Faz com que o fundo branco do PDF se misture com a cor Jasmine do container */
+.pdf-page-container canvas {
+    mix-blend-mode: multiply;
+}
+
 /* Barra de Ações Individual dos Cards (Rodapé do Card) */
 .card-actions-bar {
     display: flex;
