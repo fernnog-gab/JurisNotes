@@ -406,6 +406,8 @@
         <button class="doc-btn" style="border:none; text-align:left; margin-bottom: 4px;" onclick="abrirModalGerenciarAbas()">📑 Gerenciar Abas</button>
         <button class="doc-btn neutro" style="border:none; text-align:left; margin-bottom: 4px;" onclick="aplicarTemaPDF('jasmine')">🌕 Fundo Jasmine</button>
         <button class="doc-btn neutro" style="border:none; text-align:left;" onclick="aplicarTemaPDF('white')">⬜ Fundo Branco</button>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 4px 0;">
+        <button class="doc-btn neutro" style="border:none; text-align:left;" onclick="abrirModalAjuda()">📖 Guia da IA (Nós de Ideia)</button>
     </div>
 
     <!-- BACKDROP DEDICADO PARA O MODAL DE ABAS (Resolve Alerta 1) -->
@@ -454,6 +456,31 @@
         <div class="wizard-actions">
             <button class="chip-btn chip-cancelar" onclick="fecharModalSmartMove()">✕ Cancelar</button>
             <button class="chip-btn chip-autora" onclick="confirmarSmartMove()">✔ Confirmar</button>
+        </div>
+    </div>
+
+    <!-- BACKDROP E MODAL DO GUIA METODOLÓGICO -->
+    <div id="ajuda-modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.40); z-index: 4004;" onclick="fecharModalAjuda()"></div>
+
+    <div id="modal-ajuda-intencoes" class="crop-wizard-popup" style="display:none; z-index: 4005; max-width: 600px; max-height: 80vh; overflow-y: auto;">
+        <div class="wizard-header">🧠 Guia Metodológico: Nós de Ideia</div>
+        <div style="font-size: 0.85rem; line-height: 1.6; color: #444; margin-top: 10px;">
+            <p>Enquanto o Card Principal contém o Dado Bruto (a prova), o Nó de Ideia contém a sua cognição para guiar a IA.</p>
+            
+            <h4 style="color: #2e7d32; margin-top: 12px;">⚖️ 1. Premissa Lógica (Padrão)</h4>
+            <p><strong>Uso:</strong> Dar contexto jurídico. <em>Ex: "A reclamada possuía mais de 20 funcionários, logo, o ônus da prova era dela."</em><br><strong>Reação da IA:</strong> Anexa a dedução à prova. A IA não tentará adivinhar a regra, ela usará a sua premissa como verdade absoluta.</p>
+            
+            <h4 style="color: #c62828; margin-top: 12px;">⚡ 2. Comando Direto</h4>
+            <p><strong>Uso:</strong> Instrução imperativa. <em>Ex: "Desconsidere este depoimento na minuta."</em><br><strong>Reação da IA:</strong> É exportado sob a tag <code>&lt;comandos_para_a_minuta&gt;</code>. A IA aplica a ordem imediatamente no formato ou estilo da redação.</p>
+
+            <h4 style="color: #1565c0; margin-top: 12px;">🎯 3. Texto Fixo / Conclusão</h4>
+            <p><strong>Uso:</strong> O arremate da prova. <em>Ex: "Resta fartamente comprovado o assédio moral corporativo."</em><br><strong>Reação da IA:</strong> Obriga a máquina a utilizar a redação exata fornecida por você para fechar o argumento, usando as provas apenas como base.</p>
+            
+            <h4 style="color: #616161; margin-top: 12px;">⚠️ 4. Nota Interna (Oculta)</h4>
+            <p><strong>Uso:</strong> Lembretes apenas para o assessor (Valoração/Contradições pessoais).<br><strong>Reação da IA:</strong> Esta nota é completamente <strong>ocultada</strong> no momento da exportação Markdown. A IA não terá acesso a este texto.</p>
+        </div>
+        <div class="wizard-actions">
+            <button class="chip-btn chip-cancelar" onclick="fecharModalAjuda()">✕ Fechar Guia</button>
         </div>
     </div>
 

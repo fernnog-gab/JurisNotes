@@ -1551,3 +1551,29 @@ body.theme-white {
     border-radius: 0 6px 6px 0;
     font-weight: bold;
 }
+
+/* ================================================
+   WRAPPER PARA REDIMENSIONAMENTO NATIVO DE IMAGENS
+   ================================================ */
+.image-resize-wrapper {
+    display: block;
+    width: fit-content;
+    resize: both;
+    overflow: hidden;
+    max-width: 100%;
+    min-width: 150px;
+    min-height: 80px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    margin-top: 10px;
+    background: #fafafa;
+}
+
+.image-resize-wrapper img.card-imagem {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    margin-top: 0;
+    border: none;
+    pointer-events: none; /* Garante que o usuário consiga clicar na alça de redimensionamento */
+}
