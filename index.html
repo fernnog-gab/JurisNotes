@@ -217,27 +217,46 @@
         </button>
     </div>
     
-    <!-- MENU CONTEXTUAL DAS SUB-ANOTAÇÕES (excluir / reordenar nó de ideia) -->
-    <div id="sub-annotation-context-menu" class="annotation-context-menu">
-        <button class="ann-action-btn" title="Editar Ideia Secundária" onclick="editarSubAnotacao()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-            </svg>
+    <!-- MENU CONTEXTUAL DAS SUB-ANOTAÇÕES -->
+    <div id="sub-annotation-context-menu" class="annotation-context-menu" style="flex-direction: column; width: 220px;">
+        
+        <!-- TIPAGEM SEMÂNTICA -->
+        <span style="font-size: 0.7rem; color: #888; padding: 4px 8px; font-weight: bold; text-transform: uppercase;">Intenção da IA:</span>
+        
+        <button class="ann-action-btn btn-intent" data-intent="comando" style="justify-content: flex-start; gap: 8px; width: 100%;" title="Definir como Comando" onclick="definirIntencaoSubAnotacao('comando')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#c62828" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
+            <span style="font-size: 0.8rem; color: #c62828;">Comando Direto</span>
         </button>
-        <button class="ann-action-btn" title="Reordenar Ideia Secundária" onclick="reordenarSubAnotacao()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="8 17 12 21 16 17"></polyline>
-                <line x1="12" y1="12" x2="12" y2="21"></line>
-                <polyline points="8 7 12 3 16 7"></polyline>
-                <line x1="12" y1="12" x2="12" y2="3"></line>
-            </svg>
+        
+        <button class="ann-action-btn btn-intent" data-intent="texto" style="justify-content: flex-start; gap: 8px; width: 100%;" title="Definir como Texto Fixo" onclick="definirIntencaoSubAnotacao('texto')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#1565c0" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+            <span style="font-size: 0.8rem; color: #1565c0;">Texto Fixo</span>
         </button>
-        <button class="ann-action-btn ann-action-delete" title="Excluir Ideia Secundária" onclick="excluirSubAnotacao()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            </svg>
+        
+        <button class="ann-action-btn btn-intent" data-intent="nota" style="justify-content: flex-start; gap: 8px; width: 100%;" title="Ocultar da IA" onclick="definirIntencaoSubAnotacao('nota')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#616161" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <span style="font-size: 0.8rem; color: #616161;">Nota Interna (Ocultar)</span>
+        </button>
+        
+        <button class="ann-action-btn btn-intent" data-intent="premissa" style="justify-content: flex-start; gap: 8px; width: 100%;" title="Restaurar Padrão" onclick="definirIntencaoSubAnotacao('premissa')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+            <span style="font-size: 0.8rem;">Premissa Lógica</span>
+        </button>
+
+        <hr style="width: 100%; border: 0; border-top: 1px solid #eee; margin: 4px 0;">
+
+        <!-- AÇÕES ORIGINAIS -->
+        <button class="ann-action-btn" style="justify-content: flex-start; gap: 8px; width: 100%;" onclick="editarSubAnotacao()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            <span style="font-size: 0.8rem;">Editar Texto</span>
+        </button>
+        <button class="ann-action-btn" style="justify-content: flex-start; gap: 8px; width: 100%;" onclick="reordenarSubAnotacao()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><polyline points="8 7 12 3 16 7"></polyline><line x1="12" y1="12" x2="12" y2="3"></line></svg>
+            <span style="font-size: 0.8rem;">Reordenar</span>
+        </button>
+        <button class="ann-action-btn ann-action-delete" style="justify-content: flex-start; gap: 8px; width: 100%;" onclick="excluirSubAnotacao()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            <span style="font-size: 0.8rem;">Excluir Ideia</span>
         </button>
     </div>
     
