@@ -241,8 +241,15 @@ window.TopicsManager = (function () {
                     : '';
                     
                 return `
-                <div class="correlated-item-wrapper" data-cidx="${cIdx}">
-                    <div class="two-way-arrow-container">
+                <div class="correlated-item-wrapper" data-cidx="${cIdx}"
+                     draggable="true"
+                     ondragstart="DnDManager.dragStart(event, '${activeTabId}', ${index}, ${cIdx})"
+                     ondragover="DnDManager.dragOver(event)"
+                     ondrop="DnDManager.drop(event, '${activeTabId}', ${index}, ${cIdx})"
+                     ondragenter="DnDManager.dragEnter(event)"
+                     ondragleave="DnDManager.dragLeave(event)"
+                     ondragend="DnDManager.dragEnd(event)">
+                    <div class="two-way-arrow-container correlated-drag-handle" title="Arraste para reordenar">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l-4-4m4 4l4-4" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>

@@ -150,20 +150,16 @@ function excluirAnotacao() {
     _menuAnotacaoCtx = null;
 }
 
+let _reordenarCtx = null;
+
 function reordenarAnotacao() {
     if (!_menuAnotacaoCtx) return;
     const { topicoId, index } = _menuAnotacaoCtx;
     const topico = topicos.find(t => t.id === topicoId);
-    const posAtual = index + 1; const total = topico.anotacoes.length;
-    if (total <= 1) return exibirToast('Apenas uma anotação existente.', 'aviso');
-    const entrada = prompt(`Posição atual: ${posAtual} de ${total}\n\nMover para qual posição? (1 – ${total})`);
-    if (!entrada) return;
-    const novaPos = parseInt(entrada, 10);
-    if (isNaN(novaPos) || novaPos < 1 || novaPos > total) return exibirToast('Posição inválida.', 'erro');
-    const [item] = topico.anotacoes.splice(index, 1);
-    topico.anotacoes.splice(novaPos - 1, 0, item);
-    renderizarTopicos(); salvarBackupAutomatico();
-    _menuAnotacaoCtx = null;
+    if (topico.anotacoes.length <= 1) return exibirToast('Apenas uma anotação existente.', 'aviso');
+
+    abrirModalReordenar('main', topicoId, index, topico.anotacoes.length);
+    document.getElementById('annotation-context-menu').style.display = 'none';
 }
 
 function excluirSubAnotacao() {
@@ -176,15 +172,54 @@ function excluirSubAnotacao() {
 
 function reordenarSubAnotacao() {
     if (!_menuSubAnotacaoCtx) return;
-    const subAnotacoes = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId).anotacoes[_menuSubAnotacaoCtx.parentIndex].subAnotacoes;
-    const entrada = prompt(`Mover para qual posição? (1 – ${subAnotacoes.length})`);
-    if (entrada) {
-        const novaPos = parseInt(entrada, 10);
-        const [item] = subAnotacoes.splice(_menuSubAnotacaoCtx.subIndex, 1);
-        subAnotacoes.splice(novaPos - 1, 0, item);
-        renderizarTopicos(); salvarBackupAutomatico();
-    }
+    const { topicoId, parentIndex, subIndex } = _menuSubAnotacaoCtx;
+    const subAnotacoes = topicos.find(t => t.id === topicoId).anotacoes[parentIndex].subAnotacoes;
+    if (subAnotacoes.length <= 1) return exibirToast('Apenas uma ideia secundária.', 'aviso');
+
+    abrirModalReordenar('sub', topicoId, parentIndex, subAnotacoes.length, subIndex);
     document.getElementById('sub-annotation-context-menu').style.display = 'none';
+}
+
+function abrirModalReordenar(tipo, topicoId, index, total, subIndex = null) {
+    _reordenarCtx = { tipo, topicoId, index, total, subIndex };
+    const posAtual = tipo === 'main' ? index + 1 : subIndex + 1;
+
+    document.getElementById('input-nova-posicao').value = posAtual;
+    document.getElementById('input-nova-posicao').max = total;
+
+    document.getElementById('reordenar-modal-backdrop').style.display = 'block';
+    document.getElementById('modal-reordenar').style.display = 'flex';
+}
+
+function fecharModalReordenar() {
+    document.getElementById('reordenar-modal-backdrop').style.display = 'none';
+    document.getElementById('modal-reordenar').style.display = 'none';
+    _reordenarCtx = null;
+}
+
+function confirmarReordenacaoPosicao() {
+    if (!_reordenarCtx) return;
+    const topico = topicos.find(t => t.id === _reordenarCtx.topicoId);
+    const novaPos = parseInt(document.getElementById('input-nova-posicao').value, 10);
+
+    if (isNaN(novaPos) || novaPos < 1 || novaPos > _reordenarCtx.total) {
+        return exibirToast(`Posição inválida. Escolha entre 1 e ${_reordenarCtx.total}.`, 'erro');
+    }
+
+    if (_reordenarCtx.tipo === 'main') {
+        const [item] = topico.anotacoes.splice(_reordenarCtx.index, 1);
+        topico.anotacoes.splice(novaPos - 1, 0, item);
+    } else {
+        const subAnotacoes = topico.anotacoes[_reordenarCtx.index].subAnotacoes;
+        const [item] = subAnotacoes.splice(_reordenarCtx.subIndex, 1);
+        subAnotacoes.splice(novaPos - 1, 0, item);
+    }
+
+    renderizarTopicos(); salvarBackupAutomatico();
+    fecharModalReordenar();
+    exibirToast('Item reposicionado com sucesso.', 'sucesso');
+    _menuAnotacaoCtx = null;
+    _menuSubAnotacaoCtx = null;
 }
 
 function excluirItemCorrelacionado(topicoId, parentIndex, correlacionadoIndex) {
@@ -358,3 +393,70 @@ function confirmarSmartMove() {
 
     renderizarTopicos(); salvarBackupAutomatico(); fecharModalSmartMove();
 }
+
+/* --- TEMA E DRAG & DROP --- */
+window.toggleSubmenuTemas = function() {
+    const submenu = document.getElementById('submenu-temas');
+    submenu.style.display = submenu.style.display === 'none' ? 'flex' : 'none';
+};
+
+window.DnDManager = {
+    draggedItem: null,
+
+    dragStart: function(event, topicoId, parentIndex, cIdx) {
+        this.draggedItem = { topicoId, parentIndex, cIdx };
+        event.currentTarget.classList.add('dragging'); 
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', ''); // Essencial para Firefox
+    },
+
+    dragOver: function(event) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+    },
+
+    dragEnter: function(event) {
+        event.preventDefault();
+        const wrapper = event.currentTarget.closest('.correlated-item-wrapper');
+        if (wrapper) wrapper.classList.add('drag-over');
+    },
+
+    dragLeave: function(event) {
+        const wrapper = event.currentTarget.closest('.correlated-item-wrapper');
+        if (!wrapper) return;
+        // Evita o efeito pisca-pisca caso o mouse passe por elementos internos
+        if (!wrapper.contains(event.relatedTarget)) {
+            wrapper.classList.remove('drag-over');
+        }
+    },
+
+    dragEnd: function(event) {
+        event.currentTarget.classList.remove('dragging');
+        document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    },
+
+    drop: function(event, targetTopicoId, targetParentIndex, targetCIdx) {
+        event.preventDefault();
+
+        const wrapper = event.currentTarget.closest('.correlated-item-wrapper');
+        if (!wrapper) return; // Segurança contra crashes se o alvo for o SVG interno
+        wrapper.classList.remove('drag-over');
+
+        const src = this.draggedItem;
+        if (!src || src.topicoId !== targetTopicoId || src.parentIndex !== targetParentIndex) {
+            exibirToast('Só é possível reordenar itens dentro do mesmo agrupamento.', 'aviso');
+            return;
+        }
+        if (src.cIdx === targetCIdx) return; // Não mudou de posição
+
+        const topico = topicos.find(t => t.id === targetTopicoId);
+        const grupo = topico.anotacoes[targetParentIndex].itensCorrelacionados;
+
+        const [itemMovido] = grupo.splice(src.cIdx, 1);
+        grupo.splice(targetCIdx, 0, itemMovido);
+
+        renderizarTopicos();
+        salvarBackupAutomatico();
+        exibirToast('Ordem atualizada!', 'sucesso');
+    }
+};
