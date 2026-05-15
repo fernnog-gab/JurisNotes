@@ -1,14 +1,3 @@
-Com certeza! Atualizar a documentação após uma evolução tão significativa no produto é um passo fundamental da arquitetura. 
-
-Reescrevi a seção de **Contexto do Domínio**, removendo o jargão técnico na parte de integração com IA e focando no **valor real**: como as novas "Teses" e o agrupamento visual mastigam o trabalho cognitivo para que o modelo de IA (ChatGPT, Claude, etc.) atue apenas como um redator impecável, e não como um "detetive" propenso a inventar fatos.
-
-Também atualizei as seções de evolução do projeto (versões) e o Guia Rápido de Uso para refletir os novos modais, o Tema Jasmine e a independência dos cards.
-
-Abaixo está o conteúdo completo e atualizado, formatado para você copiar e colar diretamente no seu arquivo `README.md`.
-
-***
-
-```markdown
 # Juris Notes — Assistente de Mapeamento Estruturado para Elaboração de Acórdãos
 
 ## 1. Contexto do Domínio
