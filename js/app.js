@@ -11,7 +11,28 @@ let _encerrarConfirmando = false;  // Flag: aguardando segundo clique para confi
 let pdfObserver      = null;   // IntersectionObserver para lazy loading
 let _sessaoPossuiAudio = false; // Flag de restauração de áudio na retomada de sessão
 
+/* ================================================
+   TEMA DO PDF (JASMINE / BRANCO)
+   ================================================ */
+function aplicarTemaPDF(tema) { // 'jasmine' | 'white'
+    // Aplica a classe no body baseada na escolha
+    document.body.classList.toggle('theme-white', tema === 'white');
+    
+    // Salva a preferência no navegador do usuário
+    localStorage.setItem('pdf-theme', tema);
+    
+    // Fecha o menu após clicar
+    const menu = document.getElementById('juris-menu');
+    if (menu) menu.style.display = 'none';
+    
+    exibirToast(`Fundo ${tema === 'white' ? 'Branco' : 'Jasmine'} ativado.`, 'sucesso');
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+    // Carrega o tema salvo ou aplica o jasmine como padrão
+    const savedTheme = localStorage.getItem('pdf-theme') || 'jasmine';
+    aplicarTemaPDF(savedTheme);
+
     // Injeção de dependência dinâmica para o gerenciador de áudio
     if (window.AudioManager) {
         AudioManager.init({
