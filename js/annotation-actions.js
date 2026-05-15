@@ -77,6 +77,22 @@ function editarSubAnotacao() {
     document.getElementById('sub-annotation-context-menu').style.display = 'none';
 }
 
+function editarItemCorrelacionado() {
+    if (!_menuAnotacaoCtx || _menuAnotacaoCtx.cIdx === undefined) return;
+    
+    const topico = topicos.find(t => t.id === _menuAnotacaoCtx.topicoId);
+    const item = topico.anotacoes[_menuAnotacaoCtx.index].itensCorrelacionados[_menuAnotacaoCtx.cIdx];
+    
+    if (item.tipo !== 'texto') return exibirToast('Apenas anotações de texto podem ser editadas.', 'aviso');
+    
+    abrirModalEdicao({ 
+        tipo: 'correlated', 
+        topicoId: _menuAnotacaoCtx.topicoId, 
+        parentIndex: _menuAnotacaoCtx.index, 
+        cIdx: _menuAnotacaoCtx.cIdx 
+    }, item.conteudo);
+}
+
 function abrirModalEdicao(contexto, textoAtual) {
     _editContext = contexto;
     const textarea = document.getElementById('edit-text-input');
@@ -120,10 +136,17 @@ function salvarEdicaoTexto() {
     if (!novoTexto) return exibirToast('O texto não pode ficar vazio.', 'aviso');
 
     const topico = topicos.find(t => t.id === _editContext.topicoId);
-    if (_editContext.tipo === 'main') topico.anotacoes[_editContext.parentIndex].conteudo = novoTexto;
-    else topico.anotacoes[_editContext.parentIndex].subAnotacoes[_editContext.subIndex].texto = novoTexto;
     
-    renderizarTopicos(); salvarBackupAutomatico();
+    if (_editContext.tipo === 'main') {
+        topico.anotacoes[_editContext.parentIndex].conteudo = novoTexto;
+    } else if (_editContext.tipo === 'sub') {
+        topico.anotacoes[_editContext.parentIndex].subAnotacoes[_editContext.subIndex].texto = novoTexto;
+    } else if (_editContext.tipo === 'correlated') {
+        topico.anotacoes[_editContext.parentIndex].itensCorrelacionados[_editContext.cIdx].conteudo = novoTexto;
+    }
+    
+    renderizarTopicos(); 
+    salvarBackupAutomatico();
     exibirToast('Anotação salva com sucesso!', 'sucesso');
     fecharModalEdicao();
 }

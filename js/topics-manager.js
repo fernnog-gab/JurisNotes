@@ -163,11 +163,17 @@ window.TopicsManager = (function () {
         }
 
         function gerarBarraAcoes(isCorrelacionado, cIdx) {
-            // Injeção segura do cIdx no contexto do botão
+            // Injeção segura do cIdx no contexto do botão (resolve o bug da falta de índice)
             const ctxCidx = isCorrelacionado && cIdx != null ? `, cIdx: ${cIdx}` : '';
-            const paramCtx = isCorrelacionado ? `'${activeTabId}', ${index}, ${cIdx}` : `'${activeTabId}', ${index}`;
             
-            const btnEditar = anotacao.tipo === 'texto' ? `<button title="Editar Texto" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}}; ${isCorrelacionado ? '' : 'editarAnotacao()'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>` : '';
+            // Verifica o tipo do item na hierarquia correta (principal vs correlacionado)
+            const tipoDoItem = isCorrelacionado && cIdx != null ? anotacao.itensCorrelacionados[cIdx].tipo : anotacao.tipo;
+            
+            // Direciona para a função de edição adequada
+            const acaoEditar = isCorrelacionado ? 'editarItemCorrelacionado()' : 'editarAnotacao()';
+            
+            const btnEditar = tipoDoItem === 'texto' ? `<button title="Editar Texto" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}${ctxCidx}}; ${acaoEditar}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>` : '';
+            
             const paramMove = isCorrelacionado ? `'${activeTabId}', ${index}, ${cIdx}` : `'${activeTabId}', ${index}, null`;
             
             return `
@@ -186,7 +192,7 @@ window.TopicsManager = (function () {
         if (anotacao.subAnotacoes && anotacao.subAnotacoes.length > 0) {
             const subCardsHTML = anotacao.subAnotacoes.map((sub, sIdx) => {
                 const intencao = sub.intencao || 'premissa';
-                const isHasIntent = intencao !== 'premissa';
+                const isHasIntent = true; // Garante o design em pílula para TODAS as intenções
                 let iconSVG = '';
 
                 if (intencao === 'comando') {
@@ -195,6 +201,8 @@ window.TopicsManager = (function () {
                     iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`;
                 } else if (intencao === 'nota') {
                     iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
+                } else if (intencao === 'premissa') {
+                    iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>`;
                 }
 
                 const badgeClass = isHasIntent ? `sub-badge has-intent intencao-${intencao}` : 'sub-badge';
