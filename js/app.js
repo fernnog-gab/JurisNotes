@@ -412,7 +412,7 @@ function carregarPDF(event) {
                         height: ${viewportCSS.height}px;
                         position: relative;
                         margin-bottom: 24px;
-                        background-color: white;
+                        background-color: var(--pdf-bg-color);
                         box-shadow: var(--shadow-md);
                     `;
                     wrapper.appendChild(pageContainer);
