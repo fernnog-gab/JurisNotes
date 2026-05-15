@@ -404,10 +404,16 @@
     <!-- MENU FLUTUANTE DA LOGO -->
     <div id="juris-menu" class="annotation-context-menu" style="flex-direction: column; min-width: 150px; padding: 8px;">
         <button class="doc-btn" style="border:none; text-align:left; margin-bottom: 4px;" onclick="abrirModalGerenciarAbas()">📑 Gerenciar Abas</button>
-        <button class="doc-btn neutro" style="border:none; text-align:left; margin-bottom: 4px;" onclick="aplicarTemaPDF('jasmine')">🌕 Fundo Jasmine</button>
-        <button class="doc-btn neutro" style="border:none; text-align:left;" onclick="aplicarTemaPDF('white')">⬜ Fundo Branco</button>
+        
+        <!-- Novo Submenu de Temas -->
+        <button class="doc-btn" style="border:none; text-align:left; margin-bottom: 4px;" onclick="toggleSubmenuTemas()">🎨 Temas ▾</button>
+        <div id="submenu-temas" style="display:none; padding-left: 12px; border-left: 2px solid #eee; margin-bottom: 4px; flex-direction: column; gap: 4px;">
+            <button class="doc-btn neutro" style="border:none; text-align:left;" onclick="aplicarTemaPDF('jasmine')">🌕 Fundo Jasmine</button>
+            <button class="doc-btn neutro" style="border:none; text-align:left;" onclick="aplicarTemaPDF('white')">⬜ Fundo Branco</button>
+        </div>
+        
         <hr style="border: 0; border-top: 1px solid #eee; margin: 4px 0;">
-        <button class="doc-btn neutro" style="border:none; text-align:left;" onclick="abrirModalAjuda()">📖 Guia da IA (Nós de Ideia)</button>
+        <button class="doc-btn neutro" style="border:none; text-align:left;" onclick="abrirModalAjuda()">📖 Guia da IA</button>
     </div>
 
     <!-- BACKDROP DEDICADO PARA O MODAL DE ABAS (Resolve Alerta 1) -->
@@ -481,6 +487,21 @@
         </div>
         <div class="wizard-actions">
             <button class="chip-btn chip-cancelar" onclick="fecharModalAjuda()">✕ Fechar Guia</button>
+        </div>
+    </div>
+
+    <!-- Backdrop dedicado para Reordenação (Evita conflito com o Wizard) -->
+    <div id="reordenar-modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.40); z-index: 4004;" onclick="fecharModalReordenar()"></div>
+
+    <!-- Modal Reordenar Posição -->
+    <div id="modal-reordenar" class="crop-wizard-popup" style="display:none; z-index: 4005;">
+        <div class="wizard-header">↕️ Reposicionar Item</div>
+        <p class="popup-label">Digite a nova posição que este item deve assumir:</p>
+        <p style="font-size: 0.8rem; color: #666; margin-bottom: 8px;">Os demais itens serão renumerados automaticamente.</p>
+        <input type="number" id="input-nova-posicao" class="topic-select" placeholder="Ex: 2" min="1">
+        <div class="wizard-actions">
+            <button class="chip-btn chip-cancelar" onclick="fecharModalReordenar()">✕ Cancelar</button>
+            <button class="chip-btn chip-autora" onclick="confirmarReordenacaoPosicao()">✔ Confirmar</button>
         </div>
     </div>
 

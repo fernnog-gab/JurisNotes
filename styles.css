@@ -1577,3 +1577,29 @@ body.theme-white {
     border: none;
     pointer-events: none; /* Garante que o usuário consiga clicar na alça de redimensionamento */
 }
+
+/* Feedback visual ao arrastar (Drag & Drop) */
+.correlated-item-wrapper.dragging {
+    opacity: 0.4;
+    transform: scale(0.98);
+}
+
+.correlated-item-wrapper.drag-over {
+    border-top: 3px dashed var(--trt-blue-mid) !important;
+    padding-top: 4px;
+    background-color: rgba(26, 58, 92, 0.03);
+}
+
+/* Alça de Arraste (Drag Handle) */
+.correlated-drag-handle {
+    cursor: grab;
+    transition: color 0.2s;
+}
+
+.correlated-drag-handle:hover {
+    color: var(--trt-blue-mid);
+}
+
+.correlated-drag-handle:active {
+    cursor: grabbing;
+}
