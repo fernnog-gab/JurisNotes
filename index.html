@@ -259,6 +259,29 @@
         </button>
 
         <hr style="width: 100%; border: 0; border-top: 1px solid #eee; margin: 4px 0;">
+        <span style="font-size: 0.7rem; color: #888; padding: 4px 8px; font-weight: bold; text-transform: uppercase;">Estrutura da Minuta:</span>
+
+        <button class="ann-action-btn btn-intent btn-intent-preliminar" data-intent="preliminar" title="Prescrição, Inépcia, etc." onclick="definirIntencaoSubAnotacao('preliminar')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <span>Filtro / Prejudicial</span>
+        </button>
+
+        <button class="ann-action-btn btn-intent btn-intent-alegacao" data-intent="alegacao" title="O que a parte pede" onclick="definirIntencaoSubAnotacao('alegacao')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            <span>Alegação Recursal</span>
+        </button>
+
+        <button class="ann-action-btn btn-intent btn-intent-fundamento_sentenca" data-intent="fundamento_sentenca" title="Base da sentença" onclick="definirIntencaoSubAnotacao('fundamento_sentenca')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 21V7l6-4 6 4v14"></path></svg>
+            <span>Fundamento da Origem</span>
+        </button>
+
+        <button class="ann-action-btn btn-intent btn-intent-refutacao" data-intent="refutacao" title="Derrubar argumento" onclick="definirIntencaoSubAnotacao('refutacao')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>
+            <span>Refutação (Mérito)</span>
+        </button>
+
+        <hr style="width: 100%; border: 0; border-top: 1px solid #eee; margin: 4px 0;">
 
         <!-- AÇÕES ORIGINAIS -->
         <button class="ann-action-btn" style="justify-content: flex-start; gap: 8px; width: 100%;" onclick="editarSubAnotacao()">
@@ -512,6 +535,20 @@
 
             <h4 style="color: #00695c; margin-top: 12px;">📚 6. Fundamentação Legal (Súmula/Lei)</h4>
             <p><strong>Uso:</strong> Colar uma Súmula do TST ou artigo de lei aplicável. <em>Ex: "Súmula 297 do TST."</em><br><strong>Reação da IA:</strong> Exportado sob a tag <code>&lt;base_legal_obrigatoria&gt;</code>. A IA priorizará este argumento matemático acima de qualquer dedução lógica que ela própria faria.</p>
+
+            <hr style="border: 0; border-top: 1px dashed #ccc; margin: 16px 0;">
+
+            <h4 style="color: #5d4037; margin-top: 12px;">⏳ 7. Filtro / Prejudicial (Ex: Prescrição)</h4>
+            <p><strong>Uso:</strong> Questões temporais (prescrição) ou processuais (inépcia/ilegitimidade).<br><strong>Reação da IA:</strong> Exportado para o TOPO do arquivo. A IA é instruída a redigir e resolver essa barreira antes de analisar as provas de mérito.</p>
+
+            <h4 style="color: #f57c00; margin-top: 12px;">📢 8. Alegação Recursal</h4>
+            <p><strong>Uso:</strong> A tese que a parte está levantando no recurso. <br><strong>Reação da IA:</strong> Usará para abrir a introdução do tópico (Relatório do Conflito).</p>
+
+            <h4 style="color: #3949ab; margin-top: 12px;">🏛️ 9. Fundamento da Origem</h4>
+            <p><strong>Uso:</strong> O que o juiz de 1º grau decidiu sobre o tema. <br><strong>Reação da IA:</strong> Usará para contrapor a alegação e contextualizar o litígio antes de analisar as provas.</p>
+
+            <h4 style="color: #d81b60; margin-top: 12px;">🛡️ 10. Refutação (Mérito)</h4>
+            <p><strong>Uso:</strong> Explicar por que o argumento da parte cai por terra. <br><strong>Reação da IA:</strong> Fica colado à prova na Matriz Dialética, guiando o LLM a escrever os parágrafos de afastamento de teses.</p>
         </div>
         <div class="wizard-actions">
             <button class="chip-btn chip-cancelar" onclick="fecharModalAjuda()">✕ Fechar Guia</button>

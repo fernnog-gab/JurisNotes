@@ -445,6 +445,13 @@
 /* Novos badges: Veredito e Fundamentação Legal */
 .sub-badge.intencao-veredito      { background-color: #e65100; border: 2px solid #ffccbc; color: #fff; }
 .sub-badge.intencao-fundamentacao { background-color: #00695c; border: 2px solid #b2dfdb; color: #fff; }
+
+/* Novas Cores para as Intenções no Badge */
+.sub-badge.intencao-alegacao            { background-color: #f57c00; border: 2px solid #ffe0b2; color: #fff; }
+.sub-badge.intencao-fundamento_sentenca { background-color: #3949ab; border: 2px solid #c5cae9; color: #fff; }
+.sub-badge.intencao-refutacao           { background-color: #d81b60; border: 2px solid #f8bbd0; color: #fff; }
+.sub-badge.intencao-preliminar          { background-color: #5d4037; border: 2px solid #d7ccc8; color: #fff; }
+
 .sub-annotation-item.is-nota-interna { opacity: 0.65; }
 
 .sub-text-content { display: -webkit-box; -webkit-line-clamp: 10; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.6; max-height: 16em; }
@@ -687,6 +694,19 @@
 
 .btn-intent-fundamentacao       { color: #00695c; justify-content: flex-start; gap: 8px; width: 100%; font-size: 0.8rem; }
 .btn-intent-fundamentacao svg   { stroke: #00695c; }
+
+/* Estilos dos Botões Flutuantes do Menu Contextual */
+.btn-intent-alegacao { color: #f57c00; justify-content: flex-start; gap: 8px; width: 100%; font-size: 0.8rem; }
+.btn-intent-alegacao svg { stroke: #f57c00; }
+
+.btn-intent-fundamento_sentenca { color: #3949ab; justify-content: flex-start; gap: 8px; width: 100%; font-size: 0.8rem; }
+.btn-intent-fundamento_sentenca svg { stroke: #3949ab; }
+
+.btn-intent-refutacao { color: #d81b60; justify-content: flex-start; gap: 8px; width: 100%; font-size: 0.8rem; }
+.btn-intent-refutacao svg { stroke: #d81b60; }
+
+.btn-intent-preliminar { color: #5d4037; justify-content: flex-start; gap: 8px; width: 100%; font-size: 0.8rem; }
+.btn-intent-preliminar svg { stroke: #5d4037; }
 
 /* ================================================
    11. BOTÕES FLUTUANTES DE SCROLL (FABs)
