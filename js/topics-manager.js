@@ -390,13 +390,7 @@ window.TopicsManager = (function () {
             const tesesValidas = topicoAtivo.anotacoes.filter(an => an.tese && an.tese.trim() !== '');
             if (tesesValidas.length > 0) {
                 sumarioHtml = `
-                <div class="thesis-summary-panel">
-                    <div class="thesis-legend">
-                        <span class="legend-dot" style="background: var(--fase-1-color);"></span> 1. Recurso
-                        <span class="legend-dot" style="background: var(--fase-2-color);"></span> 2. Gênese
-                        <span class="legend-dot" style="background: var(--fase-3-color);"></span> 3. Sentença
-                        <span class="legend-dot" style="background: var(--fase-4-color);"></span> 4. Provas
-                    </div>`;
+                <div class="thesis-summary-panel">`;
 
                 topicoAtivo.anotacoes.forEach((an, idx) => {
                     if (an.tese && an.tese.trim() !== '') {
@@ -461,7 +455,6 @@ window.TopicsManager = (function () {
             requestAnimationFrame(() => {
                 document.querySelectorAll('.sub-text-content').forEach(el => {
                     const btn = el.parentElement.querySelector('.btn-expand-text');
-                    // Guarda de segurança para evitar erro caso o DOM perca o botão
                     if (btn && el.scrollHeight > el.clientHeight) {
                         btn.style.display = 'inline-flex';
                     }
@@ -473,14 +466,67 @@ window.TopicsManager = (function () {
                     wrapper.addEventListener('mouseleave', () => desenharConexoes());
                 });
 
-                desenharConexoes();
+                const container = document.getElementById('timeline-container');
+                if (container) {
+                    posicionarNosDeIdeia(container);
+                    requestAnimationFrame(() => {
+                        desenharConexoes();
+                    });
+                }
             });
         }
     }
 
     /**
+     * Motor de Posicionamento Absoluto dos Nós de Ideia
+     * Evita Layout Thrashing através de leitura em massa (Passe A) seguida de mutação (Passe B)
+     */
+    function posicionarNosDeIdeia(container) {
+        const masterItems = container.querySelectorAll('.timeline-item-master');
+        
+        masterItems.forEach(master => {
+            const mainCard = master.querySelector('.main-card-wrapper > .annotation-card');
+            const subWrapper = master.querySelector('.sub-annotations-wrapper');
+            const subItems = master.querySelectorAll('.sub-annotation-item');
+
+            if (!mainCard || subItems.length === 0 || !subWrapper) return;
+
+            const wrapperRect = subWrapper.getBoundingClientRect();
+            
+            // Passe A: Leituras (Evita Layout Thrashing)
+            const measurements = Array.from(subItems).map(subItem => {
+                const sourceRef = subItem.dataset.source;
+                let sourceCard = mainCard;
+                if (sourceRef !== 'main') {
+                    const correlatedWrapper = master.querySelector(`.correlated-item-wrapper[data-cidx="${sourceRef}"]`);
+                    if (correlatedWrapper) sourceCard = correlatedWrapper.querySelector('.annotation-card');
+                }
+                return {
+                    el: subItem,
+                    sourceCenterY: (sourceCard.getBoundingClientRect().top - wrapperRect.top) + (sourceCard.getBoundingClientRect().height / 2),
+                    height: subItem.offsetHeight
+                };
+            });
+
+            // Passe B: Mutações
+            let currentY = 0;
+            measurements.forEach(m => {
+                let desiredTop = m.sourceCenterY - (m.height / 2);
+                if (desiredTop < currentY) desiredTop = currentY;
+                
+                m.el.style.position = 'absolute';
+                m.el.style.top = desiredTop + 'px';
+                m.el.style.width = '100%';
+                
+                currentY = desiredTop + m.height + 16;
+            });
+
+            subWrapper.style.minHeight = currentY + 'px';
+        });
+    }
+
+    /**
      * Motor Dinâmico de Conexões Sinuosas
-     * Lê as coordenadas absolutas dos cards e desenha curvas de Bézier SVG entre eles.
      */
     function desenharConexoes() {
         const container = document.getElementById('timeline-container');
@@ -488,76 +534,47 @@ window.TopicsManager = (function () {
         if (!container || !svg) return;
 
         const containerRect = container.getBoundingClientRect();
-        // Captura todos os wrappers principais renderizados
-        const wrappers = Array.from(container.querySelectorAll('.main-card-wrapper'));
         let svgContent = '';
 
-        for (let i = 0; i < wrappers.length - 1; i++) {
-            // Selecionamos o primeiro .annotation-card de cada wrapper (ignora cards correlacionados)
-            const cardAtual = wrappers[i].querySelector('.annotation-card');
-            const cardProx = wrappers[i+1].querySelector('.annotation-card');
+        const allSpineCards = Array.from(container.querySelectorAll('.main-card-wrapper > .annotation-card, .correlated-item-wrapper > .annotation-card'));
 
-            if (!cardAtual || !cardProx) continue;
+        for (let i = 0; i < allSpineCards.length - 1; i++) {
+            const rectAtual = allSpineCards[i].getBoundingClientRect();
+            const rectProx = allSpineCards[i+1].getBoundingClientRect();
 
-            const rectAtual = cardAtual.getBoundingClientRect();
-            const rectProx = cardProx.getBoundingClientRect();
-
-            // Ponto de Origem: Centro da borda INFERIOR do Card atual
             const startX = (rectAtual.left + rectAtual.width / 2) - containerRect.left;
             const startY = rectAtual.bottom - containerRect.top;
-
-            // Ponto de Destino: Centro da borda SUPERIOR do PRÓXIMO Card
             const endX = (rectProx.left + rectProx.width / 2) - containerRect.left;
             const endY = rectProx.top - containerRect.top;
-
-            // Ponto de Controle de Curvatura (suaviza o "S" sinuoso no eixo Y)
             const ctrlY = (startY + endY) / 2;
 
-            // Gera a Curva de Bézier Cúbica e anexa ao conteúdo do SVG
             svgContent += `<path d="M ${startX},${startY} C ${startX},${ctrlY} ${endX},${ctrlY} ${endX},${endY}" stroke="#d32f2f" stroke-width="2.5" fill="none" stroke-linecap="round" />`;
         }
 
-        // --- MOTOR DE CURVAS TRACEJADAS PARA NÓS DE IDEIA ---
         const masterItems = container.querySelectorAll('.timeline-item-master');
         masterItems.forEach(master => {
             const mainCard = master.querySelector('.main-card-wrapper > .annotation-card');
             const subItems = master.querySelectorAll('.sub-annotation-item');
-
             if (!mainCard || subItems.length === 0) return;
 
-            const containerRect = container.getBoundingClientRect();
             const isRightAligned = master.classList.contains('align-right');
-
+            
             subItems.forEach(subItem => {
                 const subCard = subItem.querySelector('.sub-annotation-card');
                 const subRect = subCard.getBoundingClientRect();
-                
-                // 1. Identifica a origem baseada no data-source
                 const sourceRef = subItem.dataset.source;
-                let sourceCard = mainCard; 
                 
+                let sourceCard = mainCard;
                 if (sourceRef !== 'main') {
                     const correlatedWrapper = master.querySelector(`.correlated-item-wrapper[data-cidx="${sourceRef}"]`);
-                    if (correlatedWrapper) {
-                        sourceCard = correlatedWrapper.querySelector('.annotation-card');
-                    }
+                    if (correlatedWrapper) sourceCard = correlatedWrapper.querySelector('.annotation-card');
                 }
-                
                 const sourceRect = sourceCard.getBoundingClientRect();
 
-                // 2. Coordenadas X ancoradas na face correspondente
-                const startX = isRightAligned
-                    ? sourceRect.left  - containerRect.left
-                    : sourceRect.right - containerRect.left;
-
-                const endX = isRightAligned
-                    ? subRect.right - containerRect.left
-                    : subRect.left  - containerRect.left;
-
-                // 3. Âncoras verticais cirúrgicas no centro do card gerador específico
+                const startX = isRightAligned ? sourceRect.left - containerRect.left : sourceRect.right - containerRect.left;
+                const endX = isRightAligned ? subRect.right - containerRect.left : subRect.left - containerRect.left;
                 const startY = (sourceRect.top + sourceRect.height / 2) - containerRect.top;
                 const endY   = (subRect.top + subRect.height / 2) - containerRect.top;
-                
                 const ctrlX  = (startX + endX) / 2;
 
                 svgContent += `<path d="M ${startX},${startY} C ${ctrlX},${startY} ${ctrlX},${endY} ${endX},${endY}" stroke="#777" stroke-width="1.5" stroke-dasharray="5 4" fill="none" stroke-linecap="round"/>`;
