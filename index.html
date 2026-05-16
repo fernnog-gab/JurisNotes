@@ -154,7 +154,10 @@
          O select é populado dinamicamente por exibirPopupClassificacao().
     -->
     <div id="classification-popup">
-        <p class="popup-label">Tópico de Destino:</p>
+        <!-- Banner de feedback de cor (desacoplado) -->
+        <div id="popup-topic-color-feedback" style="height: 0; border-radius: 4px 4px 0 0; transition: height 0.2s, background-color 0.2s;"></div>
+        
+        <p class="popup-label" style="margin-top: 8px;">Tópico de Destino:</p>
         <select id="seletor-topico" class="topic-select">
             <option value="">Selecione o Tópico...</option>
         </select>
@@ -175,7 +178,8 @@
         </div>
 
         <div id="popup-step-doc">
-            <p class="popup-label">Tipo de Documento:</p>
+            <p class="popup-label">Fase Metodológica e Documento:</p>
+            <div class="phase-tabs" id="popup-phase-tabs"></div>
             <div id="lista-docs-popup" class="doc-list-container"></div>
             <button class="chip-btn chip-cancelar" style="margin-top: 12px;" onclick="fecharPopupClassificacao()">✕ Cancelar</button>
         </div>
@@ -318,8 +322,10 @@
             <input type="number" id="input-ideia-wizard" class="topic-select" style="display:none;" placeholder="Nº da Ideia (ex: 1)" min="1">
         </div>
 
+        <div id="wizard-topic-color-feedback" style="height: 0; border-radius: 4px 4px 0 0; margin-bottom: 8px; transition: height 0.2s, background-color 0.2s;"></div>
         <div id="wizard-step-doc">
-            <p class="popup-label">Tipo de Documento:</p>
+            <p class="popup-label">Fase Metodológica e Documento:</p>
+            <div class="phase-tabs" id="wizard-phase-tabs"></div>
             <div id="lista-docs-wizard" class="doc-list-container" style="max-height: 140px;"></div>
             <div class="wizard-actions">
                 <button class="chip-btn chip-cancelar" onclick="cancelarRecorteWizard(event);">✕ Cancelar</button>
