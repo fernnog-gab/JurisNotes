@@ -12,6 +12,22 @@ let pdfObserver      = null;   // IntersectionObserver para lazy loading
 let _sessaoPossuiAudio = false; // Flag de restauração de áudio na retomada de sessão
 
 /* ================================================
+   METADADOS LÓGICOS DO PDF (PJe)
+   ================================================ */
+let pageLabelsGlobais = null; // Armazena a numeração oficial (PJe/Foxit)
+
+/**
+ * Função utilitária para obter o rótulo lógico da página.
+ * Retorna o rótulo se existir, ou faz o fallback seguro para o número físico.
+ */
+function obterRotuloPagina(paginaFisica) {
+    if (pageLabelsGlobais && pageLabelsGlobais[paginaFisica - 1]) {
+        return pageLabelsGlobais[paginaFisica - 1];
+    }
+    return paginaFisica;
+}
+
+/* ================================================
    TEMA DO PDF (JASMINE / BRANCO)
    ================================================ */
 function aplicarTemaPDF(tema) { // 'jasmine' | 'white'
@@ -372,6 +388,16 @@ function carregarPDF(event) {
                 pdfDoc = pdf;
                 console.log('PDF carregado. Total de páginas:', pdf.numPages);
 
+                // --- NOVO: Extração de Metadados Lógicos ---
+                try {
+                    pageLabelsGlobais = await pdf.getPageLabels();
+                    console.log('Metadados lógicos de página carregados com sucesso.');
+                } catch (e) {
+                    console.warn('PDF não possui rótulos lógicos. Usando numeração física.');
+                    pageLabelsGlobais = null; // Limpa resquícios de sessão anterior
+                }
+                // -------------------------------------------
+
                 habilitarFerramentasDeTrabalho();
 
                 const wrapper = document.getElementById('pdf-wrapper');
@@ -386,7 +412,8 @@ function carregarPDF(event) {
                         const pageNum = parseInt(entry.target.dataset.pageNumber);
                         if (entry.isIntersecting && entry.intersectionRatio > 0.4) {
                             currentPage = pageNum;
-                            document.getElementById('current-page-display').textContent = currentPage;
+                            // Utiliza a função utilitária para exibir o rótulo oficial
+                            document.getElementById('current-page-display').textContent = obterRotuloPagina(currentPage);
                         }
                         if (entry.isIntersecting && entry.target.dataset.loaded === 'false') {
                             renderizarPaginaElemento(pageNum, entry.target);
@@ -575,7 +602,7 @@ async function salvarAnotacao(tipo, conteudo, documento, polo, topicoId, comenta
         tipo,
         documento,
         polo,
-        pagina: currentPage,
+        pagina: obterRotuloPagina(currentPage), // Aplica a sincronização lógica aqui
         timestamp: Date.now(),
         conteudo: conteudo,
         pjeId: pjeId,
@@ -662,25 +689,41 @@ document.addEventListener('click', function (e) {
 });
 
 /* ================================================
-   NAVEGAÇÃO DIRETA DE PÁGINA
+   NAVEGAÇÃO DIRETA DE PÁGINA (COM BUSCA REVERSA)
    ================================================ */
 function irParaPagina() {
     const input = document.getElementById('goto-page-input');
-    const pageNum = parseInt(input.value, 10);
+    const termoBusca = input.value.trim().toLowerCase();
     
     if (!pdfDoc) {
         exibirToast('Carregue um documento primeiro.', 'aviso');
         return;
     }
     
+    if (!termoBusca) return;
+
+    let pageNum = parseInt(termoBusca, 10);
+
+    // Engenharia Reversa: Procurar no array de rótulos o índice físico correspondente
+    if (pageLabelsGlobais) {
+        const indexEncontrado = pageLabelsGlobais.findIndex(label => 
+            label && label.toString().trim().toLowerCase() === termoBusca
+        );
+        
+        if (indexEncontrado !== -1) {
+            pageNum = indexEncontrado + 1; // Array é 0-based, PDF.js é 1-based
+        }
+    }
+
     if (isNaN(pageNum) || pageNum < 1 || pageNum > pdfDoc.numPages) {
-        exibirToast(`Página inválida. Digite um número entre 1 e ${pdfDoc.numPages}.`, 'erro');
+        exibirToast(`Página não encontrada. Digite um número ou rótulo válido.`, 'erro');
         return;
     }
 
     const pageContainer = document.querySelector(`.pdf-page-container[data-page-number="${pageNum}"]`);
     if (pageContainer) {
         pageContainer.scrollIntoView({ behavior: 'smooth' });
+        input.value = ''; // Limpa o input por questão de UX após o sucesso
     }
 }
 
