@@ -440,6 +440,9 @@
 .sub-badge.intencao-texto { background-color: #1565c0; border: 2px solid #bbdefb; color: #fff; }
 .sub-badge.intencao-nota { background-color: #616161; border: 2px solid #e0e0e0; color: #fff; }
 .sub-badge.intencao-premissa { background-color: #7b1fa2; border: 2px solid #e1bee7; color: #fff; }
+/* Novos badges: Veredito e Fundamentação Legal */
+.sub-badge.intencao-veredito      { background-color: #e65100; border: 2px solid #ffccbc; color: #fff; }
+.sub-badge.intencao-fundamentacao { background-color: #00695c; border: 2px solid #b2dfdb; color: #fff; }
 .sub-annotation-item.is-nota-interna { opacity: 0.65; }
 
 .sub-text-content { display: -webkit-box; -webkit-line-clamp: 10; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.6; max-height: 16em; }
@@ -669,4 +672,56 @@
 
 @keyframes spin-glow-mature {
     100% { transform: rotate(360deg); }
+}
+
+/* ================================================
+   10. INTENÇÕES DE IA — BOTÕES DO MENU CONTEXTUAL
+   ================================================ */
+.btn-intent-premissa       { color: #7b1fa2; justify-content: flex-start; gap: 8px; width: 100%; font-size: 0.8rem; }
+.btn-intent-premissa svg   { stroke: #7b1fa2; }
+
+.btn-intent-veredito       { color: #e65100; justify-content: flex-start; gap: 8px; width: 100%; font-size: 0.8rem; }
+.btn-intent-veredito svg   { stroke: #e65100; }
+
+.btn-intent-fundamentacao       { color: #00695c; justify-content: flex-start; gap: 8px; width: 100%; font-size: 0.8rem; }
+.btn-intent-fundamentacao svg   { stroke: #00695c; }
+
+/* ================================================
+   11. BOTÕES FLUTUANTES DE SCROLL (FABs)
+   ================================================ */
+.scroll-fab-container {
+    position: fixed;
+    bottom: 32px;
+    right: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 2000;
+    pointer-events: none;
+}
+
+.fab-btn {
+    pointer-events: auto;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background-color: var(--trt-blue);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.18s ease, background-color 0.18s ease, opacity 0.25s ease;
+}
+
+.fab-btn svg { width: 20px; height: 20px; }
+.fab-btn:hover  { background-color: var(--trt-blue-mid); transform: scale(1.1); }
+.fab-btn:active { transform: scale(0.92); }
+
+.fab-btn.is-hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.8);
 }

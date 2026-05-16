@@ -11,9 +11,9 @@
     <link rel="icon" type="image/png" sizes="16x16" href="imagens/favicon-16x16.png">
     <link rel="icon" href="imagens/favicon.ico">
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
     
     <!-- 1. Estilos Base, Variáveis Globais e Estrutura Principal (Core) -->
@@ -66,43 +66,33 @@
                 <hr class="toolbar-separator">
 
                 <!-- ── GRUPO 2: Ferramentas de Trabalho Diário ───────── -->
-                <button class="icon-btn" id="btn-ferramenta-audio" onclick="AudioManager.iniciarSessao()" title="Analisar Audiência (Áudio)" disabled>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                        <line x1="12" y1="19" x2="12" y2="23"></line>
-                        <line x1="8" y1="23" x2="16" y2="23"></line>
-                    </svg>
-                </button>
-
                 <button class="icon-btn" id="btn-novo-topico" onclick="criarTopicoPrompt()" title="Criar Tópico Recursal" disabled>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                </button>
-                
-                <button class="icon-btn" id="btn-ferramenta-texto" onmousedown="event.preventDefault()" onclick="capturarTrechoSelecionado()" title="Gerar Anotação a Partir de Texto" disabled>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                        <polyline points="16 17 21 12 16 7"></polyline>
-                        <line x1="21" y1="12" x2="9" y2="12"></line>
-                    </svg>
-                </button>
-                
-                <button class="icon-btn" id="btn-ferramenta-recorte" onclick="iniciarRecorteWizard()" title="Ativar Modo Recorte de Imagem" disabled>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                        <circle cx="12" cy="13" r="4"></circle>
+                        <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
                     </svg>
                 </button>
 
-                <!-- Botão de exportação: inicia oculto, aparece via JS apenas na aba Anotações -->
+                <button class="icon-btn" id="btn-ferramenta-texto" onmousedown="event.preventDefault()" onclick="capturarTrechoSelecionado()" title="Gerar Anotação a Partir de Texto" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                </button>
+
+                <button class="icon-btn" id="btn-ferramenta-recorte" onclick="iniciarRecorteWizard()" title="Ativar Modo Recorte de Imagem" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle>
+                    </svg>
+                </button>
+
+                <button class="icon-btn" id="btn-ferramenta-audio" onclick="AudioManager.iniciarSessao()" title="Analisar Audiência (Áudio)" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line>
+                    </svg>
+                </button>
+
                 <button class="icon-btn" id="btn-exportar-topico" onclick="ExportManager.exportarTopicoAtivo()" title="Exportar Tópico para IA (Markdown)" style="display: none;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="7 10 12 15 17 10"></polyline>
-                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line>
                     </svg>
                 </button>
                 
@@ -124,7 +114,7 @@
             <!-- Painel flutuante sticky: paginador + indicador de página atual -->
             <div class="floating-page-panel" id="floating-page-panel" style="display: none;">
                 <div class="current-page-badge" title="Página sendo visualizada">
-                    Pág. <span id="current-page-display">1</span>
+                    Pág. <span id="current-page-display">1</span>&nbsp;de&nbsp;<span id="total-page-display">?</span>
                 </div>
                 <div class="page-nav-box floating-nav" title="Digite o número e pressione Enter">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" onclick="irParaPagina()">
@@ -246,9 +236,19 @@
             <span style="font-size: 0.8rem; color: #616161;">Nota Interna (Ocultar)</span>
         </button>
         
-        <button class="ann-action-btn btn-intent" data-intent="premissa" style="justify-content: flex-start; gap: 8px; width: 100%;" title="Restaurar Padrão" onclick="definirIntencaoSubAnotacao('premissa')">
+        <button class="ann-action-btn btn-intent btn-intent-premissa" data-intent="premissa" title="Restaurar Padrão" onclick="definirIntencaoSubAnotacao('premissa')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
-            <span style="font-size: 0.8rem;">Premissa Lógica</span>
+            <span>Premissa Lógica</span>
+        </button>
+        
+        <button class="ann-action-btn btn-intent btn-intent-veredito" data-intent="veredito" title="Decisão Final" onclick="definirIntencaoSubAnotacao('veredito')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+            <span>Veredito / Conclusão</span>
+        </button>
+        
+        <button class="ann-action-btn btn-intent btn-intent-fundamentacao" data-intent="fundamentacao" title="Base Legal Obrigatória" onclick="definirIntencaoSubAnotacao('fundamentacao')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+            <span>Fundamentação Legal</span>
         </button>
 
         <hr style="width: 100%; border: 0; border-top: 1px solid #eee; margin: 4px 0;">
@@ -487,18 +487,24 @@
         <div class="wizard-header">🧠 Guia Metodológico: Nós de Ideia</div>
         <div style="font-size: 0.85rem; line-height: 1.6; color: #444; margin-top: 10px;">
             <p>Enquanto o Card Principal contém o Dado Bruto (a prova), o Nó de Ideia contém a sua cognição para guiar a IA.</p>
-            
+
             <h4 style="color: #2e7d32; margin-top: 12px;">⚖️ 1. Premissa Lógica (Padrão)</h4>
-            <p><strong>Uso:</strong> Dar contexto jurídico. <em>Ex: "A reclamada possuía mais de 20 funcionários, logo, o ônus da prova era dela."</em><br><strong>Reação da IA:</strong> Anexa a dedução à prova. A IA não tentará adivinhar a regra, ela usará a sua premissa como verdade absoluta.</p>
-            
+            <p><strong>Uso:</strong> Dar contexto jurídico. <em>Ex: "A reclamada possuía mais de 20 funcionários, logo, o ônus da prova era dela."</em><br><strong>Reação da IA:</strong> Anexa a dedução à prova. A IA usará sua premissa como verdade absoluta.</p>
+
             <h4 style="color: #c62828; margin-top: 12px;">⚡ 2. Comando Direto</h4>
-            <p><strong>Uso:</strong> Instrução imperativa. <em>Ex: "Desconsidere este depoimento na minuta."</em><br><strong>Reação da IA:</strong> É exportado sob a tag <code>&lt;comandos_para_a_minuta&gt;</code>. A IA aplica a ordem imediatamente no formato ou estilo da redação.</p>
+            <p><strong>Uso:</strong> Instrução imperativa. <em>Ex: "Desconsidere este depoimento na minuta."</em><br><strong>Reação da IA:</strong> Exportado sob a tag <code>&lt;comandos_para_a_minuta&gt;</code>. A IA aplica a ordem imediatamente.</p>
 
             <h4 style="color: #1565c0; margin-top: 12px;">🎯 3. Texto Fixo / Conclusão</h4>
-            <p><strong>Uso:</strong> O arremate da prova. <em>Ex: "Resta fartamente comprovado o assédio moral corporativo."</em><br><strong>Reação da IA:</strong> Obriga a máquina a utilizar a redação exata fornecida por você para fechar o argumento, usando as provas apenas como base.</p>
-            
+            <p><strong>Uso:</strong> O arremate da prova. <em>Ex: "Resta fartamente comprovado o assédio moral corporativo."</em><br><strong>Reação da IA:</strong> Obriga a máquina a utilizar a redação exata fornecida, usando as provas apenas como base.</p>
+
             <h4 style="color: #616161; margin-top: 12px;">⚠️ 4. Nota Interna (Oculta)</h4>
-            <p><strong>Uso:</strong> Lembretes apenas para o assessor (Valoração/Contradições pessoais).<br><strong>Reação da IA:</strong> Esta nota é completamente <strong>ocultada</strong> no momento da exportação Markdown. A IA não terá acesso a este texto.</p>
+            <p><strong>Uso:</strong> Lembretes pessoais de valoração ou contradições.<br><strong>Reação da IA:</strong> Esta nota é <strong>completamente ocultada</strong> na exportação Markdown. A IA não terá acesso.</p>
+
+            <h4 style="color: #e65100; margin-top: 12px;">🏛️ 5. Veredito / Conclusão Final</h4>
+            <p><strong>Uso:</strong> A decisão que o recurso deve receber. <em>Ex: "Dou provimento parcial para excluir a multa do art. 477."</em><br><strong>Reação da IA:</strong> Exportado sob a tag <code>&lt;decisao_magistrado_pretendida&gt;</code>. A IA não tentará adivinhar o final — ela usará sua decisão como o ponto de chegada obrigatório da fundamentação.</p>
+
+            <h4 style="color: #00695c; margin-top: 12px;">📚 6. Fundamentação Legal (Súmula/Lei)</h4>
+            <p><strong>Uso:</strong> Colar uma Súmula do TST ou artigo de lei aplicável. <em>Ex: "Súmula 297 do TST."</em><br><strong>Reação da IA:</strong> Exportado sob a tag <code>&lt;base_legal_obrigatoria&gt;</code>. A IA priorizará este argumento matemático acima de qualquer dedução lógica que ela própria faria.</p>
         </div>
         <div class="wizard-actions">
             <button class="chip-btn chip-cancelar" onclick="fecharModalAjuda()">✕ Fechar Guia</button>
@@ -518,6 +524,23 @@
             <button class="chip-btn chip-cancelar" onclick="fecharModalReordenar()">✕ Cancelar</button>
             <button class="chip-btn chip-autora" onclick="confirmarReordenacaoPosicao()">✔ Confirmar</button>
         </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- FABs DE NAVEGAÇÃO DO PAINEL DE ANOTAÇÕES  -->
+    <!-- Oculto por padrão; gerenciado por trocarAba() e checkScrollFabState() -->
+    <!-- ========================================== -->
+    <div id="scroll-fab-container" class="scroll-fab-container" style="display: none;">
+        <button id="btn-scroll-top" class="fab-btn is-hidden" onclick="rolarParaTopo()" title="Voltar ao Topo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="18 15 12 9 6 15"></polyline>
+            </svg>
+        </button>
+        <button id="btn-scroll-bottom" class="fab-btn is-hidden" onclick="rolarParaFinal()" title="Ir para o Final">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </button>
     </div>
 
     <script src="js/backup-manager.js"></script>
