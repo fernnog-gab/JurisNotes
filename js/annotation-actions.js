@@ -44,17 +44,7 @@ function definirIntencaoSubAnotacao(intencaoStr) {
     renderizarTopicos(); 
     salvarBackupAutomatico();
     
-    const rotulos = {
-        'premissa'     : 'Premissa Lógica',
-        'comando'      : 'Comando Direto',
-        'texto'        : 'Texto Fixo',
-        'nota'         : 'Nota Interna (Oculta)',
-        'veredito'     : 'Veredito / Conclusão',
-        'fundamentacao': 'Fundamentação Legal',
-        'refutacao'    : 'Refutação / Afastar',
-        'parametro'    : 'Parâmetro / Limitador',
-        'sintese'      : 'Síntese Histórica',
-    };
+    const rotulos = { 'comando': 'Comando Direto', 'texto': 'Texto Fixo', 'nota': 'Nota Oculta', 'premissa': 'Premissa Padrão' };
     exibirToast(`Classificado como: ${rotulos[intencaoStr]}`, 'sucesso');
     document.getElementById('sub-annotation-context-menu').style.display = 'none';
 }
@@ -330,7 +320,37 @@ function confirmarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
     exibirToast('Observação secundária vinculada.', 'sucesso');
 }
 
-/* --- MODAL DE SMART MOVE --- */
+/* --- MODAL DE TESE --- */
+let _ideiaContextoTese = null;
+
+function abrirModalTese(topicoId, index) {
+    _ideiaContextoTese = { topicoId, index };
+    document.getElementById('tese-ideia-num').textContent = index + 1;
+    const anotacao = topicos.find(t => t.id === topicoId).anotacoes[index];
+    document.getElementById('input-texto-tese').value = anotacao.tese || '';
+    
+    document.getElementById('wizard-backdrop').style.display = 'block';
+    document.getElementById('modal-editar-tese').style.display = 'flex';
+}
+
+function fecharModalTese() {
+    document.getElementById('wizard-backdrop').style.display = 'none';
+    document.getElementById('modal-editar-tese').style.display = 'none';
+    _ideiaContextoTese = null;
+}
+
+function salvarTese() {
+    if (!_ideiaContextoTese) return;
+    const teseTxt = document.getElementById('input-texto-tese').value.trim();
+    const topico = topicos.find(t => t.id === _ideiaContextoTese.topicoId);
+    topico.anotacoes[_ideiaContextoTese.index].tese = teseTxt;
+    
+    renderizarTopicos(); salvarBackupAutomatico();
+    exibirToast('Tese salva com sucesso!', 'sucesso');
+    fecharModalTese();
+}
+
+/* --- MODAL DE SMART MOVE (REORDENAÇÃO INTELIGENTE) --- */
 let _smartMoveCtx = null;
 
 function toggleSmartMoveInput() {
@@ -425,3 +445,70 @@ function confirmarSmartMove() {
 
     renderizarTopicos(); salvarBackupAutomatico(); fecharModalSmartMove();
 }
+
+/* --- TEMA E DRAG & DROP --- */
+window.toggleSubmenuTemas = function() {
+    const submenu = document.getElementById('submenu-temas');
+    submenu.style.display = submenu.style.display === 'none' ? 'flex' : 'none';
+};
+
+window.DnDManager = {
+    draggedItem: null,
+
+    dragStart: function(event, topicoId, parentIndex, cIdx) {
+        this.draggedItem = { topicoId, parentIndex, cIdx };
+        event.currentTarget.classList.add('dragging'); 
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', ''); // Essencial para Firefox
+    },
+
+    dragOver: function(event) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+    },
+
+    dragEnter: function(event) {
+        event.preventDefault();
+        const wrapper = event.currentTarget.closest('.correlated-item-wrapper');
+        if (wrapper) wrapper.classList.add('drag-over');
+    },
+
+    dragLeave: function(event) {
+        const wrapper = event.currentTarget.closest('.correlated-item-wrapper');
+        if (!wrapper) return;
+        // Evita o efeito pisca-pisca caso o mouse passe por elementos internos
+        if (!wrapper.contains(event.relatedTarget)) {
+            wrapper.classList.remove('drag-over');
+        }
+    },
+
+    dragEnd: function(event) {
+        event.currentTarget.classList.remove('dragging');
+        document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    },
+
+    drop: function(event, targetTopicoId, targetParentIndex, targetCIdx) {
+        event.preventDefault();
+
+        const wrapper = event.currentTarget.closest('.correlated-item-wrapper');
+        if (!wrapper) return; // Segurança contra crashes se o alvo for o SVG interno
+        wrapper.classList.remove('drag-over');
+
+        const src = this.draggedItem;
+        if (!src || src.topicoId !== targetTopicoId || src.parentIndex !== targetParentIndex) {
+            exibirToast('Só é possível reordenar itens dentro do mesmo agrupamento.', 'aviso');
+            return;
+        }
+        if (src.cIdx === targetCIdx) return; // Não mudou de posição
+
+        const topico = topicos.find(t => t.id === targetTopicoId);
+        const grupo = topico.anotacoes[targetParentIndex].itensCorrelacionados;
+
+        const [itemMovido] = grupo.splice(src.cIdx, 1);
+        grupo.splice(targetCIdx, 0, itemMovido);
+
+        renderizarTopicos();
+        salvarBackupAutomatico();
+        exibirToast('Ordem atualizada!', 'sucesso');
+    }
+};
