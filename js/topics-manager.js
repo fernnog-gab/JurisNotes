@@ -213,9 +213,20 @@ window.TopicsManager = (function () {
                 
                 const textoFormatado = renderizarMarkdownSeguro(escaparHTML(sub.texto));
                 const sourceRef = sub.sourceRef ?? 'main'; // Recupera a origem do JSON
+                
+                // Cálculo seguro da fase com fallback para 'main'
+                let faseSub = faseDoCard;
+                if (sourceRef !== 'main' && anotacao.itensCorrelacionados) {
+                    const idx = parseInt(sourceRef, 10);
+                    if (!isNaN(idx) && anotacao.itensCorrelacionados[idx]) {
+                         faseSub = typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(anotacao.itensCorrelacionados[idx].documento) : 4;
+                    }
+                }
+                const bordaFaseClass = `borda-fase-${faseSub}`;
+
                 return `
                     <div class="sub-annotation-item" data-source="${sourceRef}">
-                        <div class="sub-annotation-card">
+                        <div class="sub-annotation-card ${bordaFaseClass}">
                             <div class="${badgeClass}"
                                  title="Opções desta ideia secundária"
                                  onclick="abrirMenuSubAnotacao('${activeTabId}', ${index}, ${sIdx}, event)">
@@ -265,7 +276,7 @@ window.TopicsManager = (function () {
                             <path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l-4-4m4 4l4-4" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </div>
-                    <div class="annotation-card correlated-card">
+                    <div class="annotation-card correlated-card fase-${typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(item.documento) : 4}">
                         <div class="card-header">
                             <div style="display:flex; gap:6px;">
                                 <span class="polo-tag doc-tag">${item.documento ? escaparHTML(item.documento) : escaparHTML(item.polo)}</span>
@@ -378,18 +389,39 @@ window.TopicsManager = (function () {
             let sumarioHtml = '';
             const tesesValidas = topicoAtivo.anotacoes.filter(an => an.tese && an.tese.trim() !== '');
             if (tesesValidas.length > 0) {
-                sumarioHtml = '<div class="thesis-summary-panel">';
+                sumarioHtml = `
+                <div class="thesis-summary-panel">
+                    <div class="thesis-legend">
+                        <span class="legend-dot" style="background: var(--fase-1-color);"></span> 1. Recurso
+                        <span class="legend-dot" style="background: var(--fase-2-color);"></span> 2. Gênese
+                        <span class="legend-dot" style="background: var(--fase-3-color);"></span> 3. Sentença
+                        <span class="legend-dot" style="background: var(--fase-4-color);"></span> 4. Provas
+                    </div>`;
+
                 topicoAtivo.anotacoes.forEach((an, idx) => {
                     if (an.tese && an.tese.trim() !== '') {
                         const fasesPresentes = new Set();
+                        
+                        // Coleta a fase do card pai
                         fasesPresentes.add(typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(an.documento) : 4);
                         
-                        // Guard clause robusto
+                        // Coleta fases dos itens agrupados
                         if (an.itensCorrelacionados?.length) {
                             an.itensCorrelacionados.forEach(ic => fasesPresentes.add(typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(ic.documento) : 4));
                         }
 
-                        // Construção do Gradiente CSS Transparente
+                        // Coleta fases das sub-anotações (resolve falha de subestimação)
+                        if (an.subAnotacoes?.length) {
+                            an.subAnotacoes.forEach(sub => {
+                                if (sub.sourceRef !== 'main' && an.itensCorrelacionados) {
+                                    const cIdx = parseInt(sub.sourceRef, 10);
+                                    if (!isNaN(cIdx) && an.itensCorrelacionados[cIdx]) {
+                                        fasesPresentes.add(typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(an.itensCorrelacionados[cIdx].documento) : 4);
+                                    }
+                                }
+                            });
+                        }
+
                         const cores = [];
                         if(fasesPresentes.has(1)) cores.push('var(--fase-1-bg)');
                         if(fasesPresentes.has(2)) cores.push('var(--fase-2-bg)');
@@ -407,9 +439,11 @@ window.TopicsManager = (function () {
                         const txt = escaparHTML(an.tese);
 
                         sumarioHtml += `
-                            <div class="thesis-badge ${matureClass}" ${bgStyle} onclick="abrirModalTese('${activeTabId}', ${idx})">
-                                <span class="num">${idx + 1}</span> 
-                                <span class="texto-tese">${txt}</span>
+                            <div class="thesis-badge ${matureClass}" onclick="abrirModalTese('${activeTabId}', ${idx})">
+                                <div class="thesis-badge-inner" ${bgStyle}>
+                                    <span class="num">${idx + 1}</span> 
+                                    <span class="texto-tese">${txt}</span>
+                                </div>
                             </div>`;
                     }
                 });
