@@ -536,16 +536,38 @@ window.TopicsManager = (function () {
         const containerRect = container.getBoundingClientRect();
         let svgContent = '';
 
-        const allSpineCards = Array.from(container.querySelectorAll('.main-card-wrapper > .annotation-card, .correlated-item-wrapper > .annotation-card'));
+        // 1. LINHA VERMELHA: Conecta apenas de Grupo a Grupo (Master items)
+        const masterItemsForSpine = Array.from(container.querySelectorAll('.timeline-item-master'));
 
-        for (let i = 0; i < allSpineCards.length - 1; i++) {
-            const rectAtual = allSpineCards[i].getBoundingClientRect();
-            const rectProx = allSpineCards[i+1].getBoundingClientRect();
+        for (let i = 0; i < masterItemsForSpine.length - 1; i++) {
+            const currentGroup = masterItemsForSpine[i];
+            const nextGroup = masterItemsForSpine[i + 1];
 
+            // Acha o ÚLTIMO card do grupo atual (pode ser um card agrupado ou o principal)
+            const currentCorrelated = currentGroup.querySelectorAll('.correlated-item-wrapper > .annotation-card');
+            let cardAtual;
+            if (currentCorrelated.length > 0) {
+                cardAtual = currentCorrelated[currentCorrelated.length - 1]; // Pega o último card agrupado
+            } else {
+                cardAtual = currentGroup.querySelector('.main-card-wrapper > .annotation-card'); // Pega o principal
+            }
+
+            // Acha o PRIMEIRO card do próximo grupo (sempre o card principal numerado)
+            const cardProx = nextGroup.querySelector('.main-card-wrapper > .annotation-card');
+
+            if (!cardAtual || !cardProx) continue;
+
+            const rectAtual = cardAtual.getBoundingClientRect();
+            const rectProx = cardProx.getBoundingClientRect();
+
+            // Ponto de Origem: Fundo do último card do grupo A
             const startX = (rectAtual.left + rectAtual.width / 2) - containerRect.left;
             const startY = rectAtual.bottom - containerRect.top;
+            
+            // Ponto de Destino: Topo do primeiro card do grupo B
             const endX = (rectProx.left + rectProx.width / 2) - containerRect.left;
             const endY = rectProx.top - containerRect.top;
+            
             const ctrlY = (startY + endY) / 2;
 
             svgContent += `<path d="M ${startX},${startY} C ${startX},${ctrlY} ${endX},${ctrlY} ${endX},${endY}" stroke="#d32f2f" stroke-width="2.5" fill="none" stroke-linecap="round" />`;
