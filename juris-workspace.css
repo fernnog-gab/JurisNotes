@@ -58,7 +58,6 @@
     line-height: 1;
     pointer-events: auto;
     user-select: text;
-    /* Suporte V4: Garantia de alinhamento nativo para o scale-factor */
     transform-origin: 0% 0%;
 }
 
@@ -224,8 +223,6 @@
     margin-bottom: 24px;
 }
 
-/* Classes .thesis-legend e .legend-dot removidas na refatoração */
-
 .thesis-badge {
     position: relative;
     overflow: hidden;
@@ -318,7 +315,6 @@
 .sub-annotations-wrapper {
     display: flex;
     flex-direction: column;
-    /* gap: 16px; (Removido, responsabilidade repassada ao JS) */
     width: calc(40% - 16px);
     position: relative;
     overflow: visible;
@@ -359,8 +355,6 @@
 .timeline-item { position: relative; width: 70%; z-index: 2; margin-bottom: 0; }
 .timeline-item.align-left { align-self: flex-start; }
 .timeline-item.align-right { align-self: flex-end; }
-.connector-wrapper { width: 100%; height: 48px; z-index: 1; }
-.connector-wrapper svg { width: 100%; height: 100%; display: block; overflow: visible; }
 
 /* ================================================
    5. CARDS DE ANOTAÇÃO E AGRUPAMENTOS
@@ -411,18 +405,6 @@
 .btn-excluir-correlacionado:hover { color: #c62828; }
 .btn-excluir-correlacionado svg { width: 16px; height: 16px; }
 
-/* Drag & Drop */
-.correlated-item-wrapper.dragging { opacity: 0.4; transform: scale(0.98); }
-.correlated-item-wrapper.drag-over { border-top: 3px dashed var(--trt-blue-mid) !important; padding-top: 4px; background-color: rgba(26, 58, 92, 0.03); }
-.correlated-drag-handle { cursor: grab; transition: color 0.2s; }
-.correlated-drag-handle:hover { color: var(--trt-blue-mid); }
-.correlated-drag-handle:active { cursor: grabbing; }
-
-/* Image Resizer */
-.annotation-card:has(.image-resize-wrapper) { width: fit-content; min-width: 280px; max-width: 100%; }
-.image-resize-wrapper { max-width: 100%; height: auto; display: inline-block; resize: both; overflow: hidden; min-width: 150px; min-height: 80px; border: 1px solid var(--border-color); border-radius: 6px; margin-top: 10px; background: #fafafa; }
-.image-resize-wrapper img.card-imagem { width: 100%; height: 100%; object-fit: contain; margin-top: 0; border: none; pointer-events: none; }
-
 /* ================================================
    6. NÓS DE IDEIA (SUB-ANOTAÇÕES)
    ================================================ */
@@ -442,44 +424,31 @@
 .sub-badge.intencao-texto { background-color: #1565c0; border: 2px solid #bbdefb; color: #fff; }
 .sub-badge.intencao-nota { background-color: #616161; border: 2px solid #e0e0e0; color: #fff; }
 .sub-badge.intencao-premissa { background-color: #7b1fa2; border: 2px solid #e1bee7; color: #fff; }
-/* Novos badges: Veredito e Fundamentação Legal */
+
 .sub-badge.intencao-veredito      { background-color: #e65100; border: 2px solid #ffccbc; color: #fff; }
 .sub-badge.intencao-fundamentacao { background-color: #00695c; border: 2px solid #b2dfdb; color: #fff; }
-.sub-annotation-item.is-nota-interna { opacity: 0.65; }
+
+/* --- Novas intenções (Badges na Timeline) --- */
+.sub-badge.intencao-refutacao { background-color: #bf360c; border: 2px solid #ffab91; color: #fff; }
+.sub-badge.intencao-parametro { background-color: #f57f17; border: 2px solid #ffe082; color: #fff; }
+.sub-badge.intencao-sintese   { background-color: #00838f; border: 2px solid #b2ebf2; color: #fff; }
 
 .sub-text-content { display: -webkit-box; -webkit-line-clamp: 10; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.6; max-height: 16em; }
 .sub-text-content.expanded { -webkit-line-clamp: unset; display: block; overflow-y: auto; max-height: 350px; padding-right: 6px; margin-right: -6px; }
-.sub-text-content.expanded::-webkit-scrollbar { width: 6px; }
-.sub-text-content.expanded::-webkit-scrollbar-track { background: transparent; }
-.sub-text-content.expanded::-webkit-scrollbar-thumb { background: #d0cabc; border-radius: 4px; }
 
 .btn-expand-text { background: none; border: none; color: var(--trt-blue-mid); font-size: 0.75rem; font-weight: 700; cursor: pointer; margin-top: 10px; display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 4px; transition: background 0.2s; }
 .btn-expand-text:hover { background: rgba(37, 82, 127, 0.08); }
 
 .sub-input-panel { width: 90%; margin: 12px auto 0 auto; background: #fafafa; border: 1px dashed #555; border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
-.sub-input-actions { display: flex; gap: 8px; justify-content: flex-end; }
-.sub-input-btn-icon { background: transparent; border: 1px solid transparent; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #888; transition: all 0.2s ease; }
-.sub-input-btn-icon svg { width: 18px; height: 18px; }
-.sub-input-btn-icon.confirm:hover { background: #e8f5e9; color: #2e7d32; border-color: #a5d6a7; }
-.sub-input-btn-icon.cancel:hover { background: #ffebee; color: #c62828; border-color: #ef9a9a; }
-.btn-add-sub { display: none !important; }
 
 /* ================================================
    7. MODAIS E POPUPS GERAIS
    ================================================ */
-
-/* Listas de Documentos */
 .doc-list-container { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; padding-right: 6px; border: 1px solid var(--border-color); border-radius: 6px; padding: 6px; background: #fdfdfd; }
-.doc-list-container::-webkit-scrollbar { width: 6px; }
-.doc-list-container::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
 
 .doc-btn { background: #ffffff; border: 1px solid var(--border-color); padding: 10px 12px; border-radius: 6px; text-align: left; font-size: 0.82rem; font-weight: 600; color: var(--trt-blue); cursor: pointer; transition: all 0.15s ease; }
 .doc-btn:hover { background: #e8ecef; border-color: var(--trt-blue-mid); transform: translateX(2px); }
-.doc-btn.dual::after { content: " \2192"; float: right; color: #999; }
-.doc-btn.neutro { color: #455a64; background: #f5f7f8; }
-.doc-highlight { font-size: 0.9rem; font-weight: 800; margin-bottom: 12px; color: var(--trt-blue-mid); text-align: center; background: var(--trt-light-bg); padding: 6px; border-radius: 4px; }
 
-/* Popup de Classificação Rápida */
 #classification-popup {
     position: fixed;
     background: white;
@@ -494,13 +463,6 @@
     min-width: 220px;
 }
 
-.popup-label { font-size: 0.74rem; color: #999; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
-.topic-select { width: 100%; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; font-size: 0.84rem; color: var(--text-dark); background: #fafafa; cursor: pointer; outline: none; transition: border-color 0.2s; }
-.topic-select:focus { border-color: var(--trt-blue-mid); background: white; }
-.popup-textarea { display: none; width: 100%; min-height: 72px; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; font-size: 0.84rem; color: var(--text-dark); background: #fafafa; resize: vertical; outline: none; transition: border-color 0.2s, background 0.2s; line-height: 1.5; }
-.popup-textarea:focus { border-color: var(--trt-blue-mid); background: #ffffff; }
-
-/* Menus de Contexto */
 .annotation-context-menu {
     position: fixed;
     display: none;
@@ -516,51 +478,6 @@
 
 .ann-action-btn { background: transparent; border: none; cursor: pointer; padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--text-dark); transition: background 0.2s, color 0.2s; }
 .ann-action-btn svg { width: 18px; height: 18px; pointer-events: none; }
-.ann-action-btn:hover { background: var(--trt-light-bg); color: var(--trt-blue); }
-.ann-action-delete:hover { background: #ffebee; color: #c62828; }
-.ann-action-btn.btn-intent.active-intent { background-color: #f5f5f5; border-left: 3px solid var(--trt-blue-mid); border-radius: 0 6px 6px 0; font-weight: bold; }
-
-/* Backdrops Gerais */
-#wizard-backdrop { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.40); z-index: var(--z-wizard-backdrop); }
-
-/* Modal Wizard Genérico */
-.crop-wizard-popup {
-    position: fixed;
-    top: 50%; left: 50%; transform: translate(-50%, -50%);
-    background: white; border: 1px solid var(--border-color);
-    border-radius: 12px; padding: 20px; box-shadow: 0 12px 48px rgba(0, 0, 0, 0.28);
-    z-index: var(--z-wizard-modal);
-    min-width: 360px; max-width: 90vw;
-    display: flex; flex-direction: column; gap: 12px;
-}
-
-.wizard-header { font-size: 1.05rem; font-weight: 800; color: var(--trt-blue); border-bottom: 2px solid var(--trt-light-bg); padding-bottom: 8px; margin-bottom: 4px; }
-.wizard-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; padding-top: 12px; border-top: 1px solid #eee; }
-.crop-preview-container { text-align: center; background: var(--trt-light-bg); border: 2px dashed var(--border-color); border-radius: 8px; padding: 12px; max-height: 260px; overflow-y: auto; }
-.crop-preview-container img { max-width: 100%; border-radius: 4px; box-shadow: var(--shadow-sm); }
-.wizard-polo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-
-/* Modal Edição de Texto */
-.text-edit-modal {
-    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    background: white; border: 1px solid var(--border-color);
-    border-radius: 12px; padding: 20px; box-shadow: 0 12px 48px rgba(0,0,0,0.28);
-    z-index: var(--z-text-edit-modal); min-width: 400px; max-width: 90vw;
-    display: flex; flex-direction: column; gap: 12px;
-}
-.edit-header { font-size: 1.05rem; font-weight: 800; color: var(--trt-blue); border-bottom: 2px solid var(--trt-light-bg); padding-bottom: 8px; }
-.edit-toolbar { display: flex; gap: 8px; margin-bottom: 4px; }
-.edit-tool-btn { background: #fff; border: 1px solid #bbb; border-radius: 6px; padding: 6px 12px; cursor: pointer; color: var(--trt-blue); font-size: 0.9rem; transition: background 0.2s; }
-.edit-tool-btn:hover { background: #f0f4f8; }
-.edit-textarea { width: 100%; min-height: 140px; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; font-size: 0.9rem; line-height: 1.5; outline: none; resize: vertical; }
-.edit-textarea:focus { border-color: var(--trt-blue-mid); }
-.edit-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; padding-top: 12px; border-top: 1px solid #eee; }
-.edit-save-btn { background: var(--trt-blue); color: white; border-color: var(--trt-blue); }
-
-/* Gerenciador de Abas */
-.aba-manager-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; background: #fafafa; margin-bottom: 6px; }
-.aba-manager-nome { font-weight: 600; color: var(--trt-blue); font-size: 0.88rem; }
-.aba-manager-actions { display: flex; gap: 8px; }
 
 /* ================================================
    8. COMPONENTES DE ÁUDIO
@@ -580,49 +497,6 @@
     box-shadow: 0 2px 6px rgba(229, 57, 53, 0.4);
     animation: pulse-mic 2s infinite;
 }
-#active-audio-indicator svg { width: 16px; height: 16px; }
-
-@keyframes pulse-mic {
-    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(229, 57, 53, 0.7); }
-    70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(229, 57, 53, 0); }
-    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(229, 57, 53, 0); }
-}
-
-#audio-player-panel {
-    position: fixed;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: white;
-    padding: 16px;
-    border-radius: 12px;
-    box-shadow: 0 12px 32px rgba(0,0,0,0.25);
-    z-index: var(--z-audio-player);
-    border: 1px solid var(--border-color);
-    width: 400px;
-    max-width: 90vw;
-    flex-direction: column;
-    gap: 12px;
-}
-.audio-header { display: flex; justify-content: space-between; font-weight: 700; color: var(--trt-blue); border-bottom: 1px solid #eee; padding-bottom: 8px; }
-.audio-header button { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #999; }
-.audio-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.audio-markers { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 600; color: #555; background: #f4f7f9; padding: 6px 10px; border-radius: 6px; }
-#main-audio-player { width: 100%; height: 40px; outline: none; }
-
-.card-audio { background: #fdfaf4; border: 1px solid #f2e3c6; padding: 12px; border-radius: 6px; margin-top: 10px; display: flex; align-items: center; gap: 12px; }
-.audio-icon-box { background: #ffe082; color: #d84315; padding: 10px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.audio-icon-box svg { width: 20px; height: 20px; }
-.audio-card-meta { line-height: 1.5; }
-.audio-card-meta strong { color: var(--trt-blue-mid); }
-.audio-card-meta span { font-size: 0.85rem; color: #555; }
-
-/* Responsividade Mobile (Timeline) */
-@media (max-width: 480px) {
-    .timeline-container { padding: 24px 10px 10px; }
-    .timeline-item { width: 90%; align-self: flex-start !important; margin-bottom: 28px; }
-    .connector-wrapper { display: none; }
-}
 
 /* ================================================
    9. FASES METODOLÓGICAS E DASHBOARD
@@ -638,43 +512,10 @@
     --fase-4-bg: #FFF4E5;  
 }
 
-.annotation-card.fase-1, .annotation-card.correlated-card.fase-1 { background-color: var(--fase-1-bg); border-left: 4px solid var(--fase-1-color); }
-.annotation-card.fase-2, .annotation-card.correlated-card.fase-2 { background-color: var(--fase-2-bg); border-left: 4px solid var(--fase-2-color); }
-.annotation-card.fase-3, .annotation-card.correlated-card.fase-3 { background-color: var(--fase-3-bg); border-left: 4px solid var(--fase-3-color); }
-.annotation-card.fase-4, .annotation-card.correlated-card.fase-4 { background-color: var(--fase-4-bg); border-left: 4px solid var(--fase-4-color); }
-
-/* 3. BORDAS PARA NÓS DE IDEIA (SUB-ANOTAÇÕES) */
-.sub-annotation-card.borda-fase-1 { border-color: rgba(33, 150, 243, 0.4); border-left: 5px solid var(--fase-1-color); }
-.sub-annotation-card.borda-fase-2 { border-color: rgba(76, 175, 80, 0.4);  border-left: 5px solid var(--fase-2-color); }
-.sub-annotation-card.borda-fase-3 { border-color: rgba(156, 39, 176, 0.4); border-left: 5px solid var(--fase-3-color); }
-.sub-annotation-card.borda-fase-4 { border-color: rgba(255, 152, 0, 0.4);  border-left: 5px solid var(--fase-4-color); }
-
-/* --- ABAS DOS MODAIS --- */
-.phase-tabs { display: flex; gap: 4px; margin-bottom: 8px; border-bottom: 2px solid var(--border-color); }
-.phase-tab-btn { flex: 1; padding: 6px 2px; font-size: 0.72rem; border: none; background: transparent; cursor: pointer; font-weight: 600; color: #888; border-bottom: 3px solid transparent; transition: 0.2s;}
-.phase-tab-btn.active-f1 { color: #2196F3; border-bottom-color: #2196F3; }
-.phase-tab-btn.active-f2 { color: #4CAF50; border-bottom-color: #4CAF50; }
-.phase-tab-btn.active-f3 { color: #9C27B0; border-bottom-color: #9C27B0; }
-.phase-tab-btn.active-f4 { color: #FF9800; border-bottom-color: #FF9800; }
-
-/* --- DASHBOARD DE MATURIDADE --- */
-/* Override explícito para matar a animação legada */
-.thesis-badge.mature::after { content: none !important; display: none !important; }
-
-/* Nova animação estilo estrela cadente (Juris Notes) */
-.thesis-badge.mature::before {
-    content: '';
-    position: absolute;
-    top: -100%; left: -100%;
-    width: 300%; height: 300%;
-    background: conic-gradient(from 0deg, transparent 70%, rgba(255, 213, 80, 0.9) 85%, white 92%, rgba(255, 213, 80, 0.9) 95%, transparent 100%);
-    animation: spin-glow-mature 2.5s linear infinite;
-    z-index: 0;
-}
-
-@keyframes spin-glow-mature {
-    100% { transform: rotate(360deg); }
-}
+.annotation-card.fase-1 { background-color: var(--fase-1-bg); border-left: 4px solid var(--fase-1-color); }
+.annotation-card.fase-2 { background-color: var(--fase-2-bg); border-left: 4px solid var(--fase-2-color); }
+.annotation-card.fase-3 { background-color: var(--fase-3-bg); border-left: 4px solid var(--fase-3-color); }
+.annotation-card.fase-4 { background-color: var(--fase-4-bg); border-left: 4px solid var(--fase-4-color); }
 
 /* ================================================
    10. INTENÇÕES DE IA — BOTÕES DO MENU CONTEXTUAL
@@ -688,6 +529,26 @@
 .btn-intent-fundamentacao       { color: #00695c; justify-content: flex-start; gap: 8px; width: 100%; font-size: 0.8rem; }
 .btn-intent-fundamentacao svg   { stroke: #00695c; }
 
+/* --- Normalização dos botões antigos (remove dependência de inline-style) --- */
+.btn-intent-comando     { color: #c62828; justify-content: flex-start; gap: 8px; width: 100%; font-size: 0.8rem; }
+.btn-intent-comando svg { stroke: #c62828; }
+
+.btn-intent-texto       { color: #1565c0; justify-content: flex-start; gap: 8px; width: 100%; font-size: 0.8rem; }
+.btn-intent-texto svg   { stroke: #1565c0; }
+
+.btn-intent-nota        { color: #616161; justify-content: flex-start; gap: 8px; width: 100%; font-size: 0.8rem; }
+.btn-intent-nota svg    { stroke: #616161; }
+
+/* --- Novas intenções (Botões no Menu Contextual) --- */
+.btn-intent-refutacao       { color: #bf360c; justify-content: flex-start; gap: 8px; width: 100%; font-size: 0.8rem; }
+.btn-intent-refutacao svg   { stroke: #bf360c; }
+
+.btn-intent-parametro       { color: #f57f17; justify-content: flex-start; gap: 8px; width: 100%; font-size: 0.8rem; }
+.btn-intent-parametro svg   { stroke: #f57f17; }
+
+.btn-intent-sintese         { color: #00838f; justify-content: flex-start; gap: 8px; width: 100%; font-size: 0.8rem; }
+.btn-intent-sintese svg     { stroke: #00838f; }
+
 /* ================================================
    11. BOTÕES FLUTUANTES DE SCROLL (FABs)
    ================================================ */
@@ -699,31 +560,17 @@
     flex-direction: column;
     gap: 10px;
     z-index: 2000;
-    pointer-events: none;
 }
 
 .fab-btn {
-    pointer-events: auto;
     width: 42px;
     height: 42px;
     border-radius: 50%;
     background-color: var(--trt-blue);
     color: white;
     border: 2px solid rgba(255, 255, 255, 0.25);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: transform 0.18s ease, background-color 0.18s ease, opacity 0.25s ease;
-}
-
-.fab-btn svg { width: 20px; height: 20px; }
-.fab-btn:hover  { background-color: var(--trt-blue-mid); transform: scale(1.1); }
-.fab-btn:active { transform: scale(0.92); }
-
-.fab-btn.is-hidden {
-    opacity: 0;
-    pointer-events: none;
-    transform: scale(0.8);
 }
