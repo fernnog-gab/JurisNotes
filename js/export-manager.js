@@ -114,6 +114,10 @@ window.ExportManager = (function () {
         const dataGeracao = new Date().toLocaleString('pt-BR');
 
         // Coletores para os blocos globais de arquitetura (tags XML)
+        const preliminaresInjetadas = [];
+        const alegacoesInjetadas    = [];
+        const fundamentosInjetados  = [];
+        
         const comandosInjetados    = [];
         const vereditosExigidos    = [];
         const baseLegalObrigatoria = [];
@@ -202,27 +206,23 @@ window.ExportManager = (function () {
                     const intencao = sub.intencao || 'premissa';
 
                     if (intencao === 'premissa') {
-                        // Permanece colado à IDEIA — sinaliza fato incontroverso ao LLM.
                         md += `\n  💡 **Premissa Lógica do Assessor (Incontroversa):** ${sub.texto}\n`;
-
+                    } else if (intencao === 'refutacao') {
+                        md += `\n  🛡️ **Refutação de Mérito / Afastamento de Tese:** ${sub.texto}\n`;
                     } else if (intencao === 'comando') {
-                        // Instrução de estilo ou direcionamento para a minuta.
                         comandosInjetados.push(`[Referente à Ideia ${numIdeia}]: ${sub.texto}`);
-
                     } else if (intencao === 'texto') {
-                        // Redação literal que o assessor quer ver transcrita na minuta.
-                        comandosInjetados.push(
-                            `[Referente à Ideia ${numIdeia} — TEXTO OBRIGATÓRIO]: ` +
-                            `Incorpore a seguinte redação exata na minuta: "${sub.texto}"`
-                        );
-
+                        comandosInjetados.push(`[Referente à Ideia ${numIdeia} — TEXTO OBRIGATÓRIO]: Incorpore a seguinte redação exata na minuta: "${sub.texto}"`);
                     } else if (intencao === 'veredito') {
-                        // Conclusão/dispositivo parcial exigido pelo magistrado.
                         vereditosExigidos.push(`[Referente à Ideia ${numIdeia}]: ${sub.texto}`);
-
                     } else if (intencao === 'fundamentacao') {
-                        // Base legal ou jurisprudência vinculada à ideia.
                         baseLegalObrigatoria.push(`[Referente à Ideia ${numIdeia}]: ${sub.texto}`);
+                    } else if (intencao === 'preliminar') {
+                        preliminaresInjetadas.push(`[Referente à Ideia ${numIdeia}]: ${sub.texto}`);
+                    } else if (intencao === 'alegacao') {
+                        alegacoesInjetadas.push(`[Referente à Ideia ${numIdeia}]: ${sub.texto}`);
+                    } else if (intencao === 'fundamento_sentenca') {
+                        fundamentosInjetados.push(`[Referente à Ideia ${numIdeia}]: ${sub.texto}`);
                     }
                 });
             }
@@ -235,6 +235,24 @@ window.ExportManager = (function () {
         //   Comandos (tom/estilo) → Base Legal (Premissa Maior) → Decisão (âncora final)
         // A tag <decisao_magistrado_pretendida> SEMPRE fica por último para
         // reforçar ao LLM que todo o raciocínio deve convergir para ela.
+
+        // NOVO Bloco 0: Preliminares e Prejudiciais (Ex: Prescrição)
+        md += `<questoes_preliminares_e_prejudiciais>\n`;
+        md += `*Atenção IA: Se houver conteúdo nesta tag, você DEVE redigir e resolver estas questões temporais/processuais ANTES de iniciar a análise de mérito da Matriz Dialética.*\n`;
+        if (preliminaresInjetadas.length > 0) {
+            md += preliminaresInjetadas.map(c => `* ⏳ ${c}`).join('\n') + '\n';
+        } else {
+            md += `* Não foram apontadas questões preliminares ou prejudiciais de mérito pelo assessor.\n`;
+        }
+        md += `</questoes_preliminares_e_prejudiciais>\n\n`;
+
+        // NOVO Bloco 1: Relatório do Conflito
+        md += `<relatorio_do_conflito>\n`;
+        md += `*Atenção IA: Utilize estas teses para redigir a introdução do tópico recursal, contrapondo o que foi decidido na origem com o que a parte recorrente busca.*\n`;
+        if (alegacoesInjetadas.length > 0) md += `**Teses Recursais (O que a parte pede):**\n` + alegacoesInjetadas.map(c => `* 📢 ${c}`).join('\n') + '\n\n';
+        if (fundamentosInjetados.length > 0) md += `**Fundamentos da Origem (Por que o juiz decidiu assim):**\n` + fundamentosInjetados.map(c => `* 🏛️ ${c}`).join('\n') + '\n';
+        if (alegacoesInjetadas.length === 0 && fundamentosInjetados.length === 0) md += `* Deduzir as teses diretamente da Matriz Dialética acima.\n`;
+        md += `</relatorio_do_conflito>\n\n`;
 
         // Bloco A: Comandos Diretos de Estilo e Redação
         md += `<comandos_para_a_minuta>\n`;

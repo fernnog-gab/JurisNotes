@@ -44,7 +44,18 @@ function definirIntencaoSubAnotacao(intencaoStr) {
     renderizarTopicos(); 
     salvarBackupAutomatico();
     
-    const rotulos = { 'comando': 'Comando Direto', 'texto': 'Texto Fixo', 'nota': 'Nota Oculta', 'premissa': 'Premissa Padrão' };
+    const rotulos = { 
+        'comando': 'Comando Direto', 
+        'texto': 'Texto Fixo', 
+        'nota': 'Nota Oculta', 
+        'premissa': 'Premissa Padrão',
+        'veredito': 'Veredito / Conclusão',
+        'fundamentacao': 'Fundamentação Legal',
+        'alegacao': 'Alegação Recursal',
+        'fundamento_sentenca': 'Fundamento da Origem',
+        'refutacao': 'Refutação (Mérito)',
+        'preliminar': 'Filtro / Prejudicial'
+    };
     exibirToast(`Classificado como: ${rotulos[intencaoStr]}`, 'sucesso');
     document.getElementById('sub-annotation-context-menu').style.display = 'none';
 }
