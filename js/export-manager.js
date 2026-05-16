@@ -61,9 +61,11 @@ window.ExportManager = (function() {
 # TÓPICO RECURSAL: **${topico.nome.toUpperCase()}**
 
 `;
-        const dialectica = { sentencas: [], ataques: [], defesas: [] };
-        const provas = [];
-        const diretrizes = [];
+        const dialectica     = { sentencas: [], ataques: [], defesas: [] };
+        const provas         = [];
+        const diretrizes     = [];
+        const vereditos      = []; // Intenção: veredito — tag <decisao_magistrado_pretendida>
+        const fundamentacoes = []; // Intenção: fundamentacao — tag <base_legal_obrigatoria>
 
         topico.anotacoes.forEach((an, index) => {
             const refStr = `(Fl. ${an.pagina || 'não idt.'}${an.pjeId ? `, ID ${an.pjeId}` : ''})`;
@@ -83,17 +85,26 @@ window.ExportManager = (function() {
             if (an.subAnotacoes && an.subAnotacoes.length > 0) {
                 an.subAnotacoes.forEach(sub => {
                     const intencao = sub.intencao || 'premissa';
-                    
+
                     if (intencao === 'comando') {
                         diretrizes.push(`* **ORDEM DE REDAÇÃO:** ${sub.texto}`);
-                    } 
+                    }
                     else if (intencao === 'texto') {
                         diretrizes.push(`* **UTILIZAR ESTA REDAÇÃO EXATA:**\n  > ${sub.texto}`);
-                    } 
+                    }
                     else if (intencao === 'premissa') {
-                        // FUNDAMENTAL: A premissa é "grudada" na string do bloco pai aqui!
+                        // Premissa é "grudada" no bloco pai para dar contexto direto à prova
                         textoBloco += `\n    * *Dedução do Assessor:* ${sub.texto}`;
                     }
+                    else if (intencao === 'veredito') {
+                        // Decisão final: vai para uma seção e tag XML próprias
+                        vereditos.push(`* ${sub.texto}`);
+                    }
+                    else if (intencao === 'fundamentacao') {
+                        // Base legal obrigatória: vai para tag XML de máxima prioridade
+                        fundamentacoes.push(`* ${sub.texto}`);
+                    }
+                    // 'nota': intencionalmente ignorada — não exportada para a IA
                 });
             }
 
@@ -134,6 +145,24 @@ window.ExportManager = (function() {
         if (diretrizes.length > 0) md += diretrizes.join('\n\n') + '\n';
         else md += `* Analise a matriz dialética e as provas acima para construir a fundamentação do voto, seguindo os padrões do tribunal.\n`;
         md += `</comandos_para_a_minuta>\n`;
+
+        md += `\n## 4. 🏛️ DECISÃO DO MAGISTRADO\n`;
+        md += `<decisao_magistrado_pretendida>\n`;
+        if (vereditos.length > 0) {
+            md += vereditos.join('\n\n') + '\n';
+        } else {
+            md += `* [Nenhum veredito explícito definido. Extraia a conclusão da dialética e das provas acima.]\n`;
+        }
+        md += `</decisao_magistrado_pretendida>\n`;
+
+        md += `\n## 5. 📚 BASE LEGAL OBRIGATÓRIA\n`;
+        md += `<base_legal_obrigatoria>\n`;
+        if (fundamentacoes.length > 0) {
+            md += fundamentacoes.join('\n\n') + '\n';
+        } else {
+            md += `* [Nenhuma súmula ou artigo específico foi marcado. Utilize o repertório jurisprudencial pertinente.]\n`;
+        }
+        md += `</base_legal_obrigatoria>\n`;
 
         return md;
     }

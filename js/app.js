@@ -66,6 +66,12 @@ document.addEventListener("DOMContentLoaded", () => {
             getActiveTabId: () => TopicsManager.getActiveTabId()
         });
     }
+
+    // Listener de scroll para os FABs — passivo para não bloquear a renderização
+    const historyContainer = document.getElementById('history-container');
+    if (historyContainer) {
+        historyContainer.addEventListener('scroll', checkScrollFabState, { passive: true });
+    }
 });
 
 /* ================================================
@@ -87,6 +93,54 @@ function trocarAba(aba) {
     if (btnExportar) {
         btnExportar.style.display = (aba === 'historico' && topicos.length > 0) ? 'flex' : 'none';
     }
+
+    // FABs de navegação: container visível apenas na aba Anotações
+    const fabContainer = document.getElementById('scroll-fab-container');
+    if (fabContainer) {
+        fabContainer.style.display = (aba === 'historico') ? 'flex' : 'none';
+        if (aba === 'historico') {
+            // Pequeno delay para garantir que o display:block do history-container
+            // já foi aplicado antes de checar scrollHeight vs clientHeight
+            setTimeout(checkScrollFabState, 60);
+        }
+    }
+}
+
+/* ================================================
+   NAVEGAÇÃO POR FABs (PAINEL DE ANOTAÇÕES)
+   ================================================ */
+
+/**
+ * Avalia o estado de scroll do history-container e
+ * mostra/oculta os botões FAB de forma inteligente.
+ * Chamada pelo listener de scroll e pela troca de aba.
+ */
+function checkScrollFabState() {
+    const hc     = document.getElementById('history-container');
+    const btnTop = document.getElementById('btn-scroll-top');
+    const btnBot = document.getElementById('btn-scroll-bottom');
+    if (!hc || !btnTop || !btnBot) return;
+
+    const scrollable = hc.scrollHeight > hc.clientHeight + 10;
+    const atTop      = hc.scrollTop < 50;
+    const atBottom   = hc.scrollTop + hc.clientHeight >= hc.scrollHeight - 30;
+
+    // Toggle da classe .is-hidden (opacity + pointer-events), não do display
+    // para aproveitar a transição CSS e evitar conflito de especificidade
+    btnTop.classList.toggle('is-hidden', atTop);
+    btnBot.classList.toggle('is-hidden', !scrollable || atBottom);
+}
+
+/** Rola suavemente o painel de anotações para o topo. */
+function rolarParaTopo() {
+    const hc = document.getElementById('history-container');
+    if (hc) hc.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/** Rola suavemente o painel de anotações para o final. */
+function rolarParaFinal() {
+    const hc = document.getElementById('history-container');
+    if (hc) hc.scrollTo({ top: hc.scrollHeight, behavior: 'smooth' });
 }
 
 /* ================================================
@@ -388,6 +442,9 @@ function carregarPDF(event) {
                 pdfDoc = pdf;
                 console.log('PDF carregado. Total de páginas:', pdf.numPages);
 
+                // Alimenta o badge "Pág. X de Y" com o total físico de páginas do documento
+                document.getElementById('total-page-display').textContent = pdf.numPages;
+
                 // --- NOVO: Extração de Metadados Lógicos ---
                 try {
                     pageLabelsGlobais = await pdf.getPageLabels();
@@ -470,9 +527,11 @@ function carregarPDF(event) {
 }
 
 /* ================================================
-   RENDERIZAÇÃO DINÂMICA (PÁGINA INDIVIDUAL)
-   Renderiza o canvas HD e a camada de texto selecionável
-   apenas quando a página entra no viewport (lazy loading).
+   RENDERIZAÇÃO DINÂMICA (PÁGINA INDIVIDUAL) — v3.1
+   Correções aplicadas:
+   - Canvas com position:absolute para empilhamento correto com textLayer
+   - TextLayer aguardado com await (eliminava race condition e texto fantasma)
+   - Uso da API pdfjsLib.TextLayer (estável em 3.11.x) com fallback seguro
    ================================================ */
 async function renderizarPaginaElemento(num, container) {
     if (!pdfDoc) return;
@@ -480,34 +539,60 @@ async function renderizarPaginaElemento(num, container) {
     const page = await pdfDoc.getPage(num);
     const dpr  = window.devicePixelRatio || 1;
 
-    const viewportHD  = page.getViewport({ scale: 1.5 * dpr });
+    // Dois viewports: CSS para layout, HD para pixels físicos (telas Retina)
     const viewportCSS = page.getViewport({ scale: 1.5 });
+    const viewportHD  = page.getViewport({ scale: 1.5 * dpr });
 
+    // Redimensiona o container ao tamanho real desta página específica
+    // (páginas de processo podem ter orientações mistas)
     container.style.width  = viewportCSS.width  + 'px';
     container.style.height = viewportCSS.height + 'px';
 
+    // --- Canvas HD (desenho da página) ---
     const canvas = document.createElement('canvas');
     const ctx    = canvas.getContext('2d');
-    canvas.width  = viewportHD.width;
-    canvas.height = viewportHD.height;
-    canvas.style.cssText = 'width:100%; height:100%; display:block;';
-
-    const textLayer = document.createElement('div');
-    textLayer.className  = 'textLayer';
-    textLayer.style.cssText = `width:${viewportCSS.width}px; height:${viewportCSS.height}px;`;
-
+    canvas.width         = viewportHD.width;
+    canvas.height        = viewportHD.height;
+    // position:absolute garante que o canvas e o textLayer compartilhem
+    // o mesmo contexto de empilhamento (stacking context) dentro do container
+    canvas.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block;';
     container.appendChild(canvas);
+
+    // --- Camada de Texto Selecionável ---
+    const textLayer = document.createElement('div');
+    textLayer.className     = 'textLayer';
+    // Dimensões explícitas garantem alinhamento milimétrico dos spans de texto
+    textLayer.style.cssText = `width:${viewportCSS.width}px; height:${viewportCSS.height}px;`;
     container.appendChild(textLayer);
 
-    await page.render({ canvasContext: ctx, viewport: viewportHD }).promise;
+    // --- Renderização Sequencial (sem race condition) ---
+    // 1. Canvas: aguarda conclusão antes de iniciar o textLayer
+    await page.render({
+        canvasContext: ctx,
+        viewport:      viewportHD,
+    }).promise;
 
-    const textContent = await page.getTextContent();
-    pdfjsLib.renderTextLayer({
-        textContent,
-        container:  textLayer,
-        viewport:   viewportCSS,
-        textDivs:   []
-    });
+    // 2. TextLayer: usa a API de classe estável do PDF.js 3.11.x (com fallback)
+    //    pdfjsLib.TextLayer usa streamTextContent() internamente, que é mais
+    //    fiel ao layout visual do que a API de objeto textContent resolvido.
+    if (typeof pdfjsLib.TextLayer === 'function') {
+        const tl = new pdfjsLib.TextLayer({
+            textContentSource: page.streamTextContent(),
+            container:         textLayer,
+            viewport:          viewportCSS,
+        });
+        await tl.render();
+    } else {
+        // Fallback para ambientes onde a classe ainda não está disponível
+        const textContent = await page.getTextContent();
+        const renderTask  = pdfjsLib.renderTextLayer({
+            textContent,
+            container:  textLayer,
+            viewport:   viewportCSS,
+            textDivs:   [],
+        });
+        await renderTask.promise;
+    }
 }
 
 /* ================================================
