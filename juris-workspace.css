@@ -58,6 +58,8 @@
     line-height: 1;
     pointer-events: auto;
     user-select: text;
+    /* Suporte V4: Garantia de alinhamento nativo para o scale-factor */
+    transform-origin: 0% 0%;
 }
 
 .textLayer span {
