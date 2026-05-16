@@ -222,8 +222,7 @@
     margin-bottom: 24px;
 }
 
-.thesis-legend { display: flex; gap: 12px; font-size: 0.75rem; color: #666; margin-bottom: 8px; justify-content: center; font-weight: 600; }
-.legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+/* Classes .thesis-legend e .legend-dot removidas na refatoração */
 
 .thesis-badge {
     position: relative;
@@ -299,7 +298,7 @@
     display: flex;
     gap: 32px; 
     width: 100%;
-    margin-bottom: 32px; 
+    margin-bottom: 56px; 
     align-items: stretch; 
     overflow: visible; 
 }
@@ -317,9 +316,10 @@
 .sub-annotations-wrapper {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    /* gap: 16px; (Removido, responsabilidade repassada ao JS) */
     width: calc(40% - 16px);
     position: relative;
+    overflow: visible;
 }
 
 .annotation-number-area {
@@ -392,7 +392,7 @@
 
 /* Agrupamento Correlacionado */
 .correlated-item-wrapper { display: flex; flex-direction: column; align-items: center; width: 100%; position: relative; }
-.two-way-arrow-container { display: flex; justify-content: center; align-items: center; padding: 6px 0; color: #888; }
+.two-way-arrow-container { display: flex; justify-content: center; align-items: center; padding: 12px 0; color: #888; }
 .two-way-arrow-container svg { width: 20px; height: 20px; transform: translateX(45%); }
 
 .annotation-card.correlated-card {
@@ -627,10 +627,10 @@
     --fase-2-color: #4CAF50;
     --fase-3-color: #9C27B0;
     --fase-4-color: #FF9800;
-    --fase-1-bg: rgba(33, 150, 243, 0.12); /* Recurso - Azul */
-    --fase-2-bg: rgba(76, 175, 80, 0.12);  /* Gênese - Verde */
-    --fase-3-bg: rgba(156, 39, 176, 0.12); /* Sentença - Roxo */
-    --fase-4-bg: rgba(255, 152, 0, 0.12);  /* Provas - Laranja */
+    --fase-1-bg: #E4F3FD; 
+    --fase-2-bg: #EBF6EB;  
+    --fase-3-bg: #F4E7F6; 
+    --fase-4-bg: #FFF4E5;  
 }
 
 .annotation-card.fase-1, .annotation-card.correlated-card.fase-1 { background-color: var(--fase-1-bg); border-left: 4px solid var(--fase-1-color); }
