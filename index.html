@@ -11,10 +11,16 @@
     <link rel="icon" type="image/png" sizes="16x16" href="imagens/favicon-16x16.png">
     <link rel="icon" href="imagens/favicon.ico">
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.3.136/pdf.min.js"></script>
-<script>
-    // É obrigatório definir o worker da mesma versão exata
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.3.136/pdf.worker.min.js';
+    <!-- ATUALIZAÇÃO PDF.JS V4 - CARREGAMENTO VIA MÓDULO -->
+<script type="module">
+    // 1. Importa a biblioteca usando a extensão .mjs (Módulo ES)
+    import * as pdfjsLibModulo from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.3.136/pdf.mjs';
+
+    // 2. Injeta a biblioteca globalmente para o seu app.js parar de dar erro
+    window.pdfjsLib = pdfjsLibModulo;
+
+    // 3. Define o "trabalhador" (worker) usando a mesma extensão .mjs
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.3.136/pdf.worker.mjs';
 </script>
     
     <!-- 1. Estilos Base, Variáveis Globais e Estrutura Principal (Core) -->
