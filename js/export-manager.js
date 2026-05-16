@@ -1,8 +1,7 @@
 /* ================================================
    export-manager.js
-   Módulo responsável por formatar e exportar dados
-   do tópico ativo para Markdown (.md), otimizado
-   para processamento por LLMs (IA).
+   Módulo de Formatação e Exportação Markdown + Imagens
+   Otimizado para LLMs Multimodais (Visão + Texto)
    ================================================ */
 window.ExportManager = (function() {
     'use strict';
@@ -13,14 +12,29 @@ window.ExportManager = (function() {
         _deps = dependencies;
     }
 
-    async function _downloadImagemSegura(base64Data, nomeArquivo) {
+    // Utilitário para formatar a citação oficial exigida: (Id Y - fl X)
+    function _formatarCitacaoOficial(pjeId, pagina) {
+        const strId = pjeId ? `Id ${pjeId}` : 'Id não idt.';
+        const strFl = pagina ? `fl ${pagina}` : 'fl não idt.';
+        return `(${strId} - ${strFl})`;
+    }
+
+    // Utilitário para garantir que o Nome do Arquivo no MD seja IDENTICO ao nome do Download
+    function _gerarNomeArquivoImagem(ideiaNum, subNum, pjeId, pagina) {
+        const strId = pjeId ? `_Id_${pjeId}` : '';
+        const strFl = pagina ? `_fl_${pagina}` : '';
+        const hierarquia = subNum ? `${ideiaNum}.${subNum}` : `${ideiaNum}`;
+        return `Recorte_Prova_${hierarquia}${strId}${strFl}.png`;
+    }
+
+    async function _downloadImagemSegura(base64Data, nomeArquivoBase) {
         try {
             const response = await fetch(base64Data);
             const blob = await response.blob();
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
-            link.download = nomeArquivo + ".png";
+            link.download = nomeArquivoBase; // O nome já vem com a extensão .png
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -28,27 +42,6 @@ window.ExportManager = (function() {
         } catch (e) {
             console.error("Falha ao baixar imagem:", e);
         }
-    }
-
-    function _formatarCitacao(texto) {
-        if (!texto) return '> [Conteúdo não especificado]';
-        return texto.split('\n').map(linha => `> ${linha}`).join('\n');
-    }
-
-    function _resolverBucketDocumento(docNome) {
-        if (!docNome) return 'provas';
-        const d = docNome.toUpperCase();
-        
-        const isSentenca = ['SENTENÇA', 'ACÓRDÃO', 'DECISÃO'].some(k => d.includes(k));
-        if (isSentenca) return 'sentencas';
-        
-        const isAtaque = ['RECURSO', 'AGRAVO', 'EMBARGOS'].some(k => d.includes(k));
-        if (isAtaque) return 'ataques';
-        
-        const isDefesa = ['CONTESTAÇÃO', 'CONTRARRAZÕES', 'IMPUGNAÇÃO', 'DEFESA'].some(k => d.includes(k));
-        if (isDefesa) return 'defesas';
-        
-        return 'provas';
     }
 
     function _gerarMarkdown(topico) {
@@ -60,108 +53,93 @@ window.ExportManager = (function() {
 
 # TÓPICO RECURSAL: **${topico.nome.toUpperCase()}**
 
+## 1. ESTRUTURA CRONOLÓGICA DA LIDE E PROVAS
+*(Siga estritamente a ordem lógica abaixo para a fundamentação)*
+
 `;
-        const dialectica     = { sentencas: [], ataques: [], defesas: [] };
-        const provas         = [];
-        const diretrizes     = [];
-        const vereditos      = []; // Intenção: veredito — tag <decisao_magistrado_pretendida>
-        const fundamentacoes = []; // Intenção: fundamentacao — tag <base_legal_obrigatoria>
+        const comandosInjetados = [];
+        const vereditosExigidos = [];
+        const baseLegalObrigatoria = [];
 
         topico.anotacoes.forEach((an, index) => {
-            const refStr = `(Fl. ${an.pagina || 'não idt.'}${an.pjeId ? `, ID ${an.pjeId}` : ''})`;
+            const numIdeia = index + 1;
+            const refCitacao = _formatarCitacaoOficial(an.pjeId, an.pagina);
             
-            // 1. Extração do Fato/Prova Principal
-            let textoBloco = "";
-            if (an.tipo === 'texto') textoBloco = an.conteudo.replace(/\n/g, ' ');
-            else if (an.tipo === 'imagem') textoBloco = `[Imagem/Recorte da Peça] Descrição do Assessor: ${an.comentario || 'Sem descrição.'}`;
-            else if (an.tipo === 'audio') {
-                 try { const ad = JSON.parse(an.conteudo); textoBloco = `[Áudio: ${ad.oradorStr} - ${ad.labelInicio} a ${ad.labelFim}] Resumo: ${an.comentario || 'Sem transcrição.'}`; } 
-                 catch(e) { textoBloco = `[Áudio] Resumo: ${an.comentario}`; }
+            // Título Principal da Ideia
+            md += `### 📌 IDEIA ESTRUTURAL ${numIdeia}: ${an.tese ? an.tese : '[Sem título definido pelo assessor]'}\n`;
+
+            // Processamento do Conteúdo Pai
+            const tituloBloco = `**1. [${an.documento || 'Elemento'}] (${an.polo || 'Sem polo'}) ${refCitacao}:**`;
+            
+            if (an.tipo === 'texto') {
+                md += `${tituloBloco} ${an.conteudo.replace(/\n/g, ' ')}\n`;
+            } else if (an.tipo === 'imagem') {
+                const imgNome = _gerarNomeArquivoImagem(numIdeia, null, an.pjeId, an.pagina);
+                md += `${tituloBloco}\n> 🖼️ **[ANEXO DE IMAGEM]** Leia o arquivo anexado nomeado \`${imgNome}\`.\n> 🧠 *Conclusão/Observação do Assessor:* ${an.comentario || 'Verifique o documento em anexo e extraia a informação correspondente.'}\n`;
+            } else if (an.tipo === 'audio') {
+                 try { 
+                     const ad = JSON.parse(an.conteudo); 
+                     md += `${tituloBloco}\n> 🎙️ **[OITIVA DE AUDIÊNCIA]** (${ad.oradorStr} - ${ad.labelInicio} a ${ad.labelFim}).\n> 🧠 *Transcrição/Resumo:* ${an.comentario || 'Sem transcrição explícita.'}\n`;
+                 } catch(e) { 
+                     md += `${tituloBloco}\n> 🎙️ **[ÁUDIO]** *Resumo:* ${an.comentario}\n`; 
+                 }
             }
 
-            // 2. Extraindo Diretrizes e Anexando PREMISSAS DIRETAMENTE ao texto do Bloco pai
-            if (an.tese) diretrizes.push(`* **TESE A ADOTAR:** ${an.tese}`);
-
-            if (an.subAnotacoes && an.subAnotacoes.length > 0) {
-                an.subAnotacoes.forEach(sub => {
-                    const intencao = sub.intencao || 'premissa';
-
-                    if (intencao === 'comando') {
-                        diretrizes.push(`* **ORDEM DE REDAÇÃO:** ${sub.texto}`);
-                    }
-                    else if (intencao === 'texto') {
-                        diretrizes.push(`* **UTILIZAR ESTA REDAÇÃO EXATA:**\n  > ${sub.texto}`);
-                    }
-                    else if (intencao === 'premissa') {
-                        // Premissa é "grudada" no bloco pai para dar contexto direto à prova
-                        textoBloco += `\n    * *Dedução do Assessor:* ${sub.texto}`;
-                    }
-                    else if (intencao === 'veredito') {
-                        // Decisão final: vai para uma seção e tag XML próprias
-                        vereditos.push(`* ${sub.texto}`);
-                    }
-                    else if (intencao === 'fundamentacao') {
-                        // Base legal obrigatória: vai para tag XML de máxima prioridade
-                        fundamentacoes.push(`* ${sub.texto}`);
-                    }
-                    // 'nota': intencionalmente ignorada — não exportada para a IA
-                });
-            }
-
-            // 3. Destinando o Bloco Pai (já com suas premissas coladas) ao Bucket correto
-            const bucketType = _resolverBucketDocumento(an.documento);
-            const prefixoStr = `* **${an.documento || (an.tipo === 'audio' ? 'Oitiva de Audiência' : 'Prova Documental')} (${an.polo || 'Sem polo'}) ${refStr}:** `;
-
-            if (bucketType === 'sentencas') dialectica.sentencas.push(prefixoStr + textoBloco);
-            else if (bucketType === 'ataques') dialectica.ataques.push(prefixoStr + textoBloco);
-            else if (bucketType === 'defesas') dialectica.defesas.push(prefixoStr + textoBloco);
-            else provas.push(prefixoStr + textoBloco);
-
-            // 4. Processando Provas Agrupadas (Itens Correlacionados sempre vão para Provas)
+            // Mapeando Itens Correlacionados (Agrupamentos)
             if (an.itensCorrelacionados && an.itensCorrelacionados.length > 0) {
-                an.itensCorrelacionados.forEach(item => {
-                    const iRef = `(Fl. ${item.pagina || 'não idt.'}${item.pjeId ? `, ID ${item.pjeId}` : ''})`;
-                    const iText = item.comentario ? item.comentario : (item.conteudo || '').replace(/\n/g, ' ');
-                    provas.push(`  * **Corroboração/Contradição (${item.documento || 'Doc'} - ${item.polo || 'Polo'}) ${iRef}:** ${iText}`);
+                an.itensCorrelacionados.forEach((corr, corrIdx) => {
+                    const numSub = corrIdx + 1;
+                    const cRefCitacao = _formatarCitacaoOficial(corr.pjeId, corr.pagina);
+                    const cTitulo = `  ↳ **Corroboração/Contradição [${corr.documento || 'Doc'}] (${corr.polo || 'Polo'}) ${cRefCitacao}:**`;
+
+                    if (corr.tipo === 'texto') {
+                        const txt = corr.comentario ? corr.comentario : (corr.conteudo || '').replace(/\n/g, ' ');
+                        md += `${cTitulo} ${txt}\n`;
+                    } else if (corr.tipo === 'imagem') {
+                        const imgNomeSub = _gerarNomeArquivoImagem(numIdeia, numSub, corr.pjeId, corr.pagina);
+                        const fallbackComentario = 'Atenção IA: O assessor agrupou esta prova com o elemento principal acima. Analise este anexo para extrair a ligação técnica entre eles.';
+                        md += `${cTitulo}\n    > 🖼️ **[ANEXO DE IMAGEM]** Leia o arquivo anexado nomeado \`${imgNomeSub}\`.\n    > 🧠 *Conclusão do Assessor:* ${corr.comentario || fallbackComentario}\n`;
+                    }
                 });
             }
+
+            // Processando Nós de Ideia (Premissas vão aqui, Comandos/Vereditos vão para o fim)
+            if (an.subAnotacoes && an.subAnotacoes.length > 0) {
+                an.subAnotacoes.forEach((sub, sIdx) => {
+                    const intencao = sub.intencao || 'premissa';
+                    const letraId = String.fromCharCode(65 + sIdx); // A, B, C...
+
+                    if (intencao === 'premissa') {
+                        md += `\n  💡 *Dedução Lógica Adicional (Ref ${numIdeia}.${letraId}):* ${sub.texto}\n`;
+                    } else if (intencao === 'comando' || intencao === 'texto') {
+                        comandosInjetados.push(`* **[Para a Ideia ${numIdeia}]** ${sub.texto}`);
+                    } else if (intencao === 'veredito') {
+                        vereditosExigidos.push(`* **[Decisão referente à Ideia ${numIdeia}]** ${sub.texto}`);
+                    } else if (intencao === 'fundamentacao') {
+                        baseLegalObrigatoria.push(`* ${sub.texto} (Aplicável à Ideia ${numIdeia})`);
+                    }
+                });
+            }
+            md += `\n---\n\n`; // Separador visual entre as Ideias
         });
 
-        // --- MONTAGEM DO MARKDOWN OTIMIZADO ---
-        md += `## 1. MATRIZ DIALÉTICA DA LIDE\n`;
-        if (dialectica.sentencas.length) md += dialectica.sentencas.join('\n\n') + '\n\n';
-        if (dialectica.ataques.length) md += dialectica.ataques.join('\n\n') + '\n\n';
-        if (dialectica.defesas.length) md += dialectica.defesas.join('\n\n') + '\n\n';
-        if (!dialectica.sentencas.length && !dialectica.ataques.length && !dialectica.defesas.length) {
-            md += `*Não foram mapeadas peças processuais estritas (Recursos/Sentenças) para compor a dialética.*\n\n`;
-        }
-
-        md += `## 2. MAPEAMENTO PROBATÓRIO E PREMISSAS\n`;
-        if (provas.length > 0) md += provas.join('\n\n') + '\n\n';
-        else md += `*Nenhuma prova específica ou premissa lógica foi mapeada neste tópico.*\n\n`;
-
-        md += `## 3. 🎯 DIRETRIZES DE REDAÇÃO PARA A IA\n`;
+        // --- TAGS XML PARA O SISTEMA DA IA ---
+        md += `## 2. 🎯 DIRETRIZES DE ESTILO E REDAÇÃO\n`;
         md += `<comandos_para_a_minuta>\n`; 
-        if (diretrizes.length > 0) md += diretrizes.join('\n\n') + '\n';
-        else md += `* Analise a matriz dialética e as provas acima para construir a fundamentação do voto, seguindo os padrões do tribunal.\n`;
-        md += `</comandos_para_a_minuta>\n`;
+        if (comandosInjetados.length > 0) md += comandosInjetados.join('\n') + '\n';
+        else md += `* Escreva com objetividade e clareza, utilizando as provas do tópico 1.\n`;
+        md += `</comandos_para_a_minuta>\n\n`;
 
-        md += `\n## 4. 🏛️ DECISÃO DO MAGISTRADO\n`;
+        md += `## 3. 🏛️ DECISÃO DO MAGISTRADO (DISPOSITIVO DO TÓPICO)\n`;
         md += `<decisao_magistrado_pretendida>\n`;
-        if (vereditos.length > 0) {
-            md += vereditos.join('\n\n') + '\n';
-        } else {
-            md += `* [Nenhum veredito explícito definido. Extraia a conclusão da dialética e das provas acima.]\n`;
-        }
-        md += `</decisao_magistrado_pretendida>\n`;
+        if (vereditosExigidos.length > 0) md += vereditosExigidos.join('\n') + '\n';
+        else md += `* [Sintetize a conclusão final de forma coesa com base nos fatos acima apresentados].\n`;
+        md += `</decisao_magistrado_pretendida>\n\n`;
 
-        md += `\n## 5. 📚 BASE LEGAL OBRIGATÓRIA\n`;
+        md += `## 4. 📚 BASE LEGAL OBRIGATÓRIA E JURISPRUDÊNCIA\n`;
         md += `<base_legal_obrigatoria>\n`;
-        if (fundamentacoes.length > 0) {
-            md += fundamentacoes.join('\n\n') + '\n';
-        } else {
-            md += `* [Nenhuma súmula ou artigo específico foi marcado. Utilize o repertório jurisprudencial pertinente.]\n`;
-        }
+        if (baseLegalObrigatoria.length > 0) md += baseLegalObrigatoria.join('\n') + '\n';
+        else md += `* [O Assessor não vinculou súmulas específicas. Utilize seu conhecimento jurídico (STF > TST > TRT)].\n`;
         md += `</base_legal_obrigatoria>\n`;
 
         return md;
@@ -171,11 +149,9 @@ window.ExportManager = (function() {
         const blob = new Blob([conteudo], { type: 'text/markdown;charset=utf-8;' });
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
-        
         link.setAttribute("href", url);
         link.setAttribute("download", nomeArquivo);
         link.style.visibility = 'hidden';
-        
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -183,40 +159,30 @@ window.ExportManager = (function() {
 
     function exportarTopicoAtivo() {
         const activeId = _deps.getActiveTabId();
-        if (!activeId) {
-            _deps.exibirToast('Selecione um tópico antes de gerar o documento.', 'aviso');
-            return;
-        }
+        if (!activeId) { _deps.exibirToast('Selecione um tópico.', 'aviso'); return; }
 
-        const topicosAtuais = _deps.getTopicos();
-        const topico = topicosAtuais.find(t => t.id === activeId);
-
-        if (!topico) {
-            _deps.exibirToast('Tópico não encontrado. Tente novamente.', 'erro');
-            return;
-        }
-
-        if (topico.anotacoes.length === 0) {
-            _deps.exibirToast('Este tópico está vazio. Adicione anotações antes de exportar.', 'aviso');
-            return;
+        const topico = _deps.getTopicos().find(t => t.id === activeId);
+        if (!topico || topico.anotacoes.length === 0) {
+            _deps.exibirToast('Tópico vazio ou inválido.', 'aviso'); return;
         }
 
         try {
+            // 1. Gerar e baixar o Markdown
             const markdownConteudo = _gerarMarkdown(topico);
             const nomeSanitizado = topico.nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            const nomeArquivo = `Tese_${nomeSanitizado}.md`;
+            _downloadArquivo(`Minuta_${nomeSanitizado}.md`, markdownConteudo);
             
-            _downloadArquivo(nomeArquivo, markdownConteudo);
-            _deps.exibirToast('Tópico exportado com sucesso para IA (.md)! Imagens sendo baixadas...', 'sucesso');
+            _deps.exibirToast('Markdown exportado! Processando download das imagens...', 'sucesso');
             
-            // Loop para exportar recortes de imagem como PNGs
+            // 2. Loop de download das imagens (usando a nova regra de nomenclatura unificada)
             let delayDownload = 500;
-            topico.anotacoes.forEach((an, anIdx) => {
+            topico.anotacoes.forEach((an, index) => {
+                const numIdeia = index + 1;
+
                 if (an.tipo === 'imagem') {
                     setTimeout(() => {
-                        const folha = an.pagina || 'Folha_Indef';
-                        const id = an.pjeId ? `_ID_${an.pjeId}` : '';
-                        _downloadImagemSegura(an.conteudo, `Imagem_Ideia_${anIdx + 1}_Folha_${folha}${id}`);
+                        const imgNome = _gerarNomeArquivoImagem(numIdeia, null, an.pjeId, an.pagina);
+                        _downloadImagemSegura(an.conteudo, imgNome);
                     }, delayDownload);
                     delayDownload += 500;
                 }
@@ -225,9 +191,9 @@ window.ExportManager = (function() {
                     an.itensCorrelacionados.forEach((corr, corrIdx) => {
                         if (corr.tipo === 'imagem') {
                             setTimeout(() => {
-                                const folha = corr.pagina || 'Folha_Indef';
-                                const id = corr.pjeId ? `_ID_${corr.pjeId}` : '';
-                                _downloadImagemSegura(corr.conteudo, `Imagem_Agrupada_${anIdx + 1}.${corrIdx + 1}_Folha_${folha}${id}`);
+                                const numSub = corrIdx + 1;
+                                const imgNomeSub = _gerarNomeArquivoImagem(numIdeia, numSub, corr.pjeId, corr.pagina);
+                                _downloadImagemSegura(corr.conteudo, imgNomeSub);
                             }, delayDownload);
                             delayDownload += 500;
                         }
@@ -237,12 +203,9 @@ window.ExportManager = (function() {
 
         } catch (error) {
             console.error(error);
-            _deps.exibirToast('Erro ao gerar o arquivo de exportação.', 'erro');
+            _deps.exibirToast('Erro ao gerar exportação.', 'erro');
         }
     }
 
-    return {
-        init,
-        exportarTopicoAtivo
-    };
+    return { init, exportarTopicoAtivo };
 })();
