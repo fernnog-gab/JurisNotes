@@ -543,6 +543,25 @@ function capturarTrechoSelecionado() {
 }
 
 /* ================================================
+   MOTOR HEURÍSTICO DE FASES METODOLÓGICAS
+   ================================================ */
+function identificarFaseMetodologica(docNome) {
+    if (!docNome) return 4; // Elementos não nomeados ou áudios caem em provas
+    
+    // 1. Tenta correspondência exata
+    const conf = DOC_CONFIG.find(d => d.label === docNome);
+    if (conf) return conf.fase;
+    
+    // 2. Fallback robusto para nomes customizados do legado
+    const upper = docNome.toUpperCase();
+    if (upper.includes('RECURSO') || upper.includes('CONTRARRAZÕES')) return 1;
+    if (upper.includes('INICIAL') || upper.includes('CONTEST') || upper.includes('IMPUGNAÇÃO')) return 2;
+    if (upper.includes('SENTENÇA') || upper.includes('ACÓRDÃO') || upper.includes('DECISÃO') || upper.includes('EMBARGOS')) return 3;
+    
+    return 4; // Quesitos, Laudos, Documentos genéricos
+}
+
+/* ================================================
    PERSISTÊNCIA DE ANOTAÇÕES
    CORREÇÃO: não troca de aba automaticamente (evita regressão de UX).
    Usa toast não-intrusivo como feedback.
@@ -563,6 +582,8 @@ async function salvarAnotacao(tipo, conteudo, documento, polo, topicoId, comenta
         comentario: comentario
     };
 
+    const faseNova = identificarFaseMetodologica(documento);
+
     if (targetParentIndex !== null && targetParentIndex !== '') {
         const parentNode = topicoAlvo.anotacoes[targetParentIndex];
         if (!parentNode.itensCorrelacionados) parentNode.itensCorrelacionados = [];
@@ -571,8 +592,24 @@ async function salvarAnotacao(tipo, conteudo, documento, polo, topicoId, comenta
     } else {
         novaExtracao.subAnotacoes = [];
         novaExtracao.itensCorrelacionados = [];
-        topicoAlvo.anotacoes.push(novaExtracao);
-        exibirToast(`Anotação salva em "${topicoAlvo.nome}".`);
+        
+        // ALERTA DE SALTO METODOLÓGICO
+        const temFase2 = topicoAlvo.anotacoes.some(a => identificarFaseMetodologica(a.documento) === 2);
+        if (faseNova === 3 && !temFase2) {
+            exibirToast("Atenção: Você avançou para a Sentença. Já verificou a Inicial/Contestação?", "aviso");
+        } else {
+            exibirToast(`Anotação salva em "${topicoAlvo.nome}".`);
+        }
+
+        // SMART SORT (Cronologia Lógica)
+        let insertIndex = topicoAlvo.anotacoes.length;
+        for (let i = 0; i < topicoAlvo.anotacoes.length; i++) {
+            if (identificarFaseMetodologica(topicoAlvo.anotacoes[i].documento) > faseNova) {
+                insertIndex = i;
+                break;
+            }
+        }
+        topicoAlvo.anotacoes.splice(insertIndex, 0, novaExtracao);
     }
 
     renderizarTopicos();

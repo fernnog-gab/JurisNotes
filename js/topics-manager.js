@@ -154,6 +154,9 @@ window.TopicsManager = (function () {
         const alignClass = isLeft ? 'align-left' : 'align-right';
         const isLast     = index === total - 1;
         
+        const faseDoCard = typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(anotacao.documento) : 4;
+        const bgZoneClass = `fase-${faseDoCard}`;
+        
         const docSeguro = anotacao.documento ? escaparHTML(anotacao.documento) : escaparHTML(anotacao.polo);
         const poloSeguro = (anotacao.documento && anotacao.polo) ? escaparHTML(anotacao.polo) : '';
         
@@ -287,7 +290,7 @@ window.TopicsManager = (function () {
                             ${numero}
                         </div>
                     </div>
-                    <div class="annotation-card">
+                    <div class="annotation-card ${bgZoneClass}">
                         <div class="card-header">
                             <div style="display:flex; gap:6px;">${tagsHtml}</div>
                             <span class="card-meta" style="cursor:pointer;" title="Clique p/ copiar | Shift+Clique p/ editar folha" onclick="handleMetaClick(event, '${activeTabId}', ${index}, false)">${metaTexto}</span>
@@ -378,9 +381,33 @@ window.TopicsManager = (function () {
                 sumarioHtml = '<div class="thesis-summary-panel">';
                 topicoAtivo.anotacoes.forEach((an, idx) => {
                     if (an.tese && an.tese.trim() !== '') {
+                        const fasesPresentes = new Set();
+                        fasesPresentes.add(typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(an.documento) : 4);
+                        
+                        // Guard clause robusto
+                        if (an.itensCorrelacionados?.length) {
+                            an.itensCorrelacionados.forEach(ic => fasesPresentes.add(typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(ic.documento) : 4));
+                        }
+
+                        // Construção do Gradiente CSS Transparente
+                        const cores = [];
+                        if(fasesPresentes.has(1)) cores.push('var(--fase-1-bg)');
+                        if(fasesPresentes.has(2)) cores.push('var(--fase-2-bg)');
+                        if(fasesPresentes.has(3)) cores.push('var(--fase-3-bg)');
+                        if(fasesPresentes.has(4)) cores.push('var(--fase-4-bg)');
+                        
+                        let bgStyle = '';
+                        if(cores.length > 0) {
+                            const step = 100 / cores.length;
+                            const gradients = cores.map((cor, i) => `${cor} ${i * step}%, ${cor} ${(i + 1) * step}%`);
+                            bgStyle = `style="background: linear-gradient(to right, ${gradients.join(', ')}), #ffffff;"`; 
+                        }
+
+                        const matureClass = fasesPresentes.size === 4 ? 'mature' : '';
                         const txt = escaparHTML(an.tese);
+
                         sumarioHtml += `
-                            <div class="thesis-badge" onclick="abrirModalTese('${activeTabId}', ${idx})">
+                            <div class="thesis-badge ${matureClass}" ${bgStyle} onclick="abrirModalTese('${activeTabId}', ${idx})">
                                 <span class="num">${idx + 1}</span> 
                                 <span class="texto-tese">${txt}</span>
                             </div>`;

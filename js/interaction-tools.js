@@ -35,35 +35,54 @@ let pendingConteudo = null;   // Conteúdo bruto da extração pendente
 
 // --- CONFIGURAÇÃO CENTRAL DE DOCUMENTOS ---
 const DOC_CONFIG = [
-    { label: 'Petição Inicial',           polo: 'Parte Autora', tipo: 'auto'   },
-    { label: 'Contestação',               polo: 'Parte Ré',     tipo: 'auto'   },
-    { label: 'Impugnação à Contestação',  polo: 'Parte Autora', tipo: 'auto'   },
-    { label: 'Recurso Ordinário',         polo: null,           tipo: 'dual'   },
-    { label: 'Recurso Adesivo',           polo: null,           tipo: 'dual'   },
-    { label: 'Contrarrazões',             polo: null,           tipo: 'dual'   },
-    { label: 'Quesitos',                  polo: null,           tipo: 'dual'   },
-    { label: 'Quesitos Complementares',   polo: null,           tipo: 'dual'   },
-    { label: 'Sentença',                  polo: 'Juízo',        tipo: 'neutro' },
-    { label: 'Sentença de Embargos de Declaração', polo: 'Juízo', tipo: 'neutro' },
-    { label: 'Laudo Pericial',            polo: 'Perito',       tipo: 'neutro' },
+    { label: 'Petição Inicial',           polo: 'Parte Autora', tipo: 'auto',   fase: 2 },
+    { label: 'Contestação',               polo: 'Parte Ré',     tipo: 'auto',   fase: 2 },
+    { label: 'Impugnação à Contestação',  polo: 'Parte Autora', tipo: 'auto',   fase: 2 },
+    { label: 'Recurso Ordinário',         polo: null,           tipo: 'dual',   fase: 1 },
+    { label: 'Recurso Adesivo',           polo: null,           tipo: 'dual',   fase: 1 },
+    { label: 'Contrarrazões',             polo: null,           tipo: 'dual',   fase: 1 },
+    { label: 'Quesitos',                  polo: null,           tipo: 'dual',   fase: 4 },
+    { label: 'Quesitos Complementares',   polo: null,           tipo: 'dual',   fase: 4 },
+    { label: 'Sentença',                  polo: 'Juízo',        tipo: 'neutro', fase: 3 },
+    { label: 'Sentença de Embargos de Declaração', polo: 'Juízo', tipo: 'neutro', fase: 3 },
+    { label: 'Laudo Pericial',            polo: 'Perito',       tipo: 'neutro', fase: 4 },
+    { label: 'Prova Documental Genérica', polo: null,           tipo: 'dual',   fase: 4 }
 ];
 
 let _docSelecionado = null;
 let _isWizardContext = false;
 let _pendingTargetIndex = null;
 
-function renderizarListaDocumentos(containerId, context) {
-    const container = document.getElementById(containerId);
-    container.innerHTML = '';
-    DOC_CONFIG.forEach(doc => {
+function renderizarFasesModais(context) {
+    const tabsContainer = document.getElementById(`${context}-phase-tabs`);
+    const listContainer = document.getElementById(`lista-docs-${context}`);
+    if (!tabsContainer || !listContainer) return;
+    
+    const fases = [
+        { id: 1, nome: '1. Recurso' }, { id: 2, nome: '2. Gênese' },
+        { id: 3, nome: '3. Sentença' }, { id: 4, nome: '4. Provas' }
+    ];
+
+    tabsContainer.innerHTML = '';
+    fases.forEach(f => {
         const btn = document.createElement('button');
-        btn.className = `doc-btn ${doc.tipo === 'dual' ? 'dual' : doc.tipo === 'neutro' ? 'neutro' : ''}`;
-        btn.textContent = doc.label;
+        btn.className = `phase-tab-btn`;
+        btn.textContent = f.nome;
         btn.onclick = (e) => {
             e.stopPropagation();
-            selecionarDocumento(doc.label, doc.polo || 'DUAL', context);
+            Array.from(tabsContainer.children).forEach(b => b.className = 'phase-tab-btn');
+            btn.classList.add(`active-f${f.id}`);
+            
+            listContainer.innerHTML = '';
+            DOC_CONFIG.filter(doc => doc.fase === f.id).forEach(doc => {
+                const docBtn = document.createElement('button');
+                docBtn.className = `doc-btn ${doc.tipo}`;
+                docBtn.textContent = doc.label;
+                docBtn.onclick = (e) => { e.stopPropagation(); selecionarDocumento(doc.label, doc.polo || 'DUAL', context); };
+                listContainer.appendChild(docBtn);
+            });
         };
-        container.appendChild(btn);
+        tabsContainer.appendChild(btn);
     });
 }
 
@@ -228,7 +247,16 @@ function abrirConfirmacaoRecorteWizard() {
     document.querySelector('input[name="modo_agrupar_wizard"][value="nova"]').checked = true;
     toggleAgruparWizard();
     
-    renderizarListaDocumentos('lista-docs-wizard', 'wizard');
+    renderizarFasesModais('wizard');
+    const tabsWizard = document.getElementById('wizard-phase-tabs');
+    if(tabsWizard && tabsWizard.firstElementChild) tabsWizard.firstElementChild.click();
+
+    const topicoObj = topicos.find(t => t.id === _wizardTopicoSelecionado);
+    const wizardHeader = document.getElementById('wizard-topic-color-feedback');
+    if(topicoObj && wizardHeader) {
+        wizardHeader.style.backgroundColor = topicoObj.cor;
+        wizardHeader.style.height = '6px';
+    }
 
     document.getElementById('wizard-backdrop').style.display = 'block';
     document.getElementById('crop-wizard-step2').style.display = 'flex';
@@ -299,6 +327,9 @@ function fecharPopupClassificacao() {
     pendingTipo = null;
     pendingConteudo = null;
     if (window.getSelection) window.getSelection().removeAllRanges();
+    
+    const header = document.getElementById('popup-topic-color-feedback');
+    if(header) header.style.height = '0';
 }
 
 function exibirPopupClassificacao(tipo, conteudo) {
@@ -310,13 +341,19 @@ function exibirPopupClassificacao(tipo, conteudo) {
 
     const select = document.getElementById('seletor-topico');
     select.innerHTML = '<option value="">Selecione o Tópico...</option>';
-    topicos.forEach(t => select.appendChild(new Option(t.nome, t.id)));
+    topicos.forEach(t => {
+        const opt = new Option(t.nome, t.id);
+        opt.dataset.cor = t.cor;
+        select.appendChild(opt);
+    });
 
     document.getElementById('agrupamento-popup-box').style.display = 'none';
     document.querySelector('input[name="modo_agrupar_popup"][value="nova"]').checked = true;
     toggleAgruparPopup();
 
-    renderizarListaDocumentos('lista-docs-popup', 'popup');
+    renderizarFasesModais('popup');
+    const tabsPopup = document.getElementById('popup-phase-tabs');
+    if(tabsPopup && tabsPopup.firstElementChild) tabsPopup.firstElementChild.click();
 
     const popup = document.getElementById('classification-popup');
     popup.style.display = 'flex';
@@ -335,8 +372,21 @@ function exibirPopupClassificacao(tipo, conteudo) {
 }
 
 document.getElementById('seletor-topico').addEventListener('change', (e) => {
+    // 1. Controla exibição do agrupamento
     const box = document.getElementById('agrupamento-popup-box');
     box.style.display = e.target.value ? 'flex' : 'none';
+    
+    // 2. Controla o feedback visual de cor desacoplado (lê data-cor injetado na option)
+    const header = document.getElementById('popup-topic-color-feedback');
+    const selectedOpt = e.target.options[e.target.selectedIndex];
+    
+    if (e.target.value && selectedOpt.dataset.cor) {
+        header.style.backgroundColor = selectedOpt.dataset.cor;
+        header.style.height = '6px';
+    } else {
+        header.style.height = '0';
+        header.style.backgroundColor = 'transparent';
+    }
 });
 
 /* ================================================
