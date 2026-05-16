@@ -69,12 +69,19 @@ Aplicação **Client-Side Only (sem backend)**. Toda a lógica de leitura, extra
 - Fundo de leitura confortável (*Jasmine* e *Branco*).
 - Separação entre a Prova Bruta (Main Card) e a Conclusão do Assessor (Nós de Ideia/Sub-anotações).
 
-### v5.0 — Inteligência Metodológica e Zonas Visuais (Versão Atual)
+### v5.0 — Inteligência Metodológica e Zonas Visuais
 - **Modal de Extração por Mini-Abas:** Categorização das peças em 4 fases metodológicas diretamente no momento do recorte.
 - **Zonas Visuais de Cores:** Pintura automática do fundo dos cards (Azul, Verde, Roxo, Laranja) criando um mapa cognitivo da cronologia da lide.
 - **Smart Sort (Reordenação Inteligente):** Independentemente da ordem em que o assessor lê o PDF, o sistema realoca o card automaticamente para a Zona (Fase) correta, garantindo que o Recurso fique acima da Sentença, e a Inicial fique entre eles.
 - **Dashboard de Maturidade:** Indicador de completude (gradiente colorido e selo giratório) no Sumário de Teses.
 - **Retrocompatibilidade Autônoma:** Backups antigos lidos pelo sistema deduzem a fase da peça pelo nome digitado no passado, colorindo e organizando os processos antigos instantaneamente sem retrabalho manual.
+
+### v6.0 — Exportação Inteligente e Integração com o Mestre de Gabinete (Versão Atual)
+- **Arquitetura "Roteiro do Diretor":** O arquivo exportado deixou de ser uma tentativa de resumo do processo e passou a funcionar como um *payload cognitivo estruturado*. Ele não entrega a "carne" dos fatos (que está nos PDFs do processo que o modelo externo já recebe), mas sim o "esqueleto": a matriz dialética, as premissas inconstroversas, a base legal vinculada, os comandos de estilo e o veredito pretendido — cada um em seu bloco arquitetural exato.
+- **Mapeamento por Tags XML:** Os Nós de Ideia agora são triados automaticamente por intenção (`premissa`, `comando`, `texto`, `veredito`, `fundamentacao`) e ejetados para as tags XML correspondentes (`<comandos_para_a_minuta>`, `<base_legal_obrigatoria>`, `<decisao_magistrado_pretendida>`) que o modelo externo ("Mestre de Gabinete") está configurado para consumir.
+- **Âncora de Fase Processual por Ideia:** Cada bloco de prova exportado agora declara explicitamente seu contexto processual (fase e polo), fornecendo ao LLM a referência narrativa para posicionar corretamente cada elemento dentro da estrutura da minuta (Relatório vs. Fundamentação vs. Dispositivo).
+- **Fila de Download Sequencial Segura:** O download das imagens-prova passou de um mecanismo frágil de `setTimeout` acumulativo para uma fila `async/await` encadeada, eliminando colisões e falhas silenciosas em lotes com muitas imagens.
+- **Nomenclatura de Arquivo Semântica:** O arquivo exportado passa a se chamar `Pacote_JurisNotes_[topico].md`, refletindo com precisão seu papel de pacote de dados estruturado, e não de minuta final.
 
 ---
 
@@ -87,11 +94,25 @@ Aplicação **Client-Side Only (sem backend)**. Toda a lógica de leitura, extra
 4. Selecione textos, recorte imagens ou áudios. No modal que se abrir, **escolha a Fase Metodológica (1 a 4)** correspondente à peça.
 
 ### Desenvolvendo a Tese e Exportando para a IA
+
 1. Ao extrair os fatos, nomeie a tese clicando no círculo numérico do card (ex: "EPI não neutralizou agente"). Ela subirá para o Dashboard de Maturidade.
 2. Continue extraindo provas, sentenças e iniciais, agrupando-as na tese criada. Observe o card no topo se preencher de cores.
-3. Quando a tese atingir a maturidade (ou estiver satisfeito), vá até a barra lateral e clique na **Seta para Cima** (Exportar).
-4. Anexe o arquivo `.md` gerado no seu ChatGPT ou Claude com o comando:
-   > *"Atue como Desembargador Relator. Com base no sumário de teses e na matriz dialética estruturada no arquivo anexo, redija a fundamentação do voto para este tópico recursal. Não presuma fatos fora do documento."*
+3. Nos **Nós de Ideia** de cada card, use as intenções para direcionar o modelo externo:
+   - **Premissa:** Um fato incontroverso que o LLM não deve questionar. Fica colado à prova no Markdown.
+   - **Fundamentação:** Uma súmula, OJ ou artigo de lei que deve obrigatoriamente embasar aquele ponto.
+   - **Veredito:** A conclusão pretendida pelo magistrado para aquela tese (provido/não provido, com ou sem ressalvas).
+   - **Comando:** Instrução direta de estilo ou direcionamento para a redação daquele trecho da minuta.
+   - **Texto:** Um trecho de redação que o assessor quer ver transcrito literalmente na minuta.
+4. Quando a tese atingir a maturidade (ou estiver satisfeito), vá até a barra lateral e clique na **Seta para Cima** (Exportar). O sistema gerará:
+   - Um arquivo `Pacote_JurisNotes_[topico].md` — o "Roteiro do Diretor".
+   - Um arquivo `.png` por imagem-prova capturada, com nomenclatura idêntica à referência no Markdown.
+
+5. No modelo externo configurado com o **Mestre de Gabinete** (ex.: Gem do Gemini), anexe **em conjunto**:
+   - O arquivo `Pacote_JurisNotes_[topico].md` gerado pelo Juris Notes.
+   - Os PDFs completos do processo relevantes ao tópico (Sentença, Recurso Ordinário, Contrarrazões).
+   - As imagens-prova baixadas (se houver).
+
+   > O modelo externo lerá o Markdown como seu roteiro arquitetural e buscará nos PDFs os detalhes de contexto das folhas referenciadas pelas âncoras `(Id X - fl Y)`. O assessor não precisa inserir nenhum prompt adicional: toda a instrução já está codificada dentro das tags do arquivo exportado.
 
 ---
 
@@ -107,8 +128,7 @@ A base de código utiliza um padrão modular isolado, garantindo fácil manuten�
 | `app.js` | Orquestrador global, Smart Sort (reordenação lógica) e motor de heurística metodológica. |
 | `topics-manager.js` | Renderização do fichário, painel de teses (gradiente dinâmico de maturidade). |
 | `backup-manager.js` | Persistência local (API de File System) e cálculo de Hashes Criptográficos. |
-| `export-manager.js` | Formatação algorítmica em Markdown separando Matriz Dialética e Provas para LLMs. |
+| `export-manager.js` | Geração do payload estruturado ("Roteiro do Diretor"): triagem de Nós de Ideia por intenção, montagem da Matriz Dialética com âncoras de fase processual, injeção nas tags XML do Mestre de Gabinete e fila sequencial de download de imagens-prova. |
 | `audio-manager.js` | Controle de playback, marcação de tempos (Início/Fim) e classificação de oitivas. |
 | `interaction-tools.js`| Wizards de captura, gerenciamento do `DOC_CONFIG` (com fases) e modais. |
 | `annotation-actions.js`| CRUD de anotações, reordenação manual e lógica interativa dos cards. |
-```
