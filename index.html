@@ -432,8 +432,11 @@
             </select>
         </div>
 
-        <p class="popup-label" style="margin-top: 12px;">Transcrição / Resumo (opcional):</p>
-        <textarea id="audio-comment" class="popup-textarea" style="display: block; min-height: 60px;" placeholder="Digite o que foi dito para conferência futura..."></textarea>
+        <p class="popup-label" style="margin-top: 12px;">Observação / Contexto do Assessor (opcional):</p>
+        <textarea id="audio-comment" class="popup-textarea" style="display: block; min-height: 60px;" placeholder="Registre o propósito deste trecho (Ex: Confessa que não usava EPI...)"></textarea>
+
+        <p class="popup-label" style="margin-top: 12px;">Degravação Literal (opcional):</p>
+        <textarea id="audio-degravacao" class="popup-textarea" style="display: block; min-height: 80px;" placeholder="Digite a transcrição exata das palavras ditas na audiência..."></textarea>
 
         <div class="wizard-actions">
             <button class="chip-btn chip-cancelar" onclick="AudioManager.cancelarAnotacao()">✕ Cancelar</button>
@@ -513,46 +516,12 @@
     <!-- BACKDROP E MODAL DO GUIA METODOLÓGICO -->
     <div id="ajuda-modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.40); z-index: 4004;" onclick="fecharModalAjuda()"></div>
 
-    <div id="modal-ajuda-intencoes" class="crop-wizard-popup" style="display:none; z-index: 4005; max-width: 600px; max-height: 80vh; overflow-y: auto;">
-        <div class="wizard-header">🧠 Guia Metodológico: Nós de Ideia</div>
-        <div style="font-size: 0.85rem; line-height: 1.6; color: #444; margin-top: 10px;">
-            <p>Enquanto o Card Principal contém o Dado Bruto (a prova), o Nó de Ideia contém a sua cognição para guiar a IA.</p>
-
-            <h4 style="color: #2e7d32; margin-top: 12px;">⚖️ 1. Premissa Lógica (Padrão)</h4>
-            <p><strong>Uso:</strong> Dar contexto jurídico. <em>Ex: "A reclamada possuía mais de 20 funcionários, logo, o ônus da prova era dela."</em><br><strong>Reação da IA:</strong> Anexa a dedução à prova. A IA usará sua premissa como verdade absoluta.</p>
-
-            <h4 style="color: #c62828; margin-top: 12px;">⚡ 2. Comando Direto</h4>
-            <p><strong>Uso:</strong> Instrução imperativa. <em>Ex: "Desconsidere este depoimento na minuta."</em><br><strong>Reação da IA:</strong> Exportado sob a tag <code>&lt;comandos_para_a_minuta&gt;</code>. A IA aplica a ordem imediatamente.</p>
-
-            <h4 style="color: #1565c0; margin-top: 12px;">🎯 3. Texto Fixo / Conclusão</h4>
-            <p><strong>Uso:</strong> O arremate da prova. <em>Ex: "Resta fartamente comprovado o assédio moral corporativo."</em><br><strong>Reação da IA:</strong> Obriga a máquina a utilizar a redação exata fornecida, usando as provas apenas como base.</p>
-
-            <h4 style="color: #616161; margin-top: 12px;">⚠️ 4. Nota Interna (Oculta)</h4>
-            <p><strong>Uso:</strong> Lembretes pessoais de valoração ou contradições.<br><strong>Reação da IA:</strong> Esta nota é <strong>completamente ocultada</strong> na exportação Markdown. A IA não terá acesso.</p>
-
-            <h4 style="color: #e65100; margin-top: 12px;">🏛️ 5. Veredito / Conclusão Final</h4>
-            <p><strong>Uso:</strong> A decisão que o recurso deve receber. <em>Ex: "Dou provimento parcial para excluir a multa do art. 477."</em><br><strong>Reação da IA:</strong> Exportado sob a tag <code>&lt;decisao_magistrado_pretendida&gt;</code>. A IA não tentará adivinhar o final — ela usará sua decisão como o ponto de chegada obrigatório da fundamentação.</p>
-
-            <h4 style="color: #00695c; margin-top: 12px;">📚 6. Fundamentação Legal (Súmula/Lei)</h4>
-            <p><strong>Uso:</strong> Colar uma Súmula do TST ou artigo de lei aplicável. <em>Ex: "Súmula 297 do TST."</em><br><strong>Reação da IA:</strong> Exportado sob a tag <code>&lt;base_legal_obrigatoria&gt;</code>. A IA priorizará este argumento matemático acima de qualquer dedução lógica que ela própria faria.</p>
-
-            <hr style="border: 0; border-top: 1px dashed #ccc; margin: 16px 0;">
-
-            <h4 style="color: #5d4037; margin-top: 12px;">⏳ 7. Filtro / Prejudicial (Ex: Prescrição)</h4>
-            <p><strong>Uso:</strong> Questões temporais (prescrição) ou processuais (inépcia/ilegitimidade).<br><strong>Reação da IA:</strong> Exportado para o TOPO do arquivo. A IA é instruída a redigir e resolver essa barreira antes de analisar as provas de mérito.</p>
-
-            <h4 style="color: #f57c00; margin-top: 12px;">📢 8. Alegação Recursal</h4>
-            <p><strong>Uso:</strong> A tese que a parte está levantando no recurso. <br><strong>Reação da IA:</strong> Usará para abrir a introdução do tópico (Relatório do Conflito).</p>
-
-            <h4 style="color: #3949ab; margin-top: 12px;">🏛️ 9. Fundamento da Origem</h4>
-            <p><strong>Uso:</strong> O que o juiz de 1º grau decidiu sobre o tema. <br><strong>Reação da IA:</strong> Usará para contrapor a alegação e contextualizar o litígio antes de analisar as provas.</p>
-
-            <h4 style="color: #d81b60; margin-top: 12px;">🛡️ 10. Refutação (Mérito)</h4>
-            <p><strong>Uso:</strong> Explicar por que o argumento da parte cai por terra. <br><strong>Reação da IA:</strong> Fica colado à prova na Matriz Dialética, guiando o LLM a escrever os parágrafos de afastamento de teses.</p>
+    <div id="modal-ajuda-intencoes" class="crop-wizard-popup" style="display:none; z-index: 4005; max-width: 800px; width: 90vw; height: 85vh; padding: 0; overflow: hidden;">
+        <div class="wizard-header" style="padding: 16px 20px 8px; margin: 0; background: white;">
+            🧠 Guia Metodológico: Nós de Ideia
+            <button style="float:right; background:none; border:none; cursor:pointer; font-size:1.2rem; color:#999;" onclick="fecharModalAjuda()">✕</button>
         </div>
-        <div class="wizard-actions">
-            <button class="chip-btn chip-cancelar" onclick="fecharModalAjuda()">✕ Fechar Guia</button>
-        </div>
+        <iframe src="guia-ia.html" style="width: 100%; height: calc(100% - 60px); border: none; background: #fdfdfd;"></iframe>
     </div>
 
     <!-- Backdrop dedicado para Reordenação (Evita conflito com o Wizard) -->
@@ -594,5 +563,7 @@
     <script src="js/annotation-actions.js"></script>
     <script src="js/export-manager.js"></script>
     <script src="js/app.js"></script>
+    
+    <div id="quick-intent-tooltip" class="quick-tooltip" style="display: none;"></div>
 </body>
 </html>
