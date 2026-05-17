@@ -170,7 +170,17 @@ window.ExportManager = (function () {
                     const ad = JSON.parse(an.conteudo);
                     md += `- ${docLabel} 🎙️ **[OITIVA DE AUDIÊNCIA]**`;
                     md += ` (${ad.oradorStr || 'Orador não idt.'} — ${ad.labelInicio || '?'} a ${ad.labelFim || '?'}).\n`;
-                    md += `  > 🧠 *Resumo/Transcrição do Assessor:* ${an.comentario || 'Sem transcrição explícita.'}\n`;
+                    
+                    // NOVA APRESENTAÇÃO ESTRUTURADA
+                    if (an.comentario) {
+                        md += `  > 🧠 *Observação / Contexto do Assessor:* ${an.comentario}\n`;
+                    }
+                    if (ad.transcricao) {
+                        md += `  > 📜 *Degravação Literal:* "${ad.transcricao}"\n`;
+                    }
+                    if (!an.comentario && !ad.transcricao) {
+                        md += `  > 🧠 *Sem transcrição ou observações registradas.*\n`;
+                    }
                 } catch (e) {
                     md += `- ${docLabel} 🎙️ **[ÁUDIO]** *Resumo:* ${an.comentario || 'Sem comentário.'}\n`;
                 }

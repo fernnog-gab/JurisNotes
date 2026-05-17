@@ -16,17 +16,28 @@ function abrirMenuAnotacao(topicoId, index, event) {
 
 function abrirMenuSubAnotacao(topicoId, parentIndex, subIndex, event) {
     event.stopPropagation();
-    _menuSubAnotacaoCtx = { topicoId, parentIndex, subIndex };
     
-    // UX: Marca o item ativo no menu com base no estado atual
     const topico = topicos.find(t => t.id === topicoId);
     const sub = topico.anotacoes[parentIndex].subAnotacoes[subIndex];
+
+    // --- NOVA LÓGICA: SHIFT + CLICK ---
+    if (event.shiftKey) {
+        const naoClassificado = (sub.intencao === null || sub.intencao === undefined);
+        if (naoClassificado) {
+            exibirToast('Ação não classificada. Clique normalmente para definir a intenção para a IA.', 'aviso');
+        } else {
+            exibirTooltipRapido(sub.intencao, event);
+        }
+        return; // Impede a abertura do menu completo
+    }
+
     const currentIntent = sub.intencao || 'premissa';
     
     document.querySelectorAll('#sub-annotation-context-menu .btn-intent').forEach(btn => {
         btn.classList.toggle('active-intent', btn.dataset.intent === currentIntent);
     });
-
+    
+    _menuSubAnotacaoCtx = { topicoId, parentIndex, subIndex };
     _posicionarMenu('sub-annotation-context-menu', event);
 }
 
@@ -523,3 +534,55 @@ window.DnDManager = {
         exibirToast('Ordem atualizada!', 'sucesso');
     }
 };
+
+function exibirTooltipRapido(intencao, event) {
+    // Encapsulado para não poluir o namespace global
+    const RESUMOS_IA = {
+        'premissa': { titulo: 'Premissa Lógica', texto: 'A IA usará isso como verdade absoluta para deduzir o caso.' },
+        'comando': { titulo: 'Comando Direto', texto: 'A IA obedecerá a esta ordem exata na hora de redigir.' },
+        'texto': { titulo: 'Texto Fixo', texto: 'A IA fará um "copia e cola" desta redação na minuta.' },
+        'nota': { titulo: 'Nota Oculta', texto: 'A IA NÃO lerá isso. É apenas um lembrete para você.' },
+        'veredito': { titulo: 'Veredito / Conclusão', texto: 'Força a IA a concluir o tópico recursal com esta decisão.' },
+        'fundamentacao': { titulo: 'Base Legal', texto: 'A IA priorizará esta lei/súmula acima de qualquer outra.' },
+        'alegacao': { titulo: 'Alegação Recursal', texto: 'A IA usará isso no Relatório (O que a parte quer).' },
+        'fundamento_sentenca': { titulo: 'Fundamento da Origem', texto: 'A IA usará isso no Relatório (O que o juiz fez).' },
+        'refutacao': { titulo: 'Refutação (Mérito)', texto: 'A IA usará este argumento para derrubar a tese da parte.' },
+        'preliminar': { titulo: 'Filtro / Prejudicial', texto: 'A IA redigirá este tópico antes de entrar no mérito.' }
+    };
+
+    const dados = RESUMOS_IA[intencao];
+    if (!dados) return;
+
+    const tooltip = document.getElementById('quick-intent-tooltip');
+    tooltip.innerHTML = `<strong>${dados.titulo}</strong>${dados.texto}`;
+
+    // Posicionamento Anti-Race-Condition: Bloqueia display antes de medir
+    tooltip.classList.remove('visible');
+    tooltip.style.display = 'block';
+
+    let x = event.clientX + 15;
+    let y = event.clientY + 15;
+    const rect = tooltip.getBoundingClientRect();
+
+    if (x + rect.width > window.innerWidth) x = event.clientX - rect.width - 15;
+    if (y + rect.height > window.innerHeight) y = event.clientY - rect.height - 15;
+
+    tooltip.style.left = `${x}px`;
+    tooltip.style.top = `${y}px`;
+
+    // Dispara a animação apenas no próximo frame
+    requestAnimationFrame(() => {
+        tooltip.classList.add('visible');
+    });
+
+    clearTimeout(tooltip._timer);
+    tooltip._timer = setTimeout(() => fecharTooltipRapido(), 4500);
+}
+
+function fecharTooltipRapido() {
+    const tooltip = document.getElementById('quick-intent-tooltip');
+    if (tooltip && tooltip.classList.contains('visible')) {
+        tooltip.classList.remove('visible');
+        setTimeout(() => { tooltip.style.display = 'none'; }, 200);
+    }
+}

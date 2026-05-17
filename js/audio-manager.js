@@ -92,7 +92,7 @@ window.AudioManager = (function() {
         document.getElementById('audio-speaker-role').value = '';
         document.getElementById('audio-speaker-side-box').style.display = 'none';
         document.getElementById('audio-comment').value = '';
-        document.getElementById('audio-transcription').value = '';
+        document.getElementById('audio-degravacao').value = '';
         
         const backdrop = document.getElementById('wizard-backdrop');
         if(backdrop) backdrop.style.display = 'block';
@@ -162,7 +162,7 @@ window.AudioManager = (function() {
             role: role,
             poloTag: polo,
             labelInicio: formatTime(_timeStart), labelFim: formatTime(_timeEnd),
-            transcricao: transcricao
+            transcricao: degravacao
         });
 
         _deps.salvarAnotacao('audio', conteudoFormatado, 'Ata de Audiência / MP3', polo, topicoId, comment, targetIndex);
