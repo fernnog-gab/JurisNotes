@@ -471,6 +471,47 @@
 .sub-input-btn-icon.cancel:hover { background: #ffebee; color: #c62828; border-color: #ef9a9a; }
 .btn-add-sub { display: none !important; }
 
+/* Grip Handle para as Ideias Secundárias */
+.sub-drag-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px 0 0;
+    color: #ccc;
+    cursor: grab;
+    transition: color 0.2s;
+    height: 100%;
+}
+.sub-drag-handle:hover { color: var(--trt-blue-mid); }
+.sub-drag-handle:active { cursor: grabbing; }
+.sub-drag-handle svg { width: 16px; height: 16px; }
+
+/* Estados do Drag & Drop */
+.sub-annotation-item.dragging {
+    opacity: 0.5;
+    z-index: 100;
+}
+
+/* Feedback Visual Inteligente (Contorna o position: absolute) */
+.sub-annotation-item.drag-over .sub-annotation-card {
+    outline: 2px solid var(--trt-blue-mid);
+    background-color: rgba(26, 58, 92, 0.03);
+}
+
+/* Linha de Inserção Falsa */
+.sub-annotation-item.drag-over::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: var(--trt-blue-mid);
+    border-radius: 2px;
+    z-index: 101;
+    pointer-events: none;
+}
+
 /* ================================================
    7. MODAIS E POPUPS GERAIS
    ================================================ */
