@@ -435,13 +435,49 @@ function confirmarSmartMove() {
         }
     }
 
-    // 2. Extração da Prova da sua Origem Original
+    // 2. Extração da Prova da sua Origem Original (Operação Isolada)
     let itemMovido;
+    let arrayReduziu = false;
+
     if (_smartMoveCtx.correlacionadoIndex !== null) {
+        // Cenário A: Movendo um filho (mantém comportamento original atômico via splice)
         itemMovido = topico.anotacoes[_smartMoveCtx.parentIndex].itensCorrelacionados.splice(_smartMoveCtx.correlacionadoIndex, 1)[0];
     } else {
-        itemMovido = topico.anotacoes.splice(_smartMoveCtx.parentIndex, 1)[0];
-        // Compensação matemática caso a ideia se mova para "baixo" após a própria remoção
+        // Cenário B: Movendo o Card Principal
+        const cardOriginal = topico.anotacoes[_smartMoveCtx.parentIndex];
+
+        if (cardOriginal.itensCorrelacionados && cardOriginal.itensCorrelacionados.length > 0) {
+            // FASE 1: CONSTRUÇÃO EM MEMÓRIA (Deep Clone para evitar mutação cruzada)
+            const cloneProfundo = structuredClone(cardOriginal);
+            
+            // O "novo líder" será o primeiro item dos filhos clonados
+            const novoMainCard = cloneProfundo.itensCorrelacionados.shift();
+            
+            // Transferindo a "coroa" (herança de estado) para o novo líder
+            novoMainCard.tese = cloneProfundo.tese;
+            novoMainCard.subAnotacoes = cloneProfundo.subAnotacoes;
+            novoMainCard.itensCorrelacionados = cloneProfundo.itensCorrelacionados;
+
+            // Preparando o card que vai viajar.
+            // Usamos defaults em vez de 'delete' para preservar a otimização da Hidden Class no V8
+            itemMovido = structuredClone(cardOriginal);
+            itemMovido.itensCorrelacionados = [];
+            itemMovido.subAnotacoes = [];
+            itemMovido.tese = ""; 
+
+            // FASE 2: ESCRITA ATÔMICA (Commit no array oficial)
+            topico.anotacoes[_smartMoveCtx.parentIndex] = novoMainCard;
+            arrayReduziu = false; // A posição foi apenas substituída, o array não diminuiu
+            
+        } else {
+            // Cenário C: Card Principal solteiro
+            itemMovido = topico.anotacoes.splice(_smartMoveCtx.parentIndex, 1)[0];
+            arrayReduziu = true;
+        }
+    }
+
+    // Compensação matemática de índice de destino
+    if (arrayReduziu && _smartMoveCtx.correlacionadoIndex === null) {
         if (!isNova && destinoIdx > _smartMoveCtx.parentIndex) destinoIdx--;
         if (isNova && destinoIdx !== null && destinoIdx > _smartMoveCtx.parentIndex) destinoIdx--; 
     }
