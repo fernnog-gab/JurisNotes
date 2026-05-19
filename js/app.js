@@ -963,6 +963,7 @@ function solicitarExclusaoAba(btnEl, id) {
         topicos = topicos.filter(t => t.id !== id);
         renderizarTopicos();
         salvarBackupAutomatico();
+        window.PdfHighlighter?.atualizarMarcacoesVisiveisGlobais();
         abrirModalGerenciarAbas(); 
         exibirToast('Aba excluída.', 'sucesso');
     } else {
