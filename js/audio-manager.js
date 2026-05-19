@@ -110,66 +110,102 @@ window.AudioManager = (function() {
     }
 
     function toggleAgrupar() {
-        const agrupar = document.querySelector('input[name="modo_agrupar_audio"]:checked').value === 'agrupar';
-        document.getElementById('audio-input-ideia').style.display = agrupar ? 'block' : 'none';
+        // Usa Optional Chaining para evitar crash se nenhum radio for encontrado
+        const radioSelecionado = document.querySelector('input[name="modo_agrupar_audio"]:checked')?.value;
+        const isAgrupar = radioSelecionado === 'agrupar';
+        
+        const inputIdeia = document.getElementById('audio-input-ideia');
+        if (inputIdeia) {
+            inputIdeia.style.display = isAgrupar ? 'block' : 'none';
+        }
     }
 
-    function salvarRecorte() {
-        const topicoId = document.getElementById('audio-topic-select').value;
-        const role = document.getElementById('audio-speaker-role').value;
-        const transcricao = document.getElementById('audio-transcription').value.trim();
-        const comment = document.getElementById('audio-comment').value.trim();
-        
-        if (!topicoId || !role) {
-            _deps.exibirToast('Tópico e Orador são obrigatórios.', 'aviso'); return;
+    function salvarRecorte(btnElement) {
+        // 1. EXTRAÇÃO SEGURA (Evitando multiplos getElementById espalhados e tratando nulos)
+        const inputs = {
+            topicoId: document.getElementById('audio-topic-select')?.value,
+            role: document.getElementById('audio-speaker-role')?.value,
+            poloSecundario: document.getElementById('audio-speaker-side')?.value,
+            transcricao: document.getElementById('audio-degravacao')?.value?.trim() || '',
+            comment: document.getElementById('audio-comment')?.value?.trim() || '',
+            modoAgrupar: document.querySelector('input[name="modo_agrupar_audio"]:checked')?.value || 'nova',
+            numIdeiaAgrupamento: document.getElementById('audio-input-ideia')?.value
+        };
+
+        // 2. VALIDAÇÃO FAIL-FAST
+        if (!inputs.topicoId || !inputs.role) {
+            _deps.exibirToast('Tópico e Orador são obrigatórios.', 'aviso'); 
+            return;
         }
 
-        let polo = '';
-        let oradorFinal = '';
+        // UX: Bloqueia o botão para evitar cliques duplos (Condição de Corrida)
+        if (btnElement) btnElement.disabled = true;
 
-        if (role === 'Testemunha' || role === 'Advogado') {
-            polo = document.getElementById('audio-speaker-side').value;
-            oradorFinal = `${role} da ${polo}`;
-        } else if (role === 'Preposto') {
-            polo = 'Parte Ré';
-            oradorFinal = 'Preposto (Parte Ré)';
-        } else if (role === 'Juízo') {
-            polo = 'Juízo';
-            oradorFinal = 'Magistrado / Juízo';
-        } else if (role === 'Parte Autora') {
-            polo = 'Parte Autora';
-            oradorFinal = 'Depoimento Pessoal (Autora)';
-        } else if (role === 'Parte Ré') {
-            polo = 'Parte Ré';
-            oradorFinal = 'Depoimento Pessoal (Ré)';
-        }
-        
-        let targetIndex = null;
-        if (document.querySelector('input[name="modo_agrupar_audio"]:checked').value === 'agrupar') {
-            const numero = parseInt(document.getElementById('audio-input-ideia').value, 10);
-            const topicosAtuais = _deps.getTopicos(); // Correção: uso do getter
-            const topico = topicosAtuais.find(t => t.id === topicoId);
-            
-            if (isNaN(numero) || numero < 1 || numero > topico.anotacoes.length) {
-                _deps.exibirToast('Número de agrupamento inválido.', 'erro'); return;
+        try {
+            // 3. TRANSFORMAÇÃO DE DADOS LÓGICOS
+            let poloFinal = '';
+            let oradorFinal = '';
+
+            switch (inputs.role) {
+                case 'Testemunha':
+                case 'Advogado':
+                    poloFinal = inputs.poloSecundario;
+                    oradorFinal = `${inputs.role} da ${poloFinal}`;
+                    break;
+                case 'Preposto':
+                    poloFinal = 'Parte Ré';
+                    oradorFinal = 'Preposto (Parte Ré)';
+                    break;
+                case 'Juízo':
+                    poloFinal = 'Juízo';
+                    oradorFinal = 'Magistrado / Juízo';
+                    break;
+                case 'Parte Autora':
+                    poloFinal = 'Parte Autora';
+                    oradorFinal = 'Depoimento Pessoal (Autora)';
+                    break;
+                case 'Parte Ré':
+                    poloFinal = 'Parte Ré';
+                    oradorFinal = 'Depoimento Pessoal (Ré)';
+                    break;
             }
-            targetIndex = numero - 1;
+            
+            let targetIndex = null;
+            if (inputs.modoAgrupar === 'agrupar') {
+                const numero = parseInt(inputs.numIdeiaAgrupamento, 10);
+                const topicosAtuais = _deps.getTopicos(); 
+                const topico = topicosAtuais.find(t => t.id === inputs.topicoId);
+                
+                if (isNaN(numero) || numero < 1 || numero > topico.anotacoes.length) {
+                    _deps.exibirToast('Número de agrupamento inválido.', 'erro'); 
+                    return;
+                }
+                targetIndex = numero - 1;
+            }
+
+            // CORREÇÃO CRÍTICA: Variável transcricao mapeada corretamente
+            const conteudoFormatado = JSON.stringify({
+                inicio: _timeStart, 
+                fim: _timeEnd,
+                oradorStr: oradorFinal,
+                role: inputs.role,
+                poloTag: poloFinal,
+                labelInicio: formatTime(_timeStart), 
+                labelFim: formatTime(_timeEnd),
+                transcricao: inputs.transcricao 
+            });
+
+            // 4. EXECUÇÃO DA AÇÃO
+            _deps.salvarAnotacao('audio', conteudoFormatado, 'Ata de Audiência / MP3', poloFinal, inputs.topicoId, inputs.comment, targetIndex);
+            
+            cancelarAnotacao(); 
+            fecharPlayer();     
+            _deps.exibirToast('Trecho da oitiva salvo!', 'sucesso');
+
+        } finally {
+            // UX: Libera o botão independente de sucesso ou falha no processamento
+            if (btnElement) btnElement.disabled = false;
         }
-
-        const conteudoFormatado = JSON.stringify({
-            inicio: _timeStart, fim: _timeEnd,
-            oradorStr: oradorFinal,
-            role: role,
-            poloTag: polo,
-            labelInicio: formatTime(_timeStart), labelFim: formatTime(_timeEnd),
-            transcricao: degravacao
-        });
-
-        _deps.salvarAnotacao('audio', conteudoFormatado, 'Ata de Audiência / MP3', polo, topicoId, comment, targetIndex);
-        
-        cancelarAnotacao(); // Fecha o modal
-        fecharPlayer();     // Força o player a minimizar e deixar apenas o ícone pulsando
-        _deps.exibirToast('Trecho da oitiva salvo!', 'sucesso');
     }
 
     function cancelarAnotacao() {
