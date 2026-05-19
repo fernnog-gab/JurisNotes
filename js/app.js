@@ -8,7 +8,10 @@ let modoRetomada         = false;  // Flag: true quando restaurando sessão exis
 let _encerrarTimer       = null;   // ID do setTimeout de confirmação do botão Encerrar
 let _encerrarConfirmando = false;  // Flag: aguardando segundo clique para confirmar encerramento
 
-let pdfObserver      = null;   // IntersectionObserver para lazy loading
+// Observers separados para resolver o conflito entre Lazy Loading (Buffer) e UI (Crachá)
+let pdfRenderObserver = null;   // Observer para pré-renderização (lazy loading)
+let pdfReadTracker    = null;   // Observer para o crachá de leitura (UI)
+
 let _sessaoPossuiAudio = false; // Flag de restauração de áudio na retomada de sessão
 
 /* ================================================
@@ -255,9 +258,13 @@ function encerrarSessao() {
     _pageMetadataCache.clear(); // O(1) memory cleanup
     BackupManager.encerrar();
 
-    if (pdfObserver) {
-        pdfObserver.disconnect();
-        pdfObserver = null;
+    if (pdfRenderObserver) {
+        pdfRenderObserver.disconnect();
+        pdfRenderObserver = null;
+    }
+    if (pdfReadTracker) {
+        pdfReadTracker.disconnect();
+        pdfReadTracker = null;
     }
 
     // Reset visual
@@ -417,15 +424,6 @@ async function novoProcesso(event) {
 
 /* ================================================
    CARREGAMENTO DO PDF E LAZY LOADING
-   Novidades v2.1:
-   - onload é agora async para suportar await do hash.
-   - NOVO PROCESSO: BackupManager.iniciarSessao() calcula
-     o hash SHA-256 e registra o processoId antes do
-     diálogo de salvamento.
-   - RETOMAR: BackupManager.validarPdf() compara o hash
-     do PDF apresentado com o hash gravado no backup.
-     Hash inválido → toast de erro + nova tentativa automática.
-     Backup legado (sem hash) → aceito em modo de confiança.
    ================================================ */
 function carregarPDF(event) {
     const file = event.target.files[0];
@@ -495,24 +493,36 @@ function carregarPDF(event) {
                 document.getElementById('pdf-placeholder').style.display = 'none';
                 document.getElementById('floating-page-panel').style.display = 'flex';
 
-                if (pdfObserver) pdfObserver.disconnect();
-                pdfObserver = new IntersectionObserver((entries) => {
+                // 1. Observer de Pré-Renderização (Lazy Loading - Mantém a tela fluida)
+                if (pdfRenderObserver) pdfRenderObserver.disconnect();
+                pdfRenderObserver = new IntersectionObserver((entries) => {
                     entries.forEach(entry => {
-                        const pageNum = parseInt(entry.target.dataset.pageNumber);
-                        if (entry.isIntersecting && entry.intersectionRatio > 0.4) {
-                    currentPage = pageNum;
-                    // O Maestro lida com o que deve aparecer na tela
-                    atualizarDisplayPaginador(currentPage);
-                }
                         if (entry.isIntersecting && entry.target.dataset.loaded === 'false') {
+                            const pageNum = parseInt(entry.target.dataset.pageNumber);
                             renderizarPaginaElemento(pageNum, entry.target);
                             entry.target.dataset.loaded = 'true';
                         }
                     });
-                }, {
-                    root:       document.getElementById('pdf-container'),
-                    rootMargin: '600px 0px',
-                    threshold:  [0, 0.5]
+                }, { 
+                    root: document.getElementById('pdf-container'), 
+                    rootMargin: '600px 0px', 
+                    threshold: 0 
+                });
+
+                // 2. Observer de Rastreamento de Leitura (Atualiza o Crachá Visual)
+                if (pdfReadTracker) pdfReadTracker.disconnect();
+                pdfReadTracker = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const pageNum = parseInt(entry.target.dataset.pageNumber);
+                            currentPage = pageNum;
+                            atualizarDisplayPaginador(currentPage);
+                        }
+                    });
+                }, { 
+                    root: document.getElementById('pdf-container'), 
+                    rootMargin: '-15% 0px -80% 0px', 
+                    threshold: 0 
                 });
 
                 const firstPage   = await pdf.getPage(1);
@@ -532,7 +542,9 @@ function carregarPDF(event) {
                         box-shadow: var(--shadow-md);
                     `;
                     wrapper.appendChild(pageContainer);
-                    pdfObserver.observe(pageContainer);
+                    
+                    pdfRenderObserver.observe(pageContainer);
+                    pdfReadTracker.observe(pageContainer);
                 }
 
                 // — Gestão de sessão pós-carregamento ——————————————
@@ -560,11 +572,6 @@ function carregarPDF(event) {
 
 /* ================================================
    RENDERIZAÇÃO DINÂMICA (PÁGINA INDIVIDUAL) — v4.x
-   Arquitetura preservada: Lazy Loading + IntersectionObserver
-   Atualizações aplicadas:
-   - Motor TextLayer V4 com CSS Variables (--scale-factor)
-   - Task Cancellation p/ evitar colapso de memória em scroll rápido
-   - Ajuste de Matrix (transform) p/ suporte perfeito Retina Display
    ================================================ */
 async function renderizarPaginaElemento(num, container) {
     if (!pdfDoc) return;
@@ -649,10 +656,6 @@ async function renderizarPaginaElemento(num, container) {
    GESTÃO DE TÓPICOS RECURSAIS
    ================================================ */
 
-/**
- * Abre um prompt para o usuário nomear o novo tópico,
- * valida duplicatas e o adiciona ao array topicos[].
- */
 function criarTopicoPrompt() {
     const nome = prompt('Digite o nome do Tópico Recursal:\n(ex: Admissibilidade, Mérito — Dano Moral, Honorários)');
     if (!nome || !nome.trim()) return;
@@ -679,29 +682,40 @@ function criarTopicoPrompt() {
     exibirToast(`Tópico "${nomeLimpo}" criado.`);
 }
 
-/**
- * Delega a renderização do fichário para o módulo gestor isolado.
- */
 function renderizarTopicos() {
     TopicsManager.renderizarFichario(topicos);
 }
 
-// Funções de UI antigas removidas. Lógica assumida pelo TopicsManager.
-
 /* ================================================
-   CAPTURA MANUAL DE TEXTO SELECIONADO
+   CAPTURA MANUAL DE TEXTO SELECIONADO E SNAPSHOT
    ================================================ */
 function capturarTrechoSelecionado() {
-    const selection    = window.getSelection();
+    const selection = window.getSelection();
     const selecaoTexto = selection.toString().trim();
 
-    if (selecaoTexto.length > 5) {
-        const range = selection.getRangeAt(0);
-        const rect  = range.getBoundingClientRect();
-        exibirPopupClassificacao('texto', selecaoTexto, rect.left, rect.bottom + 10);
-    } else {
+    if (selecaoTexto.length <= 5) {
         exibirToast('Selecione um trecho válido no documento antes de usar esta ferramenta.', 'aviso');
+        return;
     }
+
+    // Travessia segura de DOM (null-guard)
+    const node = selection.anchorNode;
+    if (!node) return; // Evita crashes se a seleção foi perdida/programática
+
+    const isTextNode = node.nodeType === 3;
+    const element = isTextNode ? node.parentNode : node;
+    const pageContainer = element.closest('.pdf-page-container');
+
+    // Mapeia a página ancorada ou usa a global como último recurso extremo
+    const anchorPage = pageContainer && pageContainer.dataset.pageNumber 
+        ? parseInt(pageContainer.dataset.pageNumber, 10) 
+        : currentPage;
+
+    const range = selection.getRangeAt(0);
+    const rect  = range.getBoundingClientRect();
+    
+    // Injeta a página correta no momento da abertura do popup (passada como parâmetro extra)
+    exibirPopupClassificacao('texto', selecaoTexto, rect.left, rect.bottom + 10, anchorPage);
 }
 
 /* ================================================
@@ -725,22 +739,21 @@ function identificarFaseMetodologica(docNome) {
 
 /* ================================================
    PERSISTÊNCIA DE ANOTAÇÕES
-   CORREÇÃO: não troca de aba automaticamente (evita regressão de UX).
-   Usa toast não-intrusivo como feedback.
    ================================================ */
-async function salvarAnotacao(tipo, conteudo, documento, polo, topicoId, comentario = '', targetParentIndex = null) {
+async function salvarAnotacao(tipo, conteudo, documento, polo, topicoId, comentario = '', targetParentIndex = null, anchorPageOverride = null) {
     const topicoAlvo = topicos.find(t => t.id === topicoId);
     if (!topicoAlvo) return;
 
-    // Busca o dado, garantindo que seja preenchido caso seja um card não renderizado visualmente
-    const metaDaPagina = await extrairMetadadosDaPagina(currentPage);
+    // Usa a página congelada no clique, não a que está na tela agora
+    const pageTarget = anchorPageOverride || currentPage;
+    const metaDaPagina = await extrairMetadadosDaPagina(pageTarget);
     
     // Aplica a sincronização lógica aqui (Fls carimbado tem prioridade via obterRotuloPagina)
     const novaExtracao = {
         tipo,
         documento,
         polo,
-        pagina: obterRotuloPagina(currentPage), 
+        pagina: obterRotuloPagina(pageTarget), 
         timestamp: Date.now(),
         conteudo: conteudo,
         pjeId: metaDaPagina.pjeId,
@@ -791,13 +804,8 @@ document.addEventListener('keydown', function (e) {
 
 /* ================================================
    GERENCIAMENTO DE ANOTAÇÕES
-   Menu contextual, exclusão e reordenamento.
    ================================================ */
 
-/**
- * Handler global de clique — fecha todos os menus e popups flutuantes.
- * Centralizado aqui para evitar múltiplos listeners no document.
- */
 document.addEventListener('click', function (e) {
     // 1. Fecha o popup de classificação se o clique foi fora dele
     const popup = document.getElementById('classification-popup');
@@ -874,7 +882,6 @@ function irParaPagina() {
     }
 }
 
-// Suporte para acionamento via tecla Enter
 document.getElementById('goto-page-input')?.addEventListener('keypress', function (e) {
     if (e.key === 'Enter') irParaPagina();
 });
@@ -882,9 +889,6 @@ document.getElementById('goto-page-input')?.addEventListener('keypress', functio
 /* ================================================
    EXTRATOR DE METADADOS (PJe e Numeração Fls.)
    ================================================ */
-/**
- * Extrai Id Pje e a Marcação "Fls.:" impressa usando sanitização extrema.
- */
 async function extrairMetadadosDaPagina(pageNum, textContentPreCarregado = null) {
     if (_pageMetadataCache.has(pageNum)) return _pageMetadataCache.get(pageNum);
     
@@ -895,21 +899,19 @@ async function extrairMetadadosDaPagina(pageNum, textContentPreCarregado = null)
             textContent = await page.getTextContent();
         }
 
-        // 1. Array de strings puras
-        const textArray = textContent.items.map(item => item.str);
+        // String para o Hash PJe (preserva espaços normais)
+        const fullTextNormal = textContent.items.map(item => item.str).join(' ');
         
-        // 2. String para o Hash PJe (preserva espaços normais para a regex de hora/hash)
-        const fullTextNormal = textArray.join(' ');
+        // Mantém hash PJe
         const regexPje = /\d{2}:\d{2}:\d{2}\s*-\s*([a-f0-9]{7,})\b/i;
         const matchPje = fullTextNormal.match(regexPje);
         const pjeId = matchPje ? matchPje[1].toLowerCase() : null;
         
-        // 3. SANITIZAÇÃO AGRESSIVA PARA O "FLS.:" (Destrói espaços para evitar fragmentação do PDF)
-        const strippedText = textArray.join('').replace(/\s+/g, '');
-        
-        // Agora procuramos fls:150 ou fls.:150 diretamente na string compactada
-        const regexFlsAgressiva = /fls\.?:(\d+)/i;
-        const matchFls = strippedText.match(regexFlsAgressiva);
+        // Estratégia de Fallback (Restrita -> Tolerante)
+        const regexFlsRigida = /\bfls\.?\s*:\s*(\d+)\b/i; // Busca exata por Fls.: 150
+        const regexFlsTolerante = /\bfls\.?\s+(\d+)\b/i;   // Fallback para Fls 150 (se mal formatado)
+
+        const matchFls = fullTextNormal.match(regexFlsRigida) || fullTextNormal.match(regexFlsTolerante);
         const flsNum = matchFls ? matchFls[1] : null;
 
         const resultado = { pjeId, flsNum };
@@ -925,12 +927,7 @@ async function extrairMetadadosDaPagina(pageNum, textContentPreCarregado = null)
 }
 
 /* ================================================
-   FUNÇÃO DE IMPRESSÃO REMOVIDA
-   A exportação agora é delegada ao módulo ExportManager.
-   ================================================ */
-
-/* ================================================
-   MENU JURIS NOTES E GESTÃO DE ABAS (Resolve Alertas 3 e 4)
+   MENU JURIS NOTES E GESTÃO DE ABAS
    ================================================ */
 function abrirMenuJuris(event) {
     event.stopPropagation();
@@ -999,7 +996,6 @@ function renomearAba(id) {
     }
 }
 
-// Implementação de exclusão segura em "Dois Cliques" (Resolve Alerta 4)
 function solicitarExclusaoAba(btnEl, id) {
     if (btnEl.dataset.confirming === "true") {
         // Segundo clique confirmado
