@@ -718,18 +718,25 @@
    ================================================ */
 .pdf-highlight {
     position: absolute;
-    mix-blend-mode: multiply;
-    opacity: 0.35;
     pointer-events: none;
     z-index: 5;
-    border-radius: 2px;
+    /* Reset total para remover opacity 0.35 e mix-blend-mode */
+    background-color: transparent !important;
+    opacity: 1 !important;
+    mix-blend-mode: normal !important;
+    border-radius: 0 !important;
+    /* Posicionamento do sublinhado na baseline */
+    box-sizing: content-box;
+    border-bottom-width: 2px;
+    border-bottom-style: solid;
+    transform: translateY(1px); /* Ajuste fino ótico */
 }
 
 /* Consumo dinâmico das variáveis globais do sistema */
-.highlight-fase-1 { background-color: var(--fase-1-color, #2196F3); }
-.highlight-fase-2 { background-color: var(--fase-2-color, #4CAF50); }
-.highlight-fase-3 { background-color: var(--fase-3-color, #9C27B0); }
-.highlight-fase-4 { background-color: var(--fase-4-color, #FF9800); }
+.highlight-fase-1 { border-bottom-color: var(--fase-1-color, #2196F3); }
+.highlight-fase-2 { border-bottom-color: var(--fase-2-color, #4CAF50); }
+.highlight-fase-3 { border-bottom-color: var(--fase-3-color, #9C27B0); }
+.highlight-fase-4 { border-bottom-color: var(--fase-4-color, #FF9800); }
 
 .pdf-marker {
     position: absolute;
@@ -741,6 +748,12 @@
     cursor: help;
     z-index: 10;
     transform: translate(-10px, -2px);
+    transition: transform 0.2s, z-index 0.2s; /* Suavidade no hover */
+}
+
+.pdf-marker:hover {
+    z-index: 50; /* Garante que o tooltip ativado fique por cima dos outros */
+    transform: translate(-10px, -2px) scale(1.1);
 }
 
 /* Tooltip nativo em CSS (Balão e Seta) */
@@ -752,11 +765,15 @@
     transform: translateX(-50%) translateY(-10px); /* Posição inicial */
     background: #1a3a5c;
     color: white;
-    padding: 6px 10px;
+    padding: 10px 14px;
     border-radius: 6px;
     font-size: 0.75rem;
-    font-weight: bold;
-    white-space: nowrap;
+    font-weight: normal; /* Melhora a leitura de textos mais longos */
+    white-space: pre-wrap; /* MÁGICA: Permite uso de \n no JS */
+    text-align: left;
+    max-width: 320px;      /* Maior largura para leitura de resumos */
+    width: max-content;    /* Adapta ao conteúdo até o limite */
+    line-height: 1.4;
     opacity: 0;
     visibility: hidden;
     transition: all 0.2s ease;
