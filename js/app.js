@@ -16,14 +16,38 @@ let _sessaoPossuiAudio = false; // Flag de restauração de áudio na retomada d
    ================================================ */
 let pageLabelsGlobais = null; // Armazena a numeração oficial (PJe/Foxit)
 
+// NOVO: Cache unificado e performático usando Map nativo
+const _pageMetadataCache = new Map(); 
+
+/**
+ * Atualiza o painel superior apenas se a página solicitada for a página atualmente visualizada.
+ * Fonte única de verdade para o DOM do paginador.
+ */
+function atualizarDisplayPaginador(pageNum) {
+    if (currentPage !== pageNum) return; // Guarda contra Race Conditions de scroll
+
+    const meta = _pageMetadataCache.get(pageNum);
+    const rotuloFls = meta ? meta.flsNum : null;
+    
+    // Fallback: Cache carimbado -> Metadado Lógico -> Índice Físico
+    let displayLabel = pageNum;
+    if (rotuloFls) {
+        displayLabel = rotuloFls;
+    } else if (pageLabelsGlobais && pageLabelsGlobais[pageNum - 1]) {
+        displayLabel = pageLabelsGlobais[pageNum - 1];
+    }
+    
+    document.getElementById('current-page-display').textContent = displayLabel;
+}
+
 /**
  * Função utilitária para obter o rótulo lógico da página.
  * Retorna o rótulo se existir, ou faz o fallback seguro para o número físico.
  */
 function obterRotuloPagina(paginaFisica) {
-    if (pageLabelsGlobais && pageLabelsGlobais[paginaFisica - 1]) {
-        return pageLabelsGlobais[paginaFisica - 1];
-    }
+    const meta = _pageMetadataCache.get(paginaFisica);
+    if (meta && meta.flsNum) return meta.flsNum;
+    if (pageLabelsGlobais && pageLabelsGlobais[paginaFisica - 1]) return pageLabelsGlobais[paginaFisica - 1];
     return paginaFisica;
 }
 
@@ -221,6 +245,8 @@ function encerrarSessao() {
     topicos      = [];
     pdfDoc       = null;
     modoRetomada = false;
+    pageLabelsGlobais = null; // Fix: Evita vazamento entre sessões
+    _pageMetadataCache.clear(); // O(1) memory cleanup
     BackupManager.encerrar();
 
     if (pdfObserver) {
@@ -468,10 +494,10 @@ function carregarPDF(event) {
                     entries.forEach(entry => {
                         const pageNum = parseInt(entry.target.dataset.pageNumber);
                         if (entry.isIntersecting && entry.intersectionRatio > 0.4) {
-                            currentPage = pageNum;
-                            // Utiliza a função utilitária para exibir o rótulo oficial
-                            document.getElementById('current-page-display').textContent = obterRotuloPagina(currentPage);
-                        }
+                    currentPage = pageNum;
+                    // O Maestro lida com o que deve aparecer na tela
+                    atualizarDisplayPaginador(currentPage);
+                }
                         if (entry.isIntersecting && entry.target.dataset.loaded === 'false') {
                             renderizarPaginaElemento(pageNum, entry.target);
                             entry.target.dataset.loaded = 'true';
@@ -593,6 +619,14 @@ async function renderizarPaginaElemento(num, container) {
         });
         await tl.render();
 
+        // NOVO: Injeta o textContent já parseado, a custo computacional quase zero.
+        if (!_pageMetadataCache.has(num)) {
+            extrairMetadadosDaPagina(num, textContent).then(() => {
+                // Notifica o Maestro para tentar atualizar o display
+                atualizarDisplayPaginador(num);
+            });
+        }
+
     } catch (err) {
         if (err.name === 'RenderingCancelledException') {
             console.log(`Renderização da página ${num} cancelada de forma segura (scroll out).`);
@@ -691,15 +725,18 @@ async function salvarAnotacao(tipo, conteudo, documento, polo, topicoId, comenta
     const topicoAlvo = topicos.find(t => t.id === topicoId);
     if (!topicoAlvo) return;
 
-    const pjeId = await extrairIdPjeDaPagina(currentPage);
+    // Busca o dado, garantindo que seja preenchido caso seja um card não renderizado visualmente
+    const metaDaPagina = await extrairMetadadosDaPagina(currentPage);
+    
+    // Aplica a sincronização lógica aqui (Fls carimbado tem prioridade via obterRotuloPagina)
     const novaExtracao = {
         tipo,
         documento,
         polo,
-        pagina: obterRotuloPagina(currentPage), // Aplica a sincronização lógica aqui
+        pagina: obterRotuloPagina(currentPage), 
         timestamp: Date.now(),
         conteudo: conteudo,
-        pjeId: pjeId,
+        pjeId: metaDaPagina.pjeId,
         comentario: comentario
     };
 
@@ -798,14 +835,23 @@ function irParaPagina() {
 
     let pageNum = parseInt(termoBusca, 10);
 
-    // Engenharia Reversa: Procurar no array de rótulos o índice físico correspondente
-    if (pageLabelsGlobais) {
+    // 1. Busca reversa no cache de folhas impressas (O(n) suportável para Map pequeno)
+    let encontradoNoCache = false;
+    for (const [key, value] of _pageMetadataCache.entries()) {
+        if (value.flsNum === termoBusca) {
+            pageNum = key;
+            encontradoNoCache = true;
+            break;
+        }
+    }
+
+    // 2. Fallback para os metadados lógicos do PDF
+    if (!encontradoNoCache && pageLabelsGlobais) {
         const indexEncontrado = pageLabelsGlobais.findIndex(label => 
             label && label.toString().trim().toLowerCase() === termoBusca
         );
-        
         if (indexEncontrado !== -1) {
-            pageNum = indexEncontrado + 1; // Array é 0-based, PDF.js é 1-based
+            pageNum = indexEncontrado + 1;
         }
     }
 
@@ -827,28 +873,42 @@ document.getElementById('goto-page-input')?.addEventListener('keypress', functio
 });
 
 /* ================================================
-   EXTRATOR DE IDENTIFICADOR PJe (BACKGROUND)
+   EXTRATOR DE METADADOS (PJe e Numeração Fls.)
    ================================================ */
-const _pjeIdCache = {}; // Cache de processamento
-
-async function extrairIdPjeDaPagina(pageNum) {
-    if (_pjeIdCache[pageNum]) return _pjeIdCache[pageNum];
+/**
+ * Extrai Id Pje e Numeração Impressa.
+ * Agora exige o textContent já mastigado pelo PDF.js para não onerar a memória.
+ */
+async function extrairMetadadosDaPagina(pageNum, textContentPreCarregado = null) {
+    // Retorna rápido se já processou
+    if (_pageMetadataCache.has(pageNum)) return _pageMetadataCache.get(pageNum);
     
     try {
-        const page = await pdfDoc.getPage(pageNum);
-        const textContent = await page.getTextContent();
+        let textContent = textContentPreCarregado;
+        if (!textContent) {
+            // Apenas para chamadas isoladas fora da renderização visual
+            const page = await pdfDoc.getPage(pageNum);
+            textContent = await page.getTextContent();
+        }
+
         const fullText = textContent.items.map(item => item.str).join(' ');
         
-        // Regex aprimorada: captura 7 ou mais caracteres alfanuméricos após a hora
         const regexPje = /\d{2}:\d{2}:\d{2}\s*-\s*([a-f0-9]{7,})\b/i;
-        const match = fullText.match(regexPje);
+        const matchPje = fullText.match(regexPje);
+        const pjeId = matchPje ? matchPje[1].toLowerCase() : null;
         
-        const id = match ? match[1].toLowerCase() : null;
-        _pjeIdCache[pageNum] = id;
-        return id;
+        // Regex robusta para variações de Fls.
+        const regexFls = /Fls\.?\s*:\s*(\d+)/i;
+        const matchFls = fullText.match(regexFls);
+        const flsNum = matchFls ? matchFls[1] : null;
+
+        const resultado = { pjeId, flsNum };
+        _pageMetadataCache.set(pageNum, resultado);
+        
+        return resultado;
     } catch (err) {
-        console.error('Falha ao extrair texto para ID do PJe:', err);
-        return null;
+        console.error('Falha ao extrair metadados da página:', err);
+        return { pjeId: null, flsNum: null };
     }
 }
 
