@@ -155,14 +155,16 @@ function voltarParaDocumentos(context, event) {
 function executarSalvamento(docLabel, polo, topicoId, targetIndex, context) {
     if (context === 'popup') {
         const comentario = document.getElementById('comentario-input').value.trim();
-        salvarAnotacao(pendingTipo, pendingConteudo, docLabel, polo, topicoId, comentario, targetIndex);
+        salvarAnotacao(pendingTipo, pendingConteudo, docLabel, polo, topicoId, comentario, targetIndex, window.pendingCoordenadas);
         fecharPopupClassificacao();
     } else {
         _ultimoTopicoUsadoId = topicoId;
         const comentario = document.getElementById('crop-comment-input').value.trim();
-        salvarAnotacao('imagem', _wizardImagemCapturada, docLabel, polo, topicoId, comentario, targetIndex);
+        salvarAnotacao('imagem', _wizardImagemCapturada, docLabel, polo, topicoId, comentario, targetIndex, window.pendingCoordenadas);
         fecharTudoWizard();
     }
+    // Flush de segurança por via das dúvidas
+    window.pendingCoordenadas = null;
 }
 
 /* ================================================
@@ -305,6 +307,9 @@ function fecharTudoWizard() {
     document.getElementById('wizard-backdrop').style.display   = 'none';
     _wizardTopicoSelecionado = null;
     _wizardImagemCapturada   = null;
+    
+    // NOVO: Limpa as coordenadas da memória para não vazar para a próxima extração
+    window.pendingCoordenadas = null;
 }
 
 /* ================================================
@@ -330,6 +335,9 @@ function fecharPopupClassificacao() {
     
     const header = document.getElementById('popup-topic-color-feedback');
     if(header) header.style.height = '0';
+
+    // NOVO: Limpa as coordenadas da memória para não vazar para a próxima extração
+    window.pendingCoordenadas = null;
 }
 
 function exibirPopupClassificacao(tipo, conteudo) {
@@ -479,6 +487,11 @@ overlay.addEventListener('mouseup', function (e) {
 
     const scaleX = canvas.width  / canvasRect.width;
     const scaleY = canvas.height / canvasRect.height;
+
+    // NOVO: Grava as coordenadas exatas para o PDF Highlighter desenhar depois
+    window.pendingCoordenadas = {
+        rects: [{ top: srcY, left: srcX, width: srcW, height: srcH }]
+    };
 
     const recorteCanvas = document.createElement('canvas');
     recorteCanvas.width  = Math.round(srcW * scaleX);
