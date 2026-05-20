@@ -626,6 +626,24 @@
 .audio-card-meta strong { color: var(--trt-blue-mid); }
 .audio-card-meta span { font-size: 0.85rem; color: #555; }
 
+/* Redimensionamento automático do ícone de áudio em cards filhos */
+.correlated-card .audio-icon-box {
+    transform: scale(0.85);
+    margin-left: -8px;
+}
+
+/* Destaque visual unificado para marcadores de tempo */
+.audio-time-badge {
+    color: #d84315;
+    font-weight: 600;
+    font-size: 0.85rem;
+    display: inline-block;
+    margin-top: 4px;
+}
+.correlated-card .audio-time-badge {
+    font-size: 0.8rem; /* Ajuste fino para cards aninhados */
+}
+
 /* Responsividade Mobile (Timeline) */
 @media (max-width: 480px) {
     .timeline-container { padding: 24px 10px 10px; }
