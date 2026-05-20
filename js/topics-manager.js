@@ -136,6 +136,26 @@ window.TopicsManager = (function () {
         return { htmlConteudo, htmlComentario };
     }
 
+    /**
+     * Extrai a referência (meta-texto) do canto superior direito.
+     * Para documentos, retorna ID e Folha. Para áudios, retorna os marcadores de tempo.
+     */
+    function _obterMetaTexto(item) {
+        if (item.tipo === 'audio') {
+            try {
+                const dados = JSON.parse(item.conteudo);
+                // Retorna exatamente o formato que o usuário quer copiar para a minuta
+                return `(⏱️ ${dados.labelInicio} a ${dados.labelFim})`;
+            } catch (e) {
+                return '(Oitiva)';
+            }
+        }
+        
+        // Tratamento padrão para documentos e imagens
+        const idFormt = item.pjeId ? `Id. ${item.pjeId} - ` : '';
+        return item.pagina ? `(${idFormt}fl. ${item.pagina})` : '';
+    }
+
     // Função estática gerarSVGConector removida (substituída pelo motor dinâmico desenharConexoes)
 
     /**
@@ -148,10 +168,7 @@ window.TopicsManager = (function () {
         const total    = arr.length;
         const numero   = index + 1;
         const tagClass = poloParaClasse(anotacao.polo);
-        const idFormatado = anotacao.pjeId ? `Id. ${anotacao.pjeId} - ` : '';
-        const metaTexto = anotacao.pagina 
-            ? `(${idFormatado}fl. ${anotacao.pagina})` 
-            : (anotacao.tipo === 'audio' ? `(Oitiva)` : '');
+        const metaTexto = _obterMetaTexto(anotacao);
 
         let htmlConteudo = '';
         let htmlComentario = '';
@@ -297,12 +314,7 @@ window.TopicsManager = (function () {
         if (anotacao.itensCorrelacionados && anotacao.itensCorrelacionados.length > 0) {
             htmlCorrelacionados = anotacao.itensCorrelacionados.map((item, cIdx) => {
                 const itemTag = poloParaClasse(item.polo);
-                const idFormt = item.pjeId ? `Id. ${item.pjeId} - ` : '';
-                
-                // FIX CRÍTICO: Aplica fallback para evitar (fl. undefined)
-                const itemMeta = item.tipo === 'audio' 
-                    ? '(Oitiva)' 
-                    : `(${idFormt}fl. ${item.pagina})`;
+                const itemMeta = _obterMetaTexto(item);
                 
                 let cConteudo = '';
                 let cComent = '';
