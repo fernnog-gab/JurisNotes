@@ -204,6 +204,19 @@ window.ExportManager = (function () {
                         md += `${cDocLabel}\n`;
                         md += `    > 🖼️ **[IMAGEM ANEXA: \`${imgNomeSub}\`]**\n`;
                         md += `    > 🧠 *Comentário:* ${corr.comentario || 'Analise a ligação técnica desta prova com o elemento principal acima.'}\n`;
+                    } else if (corr.tipo === 'audio') {
+                        try {
+                            const ad = JSON.parse(corr.conteudo);
+                            const oradorFinal = ad.role || ad.oradorStr || 'Orador não idt.';
+                            
+                            md += `${cDocLabel} 🎙️ **[OITIVA DE AUDIÊNCIA]** (${oradorFinal} — ${ad.labelInicio || '?'} a ${ad.labelFim || '?'}).\n`;
+                            
+                            if (corr.comentario) md += `    > 🧠 *Observação / Contexto:* ${corr.comentario}\n`;
+                            if (ad.transcricao) md += `    > 📜 *Degravação Literal:* "${ad.transcricao}"\n`;
+                            if (!corr.comentario && !ad.transcricao) md += `    > 🧠 *Sem observações registradas.*\n`;
+                        } catch (e) {
+                            md += `${cDocLabel} 🎙️ **[ÁUDIO]** *Contexto:* ${corr.comentario || 'Informativo ausente.'}\n`;
+                        }
                     }
                 });
             }

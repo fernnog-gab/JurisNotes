@@ -86,6 +86,56 @@ window.TopicsManager = (function () {
             .replace(/^-|-$/g, '');          
     }
 
+    /**
+     * Motor unificado para construção de cards de áudio.
+     * Desacopla o parseamento do JSON do loop principal de renderização.
+     */
+    function _gerarHtmlCardAudio(anotacao) {
+        let htmlConteudo = '';
+        let htmlComentario = '';
+        
+        try {
+            const dadosAudio = JSON.parse(anotacao.conteudo);
+            
+            // Fallback unificado para nomenclatura segura
+            const nomePapel = dadosAudio.role || dadosAudio.oradorStr || 'Orador não idt.';
+            const classePolo = dadosAudio.poloTag ? poloParaClasse(dadosAudio.poloTag) : 'doc-tag';
+            
+            let tagVisual = `<span class="polo-tag ${classePolo}">${escaparHTML(nomePapel)}</span>`;
+            if ((dadosAudio.role === 'Testemunha' || dadosAudio.role === 'Advogado') && dadosAudio.poloTag) {
+                tagVisual = `<span class="polo-tag doc-tag">${escaparHTML(dadosAudio.role)}</span> <span class="polo-tag ${classePolo}">${escaparHTML(dadosAudio.poloTag)}</span>`;
+            }
+
+            htmlConteudo = `
+                <div class="card-audio">
+                    <div class="audio-icon-box">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                            <line x1="12" y1="19" x2="12" y2="23"></line>
+                            <line x1="8" y1="23" x2="16" y2="23"></line>
+                        </svg>
+                    </div>
+                    <div class="audio-card-meta">
+                        <strong>Oitiva:</strong> ${tagVisual}<br>
+                        <span class="audio-time-badge">⏱️ ${dadosAudio.labelInicio} a ${dadosAudio.labelFim}</span>
+                    </div>
+                </div>`;
+
+            let comentarios = [];
+            if (anotacao.comentario) comentarios.push(`<strong>Contexto:</strong> ${escaparHTML(anotacao.comentario)}`);
+            if (dadosAudio.transcricao) comentarios.push(`<strong>Degravação:</strong> <em>"${escaparHTML(dadosAudio.transcricao)}"</em>`);
+            
+            if (comentarios.length > 0) {
+                htmlComentario = `<div class="card-comentario" style="display:flex; flex-direction:column; gap:6px;">${comentarios.join('<br>')}</div>`;
+            }
+        } catch (e) {
+            htmlConteudo = `<p class="card-texto" style="color:#c62828;">[Erro: metadados do áudio corrompidos]</p>`;
+        }
+        
+        return { htmlConteudo, htmlComentario };
+    }
+
     // Função estática gerarSVGConector removida (substituída pelo motor dinâmico desenharConexoes)
 
     /**
@@ -108,46 +158,17 @@ window.TopicsManager = (function () {
 
         if (anotacao.tipo === 'texto') {
             htmlConteudo = `<p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(anotacao.conteudo))}"</p>`;
+            if (anotacao.comentario) htmlComentario = `<div class="card-comentario"><strong>Observação:</strong> ${escaparHTML(anotacao.comentario)}</div>`;
         } else if (anotacao.tipo === 'imagem') {
             htmlConteudo = `
             <div class="image-resize-wrapper" title="Arraste o canto inferior direito para redimensionar">
                 <img class="card-imagem" src="${anotacao.conteudo}" alt="Recorte">
             </div>`;
+            if (anotacao.comentario) htmlComentario = `<div class="card-comentario"><strong>Descrição:</strong> ${escaparHTML(anotacao.comentario)}</div>`;
         } else if (anotacao.tipo === 'audio') {
-            try {
-                const dadosAudio = JSON.parse(anotacao.conteudo);
-                
-                // Lógica retrocompatível e estilizada
-                const nomePapel = dadosAudio.role || dadosAudio.oradorStr;
-                const classePolo = dadosAudio.poloTag ? poloParaClasse(dadosAudio.poloTag) : 'doc-tag';
-                let tagVisual = `<span class="polo-tag ${classePolo}">${escaparHTML(nomePapel)}</span>`;
-                
-                // Agrupamento de tag (Ex: [Testemunha] [Parte Autora])
-                if ((dadosAudio.role === 'Testemunha' || dadosAudio.role === 'Advogado') && dadosAudio.poloTag) {
-                    tagVisual = `<span class="polo-tag doc-tag">${escaparHTML(dadosAudio.role)}</span> <span class="polo-tag ${classePolo}">${escaparHTML(dadosAudio.poloTag)}</span>`;
-                }
-
-                htmlConteudo = `
-                    <div class="card-audio">
-                        <div class="audio-icon-box">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                            </svg>
-                        </div>
-                        <div class="audio-card-meta">
-                            <strong>Trecho da oitiva:</strong> ${tagVisual}<br>
-                            <span style="display:inline-block; margin-top: 4px;">⏱️ ${dadosAudio.labelInicio} a ${dadosAudio.labelFim}</span>
-                        </div>
-                    </div>`;
-            } catch (e) {
-                htmlConteudo = `<p class="card-texto" style="color:#c62828;">[Erro: metadados do áudio corrompidos]</p>`;
-            }
-        }
-
-        const comentarioSeguro = escaparHTML(anotacao.comentario);
-        if (comentarioSeguro && (anotacao.tipo === 'imagem' || anotacao.tipo === 'audio')) {
-            htmlComentario = `<div class="card-comentario"><strong>${anotacao.tipo === 'audio' ? 'Transcrição' : 'Descrição'}:</strong> ${comentarioSeguro}</div>`;
+            const audioData = _gerarHtmlCardAudio(anotacao);
+            htmlConteudo = audioData.htmlConteudo;
+            htmlComentario = audioData.htmlComentario;
         }
 
         const isLeft     = index % 2 === 0;
@@ -277,18 +298,26 @@ window.TopicsManager = (function () {
             htmlCorrelacionados = anotacao.itensCorrelacionados.map((item, cIdx) => {
                 const itemTag = poloParaClasse(item.polo);
                 const idFormt = item.pjeId ? `Id. ${item.pjeId} - ` : '';
-                const itemMeta = `(${idFormt}fl. ${item.pagina})`;
                 
-                const cConteudo = item.tipo === 'texto'
-                    ? `<p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(item.conteudo))}"</p>`
-                    : `
-                    <div class="image-resize-wrapper" title="Arraste o canto inferior direito para redimensionar">
-                        <img class="card-imagem" src="${item.conteudo}" alt="Recorte de Agrupamento">
-                    </div>`;
-                    
-                const cComent = (item.tipo === 'imagem' && item.comentario)
-                    ? `<div class="card-comentario"><strong>Descrição:</strong> ${escaparHTML(item.comentario)}</div>`
-                    : '';
+                // FIX CRÍTICO: Aplica fallback para evitar (fl. undefined)
+                const itemMeta = item.tipo === 'audio' 
+                    ? '(Oitiva)' 
+                    : `(${idFormt}fl. ${item.pagina})`;
+                
+                let cConteudo = '';
+                let cComent = '';
+                
+                if (item.tipo === 'texto') {
+                    cConteudo = `<p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(item.conteudo))}"</p>`;
+                    if (item.comentario) cComent = `<div class="card-comentario"><strong>Observação:</strong> ${escaparHTML(item.comentario)}</div>`;
+                } else if (item.tipo === 'imagem') {
+                    cConteudo = `<div class="image-resize-wrapper" title="Arraste para redimensionar"><img class="card-imagem" src="${item.conteudo}" alt="Agrupamento"></div>`;
+                    if (item.comentario) cComent = `<div class="card-comentario"><strong>Descrição:</strong> ${escaparHTML(item.comentario)}</div>`;
+                } else if (item.tipo === 'audio') {
+                    const audioData = _gerarHtmlCardAudio(item);
+                    cConteudo = audioData.htmlConteudo;
+                    cComent = audioData.htmlComentario;
+                }
                     
                 return `
                 <div class="correlated-item-wrapper" data-cidx="${cIdx}"
