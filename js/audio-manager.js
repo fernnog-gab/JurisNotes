@@ -9,6 +9,8 @@ window.AudioManager = (function() {
     let _audioUrl = null;
     let _timeStart = null;
     let _timeEnd = null;
+    let _listenerTrechoAtivo = null; // Guarda a referência da função atual do timeupdate
+    let _listenerInterrupcao = null; // Guarda eventos nativos (pause/seek) que anulam a reprodução
 
     // --- Injeção de Dependências ---
     function init(dependencies) {
@@ -237,9 +239,70 @@ window.AudioManager = (function() {
         }
     }
 
+    /**
+     * Função Atômica: Desmonta os "espiões" do player de áudio com segurança.
+     * Previne sobreposição de eventos e vazamento de memória.
+     */
+    function _limparMonitoramentoTrecho(audio) {
+        if (_listenerTrechoAtivo) {
+            audio.removeEventListener('timeupdate', _listenerTrechoAtivo);
+            _listenerTrechoAtivo = null;
+        }
+        if (_listenerInterrupcao) {
+            audio.removeEventListener('pause', _listenerInterrupcao);
+            audio.removeEventListener('seeked', _listenerInterrupcao);
+            _listenerInterrupcao = null;
+        }
+    }
+
+    /**
+     * Toca um fragmento exato e lida com permissões assíncronas do navegador.
+     */
+    async function tocarTrecho(inicio, fim) {
+        if (!_audioUrl) {
+            _deps.exibirToast('Carregue o arquivo MP3 da audiência para ouvir o trecho.', 'aviso');
+            await solicitarMp3Retomada();
+            if (!_audioUrl) return; // Abortado pelo usuário
+        }
+
+        abrirPlayer();
+        const audio = document.getElementById('main-audio-player');
+
+        // 1. Limpeza rigorosa de execuções concorrentes (Teardown)
+        _limparMonitoramentoTrecho(audio);
+
+        // 2. Prepara o áudio
+        audio.currentTime = inicio;
+
+        // 3. Define o observador de interrupção externa (Ex: usuário pausou manualmente)
+        _listenerInterrupcao = function() {
+            // Se o usuário interagiu, quebramos o "piloto automático"
+            _limparMonitoramentoTrecho(audio);
+        };
+        audio.addEventListener('pause', _listenerInterrupcao);
+        audio.addEventListener('seeked', _listenerInterrupcao);
+
+        // 4. Inicia reprodução com proteção contra rejeição de Promessa (Erro de Autoplay)
+        audio.play().then(() => {
+            // Sucesso: Áudio está tocando. Ativa a vigília de encerramento.
+            _listenerTrechoAtivo = function() {
+                if (audio.currentTime >= fim) {
+                    audio.pause(); // A pausa nativa engatilhará o _listenerInterrupcao que limpa tudo
+                    _deps.exibirToast('Reprodução do trecho finalizada.', 'sucesso');
+                }
+            };
+            audio.addEventListener('timeupdate', _listenerTrechoAtivo);
+        }).catch((err) => {
+            console.error('[AudioManager] Erro ao reproduzir trecho:', err);
+            _limparMonitoramentoTrecho(audio); // Aborta as escutas
+            _deps.exibirToast('Navegador bloqueou a reprodução. Clique manualmente no Player.', 'erro');
+        });
+    }
+
     return {
         init, iniciarSessao, abrirPlayer, fecharPlayer, alternarPlayer,
         marcarInicio, marcarFim, onRoleChange, toggleAgrupar,
-        salvarRecorte, cancelarAnotacao, encerrar, solicitarMp3Retomada
+        salvarRecorte, cancelarAnotacao, encerrar, solicitarMp3Retomada,
+        tocarTrecho
     };
 })();

@@ -106,14 +106,16 @@ window.TopicsManager = (function () {
                 tagVisual = `<span class="polo-tag doc-tag">${escaparHTML(dadosAudio.role)}</span> <span class="polo-tag ${classePolo}">${escaparHTML(dadosAudio.poloTag)}</span>`;
             }
 
+            // Garante extração segura de tempos matemáticos (fallback para 0)
+            const inicioNum = dadosAudio.inicio || 0;
+            const fimNum = dadosAudio.fim || 0;
+
+            // Renderiza o cabeçalho com o botão Clickable e Ícone de Play
             htmlConteudo = `
                 <div class="card-audio">
-                    <div class="audio-icon-box">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                            <line x1="12" y1="19" x2="12" y2="23"></line>
-                            <line x1="8" y1="23" x2="16" y2="23"></line>
+                    <div class="audio-icon-box clickable-audio" title="Ouvir este trecho específico" onclick="AudioManager.tocarTrecho(${inicioNum}, ${fimNum})">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
                         </svg>
                     </div>
                     <div class="audio-card-meta">
@@ -122,6 +124,7 @@ window.TopicsManager = (function () {
                     </div>
                 </div>`;
 
+            // PRESERVAÇÃO CRÍTICA: Lógica de Comentários e Degravações
             let comentarios = [];
             if (anotacao.comentario) comentarios.push(`<strong>Contexto:</strong> ${escaparHTML(anotacao.comentario)}`);
             if (dadosAudio.transcricao) comentarios.push(`<strong>Degravação:</strong> <em>"${escaparHTML(dadosAudio.transcricao)}"</em>`);

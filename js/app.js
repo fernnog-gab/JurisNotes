@@ -1043,8 +1043,20 @@ window.handleMetaClick = function(event, topicoId, index, isCorrelated = false, 
             exibirToast('Numeração de página atualizada!', 'sucesso');
         }
     } else {
-        // Modo Cópia: Mantém o padrão atual (copia exatamente o que é visto, com os parênteses)
-        const textoParaCopiar = event.target.innerText;
+        // Modo Cópia: Formatação inteligente e desacoplada
+        let textoParaCopiar = event.target.innerText;
+
+        // Regra de formatação dedicada para Oitivas
+        if (anotacao.tipo === 'audio') {
+            try {
+                const dados = JSON.parse(anotacao.conteudo);
+                // Gera: (00'34'' a 01'58'' da gravação da audiência)
+                textoParaCopiar = `(${dados.labelInicio} a ${dados.labelFim} da gravação da audiência)`;
+            } catch (e) {
+                console.warn("[Juris Notes] Falha ao processar metadados de áudio para cópia. Usando texto nativo.", e);
+            }
+        }
+
         navigator.clipboard.writeText(textoParaCopiar).then(() => {
             exibirToast('Referência copiada para a área de transferência.', 'sucesso');
         }).catch(() => {
