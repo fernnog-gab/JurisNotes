@@ -18,49 +18,69 @@ let _sessaoPossuiAudio = false; // Flag de restauração de áudio na retomada d
    MOCK COMPLETO DO LINKSERVICE (Compatível PDF.js V4)
    ================================================ */
 const jurisLinkService = {
-    // Getter de propriedades exigidas pela v4
     externalLinkEnabled: true,
     externalLinkRel: 'noopener noreferrer nofollow',
-    externalLinkTarget: 2, // _blank
+    externalLinkTarget: 2,
     
-    // Método principal de navegação
     goToDestination: async function(dest) {
         if (!pdfDoc) return;
         
-        let explicitDest = dest;
-        // O destino pode ser uma string (named destination) ou array explícito
-        if (typeof dest === 'string') {
-            explicitDest = await pdfDoc.getDestination(dest);
-        }
-        
-        if (Array.isArray(explicitDest)) {
-            const pageRef = explicitDest[0];
-            try {
-                // Descobre o índice base-0 da página alvo
-                const pageIndex = await pdfDoc.getPageIndex(pageRef);
-                const pageNum = pageIndex + 1; 
+        try {
+            let explicitDest = dest;
+            if (typeof dest === 'string') {
+                explicitDest = await pdfDoc.getDestination(dest);
+            }
+            
+            if (Array.isArray(explicitDest)) {
+                const pageRef = explicitDest[0];
+                let pageNum;
                 
-                // Busca o container no DOM
-                const pageContainer = document.querySelector(`.pdf-page-container[data-page-number="${pageNum}"]`);
-                if (pageContainer) {
-                    // Salto INSTANTÂNEO ('auto') evita travar a Main Thread com renders inúteis no caminho
-                    pageContainer.scrollIntoView({ behavior: 'auto', block: 'start' });
-                    exibirToast(`Página ${pageNum} acessada via sumário.`, 'sucesso');
-                } else {
-                    exibirToast('Página alvo não encontrada.', 'erro');
+                if (typeof pageRef === 'object' && pageRef !== null) {
+                    const pageIndex = await pdfDoc.getPageIndex(pageRef);
+                    pageNum = pageIndex + 1; 
+                } else if (Number.isInteger(pageRef)) {
+                    pageNum = pageRef + 1;
                 }
-            } catch (e) {
-                console.error('[JurisNotes] Erro ao resolver destino do sumário:', e);
+                
+                if (pageNum) {
+                    this.goTo(pageNum);
+                }
+            }
+        } catch (e) {
+            console.error('[JurisNotes] Erro ao resolver destino do sumário:', e);
+        }
+    },
+    
+    // Motor Centralizado de Rolagem Matemática
+    goTo: function(pageNum) {
+        const pageContainer = document.querySelector(`.pdf-page-container[data-page-number="${pageNum}"]`);
+        const scrollContainer = document.getElementById('pdf-container');
+        
+        if (pageContainer && scrollContainer) {
+            const containerRect = scrollContainer.getBoundingClientRect();
+            const pageRect = pageContainer.getBoundingClientRect();
+            
+            // Cálculo absoluto de posição previne bugs de DOM aninhado
+            const targetScrollTop = scrollContainer.scrollTop + (pageRect.top - containerRect.top) - 16;
+            
+            // Salto instantâneo ('auto') previne colapso da Main Thread pelos Observers
+            scrollContainer.scrollTo({ top: targetScrollTop, behavior: 'auto' });
+            
+            if (typeof exibirToast === 'function') {
+                exibirToast(`Acessando fl. ${pageNum} via sumário.`, 'sucesso');
+            }
+        } else {
+            if (typeof exibirToast === 'function') {
+                exibirToast('Página alvo não encontrada no DOM.', 'erro');
             }
         }
     },
     
-    // Stub methods requeridos pela interface para não dar TypeError
-    goTo: function(pageNum) {},
-    getDestinationHash: function(dest) { return '#'; },
-    getAnchorUrl: function(hash) { return '#'; },
+    // Stubs necessários 
+    getDestinationHash: function(dest) { return ''; }, // Retorno vazio evita acúmulo de hashes na URL
+    getAnchorUrl: function(hash) { return ''; },
     setDocument: function(doc) {},
-    executeNamedAction: function(action) {}
+    executeNamedAction: function(action) { console.log('[JurisNotes] Ação interna:', action); }
 };
 
 /* ================================================
@@ -948,11 +968,10 @@ function irParaPagina() {
         return;
     }
 
-    const pageContainer = document.querySelector(`.pdf-page-container[data-page-number="${pageNum}"]`);
-    if (pageContainer) {
-        pageContainer.scrollIntoView({ behavior: 'smooth' });
-        input.value = ''; // Limpa o input por questão de UX após o sucesso
-    }
+    // NOVA LÓGICA: Delega a ação para o barramento centralizado
+    jurisLinkService.goTo(pageNum);
+    
+    if (input) input.value = ''; // Limpa o input por questão de UX após o sucesso
 }
 
 document.getElementById('goto-page-input')?.addEventListener('keypress', function (e) {
