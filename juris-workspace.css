@@ -74,6 +74,39 @@
     background: rgba(26, 58, 92, 0.28);
 }
 
+.annotationLayer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: auto; /* Permite interações de clique no mouse */
+    transform-origin: 0% 0%;
+}
+
+/* z-index: 2 assegura que fique acima do texto, mas respeite popups/wizards */
+.annotationLayer section {
+    position: absolute;
+    cursor: pointer;
+    z-index: 2; 
+}
+
+.annotationLayer .linkAnnotation > a {
+    position: absolute;
+    font-size: 1em;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    transition: background 0.15s ease;
+}
+
+/* Feedback visual sutil (Azul do TRT translúcido) ao pairar sobre links */
+.annotationLayer .linkAnnotation > a:hover {
+    background: rgba(26, 58, 92, 0.12); 
+}
+
 .floating-page-panel {
     position: sticky;
     top: 16px;
