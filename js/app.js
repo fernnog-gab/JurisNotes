@@ -966,30 +966,49 @@ async function extrairMetadadosDaPagina(pageNum, textContentPreCarregado = null)
     if (_pageMetadataCache.has(pageNum)) return _pageMetadataCache.get(pageNum);
     
     try {
-        let textContent = textContentPreCarregado;
-        if (!textContent) {
-            const page = await pdfDoc.getPage(pageNum);
-            textContent = await page.getTextContent();
-        }
-
-        // String para o Hash PJe (preserva espaços normais)
-        const fullTextNormal = textContent.items.map(item => item.str).join(' ');
+        const page = await pdfDoc.getPage(pageNum);
+        const textContent = textContentPreCarregado || await page.getTextContent();
         
-        // Mantém hash PJe
+        // Pega as dimensões físicas reais da página (Largura e Altura)
+        const viewport = page.getViewport({ scale: 1.0 });
+
+        const items = textContent.items;
+
+        // 1. Hash PJe (Extraído de todo o texto, pois é um ID muito longo e único)
+        const fullTextNormal = items.map(item => item.str).join(' ');
         const regexPje = /\d{2}:\d{2}:\d{2}\s*-\s*([a-f0-9]{7,})\b/i;
         const matchPje = fullTextNormal.match(regexPje);
         const pjeId = matchPje ? matchPje[1].toLowerCase() : null;
         
-        // Estratégia de Fallback (Restrita -> Tolerante)
-        const regexFlsRigida = /\bfls\.?\s*:\s*(\d+)\b/i; // Busca exata por Fls.: 150
-        const regexFlsTolerante = /\bfls\.?\s+(\d+)\b/i;   // Fallback para Fls 150 (se mal formatado)
+        // ==========================================
+        // 2. RADAR ESPACIAL: Quadrante Superior Direito
+        // No sistema de coordenadas do PDF, (0,0) fica no canto inferior esquerdo.
+        // Portanto, Y alto significa "Topo da página" e X alto significa "Direita".
+        // ==========================================
+        const topRightItems = items.filter(item => {
+            const x = item.transform[4]; // Posição Horizontal
+            const y = item.transform[5]; // Posição Vertical
+            
+            // Verifica se o texto está na metade direita (> 40% da largura)
+            // E na parte superior (> 60% da altura da folha)
+            const isRightHalf = x > (viewport.width * 0.4);
+            const isTopHalf   = y > (viewport.height * 0.6);
+            
+            return isRightHalf && isTopHalf;
+        });
 
-        const matchFls = fullTextNormal.match(regexFlsRigida) || fullTextNormal.match(regexFlsTolerante);
+        // Junta apenas os textos que caíram na nossa "malha fina" geométrica
+        const topRightText = topRightItems.map(item => item.str).join(' ');
+
+        // Aplica o seu padrão estrito do carimbo oficial
+        const regexFlsRigida = /\bfls\.?\s*:\s*(\d+)\b/i;
+        const matchFls = topRightText.match(regexFlsRigida);
+
         const flsNum = matchFls ? matchFls[1] : null;
 
         const resultado = { pjeId, flsNum };
         
-        // Salva na memória oficial do sistema
+        // Salva na memória oficial do sistema (Cache O(1))
         _pageMetadataCache.set(pageNum, resultado);
         
         return resultado;
