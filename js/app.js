@@ -15,6 +15,55 @@ let pdfReadTracker    = null;   // Observer para o crachá de leitura (UI)
 let _sessaoPossuiAudio = false; // Flag de restauração de áudio na retomada de sessão
 
 /* ================================================
+   MOCK COMPLETO DO LINKSERVICE (Compatível PDF.js V4)
+   ================================================ */
+const jurisLinkService = {
+    // Getter de propriedades exigidas pela v4
+    externalLinkEnabled: true,
+    externalLinkRel: 'noopener noreferrer nofollow',
+    externalLinkTarget: 2, // _blank
+    
+    // Método principal de navegação
+    goToDestination: async function(dest) {
+        if (!pdfDoc) return;
+        
+        let explicitDest = dest;
+        // O destino pode ser uma string (named destination) ou array explícito
+        if (typeof dest === 'string') {
+            explicitDest = await pdfDoc.getDestination(dest);
+        }
+        
+        if (Array.isArray(explicitDest)) {
+            const pageRef = explicitDest[0];
+            try {
+                // Descobre o índice base-0 da página alvo
+                const pageIndex = await pdfDoc.getPageIndex(pageRef);
+                const pageNum = pageIndex + 1; 
+                
+                // Busca o container no DOM
+                const pageContainer = document.querySelector(`.pdf-page-container[data-page-number="${pageNum}"]`);
+                if (pageContainer) {
+                    // Salto INSTANTÂNEO ('auto') evita travar a Main Thread com renders inúteis no caminho
+                    pageContainer.scrollIntoView({ behavior: 'auto', block: 'start' });
+                    exibirToast(`Página ${pageNum} acessada via sumário.`, 'sucesso');
+                } else {
+                    exibirToast('Página alvo não encontrada.', 'erro');
+                }
+            } catch (e) {
+                console.error('[JurisNotes] Erro ao resolver destino do sumário:', e);
+            }
+        }
+    },
+    
+    // Stub methods requeridos pela interface para não dar TypeError
+    goTo: function(pageNum) {},
+    getDestinationHash: function(dest) { return '#'; },
+    getAnchorUrl: function(hash) { return '#'; },
+    setDocument: function(doc) {},
+    executeNamedAction: function(action) {}
+};
+
+/* ================================================
    METADADOS LÓGICOS DO PDF (PJe)
    ================================================ */
 let pageLabelsGlobais = null; // Armazena a numeração oficial (PJe/Foxit)
@@ -623,7 +672,7 @@ async function renderizarPaginaElemento(num, container) {
     try {
         await container._renderTask.promise;
         
-        // Instancia a nova API TextLayer V4
+        // 1. Renderiza o texto
         const textContent = await page.getTextContent();
         const tl = new pdfjsLib.TextLayer({
             textContentSource: textContent,
@@ -632,18 +681,42 @@ async function renderizarPaginaElemento(num, container) {
         });
         await tl.render();
 
-        // Injeta o textContent já parseado, a custo computacional quase zero.
+        // 2. Extração de Metadados (já existente)
         if (!_pageMetadataCache.has(num)) {
             extrairMetadadosDaPagina(num, textContent).then((meta) => {
-                // Notifica o Maestro para forçar a atualização do display 
-                // caso o usuário já esteja parado olhando para esta folha
                 atualizarDisplayPaginador(num);
             });
         }
 
+        // --- 3. IMPLEMENTAÇÃO SEGURA DA CAMADA DE ANOTAÇÕES (LINKS) ---
+        const annotationData = await page.getAnnotations();
+        
+        // DOM GUARD CRÍTICO: Se a promise resolveu, mas o usuário já fez scroll e o container 
+        // foi resetado (innerHTML = ''), a textLayer não será mais filha do container.
+        // Isso previne criação de "Ghost Layers" e memory leaks.
+        if (annotationData && annotationData.length > 0 && container.contains(textLayer)) {
+            
+            const annotationLayerDiv = document.createElement('div');
+            annotationLayerDiv.className = 'annotationLayer';
+            annotationLayerDiv.style.setProperty('--scale-factor', viewport.scale);
+            container.appendChild(annotationLayerDiv);
+
+            const annotationLayer = new pdfjsLib.AnnotationLayer({
+                page: page,
+                viewport: viewport,
+                div: annotationLayerDiv,
+                annotations: annotationData,
+                linkService: jurisLinkService,
+                renderInteractiveForms: false 
+            });
+
+            // v4 exige await e os parâmetros viewport e intent
+            await annotationLayer.render({ viewport, intent: 'display' });
+        }
+
     } catch (err) {
         if (err.name === 'RenderingCancelledException') {
-            console.log(`Renderização da página ${num} cancelada de forma segura (scroll out).`);
+            console.log(`Renderização da pág ${num} cancelada de forma segura.`);
         } else {
             console.error('Erro ao renderizar página PDF:', err);
         }
