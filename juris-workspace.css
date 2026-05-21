@@ -865,16 +865,3 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
-
-/* TESTE DE RAIO-X: Remover após o teste */
-.annotationLayer {
-    z-index: 9999 !important; /* Força a camada de links para a frente de tudo */
-    pointer-events: none !important; /* Deixa o clique passar para os filhos */
-}
-
-.annotationLayer section, 
-.annotationLayer .linkAnnotation {
-    background-color: rgba(255, 0, 0, 0.4) !important; /* Pinta os links de vermelho */
-    border: 2px solid red !important;
-    pointer-events: auto !important; /* Reativa o clique apenas no link */
-}
