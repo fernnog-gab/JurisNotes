@@ -305,15 +305,13 @@ document.addEventListener("DOMContentLoaded", () => {
         historyContainer.addEventListener('scroll', checkScrollFabState, { passive: true });
     }
     
-    // NOVO: Listener de scroll para os FABs na aba PDF
+    // [SCROLL E AUDITORIA] Eventos do Container Pai (Inteiro Teor)
     const pdfContainer = document.getElementById('pdf-container');
     if (pdfContainer) {
+        // 1. Novo listener de scroll para os FABs
         pdfContainer.addEventListener('scroll', checkScrollFabState, { passive: true });
-    }
-
-    // [DIAGNÓSTICO CORRIGIDO]: Auditoria de Event Bubbling no Container Pai
-    const pdfContainer = document.getElementById('pdf-container');
-    if (pdfContainer) {
+        
+        // 2. Diagnóstico: Auditoria de Event Bubbling
         pdfContainer.addEventListener('click', (e) => {
             const linkAncorado = e.target.closest('.linkAnnotation a');
             if (linkAncorado) {
