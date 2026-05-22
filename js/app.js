@@ -876,7 +876,7 @@ function renderizarTopicos() {
 /* ================================================
    1. NOVO ESTADO GLOBAL (Marcações / Highlights)
    ================================================ */
-};function capturarTrechoSelecionado() {
+function capturarTrechoSelecionado() {
     const selection = window.getSelection();
     const selecaoTexto = selection.toString().trim();
 
