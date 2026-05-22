@@ -23,17 +23,18 @@ window.sincronizarHighlightsGerais = function() {
    MÓDULO DE ATALHOS FLUTUANTES (SHORTCUT MANAGER)
    ================================================ */
 window.ShortcutManager = (function() {
-    let state = { recursoAutora: null, recursoReu: null, contestacao: null, sentenca: null };
+    let state = { recursoAutora: null, recursoReu: null, recursoReu2: null, contestacao: null, sentenca: null };
     let currentEditingType = null;
     
-    const colors = { recursoAutora: 'is-active-autora', recursoReu: 'is-active-re', contestacao: 'is-active-re', sentenca: 'is-active-juizo' };
-    const rotulos = { recursoAutora: 'Recurso (Autora)', recursoReu: 'Recurso (Ré)', contestacao: 'Contestação', sentenca: 'Sentença/Acórdão' };
+    const colors = { recursoAutora: 'is-active-autora', recursoReu: 'is-active-re', recursoReu2: 'is-active-re2', contestacao: 'is-active-re', sentenca: 'is-active-juizo' };
+    const rotulos = { recursoAutora: 'Recurso (Autora)', recursoReu: 'Recurso (Ré 1)', recursoReu2: 'Recurso (Ré 2)', contestacao: 'Contestação', sentenca: 'Sentença/Acórdão' };
 
     function updateUI() {
         Object.keys(state).forEach(type => {
             const btn = document.getElementById(getFabId(type));
             if (!btn) return;
-            btn.classList.remove('is-empty', 'is-active-autora', 'is-active-re', 'is-active-juizo');
+            
+            btn.classList.remove('is-empty', 'is-active-autora', 'is-active-re', 'is-active-re2', 'is-active-juizo');
             
             if (state[type] === null) {
                 btn.classList.add('is-empty');
@@ -95,7 +96,7 @@ window.ShortcutManager = (function() {
     }
 
     function getFabId(type) {
-        const map = { recursoAutora: 'fab-recurso-autora', recursoReu: 'fab-recurso-re', contestacao: 'fab-contestacao', sentenca: 'fab-sentenca' };
+        const map = { recursoAutora: 'fab-recurso-autora', recursoReu: 'fab-recurso-re', recursoReu2: 'fab-recurso-re2', contestacao: 'fab-contestacao', sentenca: 'fab-sentenca' };
         return map[type];
     }
 
@@ -103,7 +104,7 @@ window.ShortcutManager = (function() {
         handleClick, updateUI, fecharModal, salvarModal,
         getState: () => state,
         setState: (newState) => { if (newState) { state = { ...state, ...newState }; updateUI(); } },
-        reset: () => { state = { recursoAutora: null, recursoReu: null, contestacao: null, sentenca: null }; updateUI(); },
+        reset: () => { state = { recursoAutora: null, recursoReu: null, recursoReu2: null, contestacao: null, sentenca: null }; updateUI(); },
         toggleVisibility: (show) => {
             Object.keys(state).forEach(type => {
                 const btn = document.getElementById(getFabId(type));
@@ -136,8 +137,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         window.AudioManager.solicitarMp3Retomada();
                     }
                 } else {
-                    exibirToast('PDF carregado! Defina onde salvar o arquivo de backup da sessão.');
-                    await iniciarSessaoSalvamento();
+                    exibirToast('PDF carregado e sistema de backup operante!');
+                    await salvarBackupAutomatico();
                 }
             }
         });
@@ -294,6 +295,7 @@ function encerrarSessao() {
 
     topicos      = [];
     modoRetomada = false;
+    sessionStorage.removeItem('juris_active_session');
     
     if (window.PdfEngine) window.PdfEngine.encerrar();
     BackupManager.encerrar();
@@ -325,21 +327,7 @@ function encerrarSessao() {
 /* ================================================
    API DE SISTEMA DE ARQUIVOS E PROCESSO
    ================================================ */
-async function iniciarSessaoSalvamento() {
-    const processoId = BackupManager.getProcessoId();
-    try {
-        const handle = await window.showSaveFilePicker({
-            suggestedName: `${processoId || 'backup_processo'}.json`,
-            types: [{ description: 'Arquivo de Backup', accept: { 'application/json': ['.json'] } }]
-        });
-        BackupManager.setFileHandle(handle);
-        atualizarStatusBackup('Sessão Ativa ✓', true);
-        await salvarBackupAutomatico(); 
-        exibirToast('Sessão iniciada. Backup automático ativo.');
-    } catch (err) {
-        if (err.name !== 'AbortError') exibirToast('Erro ao criar o backup.', 'erro');
-    }
-}
+/* Função iniciarSessaoSalvamento() removida arquiteturalmente (Fluxo invertido para novoProcesso) */
 
 async function retomarProcesso() {
     try {
@@ -409,6 +397,24 @@ async function novoProcesso(event) {
         return;
     }
     
+    if (!modoRetomada) {
+        try {
+            const nomeSugerido = file.name.replace(/\.[^/.]+$/, "").toLowerCase() + ".json";
+            const handle = await window.showSaveFilePicker({
+                suggestedName: nomeSugerido,
+                types: [{ description: 'Arquivo de Backup', accept: { 'application/json': ['.json'] } }]
+            });
+            BackupManager.setFileHandle(handle);
+            atualizarStatusBackup('Sessão Ativa ✓', true);
+            sessionStorage.setItem('juris_active_session', 'true');
+            exibirToast('Backup ancorado. Lendo e renderizando o PDF...', 'info');
+        } catch (err) {
+            if (err.name !== 'AbortError') exibirToast('Erro ao criar o backup. Tente novamente.', 'erro');
+            event.target.value = '';
+            return;
+        }
+    }
+
     if (window.PdfEngine) {
         await PdfEngine.carregarPDF(file, modoRetomada);
     }
@@ -801,3 +807,34 @@ window.AbaDnD = {
         if (typeof abrirModalGerenciarAbas === 'function') abrirModalGerenciarAbas(); 
     }
 };
+
+/* Mecanismo de Detecção de Memory Discard e Re-render de GPU */
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted && window.TopicsManager && topicos.length > 0) {
+        TopicsManager.renderizarFichario(topicos);
+    }
+});
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        if (sessionStorage.getItem('juris_active_session') === 'true' && topicos.length === 0) {
+            exibirToast('O navegador suspendeu esta aba e limpou a memória. Clique em "Retomar Processo" para carregar seu arquivo de backup.', 'erro');
+            sessionStorage.removeItem('juris_active_session'); 
+            return;
+        }
+
+        if (window.PdfEngine && PdfEngine.getPdfDoc() && topicos.length > 0) {
+            const visiveis = document.querySelectorAll('.pdf-page-container');
+            visiveis.forEach(container => {
+                const rect = container.getBoundingClientRect();
+                if (rect.top < window.innerHeight && rect.bottom > 0) {
+                    const canvas = container.querySelector('canvas');
+                    if (!canvas || canvas.width === 0) {
+                        container.dataset.loaded = 'false';
+                    }
+                }
+            });
+            TopicsManager.renderizarFichario(topicos);
+        }
+    }
+});
