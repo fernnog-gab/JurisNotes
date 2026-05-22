@@ -23,6 +23,103 @@ let _tempHighlightState = {
 };
 
 /* ================================================
+   MOTOR LOCAL DE HIGHLIGHTS E BADGES (DOM isolado)
+   ================================================ */
+function _renderizarHighlightsDaPagina(pageNum, highlightLayerDiv) {
+    highlightLayerDiv.innerHTML = ''; // Limpa a camada para repintura segura
+    
+    topicos.forEach(topico => {
+        const borderCor = topico.cor;
+
+        const desenharMarcacoes = (itens, parentIndex) => {
+            if (!itens) return;
+            itens.forEach((item, idx) => {
+                const numIdeia = (parentIndex !== undefined ? parentIndex : idx) + 1;
+
+                if (item.tipo === 'texto' && item.paginaFisica === pageNum && item.highlightRects && item.highlightRects.length > 0) {
+                    
+                    // 1. Desenha as linhas sublinhadas
+                    item.highlightRects.forEach(rect => {
+                        const marker = document.createElement('div');
+                        marker.className = 'pdf-highlight-rect';
+                        marker.style.top = rect.top + 'px';
+                        marker.style.left = rect.left + 'px';
+                        marker.style.width = rect.width + 'px';
+                        marker.style.height = rect.height + 'px';
+                        marker.style.borderBottom = `2.5px solid ${borderCor}`;
+                        highlightLayerDiv.appendChild(marker);
+                    });
+
+                    // 2. Desenha o Crachá Numerado
+                    const firstRect = item.highlightRects[0];
+                    const badge = document.createElement('div');
+                    badge.className = 'pdf-annotation-badge';
+                    
+                    // Alinha o centro do badge ao centro vertical do primeiro retângulo de texto
+                    badge.style.top = (firstRect.top + (firstRect.height / 2)) + 'px';
+                    badge.style.transform = 'translateY(-50%)'; 
+                    badge.style.backgroundColor = topico.cor;
+                    badge.innerText = numIdeia;
+                    
+                    // 3. Sistema de Tooltip Otimizado (reaproveitando DOM nativo da aplicação)
+                    badge.addEventListener('mouseenter', (e) => {
+                        const tooltip = document.getElementById('quick-intent-tooltip');
+                        if (!tooltip) return;
+                        tooltip.innerHTML = `<strong>Tópico Vinculado</strong>${topico.nome}`;
+                        
+                        // Lógica de posicionamento anti-overflow
+                        tooltip.style.display = 'block';
+                        tooltip.classList.remove('visible');
+                        
+                        let x = e.clientX + 15;
+                        let y = e.clientY + 15;
+                        const rect = tooltip.getBoundingClientRect();
+                        if (x + rect.width > window.innerWidth) x = e.clientX - rect.width - 15;
+                        if (y + rect.height > window.innerHeight) y = e.clientY - rect.height - 15;
+                        
+                        tooltip.style.left = `${x}px`;
+                        tooltip.style.top = `${y}px`;
+                        
+                        requestAnimationFrame(() => tooltip.classList.add('visible'));
+                    });
+                    
+                    badge.addEventListener('mouseleave', () => {
+                        const tooltip = document.getElementById('quick-intent-tooltip');
+                        if (tooltip) {
+                            tooltip.classList.remove('visible');
+                            setTimeout(() => { tooltip.style.display = 'none'; }, 200);
+                        }
+                    });
+
+                    highlightLayerDiv.appendChild(badge);
+                }
+                
+                // Mapeamento recursivo para agrupar provas (mantém numeração do pai)
+                if (item.itensCorrelacionados) {
+                    desenharMarcacoes(item.itensCorrelacionados, parentIndex !== undefined ? parentIndex : idx);
+                }
+            });
+        };
+        desenharMarcacoes(topico.anotacoes);
+    });
+}
+
+/* ================================================
+   MOTOR GLOBAL DE SINCRONIZAÇÃO (Invocado apenas por mutações de estado)
+   ================================================ */
+window.sincronizarHighlightsGerais = function() {
+    document.querySelectorAll('.pdf-page-container').forEach(container => {
+        if (container.dataset.loaded === 'true') {
+            const pageNum = parseInt(container.dataset.pageNumber);
+            const highlightLayerDiv = container.querySelector('.highlightLayer');
+            if (highlightLayerDiv) {
+                _renderizarHighlightsDaPagina(pageNum, highlightLayerDiv);
+            }
+        }
+    });
+};
+
+/* ================================================
    MOCK COMPLETO DO LINKSERVICE (Compatível PDF.js V4)
    ================================================ */
 const jurisLinkService = {
@@ -751,35 +848,8 @@ async function renderizarPaginaElemento(num, container) {
         highlightLayerDiv.style.setProperty('--scale-factor', viewport.scale);
         container.appendChild(highlightLayerDiv);
 
-        topicos.forEach(topico => {
-            // Defesa extra: fallback caso hexToRgba não seja encontrado no TopicsManager
-            const bgCor = (window.TopicsManager && typeof window.TopicsManager.hexToRgba === 'function') 
-                ? window.TopicsManager.hexToRgba(topico.cor, 0.2) 
-                : topico.cor + '33';
-            const borderCor = topico.cor;
-
-            const desenharMarcacoes = (itens) => {
-                if (!itens) return;
-                itens.forEach(item => {
-                    if (item.tipo === 'texto' && item.paginaFisica === num && item.highlightRects) {
-                        item.highlightRects.forEach(rect => {
-                            const marker = document.createElement('div');
-                            marker.className = 'pdf-highlight-rect';
-                            marker.style.top = rect.top + 'px';
-                            marker.style.left = rect.left + 'px';
-                            marker.style.width = rect.width + 'px';
-                            marker.style.height = rect.height + 'px';
-                            // marker.style.backgroundColor = bgCor; // Desativado: Modo apenas sublinhado
-                            marker.style.borderBottom = `2.5px solid ${borderCor}`;
-                            
-                            highlightLayerDiv.appendChild(marker);
-                        });
-                    }
-                    if (item.itensCorrelacionados) desenharMarcacoes(item.itensCorrelacionados);
-                });
-            };
-            desenharMarcacoes(topico.anotacoes);
-        });
+        // Renderiza atômicamente apenas a página atual (O(1))
+        _renderizarHighlightsDaPagina(num, highlightLayerDiv);
         // --- FIM DA CAMADA DE HIGHLIGHTS ---
 
         // 2. Extração de Metadados (já existente)
@@ -1002,28 +1072,10 @@ async function salvarAnotacao(tipo, conteudo, documento, polo, topicoId, comenta
 
     // INÍCIO DA INJEÇÃO VISUAL EM TEMPO REAL
     if (capturedHighlights && capturedPagina) {
-        const pageContainer = document.querySelector(`.pdf-page-container[data-page-number="${capturedPagina}"]`);
-        if (pageContainer) {
-            let highlightLayer = pageContainer.querySelector('.highlightLayer');
-            if (highlightLayer) {
-                const borderCor = topicoAlvo.cor;
-
-                capturedHighlights.forEach(rect => {
-                    const marker = document.createElement('div');
-                    marker.className = 'pdf-highlight-rect';
-                    marker.style.top = rect.top + 'px';
-                    marker.style.left = rect.left + 'px';
-                    marker.style.width = rect.width + 'px';
-                    marker.style.height = rect.height + 'px';
-                    // marker.style.backgroundColor = bgCor; // Desativado: Modo apenas sublinhado
-                    marker.style.borderBottom = `2.5px solid ${borderCor}`;
-                    
-                    highlightLayer.appendChild(marker);
-                });
-            }
-        }
         if (window.getSelection) window.getSelection().removeAllRanges();
     }
+    // Sincroniza as camadas do PDF com o novo estado de dados
+    if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
     // FIM DA INJEÇÃO VISUAL EM TEMPO REAL
 
     renderizarTopicos();
@@ -1256,6 +1308,7 @@ function solicitarExclusaoAba(btnEl, id) {
         topicos = topicos.filter(t => t.id !== id);
         renderizarTopicos();
         salvarBackupAutomatico();
+        if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
         abrirModalGerenciarAbas(); 
         exibirToast('Aba excluída.', 'sucesso');
     } else {

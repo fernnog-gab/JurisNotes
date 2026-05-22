@@ -191,6 +191,7 @@ function excluirAnotacao() {
     if (!confirm('Excluir esta anotação? A ação não pode ser desfeita.')) return;
     topico.anotacoes.splice(index, 1);
     renderizarTopicos(); salvarBackupAutomatico();
+    if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
     exibirToast('Anotação excluída.', 'sucesso');
     _menuAnotacaoCtx = null;
 }
@@ -261,6 +262,7 @@ function confirmarReordenacaoPosicao() {
     }
 
     renderizarTopicos(); salvarBackupAutomatico();
+    if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
     fecharModalReordenar();
     exibirToast('Item reposicionado com sucesso.', 'sucesso');
     _menuAnotacaoCtx = null;
@@ -271,6 +273,7 @@ function excluirItemCorrelacionado(topicoId, parentIndex, correlacionadoIndex) {
     if (!confirm('Excluir este item correlacionado?')) return;
     topicos.find(t => t.id === topicoId).anotacoes[parentIndex].itensCorrelacionados.splice(correlacionadoIndex, 1);
     renderizarTopicos(); salvarBackupAutomatico();
+    if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
     exibirToast('Item correlacionado excluído.', 'sucesso');
 }
 
@@ -501,7 +504,10 @@ function confirmarSmartMove() {
         exibirToast(`Prova agrupada à Ideia ${destinoIdx + 1}.`, 'sucesso');
     }
 
-    renderizarTopicos(); salvarBackupAutomatico(); fecharModalSmartMove();
+    renderizarTopicos(); 
+    salvarBackupAutomatico(); 
+    if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
+    fecharModalSmartMove();
 }
 
 /* --- TEMA E DRAG & DROP --- */
@@ -567,6 +573,7 @@ window.DnDManager = {
 
         renderizarTopicos();
         salvarBackupAutomatico();
+        if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
         exibirToast('Ordem atualizada!', 'sucesso');
     }
 };
