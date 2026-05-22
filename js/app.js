@@ -747,27 +747,28 @@ async function renderizarPaginaElemento(num, container) {
         // --- 3. IMPLEMENTAÇÃO SEGURA DA CAMADA DE ANOTAÇÕES (LINKS) ---
         const annotationData = await page.getAnnotations();
         
-        // DOM GUARD CRÍTICO: Se a promise resolveu, mas o usuário já fez scroll e o container 
-        // foi resetado (innerHTML = ''), a textLayer não será mais filha do container.
-        // Isso previne criação de "Ghost Layers" e memory leaks.
         if (annotationData && annotationData.length > 0 && container.contains(textLayer)) {
-            
             const annotationLayerDiv = document.createElement('div');
             annotationLayerDiv.className = 'annotationLayer';
             annotationLayerDiv.style.setProperty('--scale-factor', viewport.scale);
             container.appendChild(annotationLayerDiv);
 
+            // 1. Construtor V4 (Setup Base)
             const annotationLayer = new pdfjsLib.AnnotationLayer({
                 page: page,
                 viewport: viewport,
                 div: annotationLayerDiv,
-                annotations: annotationData,
                 linkService: jurisLinkService,
                 renderInteractiveForms: false 
             });
 
-            // Aguarda a resolução assíncrona estrita da V4 antes de qualquer diagnóstico
-            await annotationLayer.render({ viewport, intent: 'display' });
+            // 2. Renderização V4 (Injeção de Dados Obrigatória)
+            await annotationLayer.render({ 
+                annotations: annotationData, // <-- A CORREÇÃO ESTÁ AQUI
+                viewport: viewport, 
+                intent: 'display',
+                linkService: jurisLinkService 
+            });
             
             // [DIAGNÓSTICO CORRIGIDO]: Introspecção Pós-Renderização
             const links = annotationData.filter(a => a.subtype === 'Link');
