@@ -876,18 +876,7 @@ function renderizarTopicos() {
 /* ================================================
    CAPTURA MANUAL DE TEXTO SELECIONADO E SNAPSHOT
    ================================================ */
-let pdfRenderObserver = null;   // Observer para pré-renderização (lazy loading)
-let pdfReadTracker    = null;   // Observer para o crachá de leitura (UI)
-
-let _sessaoPossuiAudio = false; // Flag de restauração de áudio na retomada de sessão
-
-/* ================================================
-   1. NOVO ESTADO GLOBAL (Marcações / Highlights)
-   ================================================ */
-let _tempHighlightState = {
-    rects: null,
-    paginaFisica: null
-};function capturarTrechoSelecionado() {
+function capturarTrechoSelecionado() {
     const selection = window.getSelection();
     const selecaoTexto = selection.toString().trim();
 
