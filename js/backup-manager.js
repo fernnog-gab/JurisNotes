@@ -58,13 +58,15 @@ window.BackupManager = (function () {
                 (a.itensCorrelacionados && a.itensCorrelacionados.some(ic => ic.tipo === 'audio'))
             )
         );
+        const atalhosCapturados = window.ShortcutManager ? window.ShortcutManager.getState() : null;
         return JSON.stringify({
             metadata: {
                 processoId:        _processoId,
                 pdfHash:           _pdfHash,
                 possuiAudio:       possuiAudio,
-                versaoApp:         '2.2',
-                ultimaAtualizacao: Date.now()
+                versaoApp:         '2.3',
+                ultimaAtualizacao: Date.now(),
+                atalhosPdf:        atalhosCapturados
             },
             dados: topicos
         }, null, 2);
@@ -131,6 +133,14 @@ window.BackupManager = (function () {
         _processoId  = pacote.metadata.processoId;
         _pdfHash     = pacote.metadata.pdfHash;
         _fileHandle  = handle;
+
+        if (window.ShortcutManager) {
+            if (pacote.metadata.atalhosPdf) {
+                window.ShortcutManager.setState(pacote.metadata.atalhosPdf);
+            } else {
+                window.ShortcutManager.reset();
+            }
+        }
 
         return pacote;
     }

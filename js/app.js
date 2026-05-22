@@ -20,6 +20,100 @@ window.sincronizarHighlightsGerais = function() {
 };
 
 /* ================================================
+   MÓDULO DE ATALHOS FLUTUANTES (SHORTCUT MANAGER)
+   ================================================ */
+window.ShortcutManager = (function() {
+    let state = { recursoAutora: null, recursoReu: null, contestacao: null, sentenca: null };
+    let currentEditingType = null;
+    
+    const colors = { recursoAutora: 'is-active-autora', recursoReu: 'is-active-re', contestacao: 'is-active-re', sentenca: 'is-active-juizo' };
+    const rotulos = { recursoAutora: 'Recurso (Autora)', recursoReu: 'Recurso (Ré)', contestacao: 'Contestação', sentenca: 'Sentença/Acórdão' };
+
+    function updateUI() {
+        Object.keys(state).forEach(type => {
+            const btn = document.getElementById(getFabId(type));
+            if (!btn) return;
+            btn.classList.remove('is-empty', 'is-active-autora', 'is-active-re', 'is-active-juizo');
+            
+            if (state[type] === null) {
+                btn.classList.add('is-empty');
+                btn.title = `Marcar página: ${rotulos[type]}`;
+            } else {
+                btn.classList.add(colors[type]);
+                btn.title = `${rotulos[type]} (Pág. ${state[type]})\n[Shift + Clique] para editar`;
+            }
+        });
+    }
+
+    function handleClick(type, event) {
+        if (!window.PdfEngine || !PdfEngine.getPdfDoc()) {
+            exibirToast('Carregue um documento primeiro.', 'aviso'); return;
+        }
+        if (state[type] === null || event.shiftKey) {
+            abrirModal(type);
+        } else {
+            PdfEngine.goToPage(state[type]);
+        }
+    }
+
+    function abrirModal(type) {
+        currentEditingType = type;
+        document.getElementById('shortcut-modal-title').textContent = `Página para: ${rotulos[type]}`;
+        const input = document.getElementById('shortcut-page-input');
+        input.value = state[type] || '';
+        
+        document.getElementById('shortcut-modal-backdrop').style.display = 'block';
+        document.getElementById('shortcut-modal').style.display = 'flex';
+        setTimeout(() => input.focus(), 50);
+    }
+
+    function fecharModal() {
+        currentEditingType = null;
+        document.getElementById('shortcut-modal-backdrop').style.display = 'none';
+        document.getElementById('shortcut-modal').style.display = 'none';
+    }
+
+    async function salvarModal() {
+        if (!currentEditingType) return;
+        const val = document.getElementById('shortcut-page-input').value.trim();
+        const parsed = parseInt(val, 10);
+        
+        if (val === '') {
+            state[currentEditingType] = null;
+            exibirToast('Atalho removido.', 'sucesso');
+        } else if (!isNaN(parsed) && parsed > 0) {
+            state[currentEditingType] = parsed;
+            exibirToast('Atalho salvo com sucesso!', 'sucesso');
+        } else {
+            exibirToast('Número de página inválido.', 'erro');
+            return;
+        }
+        
+        fecharModal();
+        updateUI();
+        if (typeof salvarBackupAutomatico === 'function') await salvarBackupAutomatico();
+    }
+
+    function getFabId(type) {
+        const map = { recursoAutora: 'fab-recurso-autora', recursoReu: 'fab-recurso-re', contestacao: 'fab-contestacao', sentenca: 'fab-sentenca' };
+        return map[type];
+    }
+
+    return { 
+        handleClick, updateUI, fecharModal, salvarModal,
+        getState: () => state,
+        setState: (newState) => { if (newState) { state = { ...state, ...newState }; updateUI(); } },
+        reset: () => { state = { recursoAutora: null, recursoReu: null, contestacao: null, sentenca: null }; updateUI(); },
+        toggleVisibility: (show) => {
+            Object.keys(state).forEach(type => {
+                const btn = document.getElementById(getFabId(type));
+                if (btn) btn.style.display = show ? 'flex' : 'none';
+            });
+        }
+    };
+})();
+
+/* ================================================
    INICIALIZAÇÃO E INJEÇÃO DE DEPENDÊNCIAS
    ================================================ */
 document.addEventListener("DOMContentLoaded", () => {
@@ -118,6 +212,11 @@ function trocarAba(aba) {
         fabContainer.style.display = 'flex';
         setTimeout(checkScrollFabState, 60);
     }
+
+    if (window.ShortcutManager) {
+        const temPdf = (window.PdfEngine && PdfEngine.getPdfDoc());
+        window.ShortcutManager.toggleVisibility(aba === 'leitura' && temPdf);
+    }
 }
 
 function checkScrollFabState() {
@@ -161,6 +260,11 @@ function atualizarStatusBackup(texto, ativa = false) {
 function habilitarFerramentasDeTrabalho() {
     ['btn-ferramenta-recorte', 'btn-ferramenta-texto', 'btn-novo-topico', 'btn-encerrar-sessao', 'btn-ferramenta-audio']
         .forEach(id => document.getElementById(id).disabled = false);
+    
+    if (window.ShortcutManager && document.getElementById('tab-leitura').classList.contains('active')) {
+        window.ShortcutManager.toggleVisibility(true);
+        window.ShortcutManager.updateUI();
+    }
 }
 
 function encerrarSessao() {
@@ -193,6 +297,7 @@ function encerrarSessao() {
     
     if (window.PdfEngine) window.PdfEngine.encerrar();
     BackupManager.encerrar();
+    if (window.ShortcutManager) window.ShortcutManager.reset();
 
     const wrapper = document.getElementById('pdf-wrapper');
     wrapper.innerHTML     = '';
@@ -292,6 +397,7 @@ async function novoProcesso(event) {
         if (window.AudioManager) window.AudioManager.encerrar();
         topicos = [];
         BackupManager.encerrar(); 
+        if (window.ShortcutManager) window.ShortcutManager.reset();
         renderizarTopicos();
         atualizarStatusBackup('Aguardando...');
     }
