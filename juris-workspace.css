@@ -884,3 +884,34 @@
     mix-blend-mode: multiply; /* Efeito realista de tinta sobre papel */
     border-radius: 2px;
 }
+
+/* ================================================
+   CRACHÁS NUMERADOS NO PDF (HIGHLIGHT BADGES)
+   ================================================ */
+.pdf-annotation-badge {
+    position: absolute;
+    /* Ancora na direita, mas usa translate para não sobrepor o texto */
+    right: 4px; 
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 800;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.25);
+    cursor: default;
+    z-index: 5;
+    border: 2px solid #ffffff;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    user-select: none; 
+    pointer-events: auto;
+}
+
+.pdf-annotation-badge:hover {
+    transform: scale(1.15) translateY(-50%); /* O translate Y mantém o alinhamento da linha */
+    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.35);
+    z-index: 10;
+}
