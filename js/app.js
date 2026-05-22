@@ -15,6 +15,14 @@ let pdfReadTracker    = null;   // Observer para o crachá de leitura (UI)
 let _sessaoPossuiAudio = false; // Flag de restauração de áudio na retomada de sessão
 
 /* ================================================
+   1. NOVO ESTADO GLOBAL (Marcações / Highlights)
+   ================================================ */
+let _tempHighlightState = {
+    rects: null,
+    paginaFisica: null
+};
+
+/* ================================================
    MOCK COMPLETO DO LINKSERVICE (Compatível PDF.js V4)
    ================================================ */
 const jurisLinkService = {
@@ -737,6 +745,43 @@ async function renderizarPaginaElemento(num, container) {
         });
         await tl.render();
 
+        // --- RENDERIZAÇÃO DA CAMADA DE HIGHLIGHTS ---
+        const highlightLayerDiv = document.createElement('div');
+        highlightLayerDiv.className = 'highlightLayer';
+        highlightLayerDiv.style.setProperty('--scale-factor', viewport.scale);
+        container.appendChild(highlightLayerDiv);
+
+        topicos.forEach(topico => {
+            // Defesa extra: fallback caso hexToRgba não seja encontrado no TopicsManager
+            const bgCor = (window.TopicsManager && typeof window.TopicsManager.hexToRgba === 'function') 
+                ? window.TopicsManager.hexToRgba(topico.cor, 0.2) 
+                : topico.cor + '33';
+            const borderCor = topico.cor;
+
+            const desenharMarcacoes = (itens) => {
+                if (!itens) return;
+                itens.forEach(item => {
+                    if (item.tipo === 'texto' && item.paginaFisica === num && item.highlightRects) {
+                        item.highlightRects.forEach(rect => {
+                            const marker = document.createElement('div');
+                            marker.className = 'pdf-highlight-rect';
+                            marker.style.top = rect.top + 'px';
+                            marker.style.left = rect.left + 'px';
+                            marker.style.width = rect.width + 'px';
+                            marker.style.height = rect.height + 'px';
+                            marker.style.backgroundColor = bgCor;
+                            marker.style.borderBottom = `2.5px solid ${borderCor}`;
+                            
+                            highlightLayerDiv.appendChild(marker);
+                        });
+                    }
+                    if (item.itensCorrelacionados) desenharMarcacoes(item.itensCorrelacionados);
+                });
+            };
+            desenharMarcacoes(topico.anotacoes);
+        });
+        // --- FIM DA CAMADA DE HIGHLIGHTS ---
+
         // 2. Extração de Metadados (já existente)
         if (!_pageMetadataCache.has(num)) {
             extrairMetadadosDaPagina(num, textContent).then((meta) => {
@@ -831,34 +876,56 @@ function renderizarTopicos() {
 /* ================================================
    CAPTURA MANUAL DE TEXTO SELECIONADO E SNAPSHOT
    ================================================ */
-function capturarTrechoSelecionado() {
+let pdfRenderObserver = null;   // Observer para pré-renderização (lazy loading)
+let pdfReadTracker    = null;   // Observer para o crachá de leitura (UI)
+
+let _sessaoPossuiAudio = false; // Flag de restauração de áudio na retomada de sessão
+
+/* ================================================
+   1. NOVO ESTADO GLOBAL (Marcações / Highlights)
+   ================================================ */
+let _tempHighlightState = {
+    rects: null,
+    paginaFisica: null
+};function capturarTrechoSelecionado() {
     const selection = window.getSelection();
     const selecaoTexto = selection.toString().trim();
 
     if (selecaoTexto.length <= 5) {
-        exibirToast('Selecione um trecho válido no documento antes de usar esta ferramenta.', 'aviso');
+        exibirToast('Selecione um trecho válido no documento.', 'aviso');
         return;
     }
 
-    // Travessia segura de DOM (null-guard)
     const node = selection.anchorNode;
-    if (!node) return; // Evita crashes se a seleção foi perdida/programática
+    if (!node) return;
 
-    const isTextNode = node.nodeType === 3;
-    const element = isTextNode ? node.parentNode : node;
+    const element = node.nodeType === 3 ? node.parentNode : node;
     const pageContainer = element.closest('.pdf-page-container');
 
-    // Mapeia a página ancorada ou usa a global como último recurso extremo
-    const anchorPage = pageContainer && pageContainer.dataset.pageNumber 
-        ? parseInt(pageContainer.dataset.pageNumber, 10) 
-        : currentPage;
+    if (!pageContainer) {
+        exibirToast('A seleção deve estar dentro do PDF.', 'aviso');
+        return;
+    }
 
+    const anchorPage = parseInt(pageContainer.dataset.pageNumber, 10);
     const range = selection.getRangeAt(0);
-    const rect  = range.getBoundingClientRect();
-    
-    // Injeta a página correta no momento da abertura do popup (passada como parâmetro extra)
-    exibirPopupClassificacao('texto', selecaoTexto, rect.left, rect.bottom + 10, anchorPage);
+    const rects = Array.from(range.getClientRects());
+    const containerRect = pageContainer.getBoundingClientRect();
+
+    // Salva a normalização geométrica no estado global
+    _tempHighlightState.rects = rects.map(r => ({
+        top: r.top - containerRect.top,
+        left: r.left - containerRect.left,
+        width: r.width,
+        height: r.height
+    }));
+    _tempHighlightState.paginaFisica = anchorPage;
+
+    // Chamada (mantendo a assinatura antiga para retrocompatibilidade)
+    exibirPopupClassificacao('texto', selecaoTexto, rects[0].left, rects[0].bottom + 10, anchorPage);
 }
+
+/* ================================================
 
 /* ================================================
    MOTOR HEURÍSTICO DE FASES METODOLÓGICAS
@@ -883,24 +950,36 @@ function identificarFaseMetodologica(docNome) {
    PERSISTÊNCIA DE ANOTAÇÕES
    ================================================ */
 async function salvarAnotacao(tipo, conteudo, documento, polo, topicoId, comentario = '', targetParentIndex = null, anchorPageOverride = null) {
+    
+    // 🔥 DEFESA SÍNCRONA CRÍTICA: Captura os dados antes de qualquer await!
+    // Garante que o fechamento instantâneo do popup não destrua os dados desta execução.
+    const capturedHighlights = tipo === 'texto' && _tempHighlightState.rects 
+        ? structuredClone(_tempHighlightState.rects) 
+        : null;
+    const capturedPagina = _tempHighlightState.paginaFisica;
+
     const topicoAlvo = topicos.find(t => t.id === topicoId);
     if (!topicoAlvo) return;
 
-    // Usa a página congelada no clique, não a que está na tela agora
-    const pageTarget = anchorPageOverride || currentPage;
+    // A partir daqui ocorre a suspensão (await), mas nossos dados já estão seguros no escopo local.
+    const pageTarget = anchorPageOverride || (capturedPagina ? capturedPagina : currentPage);
     const metaDaPagina = await extrairMetadadosDaPagina(pageTarget);
     
-    // Aplica a sincronização lógica aqui (Fls carimbado tem prioridade via obterRotuloPagina)
     const novaExtracao = {
         tipo,
         documento,
         polo,
         pagina: obterRotuloPagina(pageTarget), 
+        paginaFisica: pageTarget, 
         timestamp: Date.now(),
         conteudo: conteudo,
         pjeId: metaDaPagina.pjeId,
         comentario: comentario
     };
+
+    if (capturedHighlights) {
+        novaExtracao.highlightRects = capturedHighlights;
+    }
 
     const faseNova = identificarFaseMetodologica(documento);
 

@@ -34,6 +34,24 @@ window.TopicsManager = (function () {
         return `rgb(${r},${g},${b})`;
     }
 
+    /**
+     * Converte cor Hexadecimal para RGBA com segurança.
+     * @param {string} hex - Cor em formato hexadecimal (ex: #FF0000)
+     * @param {number} alpha - Opacidade (0.0 a 1.0)
+     * @returns {string} String CSS válida (rgba ou o fallback original)
+     */
+    function hexToRgba(hex, alpha = 0.2) {
+        if (!hex || !hex.startsWith('#')) return hex;
+        
+        let c = hex.substring(1).split('');
+        if (c.length === 3) c = [c[0], c[0], c[1], c[1], c[2], c[2]];
+        
+        if (c.length !== 6) return hex;
+        
+        const num = parseInt(c.join(''), 16);
+        return `rgba(${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}, ${alpha})`;
+    }
+
     // Paleta Neon / Vibrante para as abas de tópicos e linhas de conexão
     const CORES_TOPICOS = [
         '#00FFFF', // Ciano Neon
@@ -710,7 +728,8 @@ window.TopicsManager = (function () {
         renderizarFichario,
         getActiveTabId: () => activeTabId,
         escaparHTML,
-        toggleTextExpansion
+        toggleTextExpansion,
+        hexToRgba
     };
 
 })();

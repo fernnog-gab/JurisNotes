@@ -326,6 +326,13 @@ function fecharPopupClassificacao() {
     }
     pendingTipo = null;
     pendingConteudo = null;
+    
+    // NOVO: Limpa o estado global geométrico com segurança
+    if (typeof _tempHighlightState !== 'undefined') {
+        _tempHighlightState.rects = null;
+        _tempHighlightState.paginaFisica = null;
+    }
+    
     if (window.getSelection) window.getSelection().removeAllRanges();
     
     const header = document.getElementById('popup-topic-color-feedback');
