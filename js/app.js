@@ -769,7 +769,7 @@ async function renderizarPaginaElemento(num, container) {
                             marker.style.left = rect.left + 'px';
                             marker.style.width = rect.width + 'px';
                             marker.style.height = rect.height + 'px';
-                            marker.style.backgroundColor = bgCor;
+                            // marker.style.backgroundColor = bgCor; // Desativado: Modo apenas sublinhado
                             marker.style.borderBottom = `2.5px solid ${borderCor}`;
                             
                             highlightLayerDiv.appendChild(marker);
@@ -874,9 +874,20 @@ function renderizarTopicos() {
 }
 
 /* ================================================
+   CAPTURA MANUAL DE TEXTO SELECIONADO E SNAPSHOT
+   ================================================ */
+let pdfRenderObserver = null;   // Observer para pré-renderização (lazy loading)
+let pdfReadTracker    = null;   // Observer para o crachá de leitura (UI)
+
+let _sessaoPossuiAudio = false; // Flag de restauração de áudio na retomada de sessão
+
+/* ================================================
    1. NOVO ESTADO GLOBAL (Marcações / Highlights)
    ================================================ */
-function capturarTrechoSelecionado() {
+let _tempHighlightState = {
+    rects: null,
+    paginaFisica: null
+};function capturarTrechoSelecionado() {
     const selection = window.getSelection();
     const selecaoTexto = selection.toString().trim();
 
@@ -999,6 +1010,32 @@ async function salvarAnotacao(tipo, conteudo, documento, polo, topicoId, comenta
         }
         topicoAlvo.anotacoes.splice(insertIndex, 0, novaExtracao);
     }
+
+    // INÍCIO DA INJEÇÃO VISUAL EM TEMPO REAL
+    if (capturedHighlights && capturedPagina) {
+        const pageContainer = document.querySelector(`.pdf-page-container[data-page-number="${capturedPagina}"]`);
+        if (pageContainer) {
+            let highlightLayer = pageContainer.querySelector('.highlightLayer');
+            if (highlightLayer) {
+                const borderCor = topicoAlvo.cor;
+
+                capturedHighlights.forEach(rect => {
+                    const marker = document.createElement('div');
+                    marker.className = 'pdf-highlight-rect';
+                    marker.style.top = rect.top + 'px';
+                    marker.style.left = rect.left + 'px';
+                    marker.style.width = rect.width + 'px';
+                    marker.style.height = rect.height + 'px';
+                    // marker.style.backgroundColor = bgCor; // Desativado: Modo apenas sublinhado
+                    marker.style.borderBottom = `2.5px solid ${borderCor}`;
+                    
+                    highlightLayer.appendChild(marker);
+                });
+            }
+        }
+        if (window.getSelection) window.getSelection().removeAllRanges();
+    }
+    // FIM DA INJEÇÃO VISUAL EM TEMPO REAL
 
     renderizarTopicos();
     salvarBackupAutomatico();
