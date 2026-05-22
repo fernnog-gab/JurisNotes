@@ -63,6 +63,20 @@ function _renderizarHighlightsDaPagina(pageNum, highlightLayerDiv) {
                         // Mantém o 'right: 4px' padrão do CSS (.pdf-annotation-badge)
                     } 
                     else if (item.tipo === 'imagem') {
+                        // 1. NOVO: Desenha a caixa demarcadora tracejada sobre a área recortada
+                        item.highlightRects.forEach(rect => {
+                            const marker = document.createElement('div');
+                            marker.className = 'pdf-highlight-rect';
+                            marker.style.top = rect.top + 'px';
+                            marker.style.left = rect.left + 'px';
+                            marker.style.width = rect.width + 'px';
+                            marker.style.height = rect.height + 'px';
+                            // Aplica a linha fina tracejada com a cor da aba
+                            marker.style.border = `1.5px dashed ${borderCor}`;
+                            
+                            highlightLayerDiv.appendChild(marker);
+                        });
+
                         // 2. Crachá da Imagem: Topo à Esquerda da área recortada
                         badge.style.top = firstRect.top + 'px';
                         badge.style.right = 'auto'; // Anula o posicionamento direito do CSS
