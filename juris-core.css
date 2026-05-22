@@ -350,3 +350,23 @@ body.theme-white {
 .toast-feedback.toast-sucesso { border-left: 4px solid #81c784; }
 .toast-feedback.toast-aviso   { border-left: 4px solid #ffd54f; }
 .toast-feedback.toast-erro    { border-left: 4px solid #e57373; }
+
+/* ================================================
+   6. ATALHOS FLUTUANTES (SMART SHORTCUTS)
+   ================================================ */
+.fab-shortcut { transition: all 0.2s ease; }
+
+.fab-shortcut.is-empty {
+    background-color: transparent !important;
+    border: 2px dashed rgba(26, 58, 92, 0.3) !important;
+    color: rgba(26, 58, 92, 0.4) !important;
+    box-shadow: none !important;
+}
+.fab-shortcut.is-empty:hover {
+    background-color: rgba(26, 58, 92, 0.08) !important;
+    color: rgba(26, 58, 92, 0.8) !important;
+    border-style: solid !important;
+}
+.fab-shortcut.is-active-autora { background-color: #388e3c !important; border-color: #81c784 !important; color: white !important; }
+.fab-shortcut.is-active-re { background-color: #d32f2f !important; border-color: #ef9a9a !important; color: white !important; }
+.fab-shortcut.is-active-juizo { background-color: var(--trt-blue) !important; border-color: #90caf9 !important; color: white !important; }
