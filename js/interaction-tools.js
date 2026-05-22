@@ -305,6 +305,12 @@ function fecharTudoWizard() {
     document.getElementById('wizard-backdrop').style.display   = 'none';
     _wizardTopicoSelecionado = null;
     _wizardImagemCapturada   = null;
+    
+    // NOVO: Prevenção de State Leakage
+    if (typeof _tempHighlightState !== 'undefined') {
+        _tempHighlightState.rects = null;
+        _tempHighlightState.paginaFisica = null;
+    }
 }
 
 /* ================================================
@@ -483,6 +489,17 @@ overlay.addEventListener('mouseup', function (e) {
         desativarOverlayRecorte();
         return;
     }
+
+    // --- CAPTURA DE COORDENADAS PARA O CRACHÁ ---
+    const containerRect = targetContainer.getBoundingClientRect();
+    _tempHighlightState.rects = [{
+        top: cropTop - containerRect.top,
+        left: cropLeft - containerRect.left,
+        width: cropW,
+        height: cropH
+    }];
+    _tempHighlightState.paginaFisica = parseInt(targetContainer.dataset.pageNumber);
+    // ------------------------------------------------
 
     const scaleX = canvas.width  / canvasRect.width;
     const scaleY = canvas.height / canvasRect.height;

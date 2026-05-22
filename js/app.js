@@ -36,30 +36,39 @@ function _renderizarHighlightsDaPagina(pageNum, highlightLayerDiv) {
             itens.forEach((item, idx) => {
                 const numIdeia = (parentIndex !== undefined ? parentIndex : idx) + 1;
 
-                if (item.tipo === 'texto' && item.paginaFisica === pageNum && item.highlightRects && item.highlightRects.length > 0) {
+                if ((item.tipo === 'texto' || item.tipo === 'imagem') && item.paginaFisica === pageNum && item.highlightRects && item.highlightRects.length > 0) {
                     
-                    // 1. Desenha as linhas sublinhadas
-                    item.highlightRects.forEach(rect => {
-                        const marker = document.createElement('div');
-                        marker.className = 'pdf-highlight-rect';
-                        marker.style.top = rect.top + 'px';
-                        marker.style.left = rect.left + 'px';
-                        marker.style.width = rect.width + 'px';
-                        marker.style.height = rect.height + 'px';
-                        marker.style.borderBottom = `2.5px solid ${borderCor}`;
-                        highlightLayerDiv.appendChild(marker);
-                    });
-
-                    // 2. Desenha o Crachá Numerado
                     const firstRect = item.highlightRects[0];
                     const badge = document.createElement('div');
                     badge.className = 'pdf-annotation-badge';
-                    
-                    // Alinha o centro do badge ao centro vertical do primeiro retângulo de texto
-                    badge.style.top = (firstRect.top + (firstRect.height / 2)) + 'px';
-                    badge.style.transform = 'translateY(-50%)'; 
                     badge.style.backgroundColor = topico.cor;
                     badge.innerText = numIdeia;
+
+                    if (item.tipo === 'texto') {
+                        // 1. Desenha as linhas sublinhadas (Apenas para texto)
+                        item.highlightRects.forEach(rect => {
+                            const marker = document.createElement('div');
+                            marker.className = 'pdf-highlight-rect';
+                            marker.style.top = rect.top + 'px';
+                            marker.style.left = rect.left + 'px';
+                            marker.style.width = rect.width + 'px';
+                            marker.style.height = rect.height + 'px';
+                            marker.style.borderBottom = `2.5px solid ${borderCor}`;
+                            highlightLayerDiv.appendChild(marker);
+                        });
+                        
+                        // 2. Crachá do Texto: Centralizado à Direita
+                        badge.style.top = (firstRect.top + (firstRect.height / 2)) + 'px';
+                        badge.style.transform = 'translateY(-50%)'; 
+                        // Mantém o 'right: 4px' padrão do CSS (.pdf-annotation-badge)
+                    } 
+                    else if (item.tipo === 'imagem') {
+                        // 2. Crachá da Imagem: Topo à Esquerda da área recortada
+                        badge.style.top = firstRect.top + 'px';
+                        badge.style.right = 'auto'; // Anula o posicionamento direito do CSS
+                        // Evita vazar da tela com Math.max (garante mínimo 4px da borda esquerda)
+                        badge.style.left = Math.max(4, firstRect.left - 28) + 'px';
+                    }
                     
                     // 3. Sistema de Tooltip Otimizado (reaproveitando DOM nativo da aplicação)
                     badge.addEventListener('mouseenter', (e) => {
@@ -295,6 +304,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (historyContainer) {
         historyContainer.addEventListener('scroll', checkScrollFabState, { passive: true });
     }
+    
+    // NOVO: Listener de scroll para os FABs na aba PDF
+    const pdfContainer = document.getElementById('pdf-container');
+    if (pdfContainer) {
+        pdfContainer.addEventListener('scroll', checkScrollFabState, { passive: true });
+    }
 
     // [DIAGNÓSTICO CORRIGIDO]: Auditoria de Event Bubbling no Container Pai
     const pdfContainer = document.getElementById('pdf-container');
@@ -323,8 +338,15 @@ document.addEventListener("DOMContentLoaded", () => {
    ================================================ */
 
 /* ================================================
-   GERENCIAMENTO DE INTERFACE (ABAS)
+   GERENCIAMENTO DE INTERFACE E SCROLL DISPATCHER
    ================================================ */
+
+function getActiveScrollContainer() {
+    return document.getElementById('tab-leitura').classList.contains('active') 
+        ? document.getElementById('pdf-container') 
+        : document.getElementById('history-container');
+}
+
 function trocarAba(aba) {
     document.getElementById('pdf-container').style.display     = aba === 'leitura'   ? 'flex'  : 'none';
     document.getElementById('history-container').style.display = aba === 'historico' ? 'block' : 'none';
@@ -337,29 +359,21 @@ function trocarAba(aba) {
         btnExportar.style.display = (aba === 'historico' && topicos.length > 0) ? 'flex' : 'none';
     }
 
-    // FABs de navegação: container visível apenas na aba Anotações
+    // FABs de navegação: exibe em ambas as abas, confia na checagem de conteúdo
     const fabContainer = document.getElementById('scroll-fab-container');
     if (fabContainer) {
-        fabContainer.style.display = (aba === 'historico') ? 'flex' : 'none';
-        if (aba === 'historico') {
-            // Pequeno delay para garantir que o display:block do history-container
-            // já foi aplicado antes de checar scrollHeight vs clientHeight
-            setTimeout(checkScrollFabState, 60);
-        }
+        fabContainer.style.display = 'flex';
+        // Pequeno delay para garantir que o display das abas já foi aplicado
+        setTimeout(checkScrollFabState, 60);
     }
 }
 
 /* ================================================
-   NAVEGAÇÃO POR FABs (PAINEL DE ANOTAÇÕES)
+   NAVEGAÇÃO POR FABs (INTELIGENTE)
    ================================================ */
 
-/**
- * Avalia o estado de scroll do history-container e
- * mostra/oculta os botões FAB de forma inteligente.
- * Chamada pelo listener de scroll e pela troca de aba.
- */
 function checkScrollFabState() {
-    const hc     = document.getElementById('history-container');
+    const hc     = getActiveScrollContainer();
     const btnTop = document.getElementById('btn-scroll-top');
     const btnBot = document.getElementById('btn-scroll-bottom');
     if (!hc || !btnTop || !btnBot) return;
@@ -368,21 +382,17 @@ function checkScrollFabState() {
     const atTop      = hc.scrollTop < 50;
     const atBottom   = hc.scrollTop + hc.clientHeight >= hc.scrollHeight - 30;
 
-    // Toggle da classe .is-hidden (opacity + pointer-events), não do display
-    // para aproveitar a transição CSS e evitar conflito de especificidade
     btnTop.classList.toggle('is-hidden', atTop);
     btnBot.classList.toggle('is-hidden', !scrollable || atBottom);
 }
 
-/** Rola suavemente o painel de anotações para o topo. */
 function rolarParaTopo() {
-    const hc = document.getElementById('history-container');
+    const hc = getActiveScrollContainer();
     if (hc) hc.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-/** Rola suavemente o painel de anotações para o final. */
 function rolarParaFinal() {
-    const hc = document.getElementById('history-container');
+    const hc = getActiveScrollContainer();
     if (hc) hc.scrollTo({ top: hc.scrollHeight, behavior: 'smooth' });
 }
 
@@ -1012,7 +1022,7 @@ async function salvarAnotacao(tipo, conteudo, documento, polo, topicoId, comenta
     
     // 🔥 DEFESA SÍNCRONA CRÍTICA: Captura os dados antes de qualquer await!
     // Garante que o fechamento instantâneo do popup não destrua os dados desta execução.
-    const capturedHighlights = tipo === 'texto' && _tempHighlightState.rects 
+    const capturedHighlights = (tipo === 'texto' || tipo === 'imagem') && _tempHighlightState.rects 
         ? structuredClone(_tempHighlightState.rects) 
         : null;
     const capturedPagina = _tempHighlightState.paginaFisica;
