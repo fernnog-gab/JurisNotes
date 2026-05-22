@@ -876,9 +876,6 @@ function renderizarTopicos() {
 /* ================================================
    1. NOVO ESTADO GLOBAL (Marcações / Highlights)
    ================================================ */
-let _tempHighlightState = {
-    rects: null,
-    paginaFisica: null
 };function capturarTrechoSelecionado() {
     const selection = window.getSelection();
     const selecaoTexto = selection.toString().trim();
