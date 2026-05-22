@@ -865,3 +865,22 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
+
+/* ================================================
+   CAMADA DE MARCAÇÃO INTELIGENTE (HIGHLIGHTS)
+   ================================================ */
+.highlightLayer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none; /* Permite selecionar texto e clicar em links por baixo */
+    z-index: 1; /* Fica entre o textLayer(0) e o annotationLayer(2) */
+}
+
+.pdf-highlight-rect {
+    position: absolute;
+    mix-blend-mode: multiply; /* Efeito realista de tinta sobre papel */
+    border-radius: 2px;
+}
