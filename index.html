@@ -378,10 +378,20 @@
     
     <div id="audio-player-panel" style="display: none;">
         <div class="audio-header">
-            <span>🎙️ Oitiva de Audiência</span>
+            <span style="display: flex; align-items: center; gap: 8px;">🎙️ Oitiva de Audiência</span>
             <button onclick="AudioManager.fecharPlayer()" title="Minimizar Player">✕</button>
         </div>
-        <audio id="main-audio-player" controls></audio>
+        
+        <div class="audio-main-controls">
+            <div class="audio-jump-box" title="Ir para tempo específico">
+                <input type="number" id="jump-h" placeholder="hh" min="0" onkeydown="AudioManager.handleJumpKey(event)"> :
+                <input type="number" id="jump-m" placeholder="mm" min="0" max="59" onkeydown="AudioManager.handleJumpKey(event)"> :
+                <input type="number" id="jump-s" placeholder="ss" min="0" max="59" onkeydown="AudioManager.handleJumpKey(event)">
+                <button onclick="AudioManager.pularParaTempo()">✔</button>
+            </div>
+            <audio id="main-audio-player" controls></audio>
+        </div>
+
         <div class="audio-controls">
             <button class="chip-btn chip-cancelar" onclick="AudioManager.marcarInicio()">⏱️ Marcar Início</button>
             <button class="chip-btn chip-cancelar" onclick="AudioManager.marcarFim()">⏱️ Marcar Fim e Anotar</button>
@@ -390,6 +400,13 @@
             <span id="audio-marker-start">Início: --' --''</span>
             <span id="audio-marker-end">Fim: --' --''</span>
         </div>
+
+        <hr style="border: 0; border-top: 1px dashed #ccc; margin: 4px 0;">
+
+        <details class="audio-history-section">
+            <summary>📋 Histórico de Recortes</summary>
+            <div id="audio-history-list" class="doc-list-container"></div>
+        </details>
     </div>
 
     <div id="audio-classification-popup" class="crop-wizard-popup" style="display:none; z-index: 3001;">
@@ -605,9 +622,16 @@
     <!-- MODAL DE ATIVAÇÃO DE BACKUP OBRIGATÓRIO -->
     <div id="backup-modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); z-index: 5000;"></div>
     <div id="modal-ativar-backup" class="crop-wizard-popup" style="display:none; z-index: 5001; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); min-width: 350px;">
-        <div class="wizard-header" style="background: var(--trt-blue); color: white;">💾 Ativar Salvamento Automático</div>
-        <p class="popup-label" style="margin-top: 10px; font-size: 0.95rem;">O PDF foi carregado com sucesso!</p>
-        <p style="font-size: 0.85rem; color: #555; margin-bottom: 16px;">Para evitar a perda de dados, crie agora o arquivo de backup desta sessão.</p>
+        <div class="wizard-header backup-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            Ativar Salvamento Automático
+        </div>
+        <p class="popup-label" style="margin-top: 10px; font-size: 0.95rem; text-align: center;">O PDF foi carregado com sucesso!</p>
+        <p style="font-size: 0.85rem; color: #555; margin-bottom: 16px; text-align: center;">Para evitar a perda de dados, crie agora o arquivo de backup desta sessão.</p>
         <div class="wizard-actions" style="justify-content: center;">
             <button class="chip-btn chip-autora" style="background: #2e7d32; color: white; border: none; padding: 12px 24px; font-size: 1rem;" onclick="acionarCriacaoBackup()">
                 ✔ Criar Arquivo de Backup
