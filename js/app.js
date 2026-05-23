@@ -137,8 +137,10 @@ document.addEventListener("DOMContentLoaded", () => {
                         window.AudioManager.solicitarMp3Retomada();
                     }
                 } else {
-                    exibirToast('PDF carregado e sistema de backup operante!');
-                    await salvarBackupAutomatico();
+                    // PDF carregou. Agora exibimos o modal para pedir o clique explícito do usuário
+                    console.log("[JURIS LOG] PDF renderizado. Aguardando clique para gerar backup.");
+                    document.getElementById('backup-modal-backdrop').style.display = 'block';
+                    document.getElementById('modal-ativar-backup').style.display = 'flex';
                 }
             }
         });
@@ -397,25 +399,11 @@ async function novoProcesso(event) {
         return;
     }
     
-    if (!modoRetomada) {
-        try {
-            const nomeSugerido = file.name.replace(/\.[^/.]+$/, "").toLowerCase() + ".json";
-            const handle = await window.showSaveFilePicker({
-                suggestedName: nomeSugerido,
-                types: [{ description: 'Arquivo de Backup', accept: { 'application/json': ['.json'] } }]
-            });
-            BackupManager.setFileHandle(handle);
-            atualizarStatusBackup('Sessão Ativa ✓', true);
-            sessionStorage.setItem('juris_active_session', 'true');
-            exibirToast('Backup ancorado. Lendo e renderizando o PDF...', 'info');
-        } catch (err) {
-            if (err.name !== 'AbortError') exibirToast('Erro ao criar o backup. Tente novamente.', 'erro');
-            event.target.value = '';
-            return;
-        }
-    }
+    // Armazenamos o nome sugerido globalmente para usar no modal depois
+    window._nomeArquivoSugerido = file.name.replace(/\.[^/.]+$/, "").toLowerCase() + ".json";
 
     if (window.PdfEngine) {
+        console.log("[JURIS LOG] Iniciando leitura do PDF:", file.name);
         await PdfEngine.carregarPDF(file, modoRetomada);
     }
 }
@@ -838,3 +826,46 @@ document.addEventListener('visibilitychange', () => {
         }
     }
 });
+
+/* ================================================
+   CRIAÇÃO EXPLÍCITA DE BACKUP (Resolve erro de ativação)
+   ================================================ */
+async function acionarCriacaoBackup() {
+    console.log("[JURIS LOG] Usuário clicou em criar backup. Iniciando FileSystem API...");
+    
+    try {
+        const handle = await window.showSaveFilePicker({
+            suggestedName: window._nomeArquivoSugerido || 'backup_processo.json',
+            types: [{ description: 'Arquivo de Backup Juris Notes', accept: { 'application/json': ['.json'] } }]
+        });
+        
+        console.log("[JURIS LOG] Permissão concedida pelo usuário. Handle capturado.");
+        
+        BackupManager.setFileHandle(handle);
+        atualizarStatusBackup('Sessão Ativa ✓', true);
+        sessionStorage.setItem('juris_active_session', 'true');
+        
+        // Salva os dados iniciais vazios para confirmar que o arquivo foi criado
+        await salvarBackupAutomatico();
+        
+        // Fecha o modal e avisa o usuário
+        document.getElementById('backup-modal-backdrop').style.display = 'none';
+        document.getElementById('modal-ativar-backup').style.display = 'none';
+        exibirToast('Backup ancorado! Salvamento automático ativado.', 'sucesso');
+        
+    } catch (err) {
+        // RASTREAMENTO DETALHADO DO ERRO
+        console.error("[JURIS LOG FATAL] Falha ao criar arquivo de backup:");
+        console.error("Nome do Erro:", err.name);
+        console.error("Mensagem:", err.message);
+        
+        if (err.name === 'AbortError') {
+            console.log("[JURIS LOG] O usuário cancelou a janela de salvar.");
+            exibirToast('Você cancelou a criação do backup. Clique novamente para tentar.', 'aviso');
+        } else if (err.name === 'SecurityError' || err.name === 'NotAllowedError') {
+            exibirToast('O navegador bloqueou a gravação. Verifique as permissões de download.', 'erro');
+        } else {
+            exibirToast('Erro desconhecido ao tentar criar o arquivo.', 'erro');
+        }
+    }
+}
