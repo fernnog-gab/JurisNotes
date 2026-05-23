@@ -53,7 +53,10 @@ window.AudioManager = (function() {
         }
     }
 
-    function abrirPlayer() { document.getElementById('audio-player-panel').style.display = 'flex'; }
+    function abrirPlayer() { 
+        document.getElementById('audio-player-panel').style.display = 'flex'; 
+        atualizarHistoricoAudio(); 
+    }
     function fecharPlayer() { document.getElementById('audio-player-panel').style.display = 'none'; }
     function alternarPlayer() {
         const p = document.getElementById('audio-player-panel');
@@ -186,6 +189,7 @@ window.AudioManager = (function() {
 
         cancelarAnotacao(); // Fecha o modal
         fecharPlayer();     // Força o player a minimizar e deixar apenas o ícone pulsando
+        atualizarHistoricoAudio(); // Mitiga falha de sincronização apontada no relatório
         _deps.exibirToast('Trecho da oitiva salvo!', 'sucesso');
     }
 
@@ -299,10 +303,100 @@ window.AudioManager = (function() {
         });
     }
 
+    /**
+     * Controlador de evento isolado para atalho de teclado
+     */
+    function handleJumpKey(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            pularParaTempo();
+        }
+    }
+
+    /**
+     * Calcula o tempo com validação contra NaN (Bug Crítico) e ReadyState
+     */
+    function pularParaTempo() {
+        const h = parseInt(document.getElementById('jump-h').value, 10) || 0;
+        const m = parseInt(document.getElementById('jump-m').value, 10) || 0;
+        const s = parseInt(document.getElementById('jump-s').value, 10) || 0;
+        const totalSegundos = (h * 3600) + (m * 60) + s;
+        
+        const audio = document.getElementById('main-audio-player');
+        
+        if (!audio.src || audio.src === window.location.href) {
+            _deps.exibirToast('Carregue o áudio primeiro.', 'aviso'); return;
+        }
+
+        // Blindagem contra I/O pendente (Causa raiz do Bug NaN)
+        if (audio.readyState === 0 || isNaN(audio.duration)) {
+            _deps.exibirToast('Aguarde o carregamento do arquivo.', 'aviso'); return;
+        }
+        
+        if (totalSegundos > audio.duration) {
+            _deps.exibirToast('Tempo excede a duração do áudio.', 'erro'); return;
+        }
+
+        _limparMonitoramentoTrecho(audio); // Teardown limpo
+
+        audio.currentTime = totalSegundos;
+        audio.play().catch(() => _deps.exibirToast('Clique no player para liberar reprodução.', 'aviso'));
+    }
+
+    /**
+     * Constrói o histórico rastreando toda a árvore JSON em memória
+     */
+    function atualizarHistoricoAudio() {
+        const listaEl = document.getElementById('audio-history-list');
+        if (!listaEl) return;
+        
+        const topicosAtuais = _deps.getTopicos();
+        const recortes = [];
+
+        topicosAtuais.forEach(topico => {
+            topico.anotacoes.forEach(an => {
+                if (an.tipo === 'audio') recortes.push(an);
+                if (an.itensCorrelacionados) {
+                    an.itensCorrelacionados.forEach(c => { if (c.tipo === 'audio') recortes.push(c); });
+                }
+            });
+        });
+
+        if (recortes.length === 0) {
+            listaEl.innerHTML = '<p class="popup-label" style="text-align:center;">Nenhum recorte salvo nesta sessão.</p>';
+            return;
+        }
+
+        let html = '';
+        recortes.forEach(r => {
+            try {
+                const dados = JSON.parse(r.conteudo);
+                const titulo = dados.oradorStr || dados.role || 'Orador não idt.';
+                const tempo = `${dados.labelInicio} a ${dados.labelFim}`;
+                const startNum = dados.inicio || 0;
+                const endNum = dados.fim || 0;
+                
+                // Resolução do Bug de Truncamento do texto
+                const trunc = (str, n) => (str.length > n) ? str.substring(0, n) + '...' : str;
+                const comentarioTexto = r.comentario ? trunc(r.comentario, 30) : 'Sem obs.';
+
+                html += `
+                    <div class="audio-history-item" onclick="AudioManager.tocarTrecho(${startNum}, ${endNum})" title="Ouvir trecho salvo">
+                        <div style="display:flex; flex-direction:column; gap: 2px;">
+                            <span class="hist-title">${titulo}</span>
+                            <span style="font-size:0.7rem; color:#888;">${comentarioTexto}</span>
+                        </div>
+                        <span class="hist-time">${tempo}</span>
+                    </div>`;
+            } catch(e) {}
+        });
+        listaEl.innerHTML = html;
+    }
+
     return {
         init, iniciarSessao, abrirPlayer, fecharPlayer, alternarPlayer,
         marcarInicio, marcarFim, onRoleChange, toggleAgrupar,
         salvarRecorte, cancelarAnotacao, encerrar, solicitarMp3Retomada,
-        tocarTrecho
+        tocarTrecho, pularParaTempo, handleJumpKey, atualizarHistoricoAudio
     };
 })();
