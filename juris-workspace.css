@@ -659,8 +659,10 @@
     box-shadow: 0 12px 32px rgba(0,0,0,0.25);
     z-index: var(--z-audio-player);
     border: 1px solid var(--border-color);
-    width: 480px; /* Alargado para suportar os Inputs */
-    max-width: 90vw;
+    width: 520px; /* Aumentado para dar mais conforto */
+    max-width: 90vw; /* Responsividade de segurança */
+    max-height: 85vh; /* Impede que o painel cresça além da tela do monitor */
+    overflow-y: auto; /* Se o painel ficar muito alto, ele próprio rola */
     flex-direction: column;
     gap: 12px;
 }
@@ -669,10 +671,30 @@
 .audio-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .audio-markers { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 600; color: #555; background: #f4f7f9; padding: 6px 10px; border-radius: 6px; }
 
-.audio-main-controls { display: flex; align-items: center; gap: 12px; }
-.audio-main-controls audio { flex: 1; height: 40px; outline: none; }
+.audio-main-controls { 
+    display: flex; 
+    flex-direction: column; 
+    align-items: stretch; 
+    gap: 12px; 
+}
+.audio-main-controls audio { 
+    width: 100%; 
+    height: 40px; 
+    outline: none; 
+}
 
-.audio-jump-box { display: flex; align-items: center; gap: 4px; background: #f4f7f9; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.85rem; color: #555; }
+.audio-jump-box { 
+    align-self: center;
+    display: flex; 
+    align-items: center; 
+    gap: 4px; 
+    background: #f4f7f9; 
+    padding: 6px 10px; 
+    border-radius: 8px; 
+    border: 1px solid var(--border-color); 
+    font-size: 0.85rem; 
+    color: #555; 
+}
 .audio-jump-box input { width: 32px; text-align: center; border: 1px solid #ccc; border-radius: 4px; padding: 4px 0; font-size: 0.8rem; appearance: textfield; }
 .audio-jump-box input::-webkit-outer-spin-button, .audio-jump-box input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .audio-jump-box input:focus { border-color: var(--trt-blue); outline: none; }
@@ -692,7 +714,16 @@
 }
 .audio-history-section[open] summary::before { transform: rotate(90deg); color: var(--trt-blue); }
 
-#audio-history-list { margin-top: 8px; max-height: 180px; }
+#audio-history-list { 
+    margin-top: 8px; 
+    max-height: 220px; /* Aumentado um pouco o espaço visual da lista */
+    overflow-y: auto; /* CORREÇÃO CRÍTICA: Cria a barra de rolagem quando encher */
+    padding-right: 6px; /* Evita que o texto encoste na barra de rolagem */
+}
+
+/* Estilizando a barra de rolagem para ficar elegante e não grosseira */
+#audio-history-list::-webkit-scrollbar { width: 6px; }
+#audio-history-list::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
 .audio-history-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: white; border: 1px solid #eee; border-radius: 6px; margin-bottom: 6px; cursor: pointer; transition: background 0.2s; }
 .audio-history-item:hover { background: #fdfaf4; border-color: #f2e3c6; }
 .audio-history-item .hist-title { font-size: 0.8rem; font-weight: 600; color: var(--text-dark); }
