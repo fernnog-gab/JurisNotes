@@ -367,15 +367,15 @@ body.theme-white {
     color: rgba(26, 58, 92, 0.8) !important;
     border-style: solid !important;
 }
-<button id="fab-recurso-autora" class="fab-btn fab-shortcut is-empty" onclick="ShortcutManager.handleClick('recursoAutora', event)" title="Recurso Ordinário (Autora)" style="display:none;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="transform: scaleX(-1);"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"></path><path d="M13 19l6-6"></path><path d="M16 16l4 4"></path><path d="M19 21l2-2"></path></svg>
-        </button>
-        .fab-shortcut.is-active-autora { background-color: #388e3c !important; border-color: #81c784 !important; color: white !important; }
+
+/* VERDE: Recurso Autora */
+.fab-shortcut.is-active-autora { background-color: #388e3c !important; border-color: #81c784 !important; color: white !important; }
+
+/* VERMELHO: Recurso Ré 1 e Contestação */
 .fab-shortcut.is-active-re { background-color: #d32f2f !important; border-color: #ef9a9a !important; color: white !important; }
+
+/* BORDÔ: Recurso Ré 2 (Novo) */
 .fab-shortcut.is-active-re2 { background-color: #800020 !important; border-color: #b33939 !important; color: white !important; }
-.fab-shortcut.is-active-juizo { background-color: var(--trt-blue) !important; border-color: #90caf9 !important; color: white !important; }<button id="fab-recurso-re" class="fab-btn fab-shortcut is-empty" onclick="ShortcutManager.handleClick('recursoReu', event)" title="Recurso Ordinário (Ré 1)" style="display:none;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"></path><path d="M13 19l6-6"></path><path d="M16 16l4 4"></path><path d="M19 21l2-2"></path></svg>
-        </button>
-        <button id="fab-recurso-re2" class="fab-btn fab-shortcut is-empty" onclick="ShortcutManager.handleClick('recursoReu2', event)" title="Recurso Ordinário (Ré 2)" style="display:none;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"></path><path d="M13 19l6-6"></path><path d="M16 16l4 4"></path><path d="M19 21l2-2"></path></svg>
-        </button>
+
+/* AZUL: Sentença / Juízo */
+.fab-shortcut.is-active-juizo { background-color: var(--trt-blue) !important; border-color: #90caf9 !important; color: white !important; }
