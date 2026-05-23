@@ -2,7 +2,7 @@
    export-manager.js
    Módulo de Formatação e Exportação: Markdown + Imagens
    Arquitetura: "Roteiro do Diretor" para o Mestre de Gabinete
-   Versão: 3.0 - Produção
+   Versão: 3.1 - Produção (Com Blindagem de Strings e SourceRef)
    ================================================
 
    CORREÇÕES APLICADAS v3.0:
@@ -18,6 +18,12 @@
        'Análise Probatória' foi substituído por texto que instrui
        o LLM a inferir a tese, evitando que ele trate o rótulo
        como uma tese definida.
+       
+   CORREÇÕES APLICADAS v3.1:
+   [4] Blindagem de Strings: Centralização de tratamento via helper _safeMD,
+       impedindo que parágrafos inseridos pelo usuário quebrem as tags Markdown.
+   [5] Recuperação de Contexto (SourceRef): Mapeamento dinâmico entre intenções 
+       metodológicas e as sub-provas que as originaram.
    ================================================ */
 
 window.ExportManager = (function () {
@@ -95,6 +101,17 @@ window.ExportManager = (function () {
         _deps.exibirToast('Todas as imagens foram baixadas.', 'sucesso');
     }
 
+    /**
+     * Sanitiza textos livres do usuário para injeção segura em blocos Markdown.
+     * Previne que quebras de linha (\n) escapem da formatação do blockquote ou lista.
+     * @param {string} texto Conteúdo bruto.
+     * @param {string} prefixo Prefixo estrutural (ex: '\n  > ' ou '\n  ').
+     */
+    function _safeMD(texto, prefixo = '\n  > ') {
+        if (!texto) return '';
+        return texto.replace(/\n/g, prefixo);
+    }
+
     // ─── GERADOR DE MARKDOWN ──────────────────────────────────────────────────
 
     /**
@@ -163,26 +180,26 @@ window.ExportManager = (function () {
                 const imgNome = _gerarNomeArquivoImagem(numIdeia, null, an.pjeId, an.pagina);
                 md += `- ${docLabel}\n`;
                 md += `  > 🖼️ **[IMAGEM FORNECIDA PELO ASSESSOR]** (Nome do arquivo: \`${imgNome}\`).\n`;
-                md += `  > 🧠 *Comentário Humano:* ${an.comentario || 'Extraia a informação desta imagem e integre à fundamentação.'}\n`;
+                md += `  > 🧠 *Comentário Humano:* ${_safeMD(an.comentario || 'Extraia a informação desta imagem e integre à fundamentação.', '\n  > ')}\n`;
 
             } else if (an.tipo === 'audio') {
                 try {
                     const ad = JSON.parse(an.conteudo);
-                    md += `- ${docLabel} 🎙️ **[OITIVA DE AUDIÊNCIA]**`;
-                    md += ` (${ad.oradorStr || 'Orador não idt.'} — ${ad.labelInicio || '?'} a ${ad.labelFim || '?'}).\n`;
+                    // Unificação do orador
+                    const oradorFinal = ad.role || ad.oradorStr || 'Orador não idt.';
+                    md += `- ${docLabel} 🎙️ **[OITIVA DE AUDIÊNCIA]** (${oradorFinal} — ${ad.labelInicio || '?'} a ${ad.labelFim || '?'}).\n`;
                     
-                    // NOVA APRESENTAÇÃO ESTRUTURADA
                     if (an.comentario) {
-                        md += `  > 🧠 *Observação / Contexto do Assessor:* ${an.comentario}\n`;
+                        md += `  > 🧠 *Observação / Contexto do Assessor:* ${_safeMD(an.comentario, '\n  > ')}\n`;
                     }
                     if (ad.transcricao) {
-                        md += `  > 📜 *Degravação Literal:* "${ad.transcricao}"\n`;
+                        md += `  > 📜 *Degravação Literal:* "${_safeMD(ad.transcricao, '\n  > ')}"\n`;
                     }
                     if (!an.comentario && !ad.transcricao) {
                         md += `  > 🧠 *Sem transcrição ou observações registradas.*\n`;
                     }
                 } catch (e) {
-                    md += `- ${docLabel} 🎙️ **[ÁUDIO]** *Resumo:* ${an.comentario || 'Sem comentário.'}\n`;
+                    md += `- ${docLabel} 🎙️ **[ÁUDIO]** *Resumo:* ${_safeMD(an.comentario || 'Sem comentário.', '\n  > ')}\n`;
                 }
             }
 
@@ -194,58 +211,69 @@ window.ExportManager = (function () {
                     const cDocLabel   = `  ↳ *Confronto [${corr.documento || 'Doc'}] (${corr.polo || 'Polo'}) ${cRefCitacao}:*`;
 
                     if (corr.tipo === 'texto') {
-                        const txt = corr.comentario
-                            ? corr.comentario
-                            : (corr.conteudo || '').replace(/\n/g, ' ');
-                        md += `${cDocLabel} ${txt}\n`;
+                        const txt = corr.comentario ? corr.comentario : (corr.conteudo || '');
+                        md += `${cDocLabel} ${_safeMD(txt, ' ')}\n`;
 
                     } else if (corr.tipo === 'imagem') {
                         const imgNomeSub = _gerarNomeArquivoImagem(numIdeia, numSub, corr.pjeId, corr.pagina);
                         md += `${cDocLabel}\n`;
                         md += `    > 🖼️ **[IMAGEM ANEXA: \`${imgNomeSub}\`]**\n`;
-                        md += `    > 🧠 *Comentário:* ${corr.comentario || 'Analise a ligação técnica desta prova com o elemento principal acima.'}\n`;
+                        md += `    > 🧠 *Comentário:* ${_safeMD(corr.comentario || 'Analise a ligação técnica.', '\n    > ')}\n`;
+                        
                     } else if (corr.tipo === 'audio') {
                         try {
                             const ad = JSON.parse(corr.conteudo);
                             const oradorFinal = ad.role || ad.oradorStr || 'Orador não idt.';
-                            
                             md += `${cDocLabel} 🎙️ **[OITIVA DE AUDIÊNCIA]** (${oradorFinal} — ${ad.labelInicio || '?'} a ${ad.labelFim || '?'}).\n`;
                             
-                            if (corr.comentario) md += `    > 🧠 *Observação / Contexto:* ${corr.comentario}\n`;
-                            if (ad.transcricao) md += `    > 📜 *Degravação Literal:* "${ad.transcricao}"\n`;
+                            if (corr.comentario) md += `    > 🧠 *Observação / Contexto:* ${_safeMD(corr.comentario, '\n    > ')}\n`;
+                            if (ad.transcricao) md += `    > 📜 *Degravação Literal:* "${_safeMD(ad.transcricao, '\n    > ')}"\n`;
                             if (!corr.comentario && !ad.transcricao) md += `    > 🧠 *Sem observações registradas.*\n`;
                         } catch (e) {
-                            md += `${cDocLabel} 🎙️ **[ÁUDIO]** *Contexto:* ${corr.comentario || 'Informativo ausente.'}\n`;
+                            md += `${cDocLabel} 🎙️ **[ÁUDIO]** *Contexto:* ${_safeMD(corr.comentario || 'Informativo ausente.', '\n    > ')}\n`;
                         }
                     }
                 });
             }
 
             // ── Nós de Ideia (Triagem de Intenções) ─────────────────────────
-            // PREMISSAS ficam coladas à IDEIA: amarram a dedução fática localmente.
-            // DEMAIS INTENÇÕES são ejetadas para os blocos globais (tags XML).
             if (an.subAnotacoes && an.subAnotacoes.length > 0) {
                 an.subAnotacoes.forEach((sub) => {
                     const intencao = sub.intencao || 'premissa';
+                    
+                    // Resgate seguro do Alvo Metodológico (SourceRef)
+                    let focoContexto = '';
+                    if (sub.sourceRef !== undefined && sub.sourceRef !== 'main' && an.itensCorrelacionados) {
+                        const cIdx = parseInt(sub.sourceRef, 10);
+                        if (!isNaN(cIdx) && an.itensCorrelacionados[cIdx]) {
+                            const alvo = an.itensCorrelacionados[cIdx];
+                            let docNome = alvo.documento || alvo.tipo;
+                            if(alvo.tipo === 'audio') docNome = 'Oitiva/Áudio';
+                            focoContexto = ` [Foco na Prova Secundária: ${docNome} ${alvo.pagina ? 'fl.'+alvo.pagina : ''}]`;
+                        }
+                    }
+
+                    // Textos de intenção também sofrem blindagem contra quebras de linha
+                    const textoSanitizado = _safeMD(sub.texto, '\n  ');
 
                     if (intencao === 'premissa') {
-                        md += `\n  💡 **Premissa Lógica do Assessor (Incontroversa):** ${sub.texto}\n`;
+                        md += `\n  💡 **Premissa Lógica do Assessor (Incontroversa)${focoContexto}:** ${textoSanitizado}\n`;
                     } else if (intencao === 'refutacao') {
-                        md += `\n  🛡️ **Refutação de Mérito / Afastamento de Tese:** ${sub.texto}\n`;
+                        md += `\n  🛡️ **Refutação de Mérito / Afastamento de Tese${focoContexto}:** ${textoSanitizado}\n`;
                     } else if (intencao === 'comando') {
-                        comandosInjetados.push(`[Referente à Ideia ${numIdeia}]: ${sub.texto}`);
+                        comandosInjetados.push(`[Ideia ${numIdeia}${focoContexto}]: ${textoSanitizado}`);
                     } else if (intencao === 'texto') {
-                        comandosInjetados.push(`[Referente à Ideia ${numIdeia} — TEXTO OBRIGATÓRIO]: Incorpore a seguinte redação exata na minuta: "${sub.texto}"`);
+                        comandosInjetados.push(`[Ideia ${numIdeia}${focoContexto} — TEXTO FIXO]: Incorpore: "${textoSanitizado}"`);
                     } else if (intencao === 'veredito') {
-                        vereditosExigidos.push(`[Referente à Ideia ${numIdeia}]: ${sub.texto}`);
+                        vereditosExigidos.push(`[Ideia ${numIdeia}${focoContexto}]: ${textoSanitizado}`);
                     } else if (intencao === 'fundamentacao') {
-                        baseLegalObrigatoria.push(`[Referente à Ideia ${numIdeia}]: ${sub.texto}`);
+                        baseLegalObrigatoria.push(`[Ideia ${numIdeia}${focoContexto}]: ${textoSanitizado}`);
                     } else if (intencao === 'preliminar') {
-                        preliminaresInjetadas.push(`[Referente à Ideia ${numIdeia}]: ${sub.texto}`);
+                        preliminaresInjetadas.push(`[Ideia ${numIdeia}${focoContexto}]: ${textoSanitizado}`);
                     } else if (intencao === 'alegacao') {
-                        alegacoesInjetadas.push(`[Referente à Ideia ${numIdeia}]: ${sub.texto}`);
+                        alegacoesInjetadas.push(`[Ideia ${numIdeia}${focoContexto}]: ${textoSanitizado}`);
                     } else if (intencao === 'fundamento_sentenca') {
-                        fundamentosInjetados.push(`[Referente à Ideia ${numIdeia}]: ${sub.texto}`);
+                        fundamentosInjetados.push(`[Ideia ${numIdeia}${focoContexto}]: ${textoSanitizado}`);
                     }
                 });
             }
