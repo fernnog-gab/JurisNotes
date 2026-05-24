@@ -467,9 +467,21 @@
         
         <!-- Novo Submenu de Temas -->
         <button class="doc-btn" style="border:none; text-align:left; margin-bottom: 4px;" onclick="toggleSubmenuTemas()">🎨 Temas ▾</button>
-        <div id="submenu-temas" style="display:none; padding-left: 12px; border-left: 2px solid #eee; margin-bottom: 4px; flex-direction: column; gap: 4px;">
-            <button class="doc-btn neutro" style="border:none; text-align:left;" onclick="aplicarTemaPDF('jasmine')">🌕 Fundo Jasmine</button>
-            <button class="doc-btn neutro" style="border:none; text-align:left;" onclick="aplicarTemaPDF('white')">⬜ Fundo Branco</button>
+        <div id="submenu-temas" style="display:none; padding-left: 12px; border-left: 2px solid #eee; margin-bottom: 4px; flex-direction: column; gap: 12px;">
+            
+            <!-- Submenu: Processo (PDF) -->
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+                <span style="font-size: 0.7rem; color: #888; font-weight: bold; text-transform: uppercase;">📄 Processo (PDF)</span>
+                <button class="doc-btn neutro" style="border:none; text-align:left; padding: 6px 12px;" onclick="aplicarTema('processo', 'jasmine')">🌕 Fundo Jasmine</button>
+                <button class="doc-btn neutro" style="border:none; text-align:left; padding: 6px 12px;" onclick="aplicarTema('processo', 'white')">⬜ Fundo Branco</button>
+            </div>
+
+            <!-- Submenu: Anotações -->
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+                <span style="font-size: 0.7rem; color: #888; font-weight: bold; text-transform: uppercase;">📝 Anotações</span>
+                <button class="doc-btn neutro" style="border:none; text-align:left; padding: 6px 12px;" onclick="aplicarTema('anotacoes', 'jasmine')">🌕 Fundo Jasmine</button>
+                <button class="doc-btn neutro" style="border:none; text-align:left; padding: 6px 12px;" onclick="aplicarTema('anotacoes', 'white')">⬜ Fundo Branco</button>
+            </div>
         </div>
         
         <hr style="border: 0; border-top: 1px solid #eee; margin: 4px 0;">

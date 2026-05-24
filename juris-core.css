@@ -7,9 +7,20 @@
    1. VARIÁVEIS, Z-INDEX CENTRALIZADO E RESET
    ================================================ */
 :root {
+    /* Design Tokens Bases */
+    --theme-bg-jasmine: #FFD580;
+    --theme-border-jasmine: #fbc02d;
+    --theme-bg-white: #FFFFFF;
+    --theme-border-white: #FFFFFF;
+
+    /* Variáveis Aplicadas (Padrões de Inicialização) */
+    --pdf-bg-color: var(--theme-bg-jasmine);
+    --pdf-marker-border: var(--theme-border-white);
+    --notes-bg-color: var(--theme-bg-white);
+    --notes-marker-border: var(--theme-border-jasmine);
+
     /* Paleta de Cores Base */
     --trt-blue:     #1a3a5c;
-    --pdf-bg-color: #FFD580; /* Jasmine Padrão */
     --trt-blue-mid: #25527f;
     --trt-light-bg: #f4f7f9;
     --text-dark:    #2c2c2c;
@@ -48,9 +59,24 @@ body {
     flex-direction: column;
 }
 
-/* Tema do PDF controlado no Body */
-body.theme-white {
-    --pdf-bg-color: #FFFFFF;
+/* Matriz de Temas: Processo */
+body.theme-processo-white {
+    --pdf-bg-color: var(--theme-bg-white);
+    --pdf-marker-border: var(--theme-border-jasmine);
+}
+body.theme-processo-jasmine {
+    --pdf-bg-color: var(--theme-bg-jasmine);
+    --pdf-marker-border: var(--theme-border-white);
+}
+
+/* Matriz de Temas: Anotações */
+body.theme-anotacoes-white {
+    --notes-bg-color: var(--theme-bg-white);
+    --notes-marker-border: var(--theme-border-jasmine);
+}
+body.theme-anotacoes-jasmine {
+    --notes-bg-color: var(--theme-bg-jasmine);
+    --notes-marker-border: var(--theme-border-white);
 }
 
 @media (min-width: 768px) {
@@ -295,8 +321,8 @@ body.theme-white {
 }
 
 .doc-tag { background: #eceff1; color: #37474f; border: 1px solid #cfd8dc; }
-.tag-parte-autora   { background: #388e3c; color: #ffffff; border: 1px solid #2e7d32; }
-.tag-parte-re       { background: #d32f2f; color: #ffffff; border: 1px solid #b71c1c; }
+.tag-parte-autora   { background: #e8f5e9; color: #1b5e20; }
+.tag-parte-re       { background: #c62828; color: #ffffff; }
 .tag-sentenca       { background: #e3f2fd; color: #0d47a1; }
 .tag-sentenca-de-ed { background: #f3e5f5; color: #6a1b9a; }
 .tag-laudo-pericial { background: #fff8e1; color: #e65100; }
