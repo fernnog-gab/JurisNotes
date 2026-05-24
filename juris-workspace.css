@@ -617,11 +617,9 @@
    8. COMPONENTES DE ÁUDIO
    ================================================ */
 #active-audio-indicator {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -35%);
-    margin: 0;
+    margin-left: auto;
+    margin-right: 16px;
+    align-self: center;
     background: #e53935;
     color: white;
     width: 34px;
