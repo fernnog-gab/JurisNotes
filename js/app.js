@@ -146,8 +146,10 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    const savedTheme = localStorage.getItem('pdf-theme') || 'jasmine';
-    aplicarTemaPDF(savedTheme);
+    const savedThemeProcesso = localStorage.getItem('theme-processo') || 'jasmine';
+    const savedThemeAnotacoes = localStorage.getItem('theme-anotacoes') || 'white';
+    document.body.classList.add(`theme-processo-${savedThemeProcesso}`);
+    document.body.classList.add(`theme-anotacoes-${savedThemeAnotacoes}`);
 
     if (window.AudioManager) {
         AudioManager.init({ getTopicos: () => topicos, exibirToast, salvarAnotacao });
@@ -187,13 +189,22 @@ function atualizarDisplayPaginador(pageNum) {
     }
 }
 
-function aplicarTemaPDF(tema) { 
-    document.body.classList.toggle('theme-white', tema === 'white');
-    localStorage.setItem('pdf-theme', tema);
+window.aplicarTema = function(alvo, tema) { 
+    // Remove qualquer classe de tema anterior do respectivo alvo
+    const regex = alvo === 'processo' ? /^theme-processo-/ : /^theme-anotacoes-/;
+    document.body.className = document.body.className.split(' ').filter(c => !regex.test(c)).join(' ');
+    
+    // Aplica o novo tema no Body
+    document.body.classList.add(`theme-${alvo}-${tema}`);
+    
+    // Persistência
+    localStorage.setItem(`theme-${alvo}`, tema);
+    
     const menu = document.getElementById('juris-menu');
     if (menu) menu.style.display = 'none';
-    exibirToast(`Fundo ${tema === 'white' ? 'Branco' : 'Jasmine'} ativado.`, 'sucesso');
-}
+    
+    exibirToast(`Fundo ${tema === 'white' ? 'Branco' : 'Jasmine'} aplicado a ${alvo}.`, 'sucesso');
+};
 
 function getActiveScrollContainer() {
     return document.getElementById('tab-leitura').classList.contains('active') 

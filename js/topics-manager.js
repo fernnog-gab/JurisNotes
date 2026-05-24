@@ -470,7 +470,6 @@ window.TopicsManager = (function () {
                 btn.style.borderBottom = 'none';
                 btn.style.color = escurecerCor(topico.cor, 0.4);
                 contentEl.style.borderTop = `3px solid ${escurecerCor(topico.cor)}`;
-                contentEl.style.backgroundColor = '#ffffff';
             } else {
                 btn.style.border = '1px solid #dde3ea';
                 btn.style.borderBottom = 'none';
