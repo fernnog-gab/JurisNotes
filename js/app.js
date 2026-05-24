@@ -23,18 +23,18 @@ window.sincronizarHighlightsGerais = function() {
    MÓDULO DE ATALHOS FLUTUANTES (SHORTCUT MANAGER)
    ================================================ */
 window.ShortcutManager = (function() {
-    let state = { recursoAutora: null, recursoReu: null, recursoReu2: null, contestacao: null, sentenca: null };
+    let state = { favorito: null, recursoAutora: null, recursoReu: null, recursoReu2: null, contestacao: null, sentenca: null };
     let currentEditingType = null;
     
-    const colors = { recursoAutora: 'is-active-autora', recursoReu: 'is-active-re', recursoReu2: 'is-active-re2', contestacao: 'is-active-re', sentenca: 'is-active-juizo' };
-    const rotulos = { recursoAutora: 'Recurso (Autora)', recursoReu: 'Recurso (Ré 1)', recursoReu2: 'Recurso (Ré 2)', contestacao: 'Contestação', sentenca: 'Sentença/Acórdão' };
+    const colors = { favorito: 'is-active-favorito', recursoAutora: 'is-active-autora', recursoReu: 'is-active-re', recursoReu2: 'is-active-re2', contestacao: 'is-active-re', sentenca: 'is-active-juizo' };
+    const rotulos = { favorito: 'Favorito (Coringa)', recursoAutora: 'Recurso (Autora)', recursoReu: 'Recurso (Ré 1)', recursoReu2: 'Recurso (Ré 2)', contestacao: 'Contestação', sentenca: 'Sentença/Acórdão' };
 
     function updateUI() {
         Object.keys(state).forEach(type => {
             const btn = document.getElementById(getFabId(type));
             if (!btn) return;
             
-            btn.classList.remove('is-empty', 'is-active-autora', 'is-active-re', 'is-active-re2', 'is-active-juizo');
+            btn.classList.remove('is-empty', 'is-active-favorito', 'is-active-autora', 'is-active-re', 'is-active-re2', 'is-active-juizo');
             
             if (state[type] === null) {
                 btn.classList.add('is-empty');
@@ -96,7 +96,7 @@ window.ShortcutManager = (function() {
     }
 
     function getFabId(type) {
-        const map = { recursoAutora: 'fab-recurso-autora', recursoReu: 'fab-recurso-re', recursoReu2: 'fab-recurso-re2', contestacao: 'fab-contestacao', sentenca: 'fab-sentenca' };
+        const map = { favorito: 'fab-favorito', recursoAutora: 'fab-recurso-autora', recursoReu: 'fab-recurso-re', recursoReu2: 'fab-recurso-re2', contestacao: 'fab-contestacao', sentenca: 'fab-sentenca' };
         return map[type];
     }
 
@@ -104,7 +104,7 @@ window.ShortcutManager = (function() {
         handleClick, updateUI, fecharModal, salvarModal,
         getState: () => state,
         setState: (newState) => { if (newState) { state = { ...state, ...newState }; updateUI(); } },
-        reset: () => { state = { recursoAutora: null, recursoReu: null, recursoReu2: null, contestacao: null, sentenca: null }; updateUI(); },
+        reset: () => { state = { favorito: null, recursoAutora: null, recursoReu: null, recursoReu2: null, contestacao: null, sentenca: null }; updateUI(); },
         toggleVisibility: (show) => {
             Object.keys(state).forEach(type => {
                 const btn = document.getElementById(getFabId(type));

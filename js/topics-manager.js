@@ -5,6 +5,19 @@
 window.TopicsManager = (function () {
     'use strict';
 
+    let _activeTopicoCor = '#ffffff';
+
+    function obterCorContraste(hex) {
+        if (!hex || !hex.startsWith('#')) return '#ffffff';
+        let cleanHex = hex.replace('#', '');
+        if (cleanHex.length === 3) cleanHex = cleanHex.split('').map(c => c + c).join('');
+        const r = parseInt(cleanHex.substr(0, 2), 16);
+        const g = parseInt(cleanHex.substr(2, 2), 16);
+        const b = parseInt(cleanHex.substr(4, 2), 16);
+        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+        return (yiq >= 128) ? '#1a1a1a' : '#ffffff';
+    }
+
     /**
      * Sanitizador de HTML — previne XSS ao interpolar dados do usuário
      * em template literals. Escapa os 5 metacaracteres fundamentais do HTML.
@@ -215,6 +228,12 @@ window.TopicsManager = (function () {
         
         const faseDoCard = typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(anotacao.documento) : 4;
         const bgZoneClass = `fase-${faseDoCard}`;
+
+        let bgPoloClass = '';
+        if (anotacao.polo === 'Parte Autora') bgPoloClass = 'polo-autora';
+        else if (anotacao.polo === 'Parte Ré') bgPoloClass = 'polo-re';
+        
+        const corTextoBadge = obterCorContraste(_activeTopicoCor);
         
         const docSeguro = anotacao.documento ? escaparHTML(anotacao.documento) : escaparHTML(anotacao.polo);
         const poloSeguro = (anotacao.documento && anotacao.polo) ? escaparHTML(anotacao.polo) : '';
@@ -387,11 +406,11 @@ window.TopicsManager = (function () {
             <div class="timeline-item-master ${alignClass}" id="timeline-wrapper-${index}">
                 <div class="main-card-wrapper">
                     <div class="annotation-number-area">
-                        <div class="timeline-number" title="Nomear Tese / Legenda" onclick="abrirModalTese('${activeTabId}', ${index})">
+                        <div class="timeline-number" style="background-color: ${_activeTopicoCor}; color: ${corTextoBadge};" title="Nomear Tese / Legenda" onclick="abrirModalTese('${activeTabId}', ${index})">
                             ${numero}
                         </div>
                     </div>
-                    <div class="annotation-card ${bgZoneClass}">
+                    <div class="annotation-card ${bgZoneClass} ${bgPoloClass}">
                         <div class="card-header">
                             <div style="display:flex; gap:6px;">${tagsHtml}</div>
                             <span class="card-meta" style="cursor:pointer;" title="Clique p/ copiar | Shift+Clique p/ editar folha" onclick="handleMetaClick(event, '${activeTabId}', ${index}, false)">${metaTexto}</span>
@@ -470,6 +489,9 @@ window.TopicsManager = (function () {
         const topicoAtivo = topicosArray.find(t => t.id === activeTabId);
         if (!topicoAtivo) return;
 
+        _activeTopicoCor = topicoAtivo.cor;
+        const corTextoTese = obterCorContraste(_activeTopicoCor);
+
         if (topicoAtivo.anotacoes.length === 0) {
             contentEl.innerHTML = `
                 <p class="empty-state" style="margin-top: 20px;">
@@ -525,7 +547,7 @@ window.TopicsManager = (function () {
                         sumarioHtml += `
                             <div class="thesis-badge ${matureClass}" onclick="abrirModalTese('${activeTabId}', ${idx})">
                                 <div class="thesis-badge-inner" ${bgStyle}>
-                                    <span class="num">${idx + 1}</span> 
+                                    <span class="num" style="background-color: ${_activeTopicoCor}; color: ${corTextoTese};">${idx + 1}</span> 
                                     <span class="texto-tese">${txt}</span>
                                 </div>
                             </div>`;
@@ -725,6 +747,7 @@ window.TopicsManager = (function () {
     // API pública do módulo
     return {
         obterCor,
+        obterCorContraste,
         renderizarFichario,
         getActiveTabId: () => activeTabId,
         escaparHTML,

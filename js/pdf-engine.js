@@ -375,6 +375,9 @@ window.PdfEngine = (function () {
                         const badge = document.createElement('div');
                         badge.className = 'pdf-annotation-badge';
                         badge.style.backgroundColor = topico.cor;
+                        if (window.TopicsManager && typeof window.TopicsManager.obterCorContraste === 'function') {
+                            badge.style.color = window.TopicsManager.obterCorContraste(topico.cor);
+                        }
                         badge.innerText = numIdeia;
 
                         if (item.tipo === 'texto') {
