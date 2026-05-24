@@ -321,8 +321,8 @@ body.theme-anotacoes-jasmine {
 }
 
 .doc-tag { background: #eceff1; color: #37474f; border: 1px solid #cfd8dc; }
-.tag-parte-autora   { background: #e8f5e9; color: #1b5e20; }
-.tag-parte-re       { background: #c62828; color: #ffffff; }
+.tag-parte-autora   { background: #388e3c; color: #ffffff; }
+.tag-parte-re       { background: #d32f2f; color: #ffffff; }
 .tag-sentenca       { background: #e3f2fd; color: #0d47a1; }
 .tag-sentenca-de-ed { background: #f3e5f5; color: #6a1b9a; }
 .tag-laudo-pericial { background: #fff8e1; color: #e65100; }
