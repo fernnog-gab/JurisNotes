@@ -639,6 +639,19 @@
     100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(229, 57, 53, 0); }
 }
 
+/* Estado Pendente: Exige a injeção do arquivo MP3 na sessão restaurada */
+#active-audio-indicator.pending-audio {
+    background: #f57c00;
+    box-shadow: 0 2px 6px rgba(245, 124, 0, 0.4);
+    animation: pulse-mic-pending 2.5s infinite;
+}
+
+@keyframes pulse-mic-pending {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 124, 0, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(245, 124, 0, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 124, 0, 0); }
+}
+
 /* Correção do Header de Backup (anula herança e aplica estilo centralizado) */
 .wizard-header.backup-header {
     background: var(--trt-blue);
