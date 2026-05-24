@@ -133,8 +133,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     trocarAba('leitura');
                     exibirToast('PDF validado e carregado. Sessão retomada com sucesso. ✓');
                     
-                    if (_sessaoPossuiAudio && window.AudioManager) {
-                        window.AudioManager.solicitarMp3Retomada();
+                    if (_sessaoPossuiAudio && typeof window.AudioManager?.prepararRetomada === 'function') {
+                        window.AudioManager.prepararRetomada();
                     }
                 } else {
                     // PDF carregou. Agora exibimos o modal para pedir o clique explícito do usuário

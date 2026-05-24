@@ -58,7 +58,31 @@ window.AudioManager = (function() {
         atualizarHistoricoAudio(); 
     }
     function fecharPlayer() { document.getElementById('audio-player-panel').style.display = 'none'; }
-    function alternarPlayer() {
+    
+    function prepararRetomada() {
+        const activeIndicator = document.getElementById('active-audio-indicator');
+        if (activeIndicator) {
+            activeIndicator.style.display = 'flex';
+            activeIndicator.classList.add('pending-audio');
+        }
+        _deps.exibirToast('Áudios detectados na sessão! Clique no microfone pulsante para anexar o arquivo MP3.', 'aviso');
+    }
+
+    async function alternarPlayer() {
+        if (!_audioUrl) {
+            try {
+                await solicitarMp3Retomada();
+            } catch (e) {
+                _deps.exibirToast('Carregamento do arquivo MP3 foi cancelado.', 'aviso');
+                return;
+            }
+            
+            if (!_audioUrl) return; 
+
+            const activeIndicator = document.getElementById('active-audio-indicator');
+            if (activeIndicator) activeIndicator.classList.remove('pending-audio');
+        }
+        
         const p = document.getElementById('audio-player-panel');
         p.style.display = (p.style.display === 'none') ? 'flex' : 'none';
     }
@@ -212,7 +236,10 @@ window.AudioManager = (function() {
         if (player) player.src = '';
 
         const activeIndicator = document.getElementById('active-audio-indicator');
-        if (activeIndicator) activeIndicator.style.display = 'none';
+        if (activeIndicator) {
+            activeIndicator.style.display = 'none';
+            activeIndicator.classList.remove('pending-audio');
+        }
 
         fecharPlayer();
         _timeStart = null;
@@ -397,6 +424,7 @@ window.AudioManager = (function() {
         init, iniciarSessao, abrirPlayer, fecharPlayer, alternarPlayer,
         marcarInicio, marcarFim, onRoleChange, toggleAgrupar,
         salvarRecorte, cancelarAnotacao, encerrar, solicitarMp3Retomada,
-        tocarTrecho, pularParaTempo, handleJumpKey, atualizarHistoricoAudio
+        tocarTrecho, pularParaTempo, handleJumpKey, atualizarHistoricoAudio,
+        prepararRetomada
     };
 })();
