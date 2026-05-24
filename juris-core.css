@@ -254,6 +254,7 @@ body.theme-white {
 
 .tabs {
     display: flex;
+    position: relative;
     background: #dde3ea;
     border-bottom: 2px solid var(--trt-blue);
     flex-shrink: 0;
@@ -379,3 +380,6 @@ body.theme-white {
 
 /* AZUL: Sentença / Juízo */
 .fab-shortcut.is-active-juizo { background-color: var(--trt-blue) !important; border-color: #90caf9 !important; color: white !important; }
+
+/* AMARELO: Favorito / Coringa */
+.fab-shortcut.is-active-favorito { background-color: #fbc02d !important; border-color: #f57f17 !important; color: white !important; }
