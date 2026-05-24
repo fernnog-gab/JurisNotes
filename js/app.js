@@ -713,12 +713,17 @@ function solicitarExclusaoAba(btnEl, id) {
 }
 
 window.handleMetaClick = function(event, topicoId, index, isCorrelated = false, cIdx = null) {
+    // 1. Resgate de Estado
     const topico = topicos.find(t => t.id === topicoId);
     if (!topico) return;
 
-    const anotacao = isCorrelated ? topico.anotacoes[index].itensCorrelacionados[cIdx] : topico.anotacoes[index];
+    const anotacao = isCorrelated 
+        ? topico.anotacoes[index].itensCorrelacionados[cIdx] 
+        : topico.anotacoes[index];
 
+    // 2. Roteamento de Intenção do Usuário
     if (event.shiftKey) {
+        // --- FLUXO 1: EDIÇÃO MANUAL ---
         const novaPagina = prompt(`Editar folha (Atual: ${anotacao.pagina || 'vazio'}):`, anotacao.pagina || '');
         if (novaPagina !== null) {
             anotacao.pagina = novaPagina;
@@ -726,7 +731,41 @@ window.handleMetaClick = function(event, topicoId, index, isCorrelated = false, 
             salvarBackupAutomatico();
             exibirToast('Numeração de página atualizada!', 'sucesso');
         }
+
+    } else if (event.ctrlKey && !event.shiftKey) {
+        // --- FLUXO 2: NAVEGAÇÃO DIRETA PARA A PROVA ---
+        event.preventDefault();
+        event.stopPropagation(); // Previne fechamento acidental de menus globais
+
+        // Validação estrita contra heurísticas (Usa apenas o dado físico garantido)
+        const targetPage = anotacao.paginaFisica;
+
+        if (!targetPage || isNaN(targetPage)) {
+            exibirToast('Esta anotação foi capturada em uma versão antiga e não possui âncora física.', 'aviso');
+            return;
+        }
+
+        if (!window.PdfEngine || !PdfEngine.getPdfDoc()) {
+            exibirToast('Carregue o PDF do processo para acessar a folha correspondente.', 'aviso');
+            return;
+        }
+
+        // Mutação Idempotente: Só troca a aba se realmente estiver fora dela
+        const isAbaProcessoAtiva = document.getElementById('tab-leitura').classList.contains('active');
+        if (!isAbaProcessoAtiva) {
+            trocarAba('leitura');
+        }
+
+        // Double-rAF: Aguarda o término da mutação de Layout (display: none -> flex) 
+        // antes de solicitar ao motor o cálculo de rolagem.
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                PdfEngine.goToPage(targetPage);
+            });
+        });
+
     } else {
+        // --- FLUXO 3: CÓPIA PARA ÁREA DE TRANSFERÊNCIA ---
         let textoParaCopiar = event.target.innerText;
 
         if (anotacao.tipo === 'audio') {
