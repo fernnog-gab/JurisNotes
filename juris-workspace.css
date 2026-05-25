@@ -608,6 +608,30 @@
 .edit-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; padding-top: 12px; border-top: 1px solid #eee; }
 .edit-save-btn { background: var(--trt-blue); color: white; border-color: var(--trt-blue); }
 
+/* Classes para o parser do Markdown renderizar */
+.txt-largo-1 {
+    font-size: 1.15em; 
+    line-height: 1.6;
+    display: inline;
+}
+
+.txt-largo-2 {
+    font-size: 1.35em;
+    line-height: 1.6;
+    display: inline;
+}
+
+/* Estilos internos para os labels dos novos botões (UI) */
+.font-btn-label {
+    font-size: 1.1em;
+    font-weight: bold;
+}
+
+.font-btn-label-lg {
+    font-size: 1.25em;
+    font-weight: 900;
+}
+
 /* Gerenciador de Abas */
 .aba-manager-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; background: #fafafa; margin-bottom: 6px; }
 .aba-manager-nome { font-weight: 600; color: var(--trt-blue); font-size: 0.88rem; }

@@ -301,6 +301,9 @@
     <!-- TOAST DE FEEDBACK NÃO-INTRUSIVO -->
     <div id="toast-feedback" class="toast-feedback"></div>
     
+    <!-- BACKDROP DEDICADO PARA EDIÇÃO DE TEXTO -->
+    <div id="text-edit-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.40); z-index: 4000;" onclick="fecharModalEdicao()"></div>
+    
     <!-- MODAL DE EDIÇÃO DE TEXTO -->
     <div id="text-edit-modal" class="text-edit-modal" style="display:none;">
         <div class="edit-header">✏️ Editar Texto</div>
@@ -308,6 +311,12 @@
         <div class="edit-toolbar">
             <button type="button" class="edit-tool-btn" onclick="aplicarNegritoTextarea()" title="Negrito (Ctrl+B)">
                 <b>B</b> Negrito
+            </button>
+            <button type="button" class="edit-tool-btn" onclick="aplicarAumentoFonte(1)" title="Aumentar Fonte - 15%">
+                <span class="font-btn-label">A+</span>
+            </button>
+            <button type="button" class="edit-tool-btn" onclick="aplicarAumentoFonte(2)" title="Aumentar Fonte - 35%">
+                <span class="font-btn-label-lg">A++</span>
             </button>
         </div>
         
