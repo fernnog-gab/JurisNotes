@@ -119,14 +119,14 @@ function abrirModalEdicao(contexto, textoAtual) {
     _editContext = contexto;
     const textarea = document.getElementById('edit-text-input');
     textarea.value = textoAtual;
-    document.getElementById('wizard-backdrop').style.display = 'block';
+    document.getElementById('text-edit-backdrop').style.display = 'block';
     document.getElementById('text-edit-modal').style.display = 'flex';
     setTimeout(() => textarea.focus(), 50);
 }
 
 function fecharModalEdicao() {
     _editContext = null;
-    document.getElementById('wizard-backdrop').style.display = 'none';
+    document.getElementById('text-edit-backdrop').style.display = 'none';
     document.getElementById('text-edit-modal').style.display = 'none';
 }
 
@@ -171,6 +171,41 @@ function salvarEdicaoTexto() {
     salvarBackupAutomatico();
     exibirToast('Anotação salva com sucesso!', 'sucesso');
     fecharModalEdicao();
+}
+
+function aplicarAumentoFonte(nivel) {
+    const textarea = document.getElementById('edit-text-input');
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const texto = textarea.value;
+
+    if (start === end) {
+        return exibirToast('Selecione um trecho para modificar a fonte.', 'aviso');
+    }
+
+    const prefixo = `[[size:${nivel}]]`;
+    const sufixo = `[[/size]]`;
+
+    // VERIFICAÇÃO DE TOGGLE (Idempotência)
+    const trechoAnterior = texto.substring(start - prefixo.length, start);
+    const trechoPosterior = texto.substring(end, end + sufixo.length);
+
+    if (trechoAnterior === prefixo && trechoPosterior === sufixo) {
+        // UNWRAP: Remove as tags existentes no entorno
+        textarea.value = texto.substring(0, start - prefixo.length) + 
+                         texto.substring(start, end) + 
+                         texto.substring(end + sufixo.length);
+        textarea.setSelectionRange(start - prefixo.length, end - prefixo.length);
+    } else {
+        // WRAP: Sanitiza sujeira interna antes de envelopar
+        let trechoSelecionado = texto.substring(start, end);
+        // Expurga tags de tamanho antigas de dentro da nova seleção para evitar aninhamento
+        trechoSelecionado = trechoSelecionado.replace(/\[\[size:\d\]\]/g, '').replace(/\[\[\/size\]\]/g, '');
+
+        textarea.value = texto.substring(0, start) + prefixo + trechoSelecionado + sufixo + texto.substring(end);
+        textarea.setSelectionRange(start + prefixo.length, start + prefixo.length + trechoSelecionado.length);
+    }
+    textarea.focus();
 }
 
 /* --- FUNÇÕES INTEGRAIS MIGRADAS DO APP.JS --- */

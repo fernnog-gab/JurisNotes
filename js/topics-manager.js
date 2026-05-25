@@ -36,7 +36,16 @@ window.TopicsManager = (function () {
 
     function renderizarMarkdownSeguro(strEscapada) {
         if (!strEscapada) return '';
-        return strEscapada.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+        let processado = strEscapada;
+        
+        // FIX: [\s\S]*? engloba quebras de linha (\n)
+        processado = processado.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
+        
+        // NOVA SINTAXE: Renderização de Tipografia
+        processado = processado.replace(/\[\[size:1\]\]([\s\S]*?)\[\[\/size\]\]/g, '<span class="txt-largo-1">$1</span>');
+        processado = processado.replace(/\[\[size:2\]\]([\s\S]*?)\[\[\/size\]\]/g, '<span class="txt-largo-2">$1</span>');
+        
+        return processado;
     }
 
     function escurecerCor(hex, fator = 0.65) {
