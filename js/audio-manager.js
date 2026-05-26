@@ -18,10 +18,13 @@ window.AudioManager = (function() {
     }
 
     function formatTime(seconds) {
-        if (seconds === null || isNaN(seconds)) return "--' --''";
-        const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+        if (seconds === null || seconds === undefined || isNaN(seconds)) return "--h --' --''";
+        
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
         const s = Math.floor(seconds % 60).toString().padStart(2, '0');
-        return `${m}' ${s}''`;
+        
+        return h > 0 ? `${h}h ${m}' ${s}''` : `${m}' ${s}''`;
     }
 
     async function iniciarSessao() {
@@ -223,8 +226,8 @@ window.AudioManager = (function() {
         if (backdrop) backdrop.style.display = 'none';
 
         _timeStart = null; _timeEnd = null;
-        document.getElementById('audio-marker-start').innerText = "--' --''";
-        document.getElementById('audio-marker-end').innerText = "--' --''";
+        document.getElementById('audio-marker-start').innerText = `Início: ${formatTime(null)}`;
+        document.getElementById('audio-marker-end').innerText = `Fim: ${formatTime(null)}`;
     }
 
     function encerrar() {
@@ -399,7 +402,7 @@ window.AudioManager = (function() {
             try {
                 const dados = JSON.parse(r.conteudo);
                 const titulo = dados.oradorStr || dados.role || 'Orador não idt.';
-                const tempo = `${dados.labelInicio} a ${dados.labelFim}`;
+                const tempo = `${formatTime(dados.inicio)} a ${formatTime(dados.fim)}`;
                 const startNum = dados.inicio || 0;
                 const endNum = dados.fim || 0;
                 
@@ -425,6 +428,6 @@ window.AudioManager = (function() {
         marcarInicio, marcarFim, onRoleChange, toggleAgrupar,
         salvarRecorte, cancelarAnotacao, encerrar, solicitarMp3Retomada,
         tocarTrecho, pularParaTempo, handleJumpKey, atualizarHistoricoAudio,
-        prepararRetomada
+        prepararRetomada, formatTime
     };
 })();

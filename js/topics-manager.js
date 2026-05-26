@@ -149,6 +149,8 @@ window.TopicsManager = (function () {
             // Garante extração segura de tempos matemáticos (fallback para 0)
             const inicioNum = dadosAudio.inicio || 0;
             const fimNum = dadosAudio.fim || 0;
+            
+            const safeFormatTime = (sec) => window.AudioManager?.formatTime ? window.AudioManager.formatTime(sec) : `${Math.floor(sec/60)}' ${Math.floor(sec%60)}''`;
 
             // Renderiza o cabeçalho com o botão Clickable e Ícone de Play
             htmlConteudo = `
@@ -160,7 +162,7 @@ window.TopicsManager = (function () {
                     </div>
                     <div class="audio-card-meta">
                         <strong>Oitiva:</strong> ${tagVisual}<br>
-                        <span class="audio-time-badge">⏱️ ${dadosAudio.labelInicio} a ${dadosAudio.labelFim}</span>
+                        <span class="audio-time-badge">⏱️ ${safeFormatTime(inicioNum)} a ${safeFormatTime(fimNum)}</span>
                     </div>
                 </div>`;
 
@@ -187,8 +189,9 @@ window.TopicsManager = (function () {
         if (item.tipo === 'audio') {
             try {
                 const dados = JSON.parse(item.conteudo);
+                const safeFormatTime = (sec) => window.AudioManager?.formatTime ? window.AudioManager.formatTime(sec) : `${Math.floor(sec/60)}' ${Math.floor(sec%60)}''`;
                 // Retorna exatamente o formato que o usuário quer copiar para a minuta
-                return `(⏱️ ${dados.labelInicio} a ${dados.labelFim})`;
+                return `(⏱️ ${safeFormatTime(dados.inicio)} a ${safeFormatTime(dados.fim)})`;
             } catch (e) {
                 return '(Oitiva)';
             }

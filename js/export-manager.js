@@ -129,6 +129,7 @@ window.ExportManager = (function () {
      */
     function _gerarMarkdown(topico) {
         const dataGeracao = new Date().toLocaleString('pt-BR');
+        const safeFormatTime = (sec) => window.AudioManager?.formatTime ? window.AudioManager.formatTime(sec) : `${Math.floor(sec/60)}' ${Math.floor(sec%60)}''`;
 
         // Coletores para os blocos globais de arquitetura (tags XML)
         const preliminaresInjetadas = [];
@@ -187,7 +188,7 @@ window.ExportManager = (function () {
                     const ad = JSON.parse(an.conteudo);
                     // Unificação do orador
                     const oradorFinal = ad.role || ad.oradorStr || 'Orador não idt.';
-                    md += `- ${docLabel} 🎙️ **[OITIVA DE AUDIÊNCIA]** (${oradorFinal} — ${ad.labelInicio || '?'} a ${ad.labelFim || '?'}).\n`;
+                    md += `- ${docLabel} 🎙️ **[OITIVA DE AUDIÊNCIA]** (${oradorFinal} — ${safeFormatTime(ad.inicio)} a ${safeFormatTime(ad.fim)}).\n`;
                     
                     if (an.comentario) {
                         md += `  > 🧠 *Observação / Contexto do Assessor:* ${_safeMD(an.comentario, '\n  > ')}\n`;
@@ -224,7 +225,7 @@ window.ExportManager = (function () {
                         try {
                             const ad = JSON.parse(corr.conteudo);
                             const oradorFinal = ad.role || ad.oradorStr || 'Orador não idt.';
-                            md += `${cDocLabel} 🎙️ **[OITIVA DE AUDIÊNCIA]** (${oradorFinal} — ${ad.labelInicio || '?'} a ${ad.labelFim || '?'}).\n`;
+                            md += `${cDocLabel} 🎙️ **[OITIVA DE AUDIÊNCIA]** (${oradorFinal} — ${safeFormatTime(ad.inicio)} a ${safeFormatTime(ad.fim)}).\n`;
                             
                             if (corr.comentario) md += `    > 🧠 *Observação / Contexto:* ${_safeMD(corr.comentario, '\n    > ')}\n`;
                             if (ad.transcricao) md += `    > 📜 *Degravação Literal:* "${_safeMD(ad.transcricao, '\n    > ')}"\n`;
