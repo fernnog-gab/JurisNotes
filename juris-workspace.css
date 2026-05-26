@@ -462,8 +462,15 @@
 .image-resize-wrapper img.card-imagem { width: 100%; height: 100%; object-fit: contain; margin-top: 0; border: none; pointer-events: none; }
 
 /* Borda de Polo Color Hinting - Mantém Fundo da Fase Seguros */
-.annotation-card.polo-autora { border-left: 5px solid #388e3c !important; }
-.annotation-card.polo-re     { border-left: 5px solid #d32f2f !important; }
+/* Regras de border-left delegadas para a fase metodológica */
+.annotation-card.polo-autora { }
+.annotation-card.polo-re     { }
+
+/* UX de Drag & Drop para o Card Mestre */
+.main-card-wrapper.drag-over > .annotation-card {
+    border-top: 3px dashed var(--trt-blue-mid) !important;
+    background-color: rgba(26, 58, 92, 0.03);
+}
 
 /* ================================================
    6. NÓS DE IDEIA (SUB-ANOTAÇÕES)
