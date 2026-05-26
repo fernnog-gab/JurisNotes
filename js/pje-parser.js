@@ -18,7 +18,9 @@ window.PjeParser = (function () {
      * @returns {Promise<Object>} - Ex: { contestacao: 15, sentenca: 120 }
      */
     async function mapearAtalhos(pdfDoc) {
-        let atalhos = { contestacao: null, sentenca: null };
+        let atalhos = { contestacao: null, contestacaoRe2: null, sentenca: null };
+        let contestacoesEncontradas = [];
+        
         const maxPaginasScan = Math.min(40, pdfDoc.numPages); // Margem de segurança ampliada
         
         // Lemos de trás para frente. 
@@ -70,7 +72,7 @@ window.PjeParser = (function () {
                         alvoEncontrado = 'sentenca';
                     }
 
-                    if (alvoEncontrado && !atalhos[alvoEncontrado]) {
+                    if (alvoEncontrado) {
                         // Cálculo de Tolerância Dinâmica Baseado na Altura da Fonte (aprox. 75% da altura)
                         const tolerancia = dadosLinha.alturaReferencia * 0.75;
 
@@ -95,14 +97,22 @@ window.PjeParser = (function () {
                                     numPaginaTarget = pageRef + 1;
                                 }
                                 
-                                if (numPaginaTarget) atalhos[alvoEncontrado] = numPaginaTarget;
+                                if (numPaginaTarget) {
+                                    if (alvoEncontrado === 'sentenca' && !atalhos.sentenca) {
+                                        atalhos.sentenca = numPaginaTarget;
+                                    } else if (alvoEncontrado === 'contestacao') {
+                                        if (!contestacoesEncontradas.includes(numPaginaTarget)) {
+                                            contestacoesEncontradas.push(numPaginaTarget);
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
                 }
 
-                // Condição de Saída 1: Encontrou os dois alvos
-                if (atalhos.contestacao && atalhos.sentenca) break;
+                // CONDICIONAL DE FUGA OTIMIZADA
+                if (contestacoesEncontradas.length >= 2 && atalhos.sentenca) break;
                 
                 // Condição de Saída 2: Lendo de trás pra frente, achamos o cabeçalho principal "SUMÁRIO", 
                 // indicando que a tabela acabou nesta página (o início dela).
@@ -112,6 +122,12 @@ window.PjeParser = (function () {
                 console.warn(`[PjeParser] Falha silenciosa na leitura da página ${i}:`, err);
             }
         }
+        
+        // ATRIBUIÇÃO FINAL COM ORDENAÇÃO
+        contestacoesEncontradas.sort((a, b) => a - b);
+        if (contestacoesEncontradas.length > 0) atalhos.contestacao = contestacoesEncontradas[0];
+        if (contestacoesEncontradas.length > 1) atalhos.contestacaoRe2 = contestacoesEncontradas[1];
+
         return atalhos;
     }
 

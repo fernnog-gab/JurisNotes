@@ -23,11 +23,11 @@ window.sincronizarHighlightsGerais = function() {
    MÓDULO DE ATALHOS FLUTUANTES (SHORTCUT MANAGER)
    ================================================ */
 window.ShortcutManager = (function() {
-    let state = { favorito: null, recursoAutora: null, recursoReu: null, recursoReu2: null, contestacao: null, sentenca: null };
+    let state = { favorito: null, recursoAutora: null, recursoReu: null, recursoReu2: null, contestacao: null, contestacaoRe2: null, sentenca: null };
     let currentEditingType = null;
     
-    const colors = { favorito: 'is-active-favorito', recursoAutora: 'is-active-autora', recursoReu: 'is-active-re', recursoReu2: 'is-active-re2', contestacao: 'is-active-re', sentenca: 'is-active-juizo' };
-    const rotulos = { favorito: 'Favorito (Coringa)', recursoAutora: 'Recurso (Autora)', recursoReu: 'Recurso (Ré 1)', recursoReu2: 'Recurso (Ré 2)', contestacao: 'Contestação', sentenca: 'Sentença/Acórdão' };
+    const colors = { favorito: 'is-active-favorito', recursoAutora: 'is-active-autora', recursoReu: 'is-active-re', recursoReu2: 'is-active-re2', contestacao: 'is-active-re', contestacaoRe2: 'is-active-re2', sentenca: 'is-active-juizo' };
+    const rotulos = { favorito: 'Favorito (Coringa)', recursoAutora: 'Recurso (Autora)', recursoReu: 'Recurso (Ré 1)', recursoReu2: 'Recurso (Ré 2)', contestacao: 'Contestação (Ré 1)', contestacaoRe2: 'Contestação (Ré 2)', sentenca: 'Sentença/Acórdão' };
 
     function updateUI() {
         Object.keys(state).forEach(type => {
@@ -96,7 +96,7 @@ window.ShortcutManager = (function() {
     }
 
     function getFabId(type) {
-        const map = { favorito: 'fab-favorito', recursoAutora: 'fab-recurso-autora', recursoReu: 'fab-recurso-re', recursoReu2: 'fab-recurso-re2', contestacao: 'fab-contestacao', sentenca: 'fab-sentenca' };
+        const map = { favorito: 'fab-favorito', recursoAutora: 'fab-recurso-autora', recursoReu: 'fab-recurso-re', recursoReu2: 'fab-recurso-re2', contestacao: 'fab-contestacao', contestacaoRe2: 'fab-contestacao-re2', sentenca: 'fab-sentenca' };
         return map[type];
     }
 
@@ -104,7 +104,7 @@ window.ShortcutManager = (function() {
         handleClick, updateUI, fecharModal, salvarModal,
         getState: () => state,
         setState: (newState) => { if (newState) { state = { ...state, ...newState }; updateUI(); } },
-        reset: () => { state = { favorito: null, recursoAutora: null, recursoReu: null, recursoReu2: null, contestacao: null, sentenca: null }; updateUI(); },
+        reset: () => { state = { favorito: null, recursoAutora: null, recursoReu: null, recursoReu2: null, contestacao: null, contestacaoRe2: null, sentenca: null }; updateUI(); },
         toggleVisibility: (show) => {
             Object.keys(state).forEach(type => {
                 const btn = document.getElementById(getFabId(type));
@@ -152,10 +152,11 @@ document.addEventListener("DOMContentLoaded", () => {
                         
                         PjeParser.mapearAtalhos(PdfEngine.getPdfDoc())
                             .then(async (atalhos) => {
-                                if (atalhos.contestacao || atalhos.sentenca) {
+                                if (atalhos.contestacao || atalhos.contestacaoRe2 || atalhos.sentenca) {
                                     // Atualiza a numeração interna e as cores
                                     window.ShortcutManager.setState({
                                         contestacao: atalhos.contestacao || null,
+                                        contestacaoRe2: atalhos.contestacaoRe2 || null,
                                         sentenca: atalhos.sentenca || null
                                     });
                                     

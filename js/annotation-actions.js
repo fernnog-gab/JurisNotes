@@ -568,12 +568,14 @@ window.DnDManager = {
 
     dragEnter: function(event) {
         event.preventDefault();
-        const wrapper = event.currentTarget.closest('.correlated-item-wrapper');
+        event.stopPropagation(); // Bloqueia Bubbling
+        const wrapper = event.currentTarget.closest('.correlated-item-wrapper') || event.currentTarget.closest('.main-card-wrapper');
         if (wrapper) wrapper.classList.add('drag-over');
     },
 
     dragLeave: function(event) {
-        const wrapper = event.currentTarget.closest('.correlated-item-wrapper');
+        event.stopPropagation(); // Bloqueia Bubbling
+        const wrapper = event.currentTarget.closest('.correlated-item-wrapper') || event.currentTarget.closest('.main-card-wrapper');
         if (!wrapper) return;
         // Evita o efeito pisca-pisca caso o mouse passe por elementos internos
         if (!wrapper.contains(event.relatedTarget)) {
@@ -588,10 +590,10 @@ window.DnDManager = {
 
     drop: function(event, targetTopicoId, targetParentIndex, targetCIdx) {
         event.preventDefault();
+        event.stopPropagation(); // BLOQUEIO DE BUBBLING ESSENCIAL PARA O PAI NÃO EXECUTAR
 
-        const wrapper = event.currentTarget.closest('.correlated-item-wrapper');
-        if (!wrapper) return; // Segurança contra crashes se o alvo for o SVG interno
-        wrapper.classList.remove('drag-over');
+        const wrapper = event.currentTarget.closest('.correlated-item-wrapper') || event.currentTarget.closest('.main-card-wrapper');
+        if (wrapper) wrapper.classList.remove('drag-over');
 
         const src = this.draggedItem;
         if (!src || src.topicoId !== targetTopicoId || src.parentIndex !== targetParentIndex) {
@@ -601,15 +603,42 @@ window.DnDManager = {
         if (src.cIdx === targetCIdx) return; // Não mudou de posição
 
         const topico = topicos.find(t => t.id === targetTopicoId);
-        const grupo = topico.anotacoes[targetParentIndex].itensCorrelacionados;
+        const cardOriginal = topico.anotacoes[targetParentIndex];
+        
+        if (targetCIdx === 'main' && src.cIdx !== null) {
+            // TRANSAÇÃO ATÔMICA IMUTÁVEL (Clone profundo resolve Aliasing)
+            const estadoClonado = structuredClone(cardOriginal);
+            
+            // Retira a prova a ser promovida
+            const itemArrastado = estadoClonado.itensCorrelacionados.splice(src.cIdx, 1)[0];
+            
+            // Rebaixa o mestre atual
+            const oldMain = structuredClone(estadoClonado);
+            oldMain.itensCorrelacionados = [];
+            oldMain.subAnotacoes = [];
+            oldMain.tese = "";
+            estadoClonado.itensCorrelacionados.unshift(oldMain);
+            
+            // Promove a nova prova e transfere as coroas (heranças)
+            itemArrastado.itensCorrelacionados = estadoClonado.itensCorrelacionados;
+            itemArrastado.subAnotacoes = estadoClonado.subAnotacoes;
+            itemArrastado.tese = estadoClonado.tese;
 
-        const [itemMovido] = grupo.splice(src.cIdx, 1);
-        grupo.splice(targetCIdx, 0, itemMovido);
+            // Commit Atômico
+            topico.anotacoes[targetParentIndex] = itemArrastado;
+            exibirToast('Prova promovida a Card Principal!', 'sucesso');
+            
+        } else {
+            // Reordenação padrão de filhos
+            const grupo = cardOriginal.itensCorrelacionados;
+            const [itemMovido] = grupo.splice(src.cIdx, 1);
+            grupo.splice(targetCIdx, 0, itemMovido);
+            exibirToast('Ordem atualizada!', 'sucesso');
+        }
 
         renderizarTopicos();
         salvarBackupAutomatico();
         if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
-        exibirToast('Ordem atualizada!', 'sucesso');
     }
 };
 

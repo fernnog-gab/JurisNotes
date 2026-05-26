@@ -416,7 +416,11 @@ window.TopicsManager = (function () {
         // Wrapper Master Flex atualizado para envelopar a hierarquia inteira
         const wrapperMaster = `
             <div class="timeline-item-master ${alignClass}" id="timeline-wrapper-${index}">
-                <div class="main-card-wrapper">
+                <div class="main-card-wrapper" data-cidx="main"
+                     ondragover="DnDManager.dragOver(event)"
+                     ondrop="DnDManager.drop(event, '${activeTabId}', ${index}, 'main')"
+                     ondragenter="DnDManager.dragEnter(event)"
+                     ondragleave="DnDManager.dragLeave(event)">
                     <div class="annotation-number-area">
                         <div class="timeline-number" style="background-color: ${_activeTopicoCor}; color: ${corTextoBadge};" title="Nomear Tese / Legenda" onclick="abrirModalTese('${activeTabId}', ${index})">
                             ${numero}
