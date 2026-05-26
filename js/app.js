@@ -137,31 +137,40 @@ document.addEventListener("DOMContentLoaded", () => {
                         window.AudioManager.prepararRetomada();
                     }
                 } else {
-                    // 1. Libera a Interface Imediatamente (Sem UX Freeze)
+                    // CORREÇÃO: Força a interface a acordar a barra lateral para PDFs novos.
+                    // Isso resolve o bug onde o container de botões nascia invisível (display: none).
+                    trocarAba('leitura');
+
+                    // 1. Libera a Interface Imediatamente para o usuário
                     console.log("[JURIS LOG] PDF renderizado. Exibindo modal de backup.");
                     document.getElementById('backup-modal-backdrop').style.display = 'block';
                     document.getElementById('modal-ativar-backup').style.display = 'flex';
 
                     // 2. Processamento Assíncrono em Background (Fire and Forget)
                     if (window.PjeParser && window.PdfEngine && PdfEngine.getPdfDoc()) {
-                        // Toast tipo 'aviso' (neutro), não 'sucesso', indicando processamento.
                         exibirToast('Analisando sumário do processo em segundo plano...', 'aviso');
                         
                         PjeParser.mapearAtalhos(PdfEngine.getPdfDoc())
                             .then(async (atalhos) => {
                                 if (atalhos.contestacao || atalhos.sentenca) {
-                                    // Atualiza a UI
+                                    // Atualiza a numeração interna e as cores
                                     window.ShortcutManager.setState({
                                         contestacao: atalhos.contestacao || null,
                                         sentenca: atalhos.sentenca || null
                                     });
                                     
-                                    // O orquestrador salva no backup (Evita acoplamento no PjeParser)
+                                    // FORÇA DE SEGURANÇA: Garante que os botões fiquem visíveis na tela
+                                    window.ShortcutManager.toggleVisibility(true);
+                                    
+                                    // Salva os atalhos encontrados diretamente no backup do usuário
                                     if (typeof salvarBackupAutomatico === 'function') {
                                         await salvarBackupAutomatico();
                                     }
                                     
                                     exibirToast('Atalhos da Contestação/Sentença preenchidos com sucesso!', 'sucesso');
+                                } else {
+                                    // Caso o sumário não exista ou o robô não encontre os itens
+                                    exibirToast('Análise concluída: Sumário padrão não encontrado.', 'aviso');
                                 }
                             })
                             .catch(e => console.warn('[Juris Notes] Erro não-bloqueante no Parser PJe:', e));
