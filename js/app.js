@@ -137,10 +137,35 @@ document.addEventListener("DOMContentLoaded", () => {
                         window.AudioManager.prepararRetomada();
                     }
                 } else {
-                    // PDF carregou. Agora exibimos o modal para pedir o clique explícito do usuário
-                    console.log("[JURIS LOG] PDF renderizado. Aguardando clique para gerar backup.");
+                    // 1. Libera a Interface Imediatamente (Sem UX Freeze)
+                    console.log("[JURIS LOG] PDF renderizado. Exibindo modal de backup.");
                     document.getElementById('backup-modal-backdrop').style.display = 'block';
                     document.getElementById('modal-ativar-backup').style.display = 'flex';
+
+                    // 2. Processamento Assíncrono em Background (Fire and Forget)
+                    if (window.PjeParser && window.PdfEngine && PdfEngine.getPdfDoc()) {
+                        // Toast tipo 'aviso' (neutro), não 'sucesso', indicando processamento.
+                        exibirToast('Analisando sumário do processo em segundo plano...', 'aviso');
+                        
+                        PjeParser.mapearAtalhos(PdfEngine.getPdfDoc())
+                            .then(async (atalhos) => {
+                                if (atalhos.contestacao || atalhos.sentenca) {
+                                    // Atualiza a UI
+                                    window.ShortcutManager.setState({
+                                        contestacao: atalhos.contestacao || null,
+                                        sentenca: atalhos.sentenca || null
+                                    });
+                                    
+                                    // O orquestrador salva no backup (Evita acoplamento no PjeParser)
+                                    if (typeof salvarBackupAutomatico === 'function') {
+                                        await salvarBackupAutomatico();
+                                    }
+                                    
+                                    exibirToast('Atalhos da Contestação/Sentença preenchidos com sucesso!', 'sucesso');
+                                }
+                            })
+                            .catch(e => console.warn('[Juris Notes] Erro não-bloqueante no Parser PJe:', e));
+                    }
                 }
             }
         });
