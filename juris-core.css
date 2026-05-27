@@ -458,6 +458,15 @@ body.theme-anotacoes-jasmine {
     transform: scale(0.92);
 }
 
+/* 
+   ARQUITETURA REATIVA: Controle de Visibilidade de Marcadores Numéricos
+   Se a aba ativa for 'leitura' (Processo PDF), forçamos a ocultação da lista.
+   Especificidade (1 tag + 1 atributo + 1 ID) vence a regra base.
+*/
+body[data-active-tab="leitura"] #idea-markers-list {
+    display: none;
+}
+
 /* ================================================
    SPLASH SCREEN (TELA DE ABERTURA)
    ================================================ */
