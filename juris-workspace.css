@@ -462,9 +462,15 @@
 .image-resize-wrapper img.card-imagem { width: 100%; height: 100%; object-fit: contain; margin-top: 0; border: none; pointer-events: none; }
 
 /* Borda de Polo Color Hinting - Mantém Fundo da Fase Seguros */
-/* Regras de border-left delegadas para a fase metodológica */
-.annotation-card.polo-autora { }
-.annotation-card.polo-re     { }
+/* Borda de Polo Color Hinting delegada para Fase Metodológica */
+.annotation-card.polo-autora { /* Regra delegada */ }
+.annotation-card.polo-re     { /* Regra delegada */ }
+
+/* UX de Drop Zone para o Card Mestre */
+.main-card-wrapper.drag-over > .annotation-card {
+    border-top: 3px dashed var(--trt-blue-mid) !important;
+    background-color: rgba(26, 58, 92, 0.03);
+}
 
 /* UX de Drag & Drop para o Card Mestre */
 .main-card-wrapper.drag-over > .annotation-card {
@@ -856,6 +862,16 @@
 .annotation-card.fase-2, .annotation-card.correlated-card.fase-2 { background-color: var(--fase-2-bg); border-left: 4px solid var(--fase-2-color); }
 .annotation-card.fase-3, .annotation-card.correlated-card.fase-3 { background-color: var(--fase-3-bg); border-left: 4px solid var(--fase-3-color); }
 .annotation-card.fase-4, .annotation-card.correlated-card.fase-4 { background-color: var(--fase-4-bg); border-left: 4px solid var(--fase-4-color); }
+
+/* Garante a preservação da cor da fase no mestre, sobrepondo heranças indesejadas */
+.main-card-wrapper > .annotation-card.fase-1 { border-left: 4px solid var(--fase-1-color); }
+.main-card-wrapper > .annotation-card.fase-2 { border-left: 4px solid var(--fase-2-color); }
+.main-card-wrapper > .annotation-card.fase-3 { border-left: 4px solid var(--fase-3-color); }
+.main-card-wrapper > .annotation-card.fase-4 { border-left: 4px solid var(--fase-4-color); }
+
+.master-drag-handle:active {
+    cursor: grabbing !important;
+}
 
 /* 3. BORDAS PARA NÓS DE IDEIA (SUB-ANOTAÇÕES) */
 .sub-annotation-card.borda-fase-1 { border-color: rgba(33, 150, 243, 0.4); border-left: 5px solid var(--fase-1-color); }
