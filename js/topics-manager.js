@@ -422,7 +422,13 @@ window.TopicsManager = (function () {
                      ondragenter="DnDManager.dragEnter(event)"
                      ondragleave="DnDManager.dragLeave(event)">
                     <div class="annotation-number-area">
-                        <div class="timeline-number" style="background-color: ${_activeTopicoCor}; color: ${corTextoBadge};" title="Nomear Tese / Legenda" onclick="abrirModalTese('${activeTabId}', ${index})">
+                        <div class="timeline-number master-drag-handle" 
+                             draggable="true"
+                             ondragstart="DnDManager.dragStart(event, '${activeTabId}', ${index}, 'main')"
+                             ondragend="DnDManager.dragEnd(event)"
+                             style="background-color: ${_activeTopicoCor}; color: ${corTextoBadge}; cursor: grab;" 
+                             title="Arraste para trocar o Card Mestre, ou Clique para Nomear Tese"
+                             onclick="abrirModalTese('${activeTabId}', ${index})">
                             ${numero}
                         </div>
                     </div>

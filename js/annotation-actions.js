@@ -555,10 +555,18 @@ window.DnDManager = {
     draggedItem: null,
 
     dragStart: function(event, topicoId, parentIndex, cIdx) {
+        event.stopPropagation(); // CRÍTICO: Isola o evento de Bubbling do DOM
         this.draggedItem = { topicoId, parentIndex, cIdx };
-        event.currentTarget.classList.add('dragging'); 
+        
+        // Aplica o feedback visual no container correspondente
+        const wrapper = cIdx === 'main' 
+            ? event.currentTarget.closest('.main-card-wrapper')
+            : event.currentTarget.closest('.correlated-item-wrapper');
+            
+        if (wrapper) wrapper.classList.add('dragging'); 
+        
         event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('text/plain', ''); // Essencial para Firefox
+        event.dataTransfer.setData('text/plain', ''); // Necessário p/ Firefox
     },
 
     dragOver: function(event) {
@@ -590,7 +598,7 @@ window.DnDManager = {
 
     drop: function(event, targetTopicoId, targetParentIndex, targetCIdx) {
         event.preventDefault();
-        event.stopPropagation(); // BLOQUEIO DE BUBBLING ESSENCIAL PARA O PAI NÃO EXECUTAR
+        event.stopPropagation(); // CRÍTICO: Bloqueia acionamento de áreas parentais
 
         const wrapper = event.currentTarget.closest('.correlated-item-wrapper') || event.currentTarget.closest('.main-card-wrapper');
         if (wrapper) wrapper.classList.remove('drag-over');
@@ -600,36 +608,47 @@ window.DnDManager = {
             exibirToast('Só é possível reordenar itens dentro do mesmo agrupamento.', 'aviso');
             return;
         }
-        if (src.cIdx === targetCIdx) return; // Não mudou de posição
+        if (src.cIdx === targetCIdx) return; // Nenhuma movimentação real
 
         const topico = topicos.find(t => t.id === targetTopicoId);
         const cardOriginal = topico.anotacoes[targetParentIndex];
         
-        if (targetCIdx === 'main' && src.cIdx !== null) {
-            // TRANSAÇÃO ATÔMICA IMUTÁVEL (Clone profundo resolve Aliasing)
+        if (targetCIdx === 'main' && src.cIdx !== null && src.cIdx !== 'main') {
+            // FLUXO 1: PROMOVER FILHO A MESTRE (Arrastar de baixo para cima)
             const estadoClonado = structuredClone(cardOriginal);
-            
-            // Retira a prova a ser promovida
             const itemArrastado = estadoClonado.itensCorrelacionados.splice(src.cIdx, 1)[0];
             
-            // Rebaixa o mestre atual
             const oldMain = structuredClone(estadoClonado);
-            oldMain.itensCorrelacionados = [];
-            oldMain.subAnotacoes = [];
-            oldMain.tese = "";
+            oldMain.itensCorrelacionados = []; oldMain.subAnotacoes = []; oldMain.tese = "";
+            
             estadoClonado.itensCorrelacionados.unshift(oldMain);
             
-            // Promove a nova prova e transfere as coroas (heranças)
             itemArrastado.itensCorrelacionados = estadoClonado.itensCorrelacionados;
             itemArrastado.subAnotacoes = estadoClonado.subAnotacoes;
             itemArrastado.tese = estadoClonado.tese;
 
-            // Commit Atômico
             topico.anotacoes[targetParentIndex] = itemArrastado;
             exibirToast('Prova promovida a Card Principal!', 'sucesso');
             
+        } else if (src.cIdx === 'main' && targetCIdx !== 'main' && targetCIdx !== null) {
+            // FLUXO 2: REBAIXAR MESTRE A FILHO (Arrastar mestre para baixo)
+            const estadoClonado = structuredClone(cardOriginal);
+            const novoMestre = estadoClonado.itensCorrelacionados.splice(targetCIdx, 1)[0];
+            
+            const oldMain = structuredClone(estadoClonado);
+            oldMain.itensCorrelacionados = []; oldMain.subAnotacoes = []; oldMain.tese = "";
+            
+            novoMestre.itensCorrelacionados = estadoClonado.itensCorrelacionados;
+            novoMestre.subAnotacoes = estadoClonado.subAnotacoes;
+            novoMestre.tese = estadoClonado.tese;
+            
+            novoMestre.itensCorrelacionados.splice(targetCIdx, 0, oldMain);
+            
+            topico.anotacoes[targetParentIndex] = novoMestre;
+            exibirToast('Card Mestre substituído!', 'sucesso');
+            
         } else {
-            // Reordenação padrão de filhos
+            // FLUXO 3: REORDENAÇÃO ENTRE FILHOS
             const grupo = cardOriginal.itensCorrelacionados;
             const [itemMovido] = grupo.splice(src.cIdx, 1);
             grupo.splice(targetCIdx, 0, itemMovido);
