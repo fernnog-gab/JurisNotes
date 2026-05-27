@@ -169,6 +169,9 @@ window.ShortcutManager = (function() {
    INICIALIZAÇÃO E INJEÇÃO DE DEPENDÊNCIAS
    ================================================ */
 document.addEventListener("DOMContentLoaded", () => {
+    // Definir estado inicial de aba para o CSS Engine
+    document.body.dataset.activeTab = 'leitura';
+    
     SplashScreenManager.init();
     
     if (window.PdfEngine) {
@@ -302,6 +305,10 @@ function getActiveScrollContainer() {
 }
 
 function trocarAba(aba) {
+    // 1. ELEVAÇÃO DE ESTADO (State Hoisting)
+    // Informa ao CSS de toda a aplicação qual é a aba atual
+    document.body.dataset.activeTab = aba;
+
     document.getElementById('pdf-container').style.display     = aba === 'leitura'   ? 'flex'  : 'none';
     document.getElementById('history-container').style.display = aba === 'historico' ? 'block' : 'none';
     document.getElementById('tab-leitura').classList.toggle('active',   aba === 'leitura');
