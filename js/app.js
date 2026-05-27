@@ -1,4 +1,55 @@
 /* ================================================
+   MÓDULO DA SPLASH SCREEN (GERENCIADOR DE ESTADO E EVENT LOOP)
+   ================================================ */
+window.SplashScreenManager = (function() {
+    let splashEl = null;
+    let textEl = null;
+    const DEFAULT_TEXT = "Organizar ideias. Fazer justiça.";
+    let initialLoadPromise = null;
+
+    function init() {
+        splashEl = document.getElementById('juris-splash');
+        textEl = document.getElementById('splash-dynamic-text');
+        
+        // Garante que o first-load tenha no mínimo 1.5s para a animação rodar
+        initialLoadPromise = new Promise(resolve => setTimeout(resolve, 1500));
+    }
+
+    /**
+     * Exibe a splash. Utiliza double rAF + timeout para forçar o navegador
+     * a pintar a tela antes de liberar a thread.
+     */
+    async function showWithYield(mensagem = DEFAULT_TEXT) {
+        if (!splashEl) return;
+        if (textEl) textEl.textContent = mensagem;
+        
+        splashEl.classList.remove('is-hidden');
+        
+        // Magia do Event Loop: Força o Paint na GPU antes de retornar
+        return new Promise(resolve => {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    setTimeout(resolve, 50); // Margem de segurança para layout thrashing
+                });
+            });
+        });
+    }
+
+    /** Oculta a tela de forma segura. */
+    function hide() {
+        if (splashEl) splashEl.classList.add('is-hidden');
+    }
+
+    /** Usado apenas no carregamento da página. Aguarda o tempo mínimo psicológico. */
+    async function hideInitialLoad() {
+        if (initialLoadPromise) await initialLoadPromise;
+        hide();
+    }
+
+    return { init, showWithYield, hide, hideInitialLoad };
+})();
+
+/* ================================================
    ESTADO GLOBAL DA APLICAÇÃO (ORQUESTRADOR)
    ================================================ */
 let topicos              = [];     // Array primário: [{ id, nome, cor, anotacoes: [] }]
@@ -118,6 +169,7 @@ window.ShortcutManager = (function() {
    INICIALIZAÇÃO E INJEÇÃO DE DEPENDÊNCIAS
    ================================================ */
 document.addEventListener("DOMContentLoaded", () => {
+    SplashScreenManager.init();
     
     if (window.PdfEngine) {
         PdfEngine.init({
@@ -212,6 +264,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }, true);
     }
+
+    SplashScreenManager.hideInitialLoad();
 });
 
 /* ================================================
@@ -383,10 +437,14 @@ async function retomarProcesso() {
             types: [{ description: 'Arquivo de Backup', accept: { 'application/json': ['.json'] } }]
         });
 
+        // 1. Exibe a tela e cede a thread (GARANTE A RENDERIZAÇÃO)
+        await window.SplashScreenManager.showWithYield("Restaurando mapa mental...");
+
         let pacote;
         try {
             pacote = await BackupManager.carregarJson(handle);
         } catch {
+            window.SplashScreenManager.hide();
             exibirToast('O arquivo selecionado não é um backup válido ou está corrompido.', 'erro');
             return;
         }
@@ -397,18 +455,23 @@ async function retomarProcesso() {
         modoRetomada = true;
         _sessaoPossuiAudio = pacote.metadata.possuiAudio ?? false;
 
+        // 2. Trabalho Pesado Bloqueante ocorre com a tela seguramente coberta
+        renderizarTopicos();
+        habilitarFerramentasDeTrabalho();
+        trocarAba('historico');
+        
+        // 3. Remove a tela e notifica
+        window.SplashScreenManager.hide();
+
         const isLegado = pacote.metadata.versaoApp === '1.0';
         const msgHash  = isLegado ? ' Backup legado.' : ' O PDF será validado por SHA-256.';
 
         atualizarStatusBackup(permissao === 'granted' ? 'Sessão Restaurada ✓' : 'Restaurada (sem auto-save)', true);
-
-        renderizarTopicos();
-        habilitarFerramentasDeTrabalho();
-        trocarAba('historico');
         exibirToast(`Anotações restauradas.${msgHash} Selecione agora o PDF do processo.`);
 
         document.getElementById('pdf-upload').click();
     } catch (err) {
+        if (window.SplashScreenManager) window.SplashScreenManager.hide();
         modoRetomada = false;
         if (err.name !== 'AbortError') exibirToast('Erro ao restaurar a sessão.', 'erro');
     }
@@ -449,8 +512,14 @@ async function novoProcesso(event) {
     window._nomeArquivoSugerido = file.name.replace(/\.[^/.]+$/, "").toLowerCase() + ".json";
 
     if (window.PdfEngine) {
+        // Exibe a tela informando o carregamento pesado
+        await window.SplashScreenManager.showWithYield("Processando arquivo PDF...");
+        
         console.log("[JURIS LOG] Iniciando leitura do PDF:", file.name);
         await PdfEngine.carregarPDF(file, modoRetomada);
+        
+        // A ocultação da splash será gerida pelo callback onPdfCarregado (onde o modal de backup abre)
+        window.SplashScreenManager.hide();
     }
 }
 
