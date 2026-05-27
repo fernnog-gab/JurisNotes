@@ -42,6 +42,7 @@
     --z-text-edit-modal: 4001;
     --z-abas-modal-backdrop: 4004;
     --z-abas-modal: 4005;
+    --z-splash: 9999;
 }
 
 *, *::before, *::after {
@@ -456,3 +457,73 @@ body.theme-anotacoes-jasmine {
 .fab-idea-marker:active {
     transform: scale(0.92);
 }
+
+/* ================================================
+   SPLASH SCREEN (TELA DE ABERTURA)
+   ================================================ */
+.juris-splash {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-splash);
+    background-color: var(--trt-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+    will-change: opacity; /* Otimização de GPU */
+}
+
+.juris-splash.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.splash-content {
+    text-align: center;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.splash-logo {
+    width: 140px;
+    height: auto;
+    opacity: 0;
+    animation: fade-in-logo 1s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}
+
+.splash-slogan {
+    margin-top: 24px;
+    font-size: 1.15rem;
+    font-weight: 300;
+    letter-spacing: 1.5px;
+    opacity: 0;
+    transform: translateY(15px);
+    animation: slide-up-slogan 0.8s ease 0.4s forwards; 
+}
+
+.splash-loader {
+    margin-top: 32px;
+    width: 40px;
+    height: 3px;
+    background-color: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+    opacity: 0;
+    animation: fade-in-logo 0.8s ease 0.8s forwards; 
+}
+
+.splash-loader::after {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; height: 100%; width: 40%;
+    background-color: var(--theme-bg-jasmine);
+    animation: splash-loading 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes fade-in-logo { to { opacity: 1; } }
+@keyframes slide-up-slogan { to { opacity: 1; transform: translateY(0); } }
+@keyframes splash-loading { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
