@@ -409,3 +409,50 @@ body.theme-anotacoes-jasmine {
 
 /* AMARELO: Favorito / Coringa */
 .fab-shortcut.is-active-favorito { background-color: #fbc02d !important; border-color: #f57f17 !important; color: white !important; }
+
+/* ================================================
+   11. BOTÕES FLUTUANTES DE SCROLL E ÍNDICES
+   ================================================ */
+
+/* Contêiner de isolamento com tratamento de overflow (Alerta 5 resolvido) */
+#idea-markers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+    align-items: center;
+    max-height: 45vh; /* Ocupa no máximo 45% da altura da tela */
+    overflow-y: auto;
+    scrollbar-width: none; /* Oculta scrollbar - Firefox */
+}
+#idea-markers-list::-webkit-scrollbar { 
+    display: none; /* Oculta scrollbar - Chrome/Edge/Safari */
+}
+
+/* Design unificado do marcador */
+.fab-idea-marker {
+    width: 32px;
+    height: 32px;
+    min-height: 32px; /* Garante que o flex não esmague o botão no overflow */
+    border-radius: 50%;
+    font-weight: 800;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    transition: transform 0.15s ease, filter 0.2s ease, opacity 0.2s ease;
+    pointer-events: auto;
+    user-select: none;
+}
+
+.fab-idea-marker:hover {
+    transform: scale(1.15);
+    filter: brightness(1.1);
+}
+
+.fab-idea-marker:active {
+    transform: scale(0.92);
+}
