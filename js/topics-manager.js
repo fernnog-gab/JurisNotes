@@ -450,6 +450,64 @@ window.TopicsManager = (function () {
     }
 
     /**
+     * Atualiza o índice de marcadores flutuantes com base no tópico ativo.
+     * Função idempotente: zera o DOM e reconstrói de forma leve.
+     */
+    function _atualizarMarcadoresDeIdeia(topico) {
+        const listContainer = document.getElementById('idea-markers-list');
+        if (!listContainer) return;
+        
+        // 1. Limpeza de Estado
+        listContainer.innerHTML = '';
+        
+        // 2. Validação de Escopo (Se não há ideias, encerra silenciosamente)
+        if (!topico || !topico.anotacoes || topico.anotacoes.length === 0) return;
+
+        // 3. Renderização Dinâmica e Cálculos
+        const corTexto = obterCorContraste(_activeTopicoCor);
+        
+        const fragment = document.createDocumentFragment(); // Otimização de reflow
+
+        topico.anotacoes.forEach((anotacao, index) => {
+            const btn = document.createElement('div');
+            btn.className = 'fab-idea-marker';
+            btn.style.backgroundColor = _activeTopicoCor;
+            btn.style.color = corTexto;
+            btn.textContent = index + 1;
+            
+            // UX Rica: Tooltip injeta o título da tese se existir
+            const nomeTese = anotacao.tese ? ` - ${escaparHTML(anotacao.tese)}` : '';
+            btn.title = `Ir para a Ideia ${index + 1}${nomeTese}`;
+
+            // 4. Feitiçaria Matemática de Scroll (Alerta 1 resolvido)
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                
+                const scrollContainer = document.getElementById('history-container');
+                const targetId = `timeline-wrapper-${index}`; // Mapeamento 1:1 com a renderização
+                const targetElement = document.getElementById(targetId);
+                
+                if (targetElement && scrollContainer) {
+                    // Calcula a posição relativa entre o card alvo e o container que rola, 
+                    // somando com a rolagem atual para chegar no Offset absoluto correto.
+                    const containerRect = scrollContainer.getBoundingClientRect();
+                    const targetRect = targetElement.getBoundingClientRect();
+                    
+                    // -16px de margem de respiro para o card não colar no topo do teto
+                    const offset = (targetRect.top - containerRect.top) + scrollContainer.scrollTop - 16;
+                    
+                    scrollContainer.scrollTo({ top: offset, behavior: 'smooth' });
+                }
+            };
+            
+            fragment.appendChild(btn);
+        });
+        
+        // Injeção única no DOM
+        listContainer.appendChild(fragment);
+    }
+
+    /**
      * Re-renderiza o fichário inteiro.
      */
     function renderizarFichario(topicosArray) {
@@ -606,6 +664,9 @@ window.TopicsManager = (function () {
                         desenharConexoes();
                     });
                 }
+                
+                // [NOVA LINHA] Atualiza marcadores flutuantes pós-pintura
+                _atualizarMarcadoresDeIdeia(topicoAtivo);
             });
         }
     }
