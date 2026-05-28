@@ -14,11 +14,22 @@ function abrirMenuAnotacao(topicoId, index, event) {
     _posicionarMenu('annotation-context-menu', event);
 }
 
-function abrirMenuSubAnotacao(topicoId, parentIndex, subIndex, event) {
+// HELPER PRIVADO (Resolução de Referência)
+function _resolverSubAlvo(topico, parentIndex, viewSource) {
+    const cardMestre = topico.anotacoes[parentIndex];
+    if (viewSource === 'main') {
+        return cardMestre;
+    }
+    const cIdx = parseInt(viewSource, 10);
+    return cardMestre.itensCorrelacionados[cIdx];
+}
+
+function abrirMenuSubAnotacao(topicoId, parentIndex, viewSource, localIndex, event) {
     event.stopPropagation();
     
     const topico = topicos.find(t => t.id === topicoId);
-    const sub = topico.anotacoes[parentIndex].subAnotacoes[subIndex];
+    const alvo = _resolverSubAlvo(topico, parentIndex, viewSource);
+    const sub = alvo.subAnotacoes[localIndex];
 
     // --- NOVA LÓGICA: SHIFT + CLICK ---
     if (event.shiftKey) {
@@ -37,7 +48,8 @@ function abrirMenuSubAnotacao(topicoId, parentIndex, subIndex, event) {
         btn.classList.toggle('active-intent', btn.dataset.intent === currentIntent);
     });
     
-    _menuSubAnotacaoCtx = { topicoId, parentIndex, subIndex };
+    // NOVO CONTRATO: ctx exige viewSource e localIndex
+    _menuSubAnotacaoCtx = { topicoId, parentIndex, viewSource, localIndex };
     _posicionarMenu('sub-annotation-context-menu', event);
 }
 
@@ -47,7 +59,8 @@ function definirIntencaoSubAnotacao(intencaoStr) {
     const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
     if (!topico) return;
     
-    const sub = topico.anotacoes[_menuSubAnotacaoCtx.parentIndex].subAnotacoes[_menuSubAnotacaoCtx.subIndex];
+    const alvo = _resolverSubAlvo(topico, _menuSubAnotacaoCtx.parentIndex, _menuSubAnotacaoCtx.viewSource);
+    const sub = alvo.subAnotacoes[_menuSubAnotacaoCtx.localIndex];
     
     // Atualiza o estado
     sub.intencao = intencaoStr;
@@ -94,8 +107,17 @@ function editarAnotacao() {
 
 function editarSubAnotacao() {
     if (!_menuSubAnotacaoCtx) return;
-    const sub = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId).anotacoes[_menuSubAnotacaoCtx.parentIndex].subAnotacoes[_menuSubAnotacaoCtx.subIndex];
-    abrirModalEdicao({ tipo: 'sub', topicoId: _menuSubAnotacaoCtx.topicoId, parentIndex: _menuSubAnotacaoCtx.parentIndex, subIndex: _menuSubAnotacaoCtx.subIndex }, sub.texto);
+    const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
+    const alvo = _resolverSubAlvo(topico, _menuSubAnotacaoCtx.parentIndex, _menuSubAnotacaoCtx.viewSource);
+    const sub = alvo.subAnotacoes[_menuSubAnotacaoCtx.localIndex];
+    
+    abrirModalEdicao({ 
+        tipo: 'sub', 
+        topicoId: _menuSubAnotacaoCtx.topicoId, 
+        parentIndex: _menuSubAnotacaoCtx.parentIndex, 
+        viewSource: _menuSubAnotacaoCtx.viewSource,
+        localIndex: _menuSubAnotacaoCtx.localIndex 
+    }, sub.texto);
     document.getElementById('sub-annotation-context-menu').style.display = 'none';
 }
 
@@ -162,7 +184,8 @@ function salvarEdicaoTexto() {
     if (_editContext.tipo === 'main') {
         topico.anotacoes[_editContext.parentIndex].conteudo = novoTexto;
     } else if (_editContext.tipo === 'sub') {
-        topico.anotacoes[_editContext.parentIndex].subAnotacoes[_editContext.subIndex].texto = novoTexto;
+        const alvo = _resolverSubAlvo(topico, _editContext.parentIndex, _editContext.viewSource);
+        alvo.subAnotacoes[_editContext.localIndex].texto = novoTexto;
     } else if (_editContext.tipo === 'correlated') {
         topico.anotacoes[_editContext.parentIndex].itensCorrelacionados[_editContext.cIdx].conteudo = novoTexto;
     }
@@ -246,7 +269,12 @@ function reordenarAnotacao() {
 function excluirSubAnotacao() {
     if (!_menuSubAnotacaoCtx) return;
     if (!confirm('Excluir esta ideia secundária?')) return;
-    topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId).anotacoes[_menuSubAnotacaoCtx.parentIndex].subAnotacoes.splice(_menuSubAnotacaoCtx.subIndex, 1);
+    
+    const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
+    const alvo = _resolverSubAlvo(topico, _menuSubAnotacaoCtx.parentIndex, _menuSubAnotacaoCtx.viewSource);
+    
+    alvo.subAnotacoes.splice(_menuSubAnotacaoCtx.localIndex, 1);
+    
     renderizarTopicos(); salvarBackupAutomatico();
     document.getElementById('sub-annotation-context-menu').style.display = 'none';
 }
@@ -352,29 +380,12 @@ function confirmarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
     const texto = textarea ? textarea.value.trim() : '';
     if (!texto) return exibirToast('Digite uma observação.', 'aviso');
     
-    const anotacao = topicos.find(t => t.id === topicoId).anotacoes[anotacaoIndex];
-    if (!anotacao.subAnotacoes) anotacao.subAnotacoes = [];
+    const topico = topicos.find(t => t.id === topicoId);
+    const viewSource = cIdx !== null ? cIdx : 'main';
+    const alvo = _resolverSubAlvo(topico, anotacaoIndex, viewSource);
     
-    // Grava no arquivo .json a referência exata da origem
-    anotacao.subAnotacoes.push({ 
-        texto, 
-        timestamp: Date.now(),
-        sourceRef: cIdx != null ? cIdx : 'main'
-    });
-
-    // NOVA LÓGICA: Ordenação Arquitetural Segura
-    // Ordenamos o array na camada de dados, ANTES de renderizar e salvar.
-    anotacao.subAnotacoes.sort((a, b) => {
-        // 'main' tem precedência absoluta (-1). Senão, parse para inteiro.
-        const valA = (a.sourceRef === 'main' || a.sourceRef == null) ? -1 : parseInt(a.sourceRef, 10);
-        const valB = (b.sourceRef === 'main' || b.sourceRef == null) ? -1 : parseInt(b.sourceRef, 10);
-        
-        // Desempate cronológico para nós do mesmo card
-        if (valA === valB) {
-            return (a.timestamp || 0) - (b.timestamp || 0);
-        }
-        return valA - valB;
-    });
+    if (!alvo.subAnotacoes) alvo.subAnotacoes = [];
+    alvo.subAnotacoes.push({ texto, timestamp: Date.now() });
     
     document.getElementById('sub-input-active').remove();
     renderizarTopicos(); 
@@ -495,14 +506,12 @@ function confirmarSmartMove() {
             
             // Transferindo a "coroa" (herança de estado) para o novo líder
             novoMainCard.tese = cloneProfundo.tese;
-            novoMainCard.subAnotacoes = cloneProfundo.subAnotacoes;
             novoMainCard.itensCorrelacionados = cloneProfundo.itensCorrelacionados;
 
             // Preparando o card que vai viajar.
             // Usamos defaults em vez de 'delete' para preservar a otimização da Hidden Class no V8
             itemMovido = structuredClone(cardOriginal);
             itemMovido.itensCorrelacionados = [];
-            itemMovido.subAnotacoes = [];
             itemMovido.tese = ""; 
 
             // FASE 2: ESCRITA ATÔMICA (Commit no array oficial)
@@ -621,12 +630,11 @@ window.DnDManager = {
             const itemArrastado = estadoClonado.itensCorrelacionados.splice(src.cIdx, 1)[0];
             
             const oldMain = structuredClone(estadoClonado);
-            oldMain.itensCorrelacionados = []; oldMain.subAnotacoes = []; oldMain.tese = "";
+            oldMain.itensCorrelacionados = []; oldMain.tese = "";
             
             estadoClonado.itensCorrelacionados.unshift(oldMain);
             
             itemArrastado.itensCorrelacionados = estadoClonado.itensCorrelacionados;
-            itemArrastado.subAnotacoes = estadoClonado.subAnotacoes;
             itemArrastado.tese = estadoClonado.tese;
 
             topico.anotacoes[targetParentIndex] = itemArrastado;
@@ -638,10 +646,9 @@ window.DnDManager = {
             const novoMestre = estadoClonado.itensCorrelacionados.splice(targetCIdx, 1)[0];
             
             const oldMain = structuredClone(estadoClonado);
-            oldMain.itensCorrelacionados = []; oldMain.subAnotacoes = []; oldMain.tese = "";
+            oldMain.itensCorrelacionados = []; oldMain.tese = "";
             
             novoMestre.itensCorrelacionados = estadoClonado.itensCorrelacionados;
-            novoMestre.subAnotacoes = estadoClonado.subAnotacoes;
             novoMestre.tese = estadoClonado.tese;
             
             novoMestre.itensCorrelacionados.splice(targetCIdx, 0, oldMain);

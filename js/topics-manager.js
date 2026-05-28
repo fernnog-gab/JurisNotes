@@ -281,9 +281,22 @@ window.TopicsManager = (function () {
         // Card Principal (Removido o código morto redundante do wrapper interno)
 
         // Nós de Ideia (Sub-anotações)
+        let flatSubAnotacoes = [];
+        
+        if (anotacao.subAnotacoes) {
+            flatSubAnotacoes.push(...anotacao.subAnotacoes.map((s, idx) => ({ ...s, viewSource: 'main', localIndex: idx })));
+        }
+        if (anotacao.itensCorrelacionados) {
+            anotacao.itensCorrelacionados.forEach((item, fIdx) => {
+                if (item.subAnotacoes) {
+                    flatSubAnotacoes.push(...item.subAnotacoes.map((s, idx) => ({ ...s, viewSource: fIdx, localIndex: idx })));
+                }
+            });
+        }
+
         let htmlSubAnotacoes = '';
-        if (anotacao.subAnotacoes && anotacao.subAnotacoes.length > 0) {
-            const subCardsHTML = anotacao.subAnotacoes.map((sub, sIdx) => {
+        if (flatSubAnotacoes.length > 0) {
+            const subCardsHTML = flatSubAnotacoes.map((sub, sIdx) => {
                 const intencao = sub.intencao || 'premissa';
                 const isHasIntent = true; // Garante o design em pílula para TODAS as intenções
                 let iconSVG = '';
@@ -314,24 +327,23 @@ window.TopicsManager = (function () {
                 const label = isHasIntent ? `${iconSVG} ${numero}.${gerarLetra(sIdx)}` : `${numero}.${gerarLetra(sIdx)}`;
                 
                 const textoFormatado = renderizarMarkdownSeguro(escaparHTML(sub.texto));
-                const sourceRef = sub.sourceRef ?? 'main'; // Recupera a origem do JSON
                 
-                // Cálculo seguro da fase com fallback para 'main'
+                // Cálculo rigoroso da borda de fase
                 let faseSub = faseDoCard;
-                if (sourceRef !== 'main' && anotacao.itensCorrelacionados) {
-                    const idx = parseInt(sourceRef, 10);
-                    if (!isNaN(idx) && anotacao.itensCorrelacionados[idx]) {
-                         faseSub = typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(anotacao.itensCorrelacionados[idx].documento) : 4;
+                if (sub.viewSource !== 'main' && anotacao.itensCorrelacionados) {
+                    const cIdx = parseInt(sub.viewSource, 10);
+                    if (!isNaN(cIdx) && anotacao.itensCorrelacionados[cIdx]) {
+                         faseSub = typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(anotacao.itensCorrelacionados[cIdx].documento) : 4;
                     }
                 }
                 const bordaFaseClass = `borda-fase-${faseSub}`;
 
                 return `
-                    <div class="sub-annotation-item" data-source="${sourceRef}">
+                    <div class="sub-annotation-item" data-source="${sub.viewSource}">
                         <div class="sub-annotation-card ${bordaFaseClass}">
                             <div class="${badgeClass}"
                                  title="Opções desta ideia secundária"
-                                 onclick="abrirMenuSubAnotacao('${activeTabId}', ${index}, ${sIdx}, event)">
+                                 onclick="abrirMenuSubAnotacao('${activeTabId}', ${index}, '${sub.viewSource}', ${sub.localIndex}, event)">
                                 ${label}
                             </div>
                             <div class="sub-text-content">${textoFormatado}</div>
@@ -579,14 +591,14 @@ window.TopicsManager = (function () {
                             an.itensCorrelacionados.forEach(ic => fasesPresentes.add(typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(ic.documento) : 4));
                         }
 
-                        // Coleta fases das sub-anotações (resolve falha de subestimação)
+                        // CORREÇÃO: Varre as mochilas diretamente em vez de usar o finado sourceRef
                         if (an.subAnotacoes?.length) {
-                            an.subAnotacoes.forEach(sub => {
-                                if (sub.sourceRef !== 'main' && an.itensCorrelacionados) {
-                                    const cIdx = parseInt(sub.sourceRef, 10);
-                                    if (!isNaN(cIdx) && an.itensCorrelacionados[cIdx]) {
-                                        fasesPresentes.add(typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(an.itensCorrelacionados[cIdx].documento) : 4);
-                                    }
+                             // A fase dos nós do mestre já é coberta pelo mestre (fasesPresentes.add)
+                        }
+                        if (an.itensCorrelacionados?.length) {
+                            an.itensCorrelacionados.forEach(ic => {
+                                if (ic.subAnotacoes && ic.subAnotacoes.length > 0) {
+                                    fasesPresentes.add(typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(ic.documento) : 4);
                                 }
                             });
                         }

@@ -64,7 +64,7 @@ window.BackupManager = (function () {
                 processoId:        _processoId,
                 pdfHash:           _pdfHash,
                 possuiAudio:       possuiAudio,
-                versaoApp:         '2.3',
+                versaoApp:         '3.0', // ATUALIZADO: Marca a migração estrutural
                 ultimaAtualizacao: Date.now(),
                 atalhosPdf:        atalhosCapturados
             },
@@ -83,21 +83,53 @@ window.BackupManager = (function () {
      */
     function _desempacotar(textoJson) {
         const obj = JSON.parse(textoJson); // SyntaxError se JSON inválido
-
+        let pacote = obj;
+        
         // Formato legado v1.0: array puro de tópicos (sem metadata)
         if (Array.isArray(obj)) {
-            return {
+            pacote = {
                 metadata: { processoId: null, pdfHash: null, versaoApp: '1.0' },
                 dados:    obj
             };
+        } else if (!obj || typeof obj !== 'object' || !Array.isArray(obj.dados)) {
+            throw new Error('Estrutura de backup não reconhecida.');
         }
 
-        // Formato v2.x: objeto com metadata e dados
-        if (obj && typeof obj === 'object' && Array.isArray(obj.dados)) {
-            return obj;
+        // MUDANÇA ARQUITETURAL: Migração Silenciosa de Nós de Ideia (v3.0)
+        if (pacote.metadata.versaoApp !== '3.0') {
+            pacote.dados.forEach(topico => {
+                topico.anotacoes.forEach(anotacao => {
+                    // 1. Inicializa a mochila dos filhos
+                    if (anotacao.itensCorrelacionados) {
+                        anotacao.itensCorrelacionados.forEach(item => {
+                            if (!item.subAnotacoes) item.subAnotacoes = [];
+                        });
+                    }
+                    
+                    // 2. Realoca os nós perdidos no mestre
+                    if (anotacao.subAnotacoes && anotacao.subAnotacoes.length > 0) {
+                        const nosDoMestre = [];
+                        anotacao.subAnotacoes.forEach(sub => {
+                            if (sub.sourceRef !== undefined && sub.sourceRef !== 'main') {
+                                const cIdx = parseInt(sub.sourceRef, 10);
+                                if (!isNaN(cIdx) && anotacao.itensCorrelacionados && anotacao.itensCorrelacionados[cIdx]) {
+                                    delete sub.sourceRef; 
+                                    anotacao.itensCorrelacionados[cIdx].subAnotacoes.push(sub);
+                                } else {
+                                    nosDoMestre.push(sub); // Fallback caso filho não exista
+                                }
+                            } else {
+                                delete sub.sourceRef;
+                                nosDoMestre.push(sub);
+                            }
+                        });
+                        anotacao.subAnotacoes = nosDoMestre;
+                    }
+                });
+            });
         }
-
-        throw new Error('Estrutura de backup não reconhecida.');
+        
+        return pacote;
     }
 
     /* ── API Pública ─────────────────────────────────── */
