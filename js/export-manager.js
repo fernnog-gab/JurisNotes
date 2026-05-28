@@ -133,8 +133,6 @@ window.ExportManager = (function () {
 
         // Coletores para os blocos globais de arquitetura (tags XML)
         const preliminaresInjetadas = [];
-        const alegacoesInjetadas    = [];
-        const fundamentosInjetados  = [];
         
         const comandosInjetados    = [];
         const vereditosExigidos    = [];
@@ -248,26 +246,22 @@ window.ExportManager = (function () {
                     const textoSanitizado = _safeMD(sub.texto, '\n  ');
 
                     if (intencao === 'premissa') {
-                        md += `\n  💡 **Premissa Lógica do Assessor (Incontroversa)${refContexto}:** ${textoSanitizado}\n`;
-                    } else if (intencao === 'refutacao') {
-                        md += `\n  🛡️ **Refutação de Mérito / Afastamento de Tese${refContexto}:** ${textoSanitizado}\n`;
-                    } else if (intencao === 'comando') {
-                        comandosInjetados.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
-                    } else if (intencao === 'texto') {
-                        comandosInjetados.push(`[Ideia ${numIdeia}${refContexto} — TEXTO FIXO]: Incorpore: "${textoSanitizado}"`);
-                    } else if (intencao === 'veredito') {
-                        vereditosExigidos.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
-                    } else if (intencao === 'fundamentacao') {
-                        baseLegalObrigatoria.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
-                    } else if (intencao === 'preliminar') {
-                        preliminaresInjetadas.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
-                    } else if (intencao === 'alegacao') {
-                        alegacoesInjetadas.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
-                    } else if (intencao === 'fundamento_sentenca') {
-                        fundamentosInjetados.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
-                    }
-                });
-            };
+                    md += `\n  💡 **Premissa Lógica do Assessor (Incontroversa)${refContexto}:** ${textoSanitizado}\n`;
+                } else if (intencao === 'refutacao') {
+                    md += `\n  🛡️ **Refutação de Mérito / Afastamento de Tese${refContexto}:** ${textoSanitizado}\n`;
+                } else if (intencao === 'comando') {
+                    comandosInjetados.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                } else if (intencao === 'texto') {
+                    comandosInjetados.push(`[Ideia ${numIdeia}${refContexto} — TEXTO FIXO]: Incorpore: "${textoSanitizado}"`);
+                } else if (intencao === 'veredito') {
+                    vereditosExigidos.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                } else if (intencao === 'fundamentacao') {
+                    baseLegalObrigatoria.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                } else if (intencao === 'preliminar') {
+                    preliminaresInjetadas.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                }
+            });
+        };
 
             // 1. Extrai e imprime os nós da Ideia Principal (Master)
             imprimirNos(an.subAnotacoes, '');
@@ -307,10 +301,17 @@ window.ExportManager = (function () {
 
         // NOVO Bloco 1: Relatório do Conflito
         md += `<relatorio_do_conflito>\n`;
-        md += `*Atenção IA: Utilize estas teses para redigir a introdução do tópico recursal, contrapondo o que foi decidido na origem com o que a parte recorrente busca.*\n`;
-        if (alegacoesInjetadas.length > 0) md += `**Teses Recursais (O que a parte pede):**\n` + alegacoesInjetadas.map(c => `* 📢 ${c}`).join('\n') + '\n\n';
-        if (fundamentosInjetados.length > 0) md += `**Fundamentos da Origem (Por que o juiz decidiu assim):**\n` + fundamentosInjetados.map(c => `* 🏛️ ${c}`).join('\n') + '\n';
-        if (alegacoesInjetadas.length === 0 && fundamentosInjetados.length === 0) md += `* Deduzir as teses diretamente da Matriz Dialética acima.\n`;
+        md += `*Atenção IA: Utilize estas teses para redigir a introdução do tópico recursal, contrapondo o que foi decidido na origem com o que a parte recorrente busca.*\n\n`;
+        
+        if (topico.alegacoes) {
+            md += `**Teses Recursais (O que a parte pede):**\n${_safeMD(topico.alegacoes, '')}\n\n`;
+        }
+        if (topico.fundamentos) {
+            md += `**Fundamentos da Origem (Por que o juiz decidiu assim):**\n${_safeMD(topico.fundamentos, '')}\n\n`;
+        }
+        if (!topico.alegacoes && !topico.fundamentos) {
+            md += `* Deduzir o relatório institucional pelo contexto das premissas da Matriz Dialética abaixo.\n`;
+        }
         md += `</relatorio_do_conflito>\n\n`;
 
         // Bloco A: Comandos Diretos de Estilo e Redação

@@ -572,10 +572,35 @@ window.TopicsManager = (function () {
         _activeTopicoCor = topicoAtivo.cor;
         const corTextoTese = obterCorContraste(_activeTopicoCor);
 
+        // NOVO: Painel Preâmbulo Estático gerado incondicionalmente
+        const preambleHtml = `
+            <div class="topic-preamble-panel">
+                <div class="preamble-card preamble-alegacao" onclick="abrirEdicaoPreambulo('${activeTabId}', 'alegacoes')">
+                    <div class="preamble-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                    </div>
+                    <div class="preamble-content">
+                        <span class="preamble-title">Razões Recursais (O que a parte pede)</span>
+                        ${topicoAtivo.alegacoes ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.alegacoes)) : '<span class="preamble-empty">Clique para redigir as alegações recursais...</span>'}
+                    </div>
+                </div>
+                <div class="preamble-card preamble-origem" onclick="abrirEdicaoPreambulo('${activeTabId}', 'fundamentos')">
+                    <div class="preamble-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 21V7l6-4 6 4v14"></path></svg>
+                    </div>
+                    <div class="preamble-content">
+                        <span class="preamble-title">Fundamentos da Origem (O que o juiz decidiu)</span>
+                        ${topicoAtivo.fundamentos ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.fundamentos)) : '<span class="preamble-empty">Clique para redigir os fundamentos da sentença...</span>'}
+                    </div>
+                </div>
+            </div>`;
+
+        let conteudoCentralHtml = '';
+
         if (topicoAtivo.anotacoes.length === 0) {
-            contentEl.innerHTML = `
+            conteudoCentralHtml = `
                 <p class="empty-state" style="margin-top: 20px;">
-                    Tópico vazio. Adicione extrações do documento.
+                    A Matriz Dialética está vazia. Adicione extrações das provas.
                 </p>`;
         } else {
             let sumarioHtml = '';
@@ -636,11 +661,14 @@ window.TopicsManager = (function () {
         }
         const cardsHTML = topicoAtivo.anotacoes.map(criarCard).join('');
         
-        const novoHtml = sumarioHtml + `
+        conteudoCentralHtml = sumarioHtml + `
             <div class="timeline-container" id="timeline-container">
                 <svg id="connections-canvas"></svg>
                 ${cardsHTML}
             </div>`;
+        }
+
+        const novoHtml = preambleHtml + conteudoCentralHtml;
             
         // KEYED MORPHING: Diffing cirúrgico do DOM. Acaba com o layout thrashing!
         if (typeof morphdom !== 'undefined') {

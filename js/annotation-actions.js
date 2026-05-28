@@ -75,8 +75,6 @@ function definirIntencaoSubAnotacao(intencaoStr) {
         'premissa': 'Premissa Padrão',
         'veredito': 'Veredito / Conclusão',
         'fundamentacao': 'Fundamentação Legal',
-        'alegacao': 'Alegação Recursal',
-        'fundamento_sentenca': 'Fundamento da Origem',
         'refutacao': 'Refutação (Mérito)',
         'preliminar': 'Filtro / Prejudicial'
     };
@@ -177,17 +175,21 @@ document.getElementById('edit-text-input').addEventListener('keydown', function(
 
 function salvarEdicaoTexto() {
     const novoTexto = document.getElementById('edit-text-input').value.trim();
-    if (!novoTexto) return exibirToast('O texto não pode ficar vazio.', 'aviso');
-
     const topico = topicos.find(t => t.id === _editContext.topicoId);
     
-    if (_editContext.tipo === 'main') {
-        topico.anotacoes[_editContext.parentIndex].conteudo = novoTexto;
-    } else if (_editContext.tipo === 'sub') {
-        const alvo = _resolverSubAlvo(topico, _editContext.parentIndex, _editContext.viewSource);
-        alvo.subAnotacoes[_editContext.localIndex].texto = novoTexto;
-    } else if (_editContext.tipo === 'correlated') {
-        topico.anotacoes[_editContext.parentIndex].itensCorrelacionados[_editContext.cIdx].conteudo = novoTexto;
+    if (_editContext.tipo === 'preambulo') {
+        topico[_editContext.campo] = novoTexto;
+    } else {
+        if (!novoTexto) return exibirToast('O texto não pode ficar vazio.', 'aviso');
+
+        if (_editContext.tipo === 'main') {
+            topico.anotacoes[_editContext.parentIndex].conteudo = novoTexto;
+        } else if (_editContext.tipo === 'sub') {
+            const alvo = _resolverSubAlvo(topico, _editContext.parentIndex, _editContext.viewSource);
+            alvo.subAnotacoes[_editContext.localIndex].texto = novoTexto;
+        } else if (_editContext.tipo === 'correlated') {
+            topico.anotacoes[_editContext.parentIndex].itensCorrelacionados[_editContext.cIdx].conteudo = novoTexto;
+        }
     }
     
     renderizarTopicos(); 
@@ -195,6 +197,12 @@ function salvarEdicaoTexto() {
     exibirToast('Anotação salva com sucesso!', 'sucesso');
     fecharModalEdicao();
 }
+
+window.abrirEdicaoPreambulo = function(topicoId, campo) {
+    const topico = topicos.find(t => t.id === topicoId);
+    const textoAtual = topico[campo] || '';
+    abrirModalEdicao({ tipo: 'preambulo', topicoId: topicoId, campo: campo }, textoAtual);
+};
 
 function aplicarAumentoFonte(nivel) {
     const textarea = document.getElementById('edit-text-input');
@@ -693,8 +701,6 @@ function exibirTooltipRapido(intencao, event) {
         'nota': { titulo: 'Nota Oculta', texto: 'A IA NÃO lerá isso. É apenas um lembrete para você.' },
         'veredito': { titulo: 'Veredito / Conclusão', texto: 'Força a IA a concluir o tópico recursal com esta decisão.' },
         'fundamentacao': { titulo: 'Base Legal', texto: 'A IA priorizará esta lei/súmula acima de qualquer outra.' },
-        'alegacao': { titulo: 'Alegação Recursal', texto: 'A IA usará isso no Relatório (O que a parte quer).' },
-        'fundamento_sentenca': { titulo: 'Fundamento da Origem', texto: 'A IA usará isso no Relatório (O que o juiz fez).' },
         'refutacao': { titulo: 'Refutação (Mérito)', texto: 'A IA usará este argumento para derrubar a tese da parte.' },
         'preliminar': { titulo: 'Filtro / Prejudicial', texto: 'A IA redigirá este tópico antes de entrar no mérito.' }
     };

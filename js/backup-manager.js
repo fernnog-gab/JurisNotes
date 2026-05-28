@@ -153,6 +153,49 @@ window.BackupManager = (function () {
             });
         });
         
+        // MUDANÇA ARQUITETURAL: Migração de Razões Recursais e Fundamentos para o Topo (v5.0/6.0)
+        pacote.dados.forEach(topico => {
+            // Inicializa propriedades se não existirem
+            if (topico.alegacoes === undefined) topico.alegacoes = '';
+            if (topico.fundamentos === undefined) topico.fundamentos = '';
+
+            let extraiuAlegacoes = [];
+            let extraiuFundamentos = [];
+
+            // Função auxiliar para varrer e extirpar nós antigos
+            const limparNosLegados = (listaNos) => {
+                if (!listaNos) return listaNos;
+                return listaNos.filter(sub => {
+                    if (sub.intencao === 'alegacao') {
+                        extraiuAlegacoes.push(sub.texto);
+                        return false; // Remove do array original
+                    }
+                    if (sub.intencao === 'fundamento_sentenca') {
+                        extraiuFundamentos.push(sub.texto);
+                        return false; // Remove do array original
+                    }
+                    return true; // Mantém as outras intenções
+                });
+            };
+
+            topico.anotacoes.forEach(anotacao => {
+                anotacao.subAnotacoes = limparNosLegados(anotacao.subAnotacoes);
+                if (anotacao.itensCorrelacionados) {
+                    anotacao.itensCorrelacionados.forEach(item => {
+                        item.subAnotacoes = limparNosLegados(item.subAnotacoes);
+                    });
+                }
+            });
+
+            // Se encontrou dados legados, promove para as propriedades de topo
+            if (extraiuAlegacoes.length > 0 && !topico.alegacoes) {
+                topico.alegacoes = extraiuAlegacoes.join('\n\n');
+            }
+            if (extraiuFundamentos.length > 0 && !topico.fundamentos) {
+                topico.fundamentos = extraiuFundamentos.join('\n\n');
+            }
+        });
+
         return pacote;
     }
 
