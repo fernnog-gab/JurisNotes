@@ -277,16 +277,6 @@
             <span>Filtro / Prejudicial</span>
         </button>
 
-        <button class="ann-action-btn btn-intent btn-intent-alegacao" data-intent="alegacao" title="O que a parte pede" onclick="definirIntencaoSubAnotacao('alegacao')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-            <span>Alegação Recursal</span>
-        </button>
-
-        <button class="ann-action-btn btn-intent btn-intent-fundamento_sentenca" data-intent="fundamento_sentenca" title="Base da sentença" onclick="definirIntencaoSubAnotacao('fundamento_sentenca')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 21V7l6-4 6 4v14"></path></svg>
-            <span>Fundamento da Origem</span>
-        </button>
-
         <button class="ann-action-btn btn-intent btn-intent-refutacao" data-intent="refutacao" title="Derrubar argumento" onclick="definirIntencaoSubAnotacao('refutacao')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>
             <span>Refutação (Mérito)</span>
@@ -632,6 +622,10 @@
         </button>
     </div>
 
+    <!-- DEPENDÊNCIAS DE RENDERIZAÇÃO E ESTADO (Keyed Morphing) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/morphdom/2.7.4/morphdom-umd.min.js"></script>
+    <script src="js/store.js"></script>
+    
     <script src="js/backup-manager.js"></script>
     <script src="js/topics-manager.js"></script>
     <script src="js/interaction-tools.js"></script>

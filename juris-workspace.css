@@ -502,8 +502,6 @@
 .sub-badge.intencao-fundamentacao { background-color: #00695c; border: 2px solid #b2dfdb; color: #fff; }
 
 /* Novas Cores para as Intenções no Badge */
-.sub-badge.intencao-alegacao            { background-color: #f57c00; border: 2px solid #ffe0b2; color: #fff; }
-.sub-badge.intencao-fundamento_sentenca { background-color: #3949ab; border: 2px solid #c5cae9; color: #fff; }
 .sub-badge.intencao-refutacao           { background-color: #8B4513; border: 2px solid #DEB887; color: #fff; }
 .sub-badge.intencao-preliminar          { background-color: #5d4037; border: 2px solid #d7ccc8; color: #fff; }
 
@@ -919,12 +917,6 @@
 .btn-intent-fundamentacao svg   { stroke: #00695c; }
 
 /* Estilos dos Botões Flutuantes do Menu Contextual */
-.btn-intent-alegacao { color: #f57c00; justify-content: flex-start; gap: 8px; width: 100%; font-size: 0.8rem; }
-.btn-intent-alegacao svg { stroke: #f57c00; }
-
-.btn-intent-fundamento_sentenca { color: #3949ab; justify-content: flex-start; gap: 8px; width: 100%; font-size: 0.8rem; }
-.btn-intent-fundamento_sentenca svg { stroke: #3949ab; }
-
 .btn-intent-refutacao { color: #8B4513; justify-content: flex-start; gap: 8px; width: 100%; font-size: 0.8rem; transition: background 0.2s, color 0.2s; }
 .btn-intent-refutacao svg { stroke: #8B4513; transition: stroke 0.2s; }
 
@@ -1081,4 +1073,67 @@
 
 .pdf-annotation-badge {
     cursor: pointer; /* Garante UX indicando clique (Sobrescreve o default anterior) */
+}
+
+/* ================================================
+   12. PAINEL DE PREÂMBULO (RELATÓRIO FIXO)
+   ================================================ */
+.topic-preamble-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px 24px 0 24px;
+    margin-bottom: 8px;
+}
+
+.preamble-card {
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.preamble-card:hover {
+    border-color: var(--trt-blue-mid);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    transform: translateY(-1px);
+}
+
+.preamble-alegacao { border-left: 4px solid #f57c00; }
+.preamble-origem { border-left: 4px solid #3949ab; }
+
+.preamble-icon {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    margin-top: 2px;
+}
+
+.preamble-alegacao .preamble-icon { color: #f57c00; }
+.preamble-origem .preamble-icon { color: #3949ab; }
+
+.preamble-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+}
+
+.preamble-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #777;
+    letter-spacing: 0.5px;
+}
+
+.preamble-empty {
+    font-size: 0.85rem;
+    color: #aaa;
+    font-style: italic;
 }
