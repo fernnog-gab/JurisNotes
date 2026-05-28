@@ -613,17 +613,12 @@ window.TopicsManager = (function () {
                     if (an.tese && an.tese.trim() !== '') {
                         const fasesPresentes = new Set();
                         
-                        // Coleta a fase do card pai
                         fasesPresentes.add(typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(an.documento) : 4);
                         
-                        // Coleta fases dos itens agrupados
                         if (an.itensCorrelacionados?.length) {
                             an.itensCorrelacionados.forEach(ic => fasesPresentes.add(typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(ic.documento) : 4));
                         }
 
-                        // CORREÇÃO: Varre as mochilas diretamente em vez de usar o finado sourceRef
-                        // NOVA LÓGICA: Coleta fases das "Mochilas" de Nós de Ideia (Filhos)
-                        // Obs: Se for nó do Mestre, a fase já foi coletada acima.
                         if (an.itensCorrelacionados?.length) {
                             an.itensCorrelacionados.forEach(ic => {
                                 if (ic.subAnotacoes && ic.subAnotacoes.length > 0) {
@@ -658,57 +653,53 @@ window.TopicsManager = (function () {
                     }
                 });
                 sumarioHtml += '</div>';
-        }
-        const cardsHTML = topicoAtivo.anotacoes.map(criarCard).join('');
-        
-        conteudoCentralHtml = sumarioHtml + `
-            <div class="timeline-container" id="timeline-container">
-                <svg id="connections-canvas"></svg>
-                ${cardsHTML}
-            </div>`;
+            }
+            const cardsHTML = topicoAtivo.anotacoes.map(criarCard).join('');
+            
+            conteudoCentralHtml = sumarioHtml + `
+                <div class="timeline-container" id="timeline-container">
+                    <svg id="connections-canvas"></svg>
+                    ${cardsHTML}
+                </div>`;
         }
 
         const novoHtml = preambleHtml + conteudoCentralHtml;
             
-        // KEYED MORPHING: Diffing cirúrgico do DOM. Acaba com o layout thrashing!
+        // KEYED MORPHING
         if (typeof morphdom !== 'undefined') {
             morphdom(contentEl, `<div id="topics-tab-content" class="topics-content-area" style="${contentEl.style.cssText}">${novoHtml}</div>`, {
                 childrenOnly: true,
                 getNodeKey: function(node) {
-                    if (node.id) return node.id; // Garante a preservação de eventos do Drag & Drop
+                    if (node.id) return node.id;
                 }
             });
         } else {
-            contentEl.innerHTML = novoHtml; // Fallback de segurança
+            contentEl.innerHTML = novoHtml;
         }
             
-        // Avalia expansão e redesenha conexões
         requestAnimationFrame(() => {
             document.querySelectorAll('.sub-text-content').forEach(el => {
-                    const btn = el.parentElement.querySelector('.btn-expand-text');
-                    if (btn && el.scrollHeight > el.clientHeight) {
-                        btn.style.display = 'inline-flex';
-                    }
-                });
-                
-                // Dispara o recálculo dos SVGs durante o redimensionamento nativo das imagens
-                document.querySelectorAll('.image-resize-wrapper').forEach(wrapper => {
-                    wrapper.addEventListener('mouseup', () => desenharConexoes());
-                    wrapper.addEventListener('mouseleave', () => desenharConexoes());
-                });
-
-                const container = document.getElementById('timeline-container');
-                if (container) {
-                    posicionarNosDeIdeia(container);
-                    requestAnimationFrame(() => {
-                        desenharConexoes();
-                    });
+                const btn = el.parentElement.querySelector('.btn-expand-text');
+                if (btn && el.scrollHeight > el.clientHeight) {
+                    btn.style.display = 'inline-flex';
                 }
-                
-                // [NOVA LINHA] Atualiza marcadores flutuantes pós-pintura
-                _atualizarMarcadoresDeIdeia(topicoAtivo);
             });
-        }
+            
+            document.querySelectorAll('.image-resize-wrapper').forEach(wrapper => {
+                wrapper.addEventListener('mouseup', () => desenharConexoes());
+                wrapper.addEventListener('mouseleave', () => desenharConexoes());
+            });
+
+            const container = document.getElementById('timeline-container');
+            if (container) {
+                posicionarNosDeIdeia(container);
+                requestAnimationFrame(() => {
+                    desenharConexoes();
+                });
+            }
+            
+            _atualizarMarcadoresDeIdeia(topicoAtivo);
+        });
     }
 
     /**
