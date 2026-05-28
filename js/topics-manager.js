@@ -838,6 +838,7 @@ window.TopicsManager = (function () {
         obterCorContraste,
         renderizarFichario,
         getActiveTabId: () => activeTabId,
+        setActiveTabId: (id) => { activeTabId = id; },
         escaparHTML,
         toggleTextExpansion,
         hexToRgba

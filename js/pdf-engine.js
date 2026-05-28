@@ -411,31 +411,44 @@ window.PdfEngine = (function () {
                         
                         badge.addEventListener('mouseenter', (e) => {
                             const tooltip = document.getElementById('quick-intent-tooltip');
-                            if (!tooltip) return;
-                            tooltip.innerHTML = `<strong>Tópico Vinculado</strong>${topico.nome}`;
-                            tooltip.style.display = 'block';
-                            tooltip.classList.remove('visible');
-                            
-                            let x = e.clientX + 15;
-                            let y = e.clientY + 15;
-                            const rect = tooltip.getBoundingClientRect();
-                            if (x + rect.width > window.innerWidth) x = e.clientX - rect.width - 15;
-                            if (y + rect.height > window.innerHeight) y = e.clientY - rect.height - 15;
-                            
-                            tooltip.style.left = `${x}px`;
-                            tooltip.style.top = `${y}px`;
-                            requestAnimationFrame(() => tooltip.classList.add('visible'));
-                        });
+                        if (!tooltip) return;
+                        tooltip.innerHTML = `<strong>Tópico Vinculado</strong>${topico.nome}<br><span style="font-size:0.75rem; color:#aab; display:block; margin-top:4px;">(Ctrl + Clique para acessar a anotação)</span>`;
+                        tooltip.style.display = 'block';
+                        tooltip.classList.remove('visible');
                         
-                        badge.addEventListener('mouseleave', () => {
-                            const tooltip = document.getElementById('quick-intent-tooltip');
-                            if (tooltip) {
-                                tooltip.classList.remove('visible');
-                                setTimeout(() => { tooltip.style.display = 'none'; }, 200);
-                            }
-                        });
+                        let x = e.clientX + 15;
+                        let y = e.clientY + 15;
+                        const rect = tooltip.getBoundingClientRect();
+                        if (x + rect.width > window.innerWidth) x = e.clientX - rect.width - 15;
+                        if (y + rect.height > window.innerHeight) y = e.clientY - rect.height - 15;
+                        
+                        tooltip.style.left = `${x}px`;
+                        tooltip.style.top = `${y}px`;
+                        requestAnimationFrame(() => tooltip.classList.add('visible'));
+                    });
+                    
+                    badge.addEventListener('mouseleave', () => {
+                        const tooltip = document.getElementById('quick-intent-tooltip');
+                        if (tooltip) {
+                            tooltip.classList.remove('visible');
+                            setTimeout(() => { tooltip.style.display = 'none'; }, 200);
+                        }
+                    });
 
-                        highlightLayerDiv.appendChild(badge);
+                    // Gatilho de Viagem (Navegação Reversa)
+                    badge.addEventListener('click', (e) => {
+                        if (e.ctrlKey && !e.shiftKey) {
+                            e.preventDefault();
+                            e.stopPropagation(); // Bloqueia propagação p/ o container e popups indesejados
+                            
+                            if (window.navegarParaAnotacao) {
+                                const indiceDestino = parentIndex !== undefined ? parentIndex : idx;
+                                window.navegarParaAnotacao(topico.id, indiceDestino);
+                            }
+                        }
+                    });
+
+                    highlightLayerDiv.appendChild(badge);
                     }
                     if (item.itensCorrelacionados) {
                         desenharMarcacoes(item.itensCorrelacionados, parentIndex !== undefined ? parentIndex : idx);

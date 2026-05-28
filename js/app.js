@@ -678,6 +678,55 @@ async function salvarAnotacao(tipo, conteudo, documento, polo, topicoId, comenta
 /* ================================================
    NAVEGAÇÃO E UTILITÁRIOS DA INTERFACE
    ================================================ */
+
+/* NAVEGAÇÃO REVERSA: PDF -> ANOTAÇÕES */
+window.navegarParaAnotacao = function(topicoId, anotacaoIndex) {
+    // 1. Troca o painel principal (UI Base)
+    if (!document.getElementById('tab-historico').classList.contains('active')) {
+        trocarAba('historico');
+    }
+
+    // 2. Alinhamento de Estado e Re-renderização Segura
+    if (window.TopicsManager && TopicsManager.getActiveTabId() !== topicoId) {
+        TopicsManager.setActiveTabId(topicoId);
+        renderizarTopicos(); // Correção Arquitetural: Uso do Facade de app.js
+    }
+
+    exibirToast('Localizando anotação no fichário...');
+
+    // 3. Fila de Renderização (Aguarda reflow e painting do DOM)
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            const scrollContainer = document.getElementById('history-container');
+            const targetId = `timeline-wrapper-${anotacaoIndex}`;
+            const targetElement = document.getElementById(targetId);
+
+            // 4. Guard Clause: Proteção contra dessincronização de exclusões
+            if (!targetElement) {
+                exibirToast('Não foi possível localizar o card alvo. Ele pode ter sido excluído.', 'erro');
+                return;
+            }
+
+            if (scrollContainer) {
+                // Scroll Matemático
+                const containerRect = scrollContainer.getBoundingClientRect();
+                const targetRect = targetElement.getBoundingClientRect();
+                const offset = (targetRect.top - containerRect.top) + scrollContainer.scrollTop - 16;
+                
+                scrollContainer.scrollTo({ top: offset, behavior: 'smooth' });
+
+                // Foco Visual (Trigger de Reflow)
+                const card = targetElement.querySelector('.main-card-wrapper > .annotation-card');
+                if (card) {
+                    card.classList.remove('card-flash-focus');
+                    void card.offsetWidth; // Força reavaliação do DOM
+                    card.classList.add('card-flash-focus');
+                }
+            }
+        });
+    });
+};
+
 function irParaPagina() {
     const input = document.getElementById('goto-page-input');
     const termoBusca = input.value.trim().toLowerCase();
