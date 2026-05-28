@@ -81,6 +81,10 @@ window.BackupManager = (function () {
      * @param {string} textoJson  Conteúdo bruto do arquivo .json
      * @returns {{ metadata: object, dados: Array }}
      */
+    function _gerarUUID() {
+        return 'id-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now().toString(36);
+    }
+
     function _desempacotar(textoJson) {
         const obj = JSON.parse(textoJson); // SyntaxError se JSON inválido
         let pacote = obj;
@@ -128,6 +132,26 @@ window.BackupManager = (function () {
                 });
             });
         }
+        
+        // MUDANÇA ARQUITETURAL: Normalização de UUIDs (v4.0 Keyed Morphing)
+        // Garante que todo dado legado ganhe uma chave única persistente.
+        pacote.dados.forEach(topico => {
+            if (!topico.uuid) topico.uuid = _gerarUUID();
+            
+            topico.anotacoes.forEach(anotacao => {
+                if (!anotacao.uuid) anotacao.uuid = _gerarUUID();
+                
+                if (anotacao.itensCorrelacionados) {
+                    anotacao.itensCorrelacionados.forEach(item => {
+                        if (!item.uuid) item.uuid = _gerarUUID();
+                        if (item.subAnotacoes) item.subAnotacoes.forEach(sub => { if (!sub.uuid) sub.uuid = _gerarUUID(); });
+                    });
+                }
+                if (anotacao.subAnotacoes) {
+                    anotacao.subAnotacoes.forEach(sub => { if (!sub.uuid) sub.uuid = _gerarUUID(); });
+                }
+            });
+        });
         
         return pacote;
     }

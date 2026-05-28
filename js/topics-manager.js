@@ -416,8 +416,8 @@ window.TopicsManager = (function () {
 
         // Wrapper Master Flex atualizado para envelopar a hierarquia inteira
         const wrapperMaster = `
-            <div class="timeline-item-master ${alignClass}" id="timeline-wrapper-${index}">
-                <div class="main-card-wrapper" data-cidx="main"
+            <div class="timeline-item-master ${alignClass}" id="timeline-wrapper-${anotacao.uuid || index}">
+                <div class="main-card-wrapper" data-uuid="${anotacao.uuid || index}" data-cidx="main"
                      ondragover="DnDManager.dragOver(event)"
                      ondrop="DnDManager.drop(event, '${activeTabId}', ${index}, 'main')"
                      ondragenter="DnDManager.dragEnter(event)"
@@ -485,7 +485,7 @@ window.TopicsManager = (function () {
                 e.stopPropagation();
                 
                 const scrollContainer = document.getElementById('history-container');
-                const targetId = `timeline-wrapper-${index}`; // Mapeamento 1:1 com a renderização
+                const targetId = `timeline-wrapper-${anotacao.uuid || index}`; // Reconciliação via UUID
                 const targetElement = document.getElementById(targetId);
                 
                 if (targetElement && scrollContainer) {
@@ -633,18 +633,30 @@ window.TopicsManager = (function () {
                     }
                 });
                 sumarioHtml += '</div>';
-            }
-            const cardsHTML = topicoAtivo.anotacoes.map(criarCard).join('');
-            // Injetamos o SVG absoluto no fundo do container e o sumário acima
-            contentEl.innerHTML = sumarioHtml + `
-                <div class="timeline-container" id="timeline-container">
-                    <svg id="connections-canvas"></svg>
-                    ${cardsHTML}
-                </div>`;
-                
-            // Avalia expansão e redesenha conexões
-            requestAnimationFrame(() => {
-                document.querySelectorAll('.sub-text-content').forEach(el => {
+        }
+        const cardsHTML = topicoAtivo.anotacoes.map(criarCard).join('');
+        
+        const novoHtml = sumarioHtml + `
+            <div class="timeline-container" id="timeline-container">
+                <svg id="connections-canvas"></svg>
+                ${cardsHTML}
+            </div>`;
+            
+        // KEYED MORPHING: Diffing cirúrgico do DOM. Acaba com o layout thrashing!
+        if (typeof morphdom !== 'undefined') {
+            morphdom(contentEl, `<div id="topics-tab-content" class="topics-content-area" style="${contentEl.style.cssText}">${novoHtml}</div>`, {
+                childrenOnly: true,
+                getNodeKey: function(node) {
+                    if (node.id) return node.id; // Garante a preservação de eventos do Drag & Drop
+                }
+            });
+        } else {
+            contentEl.innerHTML = novoHtml; // Fallback de segurança
+        }
+            
+        // Avalia expansão e redesenha conexões
+        requestAnimationFrame(() => {
+            document.querySelectorAll('.sub-text-content').forEach(el => {
                     const btn = el.parentElement.querySelector('.btn-expand-text');
                     if (btn && el.scrollHeight > el.clientHeight) {
                         btn.style.display = 'inline-flex';

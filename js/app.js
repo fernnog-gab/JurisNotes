@@ -625,6 +625,7 @@ async function salvarAnotacao(tipo, conteudo, documento, polo, topicoId, comenta
     }
     
     const novaExtracao = {
+        uuid: 'id-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now().toString(36),
         tipo,
         documento,
         polo,
@@ -695,17 +696,19 @@ window.navegarParaAnotacao = function(topicoId, anotacaoIndex) {
     exibirToast('Localizando anotação no fichário...');
 
     // 3. Fila de Renderização (Aguarda reflow e painting do DOM)
-    requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-            const scrollContainer = document.getElementById('history-container');
-            const targetId = `timeline-wrapper-${anotacaoIndex}`;
-            const targetElement = document.getElementById(targetId);
+            requestAnimationFrame(() => {
+                const scrollContainer = document.getElementById('history-container');
+                const topicoTarget = topicos.find(t => t.id === topicoId);
+                const uuidTarget = topicoTarget && topicoTarget.anotacoes[anotacaoIndex] ? topicoTarget.anotacoes[anotacaoIndex].uuid : null;
+                const targetId = uuidTarget ? `timeline-wrapper-${uuidTarget}` : `timeline-wrapper-${anotacaoIndex}`;
+                const targetElement = document.getElementById(targetId);
 
-            // 4. Guard Clause: Proteção contra dessincronização de exclusões
-            if (!targetElement) {
-                exibirToast('Não foi possível localizar o card alvo. Ele pode ter sido excluído.', 'erro');
-                return;
-            }
+                // 4. Guard Clause: Proteção contra dessincronização de exclusões
+                if (!targetElement) {
+                    exibirToast('Não foi possível localizar o card alvo. Ele pode ter sido excluído.', 'erro');
+                    return;
+                }
 
             if (scrollContainer) {
                 // Scroll Matemático

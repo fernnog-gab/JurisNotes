@@ -247,9 +247,17 @@ function excluirAnotacao() {
     const { topicoId, index } = _menuAnotacaoCtx;
     const topico = topicos.find(t => t.id === topicoId);
     if (!confirm('Excluir esta anotação? A ação não pode ser desfeita.')) return;
-    topico.anotacoes.splice(index, 1);
-    renderizarTopicos(); salvarBackupAutomatico();
-    if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
+    
+    // Disparo para o Store (Transição arquitetural para Fase 4)
+    if (window.Store) {
+        window.Store.dispatch({ type: 'DELETE_ITEM', payload: { topicoId, index } });
+    } else {
+        // Fallback imediato mantendo a funcionalidade nativa
+        topico.anotacoes.splice(index, 1);
+        renderizarTopicos(); salvarBackupAutomatico();
+        if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
+    }
+    
     exibirToast('Anotação excluída.', 'sucesso');
     _menuAnotacaoCtx = null;
 }
@@ -357,7 +365,9 @@ function adicionarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
         </div>`;
         
     // Ancoragem dinâmica: anexa o input logo abaixo do card que gerou a ação
-    const masterWrapper = document.getElementById(`timeline-wrapper-${anotacaoIndex}`);
+    const topicoTarget = topicos.find(t => t.id === topicoId);
+    const uuidTarget = topicoTarget && topicoTarget.anotacoes[anotacaoIndex] ? topicoTarget.anotacoes[anotacaoIndex].uuid : null;
+    const masterWrapper = document.getElementById(uuidTarget ? `timeline-wrapper-${uuidTarget}` : `timeline-wrapper-${anotacaoIndex}`);
     if (masterWrapper) {
         let mountPoint = masterWrapper.querySelector('.main-card-wrapper');
         if (cIdx != null) {
@@ -385,7 +395,11 @@ function confirmarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
     const alvo = _resolverSubAlvo(topico, anotacaoIndex, viewSource);
     
     if (!alvo.subAnotacoes) alvo.subAnotacoes = [];
-    alvo.subAnotacoes.push({ texto, timestamp: Date.now() });
+    alvo.subAnotacoes.push({ 
+        uuid: 'id-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now().toString(36),
+        texto, 
+        timestamp: Date.now() 
+    });
     
     document.getElementById('sub-input-active').remove();
     renderizarTopicos(); 
