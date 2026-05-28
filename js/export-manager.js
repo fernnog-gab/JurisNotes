@@ -237,44 +237,51 @@ window.ExportManager = (function () {
                 });
             }
 
-            // ── Nós de Ideia (Triagem de Intenções) ─────────────────────────
-            if (an.subAnotacoes && an.subAnotacoes.length > 0) {
-                an.subAnotacoes.forEach((sub) => {
+            // ── Nós de Ideia (Nova Arquitetura de Mochilas Isoladas) ─────────────────────────
+            
+            // Função Helper para imprimir os nós no Markdown e empurrar para as Tags XML
+            const imprimirNos = (listaNos, refContexto) => {
+                if (!listaNos || listaNos.length === 0) return;
+                
+                listaNos.forEach((sub) => {
                     const intencao = sub.intencao || 'premissa';
-                    
-                    // Resgate seguro do Alvo Metodológico (SourceRef)
-                    let focoContexto = '';
-                    if (sub.sourceRef !== undefined && sub.sourceRef !== 'main' && an.itensCorrelacionados) {
-                        const cIdx = parseInt(sub.sourceRef, 10);
-                        if (!isNaN(cIdx) && an.itensCorrelacionados[cIdx]) {
-                            const alvo = an.itensCorrelacionados[cIdx];
-                            let docNome = alvo.documento || alvo.tipo;
-                            if(alvo.tipo === 'audio') docNome = 'Oitiva/Áudio';
-                            focoContexto = ` [Foco na Prova Secundária: ${docNome} ${alvo.pagina ? 'fl.'+alvo.pagina : ''}]`;
-                        }
-                    }
-
-                    // Textos de intenção também sofrem blindagem contra quebras de linha
                     const textoSanitizado = _safeMD(sub.texto, '\n  ');
 
                     if (intencao === 'premissa') {
-                        md += `\n  💡 **Premissa Lógica do Assessor (Incontroversa)${focoContexto}:** ${textoSanitizado}\n`;
+                        md += `\n  💡 **Premissa Lógica do Assessor (Incontroversa)${refContexto}:** ${textoSanitizado}\n`;
                     } else if (intencao === 'refutacao') {
-                        md += `\n  🛡️ **Refutação de Mérito / Afastamento de Tese${focoContexto}:** ${textoSanitizado}\n`;
+                        md += `\n  🛡️ **Refutação de Mérito / Afastamento de Tese${refContexto}:** ${textoSanitizado}\n`;
                     } else if (intencao === 'comando') {
-                        comandosInjetados.push(`[Ideia ${numIdeia}${focoContexto}]: ${textoSanitizado}`);
+                        comandosInjetados.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
                     } else if (intencao === 'texto') {
-                        comandosInjetados.push(`[Ideia ${numIdeia}${focoContexto} — TEXTO FIXO]: Incorpore: "${textoSanitizado}"`);
+                        comandosInjetados.push(`[Ideia ${numIdeia}${refContexto} — TEXTO FIXO]: Incorpore: "${textoSanitizado}"`);
                     } else if (intencao === 'veredito') {
-                        vereditosExigidos.push(`[Ideia ${numIdeia}${focoContexto}]: ${textoSanitizado}`);
+                        vereditosExigidos.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
                     } else if (intencao === 'fundamentacao') {
-                        baseLegalObrigatoria.push(`[Ideia ${numIdeia}${focoContexto}]: ${textoSanitizado}`);
+                        baseLegalObrigatoria.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
                     } else if (intencao === 'preliminar') {
-                        preliminaresInjetadas.push(`[Ideia ${numIdeia}${focoContexto}]: ${textoSanitizado}`);
+                        preliminaresInjetadas.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
                     } else if (intencao === 'alegacao') {
-                        alegacoesInjetadas.push(`[Ideia ${numIdeia}${focoContexto}]: ${textoSanitizado}`);
+                        alegacoesInjetadas.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
                     } else if (intencao === 'fundamento_sentenca') {
-                        fundamentosInjetados.push(`[Ideia ${numIdeia}${focoContexto}]: ${textoSanitizado}`);
+                        fundamentosInjetados.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                    }
+                });
+            };
+
+            // 1. Extrai e imprime os nós da Ideia Principal (Master)
+            imprimirNos(an.subAnotacoes, '');
+
+            // 2. Extrai e imprime os nós de cada Ideia Agrupada (Correlacionados)
+            if (an.itensCorrelacionados && an.itensCorrelacionados.length > 0) {
+                an.itensCorrelacionados.forEach((corr) => {
+                    if (corr.subAnotacoes && corr.subAnotacoes.length > 0) {
+                        // Constrói o contexto da prova filha para guiar a IA
+                        let docNome = corr.documento || corr.tipo;
+                        if (corr.tipo === 'audio') docNome = 'Oitiva/Áudio';
+                        const focoContexto = ` [Foco na Prova Secundária: ${docNome} ${corr.pagina ? 'fl.' + corr.pagina : ''}]`;
+                        
+                        imprimirNos(corr.subAnotacoes, focoContexto);
                     }
                 });
             }

@@ -280,12 +280,16 @@ window.TopicsManager = (function () {
 
         // Card Principal (Removido o código morto redundante do wrapper interno)
 
-        // Nós de Ideia (Sub-anotações)
+        // Nós de Ideia (Sub-anotações - Flattening Architecture)
+        let htmlSubAnotacoes = '';
         let flatSubAnotacoes = [];
         
+        // 1. Achata os nós do Mestre
         if (anotacao.subAnotacoes) {
             flatSubAnotacoes.push(...anotacao.subAnotacoes.map((s, idx) => ({ ...s, viewSource: 'main', localIndex: idx })));
         }
+        
+        // 2. Achata os nós dos Filhos (Correlacionados)
         if (anotacao.itensCorrelacionados) {
             anotacao.itensCorrelacionados.forEach((item, fIdx) => {
                 if (item.subAnotacoes) {
@@ -294,11 +298,10 @@ window.TopicsManager = (function () {
             });
         }
 
-        let htmlSubAnotacoes = '';
         if (flatSubAnotacoes.length > 0) {
             const subCardsHTML = flatSubAnotacoes.map((sub, sIdx) => {
                 const intencao = sub.intencao || 'premissa';
-                const isHasIntent = true; // Garante o design em pílula para TODAS as intenções
+                const isHasIntent = true; 
                 let iconSVG = '';
 
                 if (intencao === 'comando') {
@@ -324,11 +327,12 @@ window.TopicsManager = (function () {
                 }
 
                 const badgeClass = isHasIntent ? `sub-badge has-intent intencao-${intencao}` : 'sub-badge';
+                // Note que o sIdx (índice global flat) continua sendo usado APENAS para gerar a letra alfabética (A, B, C)
                 const label = isHasIntent ? `${iconSVG} ${numero}.${gerarLetra(sIdx)}` : `${numero}.${gerarLetra(sIdx)}`;
                 
                 const textoFormatado = renderizarMarkdownSeguro(escaparHTML(sub.texto));
                 
-                // Cálculo rigoroso da borda de fase
+                // Cálculo rigoroso da borda de fase com base na nova estrutura
                 let faseSub = faseDoCard;
                 if (sub.viewSource !== 'main' && anotacao.itensCorrelacionados) {
                     const cIdx = parseInt(sub.viewSource, 10);
@@ -341,6 +345,7 @@ window.TopicsManager = (function () {
                 return `
                     <div class="sub-annotation-item" data-source="${sub.viewSource}">
                         <div class="sub-annotation-card ${bordaFaseClass}">
+                            <!-- NOVO CONTRATO AQUI: Passamos viewSource E localIndex antes do event -->
                             <div class="${badgeClass}"
                                  title="Opções desta ideia secundária"
                                  onclick="abrirMenuSubAnotacao('${activeTabId}', ${index}, '${sub.viewSource}', ${sub.localIndex}, event)">
@@ -592,9 +597,8 @@ window.TopicsManager = (function () {
                         }
 
                         // CORREÇÃO: Varre as mochilas diretamente em vez de usar o finado sourceRef
-                        if (an.subAnotacoes?.length) {
-                             // A fase dos nós do mestre já é coberta pelo mestre (fasesPresentes.add)
-                        }
+                        // NOVA LÓGICA: Coleta fases das "Mochilas" de Nós de Ideia (Filhos)
+                        // Obs: Se for nó do Mestre, a fase já foi coletada acima.
                         if (an.itensCorrelacionados?.length) {
                             an.itensCorrelacionados.forEach(ic => {
                                 if (ic.subAnotacoes && ic.subAnotacoes.length > 0) {
