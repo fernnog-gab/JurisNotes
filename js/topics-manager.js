@@ -580,7 +580,7 @@ window.TopicsManager = (function () {
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                     </div>
                     <div class="preamble-content">
-                        <span class="preamble-title">Razões Recursais (O que a parte pede)</span>
+                        <span class="preamble-title">Razões Recursais</span>
                         ${topicoAtivo.alegacoes ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.alegacoes)) : '<span class="preamble-empty">Clique para redigir as alegações recursais...</span>'}
                     </div>
                 </div>
@@ -589,7 +589,7 @@ window.TopicsManager = (function () {
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 21V7l6-4 6 4v14"></path></svg>
                     </div>
                     <div class="preamble-content">
-                        <span class="preamble-title">Fundamentos da Origem (O que o juiz decidiu)</span>
+                        <span class="preamble-title">Fundamentos da Origem</span>
                         ${topicoAtivo.fundamentos ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.fundamentos)) : '<span class="preamble-empty">Clique para redigir os fundamentos da sentença...</span>'}
                     </div>
                 </div>
