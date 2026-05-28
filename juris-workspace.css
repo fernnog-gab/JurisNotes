@@ -1055,3 +1055,30 @@
     box-shadow: 0 5px 12px rgba(0, 0, 0, 0.35);
     z-index: 10;
 }
+
+/* ================================================
+   NAVEGAÇÃO REVERSA E FEEDBACK VISUAL
+   ================================================ */
+@keyframes flash-highlight {
+    0%   { 
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--trt-blue) 60%, transparent); 
+        border-color: var(--trt-blue); 
+        transform: scale(1.01); 
+    }
+    50%  { 
+        box-shadow: 0 0 0 16px transparent; 
+        background-color: color-mix(in srgb, var(--trt-blue) 5%, transparent); 
+    }
+    100% { 
+        box-shadow: 0 0 0 0 transparent; 
+        transform: scale(1); 
+    }
+}
+
+.card-flash-focus {
+    animation: flash-highlight 1.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.pdf-annotation-badge {
+    cursor: pointer; /* Garante UX indicando clique (Sobrescreve o default anterior) */
+}
