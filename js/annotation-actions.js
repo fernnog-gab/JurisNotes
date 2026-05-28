@@ -251,15 +251,7 @@ function excluirSubAnotacao() {
     document.getElementById('sub-annotation-context-menu').style.display = 'none';
 }
 
-function reordenarSubAnotacao() {
-    if (!_menuSubAnotacaoCtx) return;
-    const { topicoId, parentIndex, subIndex } = _menuSubAnotacaoCtx;
-    const subAnotacoes = topicos.find(t => t.id === topicoId).anotacoes[parentIndex].subAnotacoes;
-    if (subAnotacoes.length <= 1) return exibirToast('Apenas uma ideia secundária.', 'aviso');
-
-    abrirModalReordenar('sub', topicoId, parentIndex, subAnotacoes.length, subIndex);
-    document.getElementById('sub-annotation-context-menu').style.display = 'none';
-}
+// Função reordenarSubAnotacao removida arquiteturalmente (Automação Inteligente de Distribuição)
 
 function abrirModalReordenar(tipo, topicoId, index, total, subIndex = null) {
     _reordenarCtx = { tipo, topicoId, index, total, subIndex };
@@ -290,10 +282,6 @@ function confirmarReordenacaoPosicao() {
     if (_reordenarCtx.tipo === 'main') {
         const [item] = topico.anotacoes.splice(_reordenarCtx.index, 1);
         topico.anotacoes.splice(novaPos - 1, 0, item);
-    } else {
-        const subAnotacoes = topico.anotacoes[_reordenarCtx.index].subAnotacoes;
-        const [item] = subAnotacoes.splice(_reordenarCtx.subIndex, 1);
-        subAnotacoes.splice(novaPos - 1, 0, item);
     }
 
     renderizarTopicos(); salvarBackupAutomatico();
@@ -372,6 +360,20 @@ function confirmarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
         texto, 
         timestamp: Date.now(),
         sourceRef: cIdx != null ? cIdx : 'main'
+    });
+
+    // NOVA LÓGICA: Ordenação Arquitetural Segura
+    // Ordenamos o array na camada de dados, ANTES de renderizar e salvar.
+    anotacao.subAnotacoes.sort((a, b) => {
+        // 'main' tem precedência absoluta (-1). Senão, parse para inteiro.
+        const valA = (a.sourceRef === 'main' || a.sourceRef == null) ? -1 : parseInt(a.sourceRef, 10);
+        const valB = (b.sourceRef === 'main' || b.sourceRef == null) ? -1 : parseInt(b.sourceRef, 10);
+        
+        // Desempate cronológico para nós do mesmo card
+        if (valA === valB) {
+            return (a.timestamp || 0) - (b.timestamp || 0);
+        }
+        return valA - valB;
     });
     
     document.getElementById('sub-input-active').remove();

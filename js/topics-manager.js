@@ -327,23 +327,7 @@ window.TopicsManager = (function () {
                 const bordaFaseClass = `borda-fase-${faseSub}`;
 
                 return `
-                    <div class="sub-annotation-item" data-source="${sourceRef}"
-                         draggable="true"
-                         ondragstart="SubDnDManager.dragStart(event, '${activeTabId}', ${index}, ${sIdx})"
-                         ondragover="SubDnDManager.dragOver(event)"
-                         ondrop="SubDnDManager.drop(event, '${activeTabId}', ${index}, ${sIdx})"
-                         ondragenter="SubDnDManager.dragEnter(event)"
-                         ondragleave="SubDnDManager.dragLeave(event)"
-                         ondragend="SubDnDManager.dragEnd(event)">
-                         
-                         <!-- Drag Handle (Área de Pegada) -->
-                         <div class="sub-drag-handle" title="Arraste para reordenar esta ideia">
-                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                 <circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle>
-                                 <circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle>
-                             </svg>
-                         </div>
-
+                    <div class="sub-annotation-item" data-source="${sourceRef}">
                         <div class="sub-annotation-card ${bordaFaseClass}">
                             <div class="${badgeClass}"
                                  title="Opções desta ideia secundária"
@@ -695,12 +679,18 @@ window.TopicsManager = (function () {
                     const correlatedWrapper = master.querySelector(`.correlated-item-wrapper[data-cidx="${sourceRef}"]`);
                     if (correlatedWrapper) sourceCard = correlatedWrapper.querySelector('.annotation-card');
                 }
+                
+                // TRAVA DE SEGURANÇA: Previne o bug de sobreposição ao trocar abas no navegador
+                if (sourceCard.offsetHeight === 0) return null;
+
                 return {
                     el: subItem,
                     sourceCenterY: (sourceCard.getBoundingClientRect().top - wrapperRect.top) + (sourceCard.getBoundingClientRect().height / 2),
                     height: subItem.offsetHeight
                 };
-            });
+            }).filter(m => m !== null); // Remove os itens inválidos da contagem
+
+            if (measurements.length === 0) return; // Aborta mutação em views ocultas
 
             // Passe B: Mutações
             let currentY = 0;
