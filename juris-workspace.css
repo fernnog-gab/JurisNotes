@@ -677,7 +677,24 @@
     overflow: visible;
 }
 
+/* ESTADO 1: Verde Estático (Player Aberto/Pausado) */
 #active-audio-indicator.playing-audio::before {
+    display: none;
+}
+
+#active-audio-indicator.playing-audio::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: #2e7d32; 
+    border-radius: 50%;
+    z-index: 1;
+    box-shadow: 0 2px 6px rgba(46, 125, 50, 0.4);
+}
+
+/* ESTADO 2: Tocando e Girando (Áudio Ativo) */
+#active-audio-indicator.playing-audio.is-spinning::before {
+    display: block;
     content: '';
     position: absolute;
     top: 50%;
@@ -689,16 +706,6 @@
     background: conic-gradient(transparent 75%, #39FF14 95%, #ffffff 100%);
     animation: spin-glow 2.5s linear infinite;
     z-index: 0;
-}
-
-#active-audio-indicator.playing-audio::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: #2e7d32; 
-    border-radius: 50%;
-    z-index: 1;
-    box-shadow: 0 2px 6px rgba(46, 125, 50, 0.4);
 }
 
 #active-audio-indicator.playing-audio svg {
