@@ -131,77 +131,54 @@ window.ExportManager = (function () {
         const dataGeracao = new Date().toLocaleString('pt-BR');
         const safeFormatTime = (sec) => window.AudioManager?.formatTime ? window.AudioManager.formatTime(sec) : `${Math.floor(sec/60)}' ${Math.floor(sec%60)}''`;
 
-        // Coletores para os blocos globais de arquitetura (tags XML)
+        // Coletores para os blocos globais de arquitetura
         const preliminaresInjetadas = [];
-        
         const comandosInjetados    = [];
         const baseLegalObrigatoria = [];
 
-        // ── Cabeçalho do Pacote ──────────────────────────────────────────────
-        let md = `---
-*Pacote de Dados Estruturado via Juris Notes em ${dataGeracao}*
----
+        // BUFFER 1: Cabeçalho
+        // [CORREÇÃO: Fallback defensivo para topico.nome nulo/undefined]
+        let mdCabecalho = `---\n*Pacote de Dados Estruturado via Juris Notes em ${dataGeracao}*\n---\n\n`;
+        mdCabecalho += `# TÓPICO RECURSAL: **${(topico.nome || 'Tópico Sem Nome').toUpperCase()}**\n\n`;
 
-# TÓPICO RECURSAL: **${topico.nome.toUpperCase()}**
+        // BUFFER 2: Matriz Dialética (Processamento O(n))
+        let mdMatriz = `## MATRIZ DIALÉTICA E MAPEAMENTO PROBATÓRIO\n*Atenção IA: Esta é a sua fonte de premissas fáticas inconstroversas (Premissa Menor). Integre as âncoras (Id - fl) buscando nos PDFs anexos os detalhes de contexto de cada folha citada. Nunca presuma fatos fora destes blocos.*\n\n`;
 
-## MATRIZ DIALÉTICA E MAPEAMENTO PROBATÓRIO
-*Atenção IA: Esta é a sua fonte de premissas fáticas inconstroversas (Premissa Menor). Integre as âncoras (Id - fl) buscando nos PDFs anexos os detalhes de contexto de cada folha citada. Nunca presuma fatos fora destes blocos.*
-
-`;
-
-        // ── Iteração Cronológica das IDEIAs (Esqueleto Fático) ───────────────
+        // Iteração Cronológica mantida intacta (Preservação de Closures)
         topico.anotacoes.forEach((an, index) => {
             const numIdeia    = index + 1;
             const refCitacao  = _formatarCitacaoOficial(an.pjeId, an.pagina);
+            const tituloIdeia = an.tese ? an.tese : '[Tese não nomeada pelo assessor — inferir do conteúdo probatório abaixo]';
 
-            // [CORREÇÃO #3] Fallback instrucional, não um rótulo genérico.
-            const tituloIdeia = an.tese
-                ? an.tese
-                : '[Tese não nomeada pelo assessor — inferir do conteúdo probatório abaixo]';
+            mdMatriz += `### 📌 IDEIA ${numIdeia}: ${tituloIdeia}\n\n`;
 
-            md += `### 📌 IDEIA ${numIdeia}: ${tituloIdeia}\n\n`;
-
-            // [CORREÇÃO #1] Contexto Processual como primeira linha da IDEIA.
-            // Fornece ao LLM a âncora narrativa para posicionar a prova na minuta
-            // (ex: se vem do Recurso → entra no Relatório; se é da Sentença → fundamentação).
             const faseContexto  = an.fase      || an.documento || 'Não especificado';
             const poloContexto  = an.polo      || 'N/A';
-            md += `> 📂 *Contexto Processual:* **${faseContexto}** | Polo: **${poloContexto}** | Referência: **${refCitacao}**\n\n`;
+            mdMatriz += `> 📂 *Contexto Processual:* **${faseContexto}** | Polo: **${poloContexto}** | Referência: **${refCitacao}**\n\n`;
 
-            // ── Prova Principal ──────────────────────────────────────────────
             const docLabel = `**[${an.documento || 'Elemento'}] (${an.polo || 'Sem polo'}) ${refCitacao}:**`;
 
             if (an.tipo === 'texto') {
-                md += `- ${docLabel} ${an.conteudo.replace(/\n/g, ' ')}\n`;
-
+                mdMatriz += `- ${docLabel} ${an.conteudo.replace(/\n/g, ' ')}\n`;
             } else if (an.tipo === 'imagem') {
                 const imgNome = _gerarNomeArquivoImagem(numIdeia, null, an.pjeId, an.pagina);
-                md += `- ${docLabel}\n`;
-                md += `  > 🖼️ **[IMAGEM FORNECIDA PELO ASSESSOR]** (Nome do arquivo: \`${imgNome}\`).\n`;
-                md += `  > 🧠 *Comentário Humano:* ${_safeMD(an.comentario || 'Extraia a informação desta imagem e integre à fundamentação.', '\n  > ')}\n`;
-
+                mdMatriz += `- ${docLabel}\n`;
+                mdMatriz += `  > 🖼️ **[IMAGEM FORNECIDA PELO ASSESSOR]** (Nome do arquivo: \`${imgNome}\`).\n`;
+                mdMatriz += `  > 🧠 *Comentário Humano:* ${_safeMD(an.comentario || 'Extraia a informação desta imagem e integre à fundamentação.', '\n  > ')}\n`;
             } else if (an.tipo === 'audio') {
                 try {
                     const ad = JSON.parse(an.conteudo);
-                    // Unificação do orador
                     const oradorFinal = ad.role || ad.oradorStr || 'Orador não idt.';
-                    md += `- ${docLabel} 🎙️ **[OITIVA DE AUDIÊNCIA]** (${oradorFinal} — ${safeFormatTime(ad.inicio)} a ${safeFormatTime(ad.fim)}).\n`;
+                    mdMatriz += `- ${docLabel} 🎙️ **[OITIVA DE AUDIÊNCIA]** (${oradorFinal} — ${safeFormatTime(ad.inicio)} a ${safeFormatTime(ad.fim)}).\n`;
                     
-                    if (an.comentario) {
-                        md += `  > 🧠 *Observação / Contexto do Assessor:* ${_safeMD(an.comentario, '\n  > ')}\n`;
-                    }
-                    if (ad.transcricao) {
-                        md += `  > 📜 *Degravação Literal:* "${_safeMD(ad.transcricao, '\n  > ')}"\n`;
-                    }
-                    if (!an.comentario && !ad.transcricao) {
-                        md += `  > 🧠 *Sem transcrição ou observações registradas.*\n`;
-                    }
+                    if (an.comentario) mdMatriz += `  > 🧠 *Observação / Contexto do Assessor:* ${_safeMD(an.comentario, '\n  > ')}\n`;
+                    if (ad.transcricao) mdMatriz += `  > 📜 *Degravação Literal:* "${_safeMD(ad.transcricao, '\n  > ')}"\n`;
+                    if (!an.comentario && !ad.transcricao) mdMatriz += `  > 🧠 *Sem transcrição ou observações registradas.*\n`;
                 } catch (e) {
-                    md += `- ${docLabel} 🎙️ **[ÁUDIO]** *Resumo:* ${_safeMD(an.comentario || 'Sem comentário.', '\n  > ')}\n`;
+                    mdMatriz += `- ${docLabel} 🎙️ **[ÁUDIO]** *Resumo:* ${_safeMD(an.comentario || 'Sem comentário.', '\n  > ')}\n`;
                 }
             }
 
-            // ── Itens Correlacionados (Confrontos e Corroborações) ───────────
             if (an.itensCorrelacionados && an.itensCorrelacionados.length > 0) {
                 an.itensCorrelacionados.forEach((corr, corrIdx) => {
                     const numSub     = corrIdx + 1;
@@ -210,33 +187,29 @@ window.ExportManager = (function () {
 
                     if (corr.tipo === 'texto') {
                         const txt = corr.comentario ? corr.comentario : (corr.conteudo || '');
-                        md += `${cDocLabel} ${_safeMD(txt, ' ')}\n`;
-
+                        mdMatriz += `${cDocLabel} ${_safeMD(txt, ' ')}\n`;
                     } else if (corr.tipo === 'imagem') {
                         const imgNomeSub = _gerarNomeArquivoImagem(numIdeia, numSub, corr.pjeId, corr.pagina);
-                        md += `${cDocLabel}\n`;
-                        md += `    > 🖼️ **[IMAGEM ANEXA: \`${imgNomeSub}\`]**\n`;
-                        md += `    > 🧠 *Comentário:* ${_safeMD(corr.comentario || 'Analise a ligação técnica.', '\n    > ')}\n`;
-                        
+                        mdMatriz += `${cDocLabel}\n`;
+                        mdMatriz += `    > 🖼️ **[IMAGEM ANEXA: \`${imgNomeSub}\`]**\n`;
+                        mdMatriz += `    > 🧠 *Comentário:* ${_safeMD(corr.comentario || 'Analise a ligação técnica.', '\n    > ')}\n`;
                     } else if (corr.tipo === 'audio') {
                         try {
                             const ad = JSON.parse(corr.conteudo);
                             const oradorFinal = ad.role || ad.oradorStr || 'Orador não idt.';
-                            md += `${cDocLabel} 🎙️ **[OITIVA DE AUDIÊNCIA]** (${oradorFinal} — ${safeFormatTime(ad.inicio)} a ${safeFormatTime(ad.fim)}).\n`;
+                            mdMatriz += `${cDocLabel} 🎙️ **[OITIVA DE AUDIÊNCIA]** (${oradorFinal} — ${safeFormatTime(ad.inicio)} a ${safeFormatTime(ad.fim)}).\n`;
                             
-                            if (corr.comentario) md += `    > 🧠 *Observação / Contexto:* ${_safeMD(corr.comentario, '\n    > ')}\n`;
-                            if (ad.transcricao) md += `    > 📜 *Degravação Literal:* "${_safeMD(ad.transcricao, '\n    > ')}"\n`;
-                            if (!corr.comentario && !ad.transcricao) md += `    > 🧠 *Sem observações registradas.*\n`;
+                            if (corr.comentario) mdMatriz += `    > 🧠 *Observação / Contexto:* ${_safeMD(corr.comentario, '\n    > ')}\n`;
+                            if (ad.transcricao) mdMatriz += `    > 📜 *Degravação Literal:* "${_safeMD(ad.transcricao, '\n    > ')}"\n`;
+                            if (!corr.comentario && !ad.transcricao) mdMatriz += `    > 🧠 *Sem observações registradas.*\n`;
                         } catch (e) {
-                            md += `${cDocLabel} 🎙️ **[ÁUDIO]** *Contexto:* ${_safeMD(corr.comentario || 'Informativo ausente.', '\n    > ')}\n`;
+                            mdMatriz += `${cDocLabel} 🎙️ **[ÁUDIO]** *Contexto:* ${_safeMD(corr.comentario || 'Informativo ausente.', '\n    > ')}\n`;
                         }
                     }
                 });
             }
 
-            // ── Nós de Ideia (Nova Arquitetura de Mochilas Isoladas) ─────────────────────────
-            
-            // Função Helper para imprimir os nós no Markdown e empurrar para as Tags XML
+            // Closure preservada: Manipulação segura dos arrays via referência local
             const imprimirNos = (listaNos, refContexto) => {
                 if (!listaNos || listaNos.length === 0) return;
                 
@@ -245,102 +218,54 @@ window.ExportManager = (function () {
                     const textoSanitizado = _safeMD(sub.texto, '\n  ');
 
                     if (intencao === 'premissa') {
-                    md += `\n  💡 **Premissa Lógica do Assessor (Incontroversa)${refContexto}:** ${textoSanitizado}\n`;
-                } else if (intencao === 'refutacao') {
-                    md += `\n  🛡️ **Refutação de Mérito / Afastamento de Tese${refContexto}:** ${textoSanitizado}\n`;
-                } else if (intencao === 'comando') {
-                    comandosInjetados.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
-                } else if (intencao === 'texto') {
-                    comandosInjetados.push(`[Ideia ${numIdeia}${refContexto} — TEXTO FIXO]: Incorpore: "${textoSanitizado}"`);
-                } else if (intencao === 'fundamentacao') {
-                    baseLegalObrigatoria.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
-                } else if (intencao === 'preliminar') {
-                    preliminaresInjetadas.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
-                }
-            });
-        };
+                        mdMatriz += `\n  💡 **Premissa Lógica do Assessor (Incontroversa)${refContexto}:** ${textoSanitizado}\n`;
+                    } else if (intencao === 'refutacao') {
+                        mdMatriz += `\n  🛡️ **Refutação de Mérito / Afastamento de Tese${refContexto}:** ${textoSanitizado}\n`;
+                    } else if (intencao === 'comando') {
+                        comandosInjetados.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                    } else if (intencao === 'texto') {
+                        comandosInjetados.push(`[Ideia ${numIdeia}${refContexto} — TEXTO FIXO]: Incorpore: "${textoSanitizado}"`);
+                    } else if (intencao === 'fundamentacao') {
+                        baseLegalObrigatoria.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                    } else if (intencao === 'preliminar') {
+                        preliminaresInjetadas.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                    }
+                });
+            };
 
-            // 1. Extrai e imprime os nós da Ideia Principal (Master)
             imprimirNos(an.subAnotacoes, '');
 
-            // 2. Extrai e imprime os nós de cada Ideia Agrupada (Correlacionados)
             if (an.itensCorrelacionados && an.itensCorrelacionados.length > 0) {
                 an.itensCorrelacionados.forEach((corr) => {
                     if (corr.subAnotacoes && corr.subAnotacoes.length > 0) {
-                        // Constrói o contexto da prova filha para guiar a IA
                         let docNome = corr.documento || corr.tipo;
                         if (corr.tipo === 'audio') docNome = 'Oitiva/Áudio';
                         const focoContexto = ` [Foco na Prova Secundária: ${docNome} ${corr.pagina ? 'fl.' + corr.pagina : ''}]`;
-                        
                         imprimirNos(corr.subAnotacoes, focoContexto);
                     }
                 });
             }
 
-            md += `\n---\n\n`; // Separador visual entre as IDEIAs
+            mdMatriz += `\n---\n\n`; 
         });
 
-        // ── BLOCOS GLOBAIS DE ARQUITETURA (Tags XML) ─────────────────────────
-        // Ordenação silogística deliberada:
-        //   Comandos (tom/estilo) → Base Legal (Premissa Maior) → Decisão (âncora final)
-        // A tag <decisao_magistrado_pretendida> SEMPRE fica por último para
-        // reforçar ao LLM que todo o raciocínio deve convergir para ela.
+        // BUFFER 3: Montagem das Tags XML Estruturais (Condicionais sem fallbacks vazios)
+        let mdTags = '';
 
-        // NOVO Bloco 0: Preliminares e Prejudiciais (Ex: Prescrição)
-        md += `<questoes_preliminares_e_prejudiciais>\n`;
-        md += `*Atenção IA: Se houver conteúdo nesta tag, você DEVE redigir e resolver estas questões temporais/processuais ANTES de iniciar a análise de mérito da Matriz Dialética.*\n`;
+        // [CORREÇÃO: Eliminação do fallback e tag 100% condicional]
         if (preliminaresInjetadas.length > 0) {
-            md += preliminaresInjetadas.map(c => `* ⏳ ${c}`).join('\n') + '\n';
-        } else {
-            md += `* Não foram apontadas questões preliminares ou prejudiciais de mérito pelo assessor.\n`;
+            mdTags += `<questoes_preliminares_e_prejudiciais>\n`;
+            mdTags += `*Atenção IA: Você DEVE redigir e resolver estas questões temporais/processuais ANTES de iniciar a análise de mérito da Matriz Dialética.*\n`;
+            mdTags += preliminaresInjetadas.map(c => `* ⏳ ${c}`).join('\n') + '\n';
+            mdTags += `</questoes_preliminares_e_prejudiciais>\n\n`;
         }
-        md += `</questoes_preliminares_e_prejudiciais>\n\n`;
 
-        // NOVO Bloco 1: Relatório do Conflito
-        md += `<relatorio_do_conflito>\n`;
-        md += `*Atenção IA: Utilize estas teses para redigir a introdução do tópico recursal, contrapondo o que foi decidido na origem com o que a parte recorrente busca.*\n\n`;
-        
-        if (topico.alegacoes) {
-            md += `**Teses Recursais (O que a parte pede):**\n${_safeMD(topico.alegacoes, '')}\n\n`;
-        }
-        if (topico.fundamentos) {
-            md += `**Fundamentos da Origem (Por que o juiz decidiu assim):**\n${_safeMD(topico.fundamentos, '')}\n\n`;
-        }
-        if (!topico.alegacoes && !topico.fundamentos) {
-            md += `* Deduzir o relatório institucional pelo contexto das premissas da Matriz Dialética abaixo.\n`;
-        }
-        md += `</relatorio_do_conflito>\n\n`;
-
-        // Bloco A: Comandos Diretos de Estilo e Redação
-        md += `<comandos_para_a_minuta>\n`;
-        if (comandosInjetados.length > 0) {
-            md += comandosInjetados.map(c => `* ${c}`).join('\n') + '\n';
-        } else {
-            md += `* Elabore a minuta de forma fluida, sem diretrizes especiais de estilo além do padrão do Tribunal.\n`;
-        }
-        md += `</comandos_para_a_minuta>\n\n`;
-
-        // Bloco B: Base Legal Obrigatória (Premissa Maior do Silogismo)
-        md += `<base_legal_obrigatoria>\n`;
-        if (baseLegalObrigatoria.length > 0) {
-            md += baseLegalObrigatoria.map(c => `* ${c}`).join('\n') + '\n';
-        } else {
-            md += `* O Assessor não vinculou base legal obrigatória. Aplique as Súmulas do TST e regras da CLT correspondentes aos fatos da Matriz Dialética, seguindo a hierarquia: STF (RE/RG) > TST (Súmulas/OJs/IRR) > TRT-23 (Súmulas Regionais).\n`;
-        }
-        md += `</base_legal_obrigatoria>\n\n`;
-
-        // Bloco C: Decisão do Magistrado (ÂNCORA TELEOLÓGICA — SEMPRE POR ÚLTIMO)
-        md += `<decisao_magistrado_pretendida>\n`;
-        if (topico.veredito && topico.veredito.trim() !== '') {
-            md += `* ${topico.veredito.replace(/\n/g, ' ')}\n`;
-            md += `\n*Sintetize esta decisão em um dispositivo claro ao final da minuta.*\n`;
-        } else {
-            md += `* [O Assessor não definiu o veredito. Redija o dispositivo que for logicamente imposto pelos fatos incontroversos mapeados na Matriz Dialética].\n`;
-        }
-        md += `</decisao_magistrado_pretendida>\n`;
-
-        return md;
-    }
+        // [CORREÇÃO: _safeMD usando '\n' para preservar parágrafos textuais]
+        if (topico.alegacoes || topico.fundamentos) {
+            mdTags += `<relatorio_do_conflito>\n`;
+            mdTags += `*Atenção IA: Utilize estas teses para redigir a introdução do tópico recursal, contrapondo o que foi decidido na origem com o que a parte recorrente busca.*\n\n`;
+            if (topico.alegacoes) {
+                mdTags += `**Teses Recursais (O qu
 
     // ─── DOWNLOAD DE ARQUIVO MARKDOWN ─────────────────────────────────────────
 
