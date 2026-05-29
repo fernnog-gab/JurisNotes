@@ -165,8 +165,10 @@
 #crop-overlay {
     display: none;
     z-index: var(--z-crop-overlay);
-    background: rgba(0, 0, 0, 0.001);
+    /* 0.08 garante que o navegador reconheça a área como clicável */
+    background: rgba(0, 0, 0, 0.08); 
     cursor: crosshair;
+    pointer-events: auto; /* Permite captura de cliques sem travar manipulações JS futuras */
 }
 
 #crop-box {

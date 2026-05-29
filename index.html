@@ -21,6 +21,9 @@
 
     // 3. Define o "trabalhador" (worker) usando a mesma extensão .mjs
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.3.136/pdf.worker.mjs';
+    
+    // NOVO: Aponta o diretório oficial de fontes para evitar erros de renderização
+    pdfjsLib.GlobalWorkerOptions.standardFontDataUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.3.136/standard_fonts/';
 </script>
     
     <!-- 1. Estilos Base, Variáveis Globais e Estrutura Principal (Core) -->
