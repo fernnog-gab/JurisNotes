@@ -218,6 +218,9 @@ function avancarParaRecorte() {
     document.getElementById('crop-wizard-step1').style.display = 'none';
     document.getElementById('wizard-backdrop').style.display   = 'none';
 
+    // NOVO: Remove o desfoque do documento para garantir precisão no recorte
+    window.toggleModoFoco(false);
+
     modoRecorteAtivo = true;
     const r = document.getElementById('pdf-container').getBoundingClientRect();
     overlay.style.position = 'fixed';
@@ -254,6 +257,10 @@ function desativarOverlayRecorte() {
  */
 function abrirConfirmacaoRecorteWizard() {
     desativarOverlayRecorte();
+    
+    // NOVO: Reativa o desfoque para centralizar a atenção cognitiva no formulário
+    window.toggleModoFoco(true);
+
     document.getElementById('crop-preview-img').src = _wizardImagemCapturada;
     document.getElementById('crop-comment-input').value = '';
     
@@ -478,7 +485,7 @@ overlay.addEventListener('mouseup', function (e) {
         cropBox.remove();
         cropBox = null;
         exibirToast('Selecione uma área dentro de uma página do documento.', 'aviso');
-        desativarOverlayRecorte();
+        // CORREÇÃO: Removido desativarOverlayRecorte() para não quebrar o fluxo.
         return;
     }
 
@@ -503,7 +510,7 @@ overlay.addEventListener('mouseup', function (e) {
         cropBox.remove();
         cropBox = null;
         exibirToast('Selecione uma área dentro da página do documento.', 'aviso');
-        desativarOverlayRecorte();
+        // CORREÇÃO: Removido desativarOverlayRecorte() para não quebrar o fluxo.
         return;
     }
 
@@ -547,4 +554,21 @@ overlay.addEventListener('mouseup', function (e) {
     cropBox.remove();
     cropBox = null;
     desativarOverlayRecorte();
+});
+
+/* ================================================
+   ATALHOS DE TECLADO E ACESSIBILIDADE
+   ================================================ */
+document.addEventListener('keydown', function(e) {
+    // Se a tecla for ESC e o overlay de recorte estiver ativo, abortamos o processo
+    if (e.key === 'Escape' && modoRecorteAtivo) {
+        // Limpa o quadrado em progresso, se houver
+        if (cropBox) {
+            cropBox.remove();
+            cropBox = null;
+        }
+        // Restaura todo o estado, desliga o foco e remove o overlay
+        cancelarRecorteWizard();
+        exibirToast('Recorte cancelado.', 'info');
+    }
 });
