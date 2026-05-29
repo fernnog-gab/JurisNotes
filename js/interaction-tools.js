@@ -33,6 +33,14 @@ let _ultimoTopicoUsadoId     = null;  // Memória inteligente: pré-seleciona na
 let pendingTipo     = null;   // Tipo da extração pendente: 'texto' | 'imagem'
 let pendingConteudo = null;   // Conteúdo bruto da extração pendente
 
+window.toggleModoFoco = function(ativar) {
+    const pdfContainer = document.getElementById('pdf-container');
+    if (pdfContainer) {
+        if (ativar) pdfContainer.classList.add('pdf-foco-ativo');
+        else pdfContainer.classList.remove('pdf-foco-ativo');
+    }
+};
+
 // --- CONFIGURAÇÃO CENTRAL DE DOCUMENTOS ---
 const DOC_CONFIG = [
     { label: 'Petição Inicial',           polo: 'Parte Autora', tipo: 'auto',   fase: 2 },
@@ -178,6 +186,7 @@ function executarSalvamento(docLabel, polo, topicoId, targetIndex, context) {
  * Bloqueia a interface com o backdrop.
  */
 function iniciarRecorteWizard() {
+    window.toggleModoFoco(true);
     if (topicos.length === 0) {
         exibirToast('Crie pelo menos um Tópico Recursal antes de realizar recortes.', 'aviso');
         return;
@@ -300,6 +309,7 @@ function cancelarRecorteWizard() {
 
 /** Utilitário interno: fecha os painéis visuais e zera as variáveis de estado. */
 function fecharTudoWizard() {
+    window.toggleModoFoco(false);
     document.getElementById('crop-wizard-step1').style.display = 'none';
     document.getElementById('crop-wizard-step2').style.display = 'none';
     document.getElementById('wizard-backdrop').style.display   = 'none';
@@ -318,6 +328,7 @@ function fecharTudoWizard() {
    ================================================ */
 
 function fecharPopupClassificacao() {
+    window.toggleModoFoco(false);
     const popup = document.getElementById('classification-popup');
     popup.style.display = 'none';
 
@@ -346,6 +357,7 @@ function fecharPopupClassificacao() {
 }
 
 function exibirPopupClassificacao(tipo, conteudo) {
+    window.toggleModoFoco(true);
     if (topicos.length === 0) {
         exibirToast('Crie pelo menos um Tópico Recursal.', 'aviso'); return;
     }

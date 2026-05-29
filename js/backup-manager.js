@@ -64,7 +64,7 @@ window.BackupManager = (function () {
                 processoId:        _processoId,
                 pdfHash:           _pdfHash,
                 possuiAudio:       possuiAudio,
-                versaoApp:         '3.0', // ATUALIZADO: Marca a migração estrutural
+                versaoApp:         '7.0', // MARCO DA NOVA ARQUITETURA E LIMPEZA DE VEREDITO
                 ultimaAtualizacao: Date.now(),
                 atalhosPdf:        atalhosCapturados
             },
@@ -173,6 +173,11 @@ window.BackupManager = (function () {
                     if (sub.intencao === 'fundamento_sentenca') {
                         extraiuFundamentos.push(sub.texto);
                         return false; // Remove do array original
+                    }
+                    // NOVA REGRA: Mover veredito e apagar o nó de origem
+                    if (sub.intencao === 'veredito') {
+                        if (!topico.veredito) topico.veredito = sub.texto; 
+                        return false;
                     }
                     return true; // Mantém as outras intenções
                 });

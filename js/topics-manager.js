@@ -312,8 +312,6 @@ window.TopicsManager = (function () {
                     iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
                 } else if (intencao === 'premissa') {
                     iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>`;
-                } else if (intencao === 'veredito') {
-                    iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>`;
                 } else if (intencao === 'fundamentacao') {
                     iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>`;
                 } else if (intencao === 'alegacao') {
@@ -591,6 +589,15 @@ window.TopicsManager = (function () {
                     <div class="preamble-content">
                         <span class="preamble-title">Fundamentos da Origem</span>
                         ${topicoAtivo.fundamentos ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.fundamentos)) : '<span class="preamble-empty">Clique para redigir os fundamentos da sentença...</span>'}
+                    </div>
+                </div>
+                <div class="preamble-card preamble-veredito" onclick="abrirEdicaoPreambulo('${activeTabId}', 'veredito')">
+                    <div class="preamble-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+                    </div>
+                    <div class="preamble-content">
+                        <span class="preamble-title">Veredito / Conclusão</span>
+                        ${topicoAtivo.veredito ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.veredito)) : '<span class="preamble-empty">Clique para definir o veredito final deste tópico...</span>'}
                     </div>
                 </div>
             </div>`;

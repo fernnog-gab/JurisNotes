@@ -115,6 +115,7 @@ window.AudioManager = (function() {
     }
 
     function abrirModalClassificacao() {
+        if (window.toggleModoFoco) window.toggleModoFoco(true);
         const selectTopico = document.getElementById('audio-topic-select');
         selectTopico.innerHTML = '<option value="">Selecione o Tópico...</option>';
 
@@ -221,6 +222,7 @@ window.AudioManager = (function() {
     }
 
     function cancelarAnotacao() {
+        if (window.toggleModoFoco) window.toggleModoFoco(false);
         document.getElementById('audio-classification-popup').style.display = 'none';
         const backdrop = document.getElementById('wizard-backdrop');
         if (backdrop) backdrop.style.display = 'none';

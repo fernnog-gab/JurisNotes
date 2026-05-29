@@ -135,7 +135,6 @@ window.ExportManager = (function () {
         const preliminaresInjetadas = [];
         
         const comandosInjetados    = [];
-        const vereditosExigidos    = [];
         const baseLegalObrigatoria = [];
 
         // ── Cabeçalho do Pacote ──────────────────────────────────────────────
@@ -253,8 +252,6 @@ window.ExportManager = (function () {
                     comandosInjetados.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
                 } else if (intencao === 'texto') {
                     comandosInjetados.push(`[Ideia ${numIdeia}${refContexto} — TEXTO FIXO]: Incorpore: "${textoSanitizado}"`);
-                } else if (intencao === 'veredito') {
-                    vereditosExigidos.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
                 } else if (intencao === 'fundamentacao') {
                     baseLegalObrigatoria.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
                 } else if (intencao === 'preliminar') {
@@ -334,11 +331,11 @@ window.ExportManager = (function () {
 
         // Bloco C: Decisão do Magistrado (ÂNCORA TELEOLÓGICA — SEMPRE POR ÚLTIMO)
         md += `<decisao_magistrado_pretendida>\n`;
-        if (vereditosExigidos.length > 0) {
-            md += vereditosExigidos.map(c => `* ${c}`).join('\n') + '\n';
-            md += `\n*Sintetize estas decisões parciais em um dispositivo de tópico claro e coeso ao final da minuta.*\n`;
+        if (topico.veredito && topico.veredito.trim() !== '') {
+            md += `* ${topico.veredito.replace(/\n/g, ' ')}\n`;
+            md += `\n*Sintetize esta decisão em um dispositivo claro ao final da minuta.*\n`;
         } else {
-            md += `* [O Assessor não definiu o veredito via nós de ideia. Redija o dispositivo que for logicamente imposto pelos fatos incontroversos mapeados na Matriz Dialética acima].\n`;
+            md += `* [O Assessor não definiu o veredito. Redija o dispositivo que for logicamente imposto pelos fatos incontroversos mapeados na Matriz Dialética].\n`;
         }
         md += `</decisao_magistrado_pretendida>\n`;
 
