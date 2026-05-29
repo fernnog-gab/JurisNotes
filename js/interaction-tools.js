@@ -227,20 +227,25 @@ function avancarParaRecorte() {
     overlay.style.height   = r.height + 'px';
     overlay.style.display  = 'block';
 
-    document.querySelectorAll('.textLayer').forEach(l => l.style.pointerEvents = 'none');
+    // CORREÇÃO ARQUITETURAL: Desativa a camada de texto E a camada de links (annotationLayer).
+    // A highlightLayer NÃO é alterada aqui para respeitar seu estado CSS base.
+    document.querySelectorAll('.textLayer, .annotationLayer').forEach(l => l.style.pointerEvents = 'none');
+    
     document.getElementById('btn-ferramenta-recorte').classList.add('ativo');
     exibirToast('Tópico confirmado. Arraste o mouse sobre o documento para recortar.', 'sucesso');
 }
 
 /**
  * RECORTANDO → IDLE.
- * Esconde o overlay e restaura os event listeners do texto.
+ * Esconde o overlay e restaura os event listeners do texto e dos links.
  */
 function desativarOverlayRecorte() {
     modoRecorteAtivo = false;
     overlay.style.display = 'none';
     document.getElementById('btn-ferramenta-recorte').classList.remove('ativo');
-    document.querySelectorAll('.textLayer').forEach(l => l.style.pointerEvents = 'auto');
+    
+    // RESTAURAÇÃO: Devolve a interatividade APENAS para as camadas que foram bloqueadas.
+    document.querySelectorAll('.textLayer, .annotationLayer').forEach(l => l.style.pointerEvents = 'auto');
 }
 
 /**
