@@ -651,6 +651,8 @@
    8. COMPONENTES DE ÁUDIO
    ================================================ */
 #active-audio-indicator {
+    isolation: isolate; /* Cria um escopo Z-Index isolado */
+    position: relative;
     margin-left: auto;
     margin-right: 16px;
     align-self: center;
@@ -666,6 +668,43 @@
     animation: pulse-mic 2s infinite;
 }
 #active-audio-indicator svg { width: 16px; height: 16px; }
+
+/* Estado: Player Aberto / Focado (Verde + Efeito Giratório) */
+#active-audio-indicator.playing-audio {
+    background: transparent;
+    animation: none;
+    box-shadow: none;
+    overflow: visible;
+}
+
+#active-audio-indicator.playing-audio::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: conic-gradient(transparent 75%, #39FF14 95%, #ffffff 100%);
+    animation: spin-glow 2.5s linear infinite;
+    z-index: 0;
+}
+
+#active-audio-indicator.playing-audio::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: #2e7d32; 
+    border-radius: 50%;
+    z-index: 1;
+    box-shadow: 0 2px 6px rgba(46, 125, 50, 0.4);
+}
+
+#active-audio-indicator.playing-audio svg {
+    position: relative;
+    z-index: 2;
+}
 
 @keyframes pulse-mic {
     0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(229, 57, 53, 0.7); }
