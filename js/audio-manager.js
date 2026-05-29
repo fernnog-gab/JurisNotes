@@ -11,6 +11,12 @@ window.AudioManager = (function() {
     let _timeEnd = null;
     let _listenerTrechoAtivo = null; // Guarda a referência da função atual do timeupdate
     let _listenerInterrupcao = null; // Guarda eventos nativos (pause/seek) que anulam a reprodução
+    let _isInternalNavigation = false; // Flag para prevenir loop infinito
+
+    function isPlayerVisivel() {
+        const p = document.getElementById('audio-player-panel');
+        return p && p.style.display !== 'none';
+    }
 
     // --- Injeção de Dependências ---
     function init(dependencies) {
@@ -58,9 +64,26 @@ window.AudioManager = (function() {
 
     function abrirPlayer() { 
         document.getElementById('audio-player-panel').style.display = 'flex'; 
+        
+        if (window.toggleModoFoco) window.toggleModoFoco(true);
+        
+        const indicator = document.getElementById('active-audio-indicator');
+        if (indicator) {
+            indicator.classList.remove('pending-audio');
+            indicator.classList.add('playing-audio'); 
+        }
+        
         atualizarHistoricoAudio(); 
     }
-    function fecharPlayer() { document.getElementById('audio-player-panel').style.display = 'none'; }
+
+    function fecharPlayer() { 
+        document.getElementById('audio-player-panel').style.display = 'none'; 
+        
+        if (window.toggleModoFoco) window.toggleModoFoco(false);
+        
+        const indicator = document.getElementById('active-audio-indicator');
+        if (indicator) indicator.classList.remove('playing-audio'); 
+    }
     
     function prepararRetomada() {
         const activeIndicator = document.getElementById('active-audio-indicator');
@@ -86,8 +109,23 @@ window.AudioManager = (function() {
             if (activeIndicator) activeIndicator.classList.remove('pending-audio');
         }
         
-        const p = document.getElementById('audio-player-panel');
-        p.style.display = (p.style.display === 'none') ? 'flex' : 'none';
+        if (!isPlayerVisivel()) {
+            if (document.body.dataset.activeTab !== 'leitura') {
+                _isInternalNavigation = true;
+                if (window.trocarAba) window.trocarAba('leitura');
+                _isInternalNavigation = false;
+            }
+            abrirPlayer();
+        } else {
+            fecharPlayer();
+        }
+    }
+
+    function onTabChange(aba) {
+        if (_isInternalNavigation) return;
+        if (aba !== 'leitura' && isPlayerVisivel()) {
+            fecharPlayer();
+        }
     }
 
     function marcarInicio() {
@@ -222,7 +260,12 @@ window.AudioManager = (function() {
     }
 
     function cancelarAnotacao() {
-        if (window.toggleModoFoco) window.toggleModoFoco(false);
+        const playerAberto = isPlayerVisivel();
+        
+        if (window.toggleModoFoco && playerAberto === false) {
+            window.toggleModoFoco(false);
+        }
+
         document.getElementById('audio-classification-popup').style.display = 'none';
         const backdrop = document.getElementById('wizard-backdrop');
         if (backdrop) backdrop.style.display = 'none';
@@ -430,6 +473,6 @@ window.AudioManager = (function() {
         marcarInicio, marcarFim, onRoleChange, toggleAgrupar,
         salvarRecorte, cancelarAnotacao, encerrar, solicitarMp3Retomada,
         tocarTrecho, pularParaTempo, handleJumpKey, atualizarHistoricoAudio,
-        prepararRetomada, formatTime
+        prepararRetomada, formatTime, onTabChange
     };
 })();

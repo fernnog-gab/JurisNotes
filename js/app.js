@@ -304,6 +304,17 @@ function getActiveScrollContainer() {
         : document.getElementById('history-container');
 }
 
+window.toggleModoFoco = function(ativar) {
+    const pdfWrapper = document.getElementById('pdf-wrapper');
+    if (!pdfWrapper) return;
+    
+    if (ativar) {
+        pdfWrapper.classList.add('pdf-foco-ativo');
+    } else {
+        pdfWrapper.classList.remove('pdf-foco-ativo');
+    }
+};
+
 function trocarAba(aba) {
     // 1. ELEVAÇÃO DE ESTADO (State Hoisting)
     // Informa ao CSS de toda a aplicação qual é a aba atual
@@ -326,6 +337,10 @@ function trocarAba(aba) {
     if (window.ShortcutManager) {
         const temPdf = (window.PdfEngine && PdfEngine.getPdfDoc());
         window.ShortcutManager.toggleVisibility(aba === 'leitura' && temPdf);
+    }
+
+    if (window.AudioManager && typeof window.AudioManager.onTabChange === 'function') {
+        window.AudioManager.onTabChange(aba);
     }
 }
 
