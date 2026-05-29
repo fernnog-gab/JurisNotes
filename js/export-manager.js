@@ -2,7 +2,7 @@
    export-manager.js
    Módulo de Formatação e Exportação: Markdown + Imagens
    Arquitetura: "Roteiro do Diretor" para o Mestre de Gabinete
-   Versão: 3.1 - Produção (Com Blindagem de Strings e SourceRef)
+   Versão: 3.1.1 - Produção (Com Buffers de Renderização)
    ================================================
 
    CORREÇÕES APLICADAS v3.0:
@@ -24,6 +24,10 @@
        impedindo que parágrafos inseridos pelo usuário quebrem as tags Markdown.
    [5] Recuperação de Contexto (SourceRef): Mapeamento dinâmico entre intenções 
        metodológicas e as sub-provas que as originaram.
+
+   CORREÇÕES APLICADAS v3.1.1 (Hotfix):
+   [6] Arquitetura de Buffers: Montagem Top-Down garantindo que as tags
+       XML sejam lidas pela IA antes da matriz probatória, suprimindo tags vazias.
    ================================================ */
 
 window.ExportManager = (function () {
@@ -118,14 +122,6 @@ window.ExportManager = (function () {
      * Constrói o payload Markdown completo ("Roteiro do Diretor") para o
      * Mestre de Gabinete. Segue estritamente a arquitetura de tags esperada
      * pelo System Prompt externo.
-     *
-     * ESTRUTURA DO PAYLOAD:
-     *   1. Cabeçalho de Identificação
-     *   2. MATRIZ DIALÉTICA E MAPEAMENTO PROBATÓRIO (corpo das IDEIAs)
-     *      └─ Cada IDEIA: Contexto Processual → Prova Principal → Confrontos → Premissas
-     *   3. <comandos_para_a_minuta>     (estilo, tom, redações obrigatórias)
-     *   4. <base_legal_obrigatoria>     (Premissa Maior do silogismo)
-     *   5. <decisao_magistrado_pretendida> (âncora teleológica final — SEMPRE POR ÚLTIMO)
      */
     function _gerarMarkdown(topico) {
         const dataGeracao = new Date().toLocaleString('pt-BR');
@@ -137,7 +133,7 @@ window.ExportManager = (function () {
         const baseLegalObrigatoria = [];
 
         // BUFFER 1: Cabeçalho
-        // [CORREÇÃO: Fallback defensivo para topico.nome nulo/undefined]
+        // Fallback defensivo para topico.nome nulo/undefined
         let mdCabecalho = `---\n*Pacote de Dados Estruturado via Juris Notes em ${dataGeracao}*\n---\n\n`;
         mdCabecalho += `# TÓPICO RECURSAL: **${(topico.nome || 'Tópico Sem Nome').toUpperCase()}**\n\n`;
 
@@ -252,7 +248,6 @@ window.ExportManager = (function () {
         // BUFFER 3: Montagem das Tags XML Estruturais (Condicionais sem fallbacks vazios)
         let mdTags = '';
 
-        // [CORREÇÃO: Eliminação do fallback e tag 100% condicional]
         if (preliminaresInjetadas.length > 0) {
             mdTags += `<questoes_preliminares_e_prejudiciais>\n`;
             mdTags += `*Atenção IA: Você DEVE redigir e resolver estas questões temporais/processuais ANTES de iniciar a análise de mérito da Matriz Dialética.*\n`;
@@ -260,12 +255,42 @@ window.ExportManager = (function () {
             mdTags += `</questoes_preliminares_e_prejudiciais>\n\n`;
         }
 
-        // [CORREÇÃO: _safeMD usando '\n' para preservar parágrafos textuais]
         if (topico.alegacoes || topico.fundamentos) {
             mdTags += `<relatorio_do_conflito>\n`;
             mdTags += `*Atenção IA: Utilize estas teses para redigir a introdução do tópico recursal, contrapondo o que foi decidido na origem com o que a parte recorrente busca.*\n\n`;
             if (topico.alegacoes) {
-                mdTags += `**Teses Recursais (O qu
+                mdTags += `**Teses Recursais (O que a parte pede):**\n${_safeMD(topico.alegacoes, '\n')}\n\n`;
+            }
+            if (topico.fundamentos) {
+                mdTags += `**Fundamentos da Origem (Por que o juiz decidiu assim):**\n${_safeMD(topico.fundamentos, '\n')}\n\n`;
+            }
+            mdTags += `</relatorio_do_conflito>\n\n`;
+        }
+
+        if (comandosInjetados.length > 0) {
+            mdTags += `<comandos_para_a_minuta>\n`;
+            mdTags += comandosInjetados.map(c => `* ${c}`).join('\n') + '\n';
+            mdTags += `</comandos_para_a_minuta>\n\n`;
+        }
+
+        if (baseLegalObrigatoria.length > 0) {
+            mdTags += `<base_legal_obrigatoria>\n`;
+            mdTags += baseLegalObrigatoria.map(c => `* ${c}`).join('\n') + '\n';
+            mdTags += `</base_legal_obrigatoria>\n\n`;
+        }
+
+        // A Tag de Decisão SEMPRE deve ficar no final da concatenação para âncora de recência da IA.
+        let mdVeredito = '';
+        if (topico.veredito && topico.veredito.trim() !== '') {
+            mdVeredito += `<decisao_magistrado_pretendida>\n`;
+            mdVeredito += `* ${topico.veredito.replace(/\n/g, ' ')}\n`;
+            mdVeredito += `\n*Sintetize esta decisão em um dispositivo claro ao final da minuta.*\n`;
+            mdVeredito += `</decisao_magistrado_pretendida>\n`;
+        }
+
+        // MONTAGEM FINAL DA STRING: Regras da IA primeiro (mdTags), Fatos depois (mdMatriz), Dispositivo no fim (mdVeredito).
+        return mdCabecalho + mdTags + mdMatriz + mdVeredito;
+    }
 
     // ─── DOWNLOAD DE ARQUIVO MARKDOWN ─────────────────────────────────────────
 
@@ -305,7 +330,11 @@ window.ExportManager = (function () {
         try {
             // ── Passo 1: Gerar e baixar o Markdown ──────────────────────────
             const markdownConteudo = _gerarMarkdown(topico);
-            const nomeSanitizado   = topico.nome
+            
+            // Tratamento extra seguro para garantir que a propriedade nome exista
+            const nomeBase = topico.nome || 'Exportacao_JurisNotes';
+            
+            const nomeSanitizado = nomeBase
                 .normalize('NFD')
                 .replace(/[\u0300-\u036f]/g, '')
                 .replace(/[^a-z0-9]/gi, '_')
@@ -314,15 +343,12 @@ window.ExportManager = (function () {
             _downloadArquivo(`Pacote_JurisNotes_${nomeSanitizado}.md`, markdownConteudo);
             _deps.exibirToast('Pacote Markdown exportado! Preparando imagens...', 'sucesso');
 
-            // ── Passo 2: [CORREÇÃO #2] Montar e executar a fila de imagens ──
-            // A fila é construída de forma síncrona e disparada de forma
-            // assíncrona sem bloquear a UI (sem await aqui).
+            // ── Passo 2: Montar e executar a fila de imagens ──
             const filaDeDownloads = [];
 
             topico.anotacoes.forEach((an, index) => {
                 const numIdeia = index + 1;
 
-                // Imagem da anotação principal
                 if (an.tipo === 'imagem') {
                     filaDeDownloads.push({
                         dados: an.conteudo,
@@ -330,7 +356,6 @@ window.ExportManager = (function () {
                     });
                 }
 
-                // Imagens nos itens correlacionados
                 if (an.itensCorrelacionados && an.itensCorrelacionados.length > 0) {
                     an.itensCorrelacionados.forEach((corr, corrIdx) => {
                         if (corr.tipo === 'imagem') {
@@ -343,7 +368,6 @@ window.ExportManager = (function () {
                 }
             });
 
-            // Dispara a fila sem await — não bloqueia a UI, executa em background.
             _executarFilaDeDownloads(filaDeDownloads);
 
         } catch (error) {
