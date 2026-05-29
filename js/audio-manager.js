@@ -12,6 +12,42 @@ window.AudioManager = (function() {
     let _listenerTrechoAtivo = null; // Guarda a referência da função atual do timeupdate
     let _listenerInterrupcao = null; // Guarda eventos nativos (pause/seek) que anulam a reprodução
     let _isInternalNavigation = false; // Flag para prevenir loop infinito
+    let _eventosAudioRegistrados = false; // Flag para padrão Idempotent
+
+    /**
+     * Máquina de Estado Visual do Ícone de Áudio
+     */
+    function syncIndicatorState() {
+        const audio = document.getElementById('main-audio-player');
+        const indicator = document.getElementById('active-audio-indicator');
+        if (!indicator || !audio) return;
+
+        const isPanelOpen = isPlayerVisivel();
+        const isPlaying = !audio.paused && !audio.ended;
+
+        indicator.classList.remove('playing-audio', 'is-spinning');
+
+        if (isPlaying) {
+            indicator.classList.add('playing-audio', 'is-spinning');
+        } else if (isPanelOpen) {
+            indicator.classList.add('playing-audio');
+        }
+    }
+
+    /**
+     * Registra os ouvintes uma única vez no ciclo de vida do DOM.
+     */
+    function registrarEventosAudio() {
+        if (_eventosAudioRegistrados) return;
+        
+        const audio = document.getElementById('main-audio-player');
+        if (audio) {
+            audio.addEventListener('play', syncIndicatorState);
+            audio.addEventListener('pause', syncIndicatorState);
+            audio.addEventListener('ended', syncIndicatorState);
+            _eventosAudioRegistrados = true;
+        }
+    }
 
     function isPlayerVisivel() {
         const p = document.getElementById('audio-player-panel');
@@ -53,6 +89,7 @@ window.AudioManager = (function() {
             _audioUrl = URL.createObjectURL(file);
 
             document.getElementById('main-audio-player').src = _audioUrl;
+            registrarEventosAudio();
             document.getElementById('active-audio-indicator').style.display = 'flex';
 
             abrirPlayer();
@@ -69,10 +106,11 @@ window.AudioManager = (function() {
         
         const indicator = document.getElementById('active-audio-indicator');
         if (indicator) {
+            indicator.style.display = 'flex';
             indicator.classList.remove('pending-audio');
-            indicator.classList.add('playing-audio'); 
         }
         
+        syncIndicatorState();
         atualizarHistoricoAudio(); 
     }
 
@@ -81,8 +119,7 @@ window.AudioManager = (function() {
         
         if (window.toggleModoFoco) window.toggleModoFoco(false);
         
-        const indicator = document.getElementById('active-audio-indicator');
-        if (indicator) indicator.classList.remove('playing-audio'); 
+        syncIndicatorState(); 
     }
     
     function prepararRetomada() {
@@ -254,7 +291,14 @@ window.AudioManager = (function() {
         _deps.salvarAnotacao('audio', conteudoFormatado, 'Ata de Audiência / MP3', polo, topicoId, comment, targetIndex);
 
         cancelarAnotacao(); // Fecha o modal
-        fecharPlayer();     // Força o player a minimizar e deixar apenas o ícone pulsando
+        
+        // Força a pausa da mídia ao concluir o recorte
+        const audio = document.getElementById('main-audio-player');
+        if (audio && !audio.paused) {
+            audio.pause();
+        }
+        
+        fecharPlayer();     // Força o player a minimizar e aciona syncIndicatorState
         atualizarHistoricoAudio(); // Mitiga falha de sincronização apontada no relatório
         _deps.exibirToast('Trecho da oitiva salvo!', 'sucesso');
     }
@@ -307,6 +351,8 @@ window.AudioManager = (function() {
             if (_audioUrl) URL.revokeObjectURL(_audioUrl);
             _audioUrl = URL.createObjectURL(file);
             document.getElementById('main-audio-player').src = _audioUrl;
+            
+            registrarEventosAudio();
 
             const activeIndicator = document.getElementById('active-audio-indicator');
             if (activeIndicator) activeIndicator.style.display = 'flex';
