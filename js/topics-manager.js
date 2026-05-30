@@ -155,7 +155,7 @@ window.TopicsManager = (function () {
             // Renderiza o cabeçalho com o botão Clickable e Ícone de Play
             htmlConteudo = `
                 <div class="card-audio">
-                    <div class="audio-icon-box clickable-audio" title="Ouvir este trecho específico" onclick="AudioManager.tocarTrecho(${inicioNum}, ${fimNum})">
+                    <div class="audio-icon-box clickable-audio" title="Ouvir este trecho específico" data-action="tocar-audio" data-inicio="${inicioNum}" data-fim="${fimNum}">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <polygon points="5 3 19 12 5 21 5 3"></polygon>
                         </svg>
@@ -256,25 +256,32 @@ window.TopicsManager = (function () {
         }
 
         function gerarBarraAcoes(isCorrelacionado, cIdx) {
-            // Injeção segura do cIdx no contexto do botão (resolve o bug da falta de índice)
-            const ctxCidx = isCorrelacionado && cIdx != null ? `, cIdx: ${cIdx}` : '';
-            
-            // Verifica o tipo do item na hierarquia correta (principal vs correlacionado)
             const tipoDoItem = isCorrelacionado && cIdx != null ? anotacao.itensCorrelacionados[cIdx].tipo : anotacao.tipo;
+            const acaoEditar = isCorrelacionado ? 'editar-item-correlacionado' : 'editar-anotacao';
+            const acaoExcluir = isCorrelacionado ? 'excluir-correlacionado' : 'excluir-anotacao';
+            const cIdxVal = cIdx != null ? cIdx : 'null';
             
-            // Direciona para a função de edição adequada
-            const acaoEditar = isCorrelacionado ? 'editarItemCorrelacionado()' : 'editarAnotacao()';
-            
-            const btnEditar = tipoDoItem === 'texto' ? `<button title="Editar Texto" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}${ctxCidx}}; ${acaoEditar}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>` : '';
-            
-            const paramMove = isCorrelacionado ? `'${activeTabId}', ${index}, ${cIdx}` : `'${activeTabId}', ${index}, null`;
+            const btnEditar = tipoDoItem === 'texto' ? `
+                <button title="Editar Texto" 
+                        data-action="${acaoEditar}" 
+                        data-topico="${activeTabId}" 
+                        data-index="${index}" 
+                        data-cidx="${cIdxVal}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </button>` : '';
             
             return `
             <div class="card-actions-bar">
                 ${btnEditar}
-                <button title="Adicionar Nó de Ideia" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}${ctxCidx}}; acionarNovoNoIdeia()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
-                <button title="Mover / Reordenar" onclick="abrirModalSmartMove(${paramMove})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><polyline points="8 7 12 3 16 7"></polyline><line x1="12" y1="12" x2="12" y2="3"></line></svg></button>
-                <button class="delete-btn" title="Excluir" onclick="${isCorrelacionado ? `excluirItemCorrelacionado('${activeTabId}', ${index}, ${cIdx})` : `_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}}; excluirAnotacao()`}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                <button title="Adicionar Nó de Ideia" data-action="novo-no" data-topico="${activeTabId}" data-index="${index}" data-cidx="${cIdxVal}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </button>
+                <button title="Mover / Reordenar" data-action="abrir-smart-move" data-topico="${activeTabId}" data-index="${index}" data-cidx="${cIdxVal}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><polyline points="8 7 12 3 16 7"></polyline><line x1="12" y1="12" x2="12" y2="3"></line></svg>
+                </button>
+                <button class="delete-btn" title="Excluir" data-action="${acaoExcluir}" data-topico="${activeTabId}" data-index="${index}" data-cidx="${cIdxVal}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
             </div>`;
         }
 
@@ -346,7 +353,11 @@ window.TopicsManager = (function () {
                             <!-- NOVO CONTRATO AQUI: Passamos viewSource E localIndex antes do event -->
                             <div class="${badgeClass}"
                                  title="Opções desta ideia secundária"
-                                 onclick="abrirMenuSubAnotacao('${activeTabId}', ${index}, '${sub.viewSource}', ${sub.localIndex}, event)">
+                                 data-action="abrir-menu-sub"
+                                 data-topico="${activeTabId}"
+                                 data-index="${index}"
+                                 data-viewsource="${sub.viewSource}"
+                                 data-localindex="${sub.localIndex}">
                                 ${label}
                             </div>
                             <div class="sub-text-content">${textoFormatado}</div>
@@ -402,7 +413,12 @@ window.TopicsManager = (function () {
                                 <span class="polo-tag doc-tag">${item.documento ? escaparHTML(item.documento) : escaparHTML(item.polo)}</span>
                                 ${(item.documento && item.polo && item.polo !== item.documento) ? `<span class="polo-tag ${itemTag}">${escaparHTML(item.polo)}</span>` : ''}
                             </div>
-                            <span class="card-meta" style="cursor:pointer;" title="Clique: Copiar | Shift+Clique: Editar folha | Ctrl+Clique: Ir ao PDF" onclick="handleMetaClick(event, '${activeTabId}', ${index}, true, ${cIdx})">${itemMeta}</span>
+                            <span class="card-meta" style="cursor:pointer;" title="Clique: Copiar | Shift+Clique: Editar folha | Ctrl+Clique: Ir ao PDF" 
+                                  data-action="meta-click"
+                                  data-topico="${activeTabId}"
+                                  data-index="${index}"
+                                  data-iscorrelated="true"
+                                  data-cidx="${cIdx}">${itemMeta}</span>
                         </div>
                         ${cConteudo}
                         ${cComent}
@@ -427,14 +443,20 @@ window.TopicsManager = (function () {
                              ondragend="DnDManager.dragEnd(event)"
                              style="background-color: ${_activeTopicoCor}; color: ${corTextoBadge}; cursor: grab;" 
                              title="Arraste para trocar o Card Mestre, ou Clique para Nomear Tese"
-                             onclick="abrirModalTese('${activeTabId}', ${index})">
+                             data-action="abrir-tese" 
+                             data-topico="${activeTabId}" 
+                             data-index="${index}">
                             ${numero}
                         </div>
                     </div>
                     <div class="annotation-card ${bgZoneClass} ${bgPoloClass}">
                         <div class="card-header">
                             <div style="display:flex; gap:6px;">${tagsHtml}</div>
-                            <span class="card-meta" style="cursor:pointer;" title="Clique: Copiar | Shift+Clique: Editar folha | Ctrl+Clique: Ir ao PDF" onclick="handleMetaClick(event, '${activeTabId}', ${index}, false)">${metaTexto}</span>
+                            <span class="card-meta" style="cursor:pointer;" title="Clique: Copiar | Shift+Clique: Editar folha | Ctrl+Clique: Ir ao PDF" 
+                                  data-action="meta-click"
+                                  data-topico="${activeTabId}"
+                                  data-index="${index}"
+                                  data-iscorrelated="false">${metaTexto}</span>
                         </div>
                         ${htmlConteudo}
                         ${htmlComentario}
@@ -571,36 +593,36 @@ window.TopicsManager = (function () {
         const corTextoTese = obterCorContraste(_activeTopicoCor);
 
         // NOVO: Painel Preâmbulo Estático gerado incondicionalmente
-        const preambleHtml = `
-            <div class="topic-preamble-panel">
-                <div class="preamble-card preamble-alegacao" onclick="abrirEdicaoPreambulo('${activeTabId}', 'alegacoes')">
-                    <div class="preamble-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            const preambleHtml = `
+                <div class="topic-preamble-panel">
+                    <div class="preamble-card preamble-alegacao" data-action="abrir-preambulo" data-topico="${activeTabId}" data-campo="alegacoes">
+                        <div class="preamble-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                        </div>
+                        <div class="preamble-content">
+                            <span class="preamble-title">Razões Recursais</span>
+                            ${topicoAtivo.alegacoes ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.alegacoes)) : '<span class="preamble-empty">Clique para redigir as alegações recursais...</span>'}
+                        </div>
                     </div>
-                    <div class="preamble-content">
-                        <span class="preamble-title">Razões Recursais</span>
-                        ${topicoAtivo.alegacoes ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.alegacoes)) : '<span class="preamble-empty">Clique para redigir as alegações recursais...</span>'}
+                    <div class="preamble-card preamble-origem" data-action="abrir-preambulo" data-topico="${activeTabId}" data-campo="fundamentos">
+                        <div class="preamble-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 21V7l6-4 6 4v14"></path></svg>
+                        </div>
+                        <div class="preamble-content">
+                            <span class="preamble-title">Fundamentos da Origem</span>
+                            ${topicoAtivo.fundamentos ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.fundamentos)) : '<span class="preamble-empty">Clique para redigir os fundamentos da sentença...</span>'}
+                        </div>
                     </div>
-                </div>
-                <div class="preamble-card preamble-origem" onclick="abrirEdicaoPreambulo('${activeTabId}', 'fundamentos')">
-                    <div class="preamble-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 21V7l6-4 6 4v14"></path></svg>
+                    <div class="preamble-card preamble-veredito" data-action="abrir-preambulo" data-topico="${activeTabId}" data-campo="veredito">
+                        <div class="preamble-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+                        </div>
+                        <div class="preamble-content">
+                            <span class="preamble-title">Veredito / Conclusão</span>
+                            ${topicoAtivo.veredito ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.veredito)) : '<span class="preamble-empty">Clique para definir o veredito final deste tópico...</span>'}
+                        </div>
                     </div>
-                    <div class="preamble-content">
-                        <span class="preamble-title">Fundamentos da Origem</span>
-                        ${topicoAtivo.fundamentos ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.fundamentos)) : '<span class="preamble-empty">Clique para redigir os fundamentos da sentença...</span>'}
-                    </div>
-                </div>
-                <div class="preamble-card preamble-veredito" onclick="abrirEdicaoPreambulo('${activeTabId}', 'veredito')">
-                    <div class="preamble-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
-                    </div>
-                    <div class="preamble-content">
-                        <span class="preamble-title">Veredito / Conclusão</span>
-                        ${topicoAtivo.veredito ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.veredito)) : '<span class="preamble-empty">Clique para definir o veredito final deste tópico...</span>'}
-                    </div>
-                </div>
-            </div>`;
+                </div>`;
 
         let conteudoCentralHtml = '';
 
@@ -651,7 +673,7 @@ window.TopicsManager = (function () {
                         const txt = escaparHTML(an.tese);
 
                         sumarioHtml += `
-                            <div class="thesis-badge ${matureClass}" onclick="abrirModalTese('${activeTabId}', ${idx})">
+                            <div class="thesis-badge ${matureClass}" data-action="abrir-tese" data-topico="${activeTabId}" data-index="${idx}">
                                 <div class="thesis-badge-inner" ${bgStyle}>
                                     <span class="num" style="background-color: ${_activeTopicoCor}; color: ${corTextoTese};">${idx + 1}</span> 
                                     <span class="texto-tese">${txt}</span>

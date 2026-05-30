@@ -502,7 +502,11 @@ window.AudioManager = (function() {
                 const comentarioTexto = r.comentario ? trunc(r.comentario, 30) : 'Sem obs.';
 
                 html += `
-                    <div class="audio-history-item" onclick="AudioManager.tocarTrecho(${startNum}, ${endNum})" title="Ouvir trecho salvo">
+                    <div class="audio-history-item" 
+                         title="Ouvir trecho salvo"
+                         data-action="tocar-audio"
+                         data-inicio="${startNum}"
+                         data-fim="${endNum}">
                         <div style="display:flex; flex-direction:column; gap: 2px;">
                             <span class="hist-title">${titulo}</span>
                             <span style="font-size:0.7rem; color:#888;">${comentarioTexto}</span>
