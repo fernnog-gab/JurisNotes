@@ -1106,3 +1106,106 @@ async function acionarCriacaoBackup() {
         }
     }
 }
+
+/* ================================================
+   ROTEADOR CENTRAL DE EVENTOS (INTERACTION DELEGATOR)
+   ================================================ */
+window.InteractionDelegator = (function() {
+    'use strict';
+
+    function lidarComClique(event) {
+        // Encontra o ancestral mais próximo que declara uma intenção
+        const target = event.target.closest('[data-action]');
+        if (!target) return; // Clique fora de áreas interativas
+
+        // Bloqueia ações nativas apenas para elementos de controle (evita quebrar seleção de texto)
+        const tag = target.tagName.toLowerCase();
+        if (tag === 'button' || tag === 'a' || target.classList.contains('clickable-audio')) {
+            event.preventDefault();
+        }
+
+        // Extração tipada do payload do DOM
+        const action = target.dataset.action;
+        const topicoId = target.dataset.topico;
+        const index = target.dataset.index ? parseInt(target.dataset.index, 10) : null;
+        
+        // Tratamento seguro de sub-índices (correlacionados)
+        const cIdxRaw = target.dataset.cidx;
+        const cIdx = (cIdxRaw && cIdxRaw !== 'null' && cIdxRaw !== 'undefined') ? parseInt(cIdxRaw, 10) : null;
+
+        // Roteamento preservando o objeto 'event' para os controllers
+        switch (action) {
+            case 'editar-anotacao':
+                window._menuAnotacaoCtx = { topicoId, index };
+                if (typeof editarAnotacao === 'function') editarAnotacao();
+                break;
+
+            case 'editar-item-correlacionado':
+                window._menuAnotacaoCtx = { topicoId, index, cIdx };
+                if (typeof editarItemCorrelacionado === 'function') editarItemCorrelacionado();
+                break;
+
+            case 'novo-no':
+                window._menuAnotacaoCtx = { topicoId, index, cIdx };
+                if (typeof acionarNovoNoIdeia === 'function') acionarNovoNoIdeia();
+                break;
+
+            case 'abrir-smart-move':
+                if (typeof abrirModalSmartMove === 'function') abrirModalSmartMove(topicoId, index, cIdx);
+                break;
+
+            case 'excluir-anotacao':
+                window._menuAnotacaoCtx = { topicoId, index };
+                if (typeof excluirAnotacao === 'function') excluirAnotacao();
+                break;
+
+            case 'excluir-correlacionado':
+                if (typeof excluirItemCorrelacionado === 'function') excluirItemCorrelacionado(topicoId, index, cIdx);
+                break;
+                
+            case 'abrir-tese':
+                if (typeof abrirModalTese === 'function') abrirModalTese(topicoId, index);
+                break;
+
+            case 'abrir-menu-sub':
+                const viewSource = target.dataset.viewsource;
+                const localIndex = parseInt(target.dataset.localindex, 10);
+                if (typeof abrirMenuSubAnotacao === 'function') abrirMenuSubAnotacao(topicoId, index, viewSource, localIndex, event);
+                break;
+
+            case 'meta-click':
+                const isCorrelated = target.dataset.iscorrelated === 'true';
+                if (typeof handleMetaClick === 'function') handleMetaClick(event, topicoId, index, isCorrelated, cIdx);
+                break;
+
+            case 'abrir-preambulo':
+                const campo = target.dataset.campo;
+                if (typeof abrirEdicaoPreambulo === 'function') abrirEdicaoPreambulo(topicoId, campo);
+                break;
+
+            case 'tocar-audio':
+                const inicio = parseFloat(target.dataset.inicio);
+                const fim = parseFloat(target.dataset.fim);
+                if (window.AudioManager) AudioManager.tocarTrecho(inicio, fim);
+                break;
+
+            default:
+                console.warn('[Juris Notes] Ação de delegação não implementada:', action);
+        }
+    }
+
+    function init() {
+        const historyContainer = document.getElementById('history-container');
+        const audioPanel = document.getElementById('audio-player-panel');
+
+        if (historyContainer) historyContainer.addEventListener('click', lidarComClique);
+        if (audioPanel) audioPanel.addEventListener('click', lidarComClique);
+    }
+
+    return { init };
+})();
+
+// Acionar na inicialização
+document.addEventListener("DOMContentLoaded", () => {
+    window.InteractionDelegator.init();
+});
