@@ -172,6 +172,20 @@ document.addEventListener("DOMContentLoaded", () => {
     // Definir estado inicial de aba para o CSS Engine
     document.body.dataset.activeTab = 'leitura';
     
+    // --- INÍCIO: ACORDO DE ESTADO CENTRALIZADO ---
+    if (window.Store) {
+        window.Store.subscribe((state) => {
+            // Mantém leitura global para PDF.js e ExportManager, mas a referência é CONGELADA (deepFreeze)
+            topicos = state.topicos; 
+            window.topicos = state.topicos; 
+            
+            if (window.TopicsManager) {
+                TopicsManager.renderizarFichario(state.topicos);
+            }
+        });
+    }
+    // --- FIM: ACORDO DE ESTADO CENTRALIZADO ---
+    
     SplashScreenManager.init();
     
     if (window.PdfEngine) {

@@ -175,25 +175,31 @@ document.getElementById('edit-text-input').addEventListener('keydown', function(
 
 function salvarEdicaoTexto() {
     const novoTexto = document.getElementById('edit-text-input').value.trim();
-    const topico = topicos.find(t => t.id === _editContext.topicoId);
-    
-    if (_editContext.tipo === 'preambulo') {
-        topico[_editContext.campo] = novoTexto;
-    } else {
-        if (!novoTexto) return exibirToast('O texto não pode ficar vazio.', 'aviso');
+    if (!novoTexto && _editContext.tipo !== 'preambulo') return exibirToast('O texto não pode ficar vazio.', 'aviso');
 
-        if (_editContext.tipo === 'main') {
-            topico.anotacoes[_editContext.parentIndex].conteudo = novoTexto;
-        } else if (_editContext.tipo === 'sub') {
-            const alvo = _resolverSubAlvo(topico, _editContext.parentIndex, _editContext.viewSource);
-            alvo.subAnotacoes[_editContext.localIndex].texto = novoTexto;
-        } else if (_editContext.tipo === 'correlated') {
-            topico.anotacoes[_editContext.parentIndex].itensCorrelacionados[_editContext.cIdx].conteudo = novoTexto;
-        }
+    // O DOM "mastiga" sua própria estrutura e despacha uma intenção de negócio pura
+    if (_editContext.tipo === 'preambulo') {
+        window.Store.dispatch({
+            type: 'UPDATE_TOPIC_PREAMBLE',
+            payload: { topicoId: _editContext.topicoId, campo: _editContext.campo, novoTexto }
+        });
+    } else if (_editContext.tipo === 'main') {
+        window.Store.dispatch({
+            type: 'UPDATE_MAIN_ANNOTATION',
+            payload: { topicoId: _editContext.topicoId, parentIndex: _editContext.parentIndex, novoTexto }
+        });
+    } else if (_editContext.tipo === 'sub') {
+        window.Store.dispatch({
+            type: 'UPDATE_SUB_ANNOTATION',
+            payload: { topicoId: _editContext.topicoId, parentIndex: _editContext.parentIndex, viewSource: _editContext.viewSource, localIndex: _editContext.localIndex, novoTexto }
+        });
+    } else if (_editContext.tipo === 'correlated') {
+        window.Store.dispatch({
+            type: 'UPDATE_CORRELATED_ITEM',
+            payload: { topicoId: _editContext.topicoId, parentIndex: _editContext.parentIndex, cIdx: _editContext.cIdx, novoTexto }
+        });
     }
     
-    renderizarTopicos(); 
-    salvarBackupAutomatico();
     exibirToast('Anotação salva com sucesso!', 'sucesso');
     fecharModalEdicao();
 }
