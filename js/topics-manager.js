@@ -220,7 +220,7 @@ window.TopicsManager = (function () {
         let htmlComentario = '';
 
         if (anotacao.tipo === 'texto') {
-            htmlConteudo = `<p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(anotacao.conteudo))}"</p>`;
+            htmlConteudo = `<p class="card-texto" data-node-uuid="${anotacao.uuid}">"${renderizarMarkdownSeguro(escaparHTML(anotacao.conteudo))}"</p>`;
             if (anotacao.comentario) htmlComentario = `<div class="card-comentario"><strong>Observação:</strong> ${escaparHTML(anotacao.comentario)}</div>`;
         } else if (anotacao.tipo === 'imagem') {
             htmlConteudo = `
@@ -360,7 +360,7 @@ window.TopicsManager = (function () {
                                  data-localindex="${sub.localIndex}">
                                 ${label}
                             </div>
-                            <div class="sub-text-content">${textoFormatado}</div>
+                            <div class="sub-text-content" data-node-uuid="${sub.uuid}">${textoFormatado}</div>
                             <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">
                                 Ler texto completo ▾
                             </button>
@@ -382,7 +382,7 @@ window.TopicsManager = (function () {
                 let cComent = '';
                 
                 if (item.tipo === 'texto') {
-                    cConteudo = `<p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(item.conteudo))}"</p>`;
+                    cConteudo = `<p class="card-texto" data-node-uuid="${item.uuid}">"${renderizarMarkdownSeguro(escaparHTML(item.conteudo))}"</p>`;
                     if (item.comentario) cComent = `<div class="card-comentario"><strong>Observação:</strong> ${escaparHTML(item.comentario)}</div>`;
                 } else if (item.tipo === 'imagem') {
                     cConteudo = `<div class="image-resize-wrapper" title="Arraste para redimensionar"><img class="card-imagem" src="${item.conteudo}" alt="Agrupamento"></div>`;
@@ -430,8 +430,8 @@ window.TopicsManager = (function () {
 
         // Wrapper Master Flex atualizado para envelopar a hierarquia inteira
         const wrapperMaster = `
-            <div class="timeline-item-master ${alignClass}" id="timeline-wrapper-${anotacao.uuid || index}">
-                <div class="main-card-wrapper" data-uuid="${anotacao.uuid || index}" data-cidx="main"
+            <div class="timeline-item-master ${alignClass}" id="timeline-wrapper-${anotacao.uuid}">
+                <div class="main-card-wrapper" data-uuid="${anotacao.uuid}" data-cidx="main"
                      ondragover="DnDManager.dragOver(event)"
                      ondrop="DnDManager.drop(event, '${activeTabId}', ${index}, 'main')"
                      ondragenter="DnDManager.dragEnter(event)"
@@ -505,7 +505,7 @@ window.TopicsManager = (function () {
                 e.stopPropagation();
                 
                 const scrollContainer = document.getElementById('history-container');
-                const targetId = `timeline-wrapper-${anotacao.uuid || index}`; // Reconciliação via UUID
+                const targetId = `timeline-wrapper-${anotacao.uuid}`; // Reconciliação via UUID
                 const targetElement = document.getElementById(targetId);
                 
                 if (targetElement && scrollContainer) {
@@ -905,3 +905,66 @@ window.TopicsManager = (function () {
     };
 
 })();
+
+/* ================================================
+   MÁQUINA DE INTERCEPTAÇÃO CIRÚRGICA (SIDE-EFFECTS E DOM)
+   ================================================ */
+document.addEventListener("DOMContentLoaded", () => {
+    if (!window.Store) return;
+
+    // Utilitário de Efeitos Colaterais Seguros (Só chamado se o DOM for manipulado com sucesso)
+    function triggerSuccessSideEffects() {
+        if (window.salvarBackupAutomatico) window.salvarBackupAutomatico();
+        if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
+        if (window.desenharConexoes) requestAnimationFrame(() => window.desenharConexoes());
+    }
+
+    // Assinante 1: Textos dos Cards (Main, Sub, Correlated)
+    function atualizarNoTexto(nodeInfo) {
+        const textElement = document.querySelector(`[data-node-uuid="${nodeInfo.uuid}"]`);
+        
+        if (!textElement) {
+            console.warn(`[Reatividade] Nó ${nodeInfo.uuid} ausente. Fallback Global acionado.`);
+            window.Store.forceGlobalNotify();
+            return;
+        }
+
+        const textoSanitizado = window.TopicsManager.escaparHTML(nodeInfo.texto);
+        const markdownRenderizado = window.TopicsManager.renderizarMarkdownSeguro(textoSanitizado);
+        
+        if (textElement.tagName.toLowerCase() === 'p') {
+            textElement.innerHTML = `"${markdownRenderizado}"`; // Preserva aspas do layout
+        } else {
+            textElement.innerHTML = markdownRenderizado;
+        }
+
+        triggerSuccessSideEffects();
+    }
+
+    // Assinante 2: Campos de Preâmbulo do Tópico
+    function atualizarNoPreambulo(nodeInfo) {
+        const preambleContent = document.querySelector(`.preamble-card[data-campo="${nodeInfo.campo}"] .preamble-content`);
+        
+        if (!preambleContent) {
+            console.warn(`[Reatividade] Preâmbulo ${nodeInfo.campo} ausente. Fallback Global acionado.`);
+            window.Store.forceGlobalNotify();
+            return;
+        }
+
+        const tituloMap = { alegacoes: 'Razões Recursais', fundamentos: 'Fundamentos da Origem', veredito: 'Veredito / Conclusão' };
+        const textoSanitizado = window.TopicsManager.escaparHTML(nodeInfo.texto);
+        
+        preambleContent.innerHTML = `
+            <span class="preamble-title">${tituloMap[nodeInfo.campo] || 'Preâmbulo'}</span>
+            ${nodeInfo.texto ? window.TopicsManager.renderizarMarkdownSeguro(textoSanitizado) : '<span class="preamble-empty">Clique para redigir...</span>'}
+        `;
+
+        triggerSuccessSideEffects();
+    }
+
+    // Vinculação Total
+    window.Store.subscribeAction('UPDATE_MAIN_ANNOTATION', atualizarNoTexto);
+    window.Store.subscribeAction('UPDATE_SUB_ANNOTATION', atualizarNoTexto);
+    window.Store.subscribeAction('UPDATE_CORRELATED_ITEM', atualizarNoTexto);
+    window.Store.subscribeAction('UPDATE_TOPIC_PREAMBLE', atualizarNoPreambulo);
+});

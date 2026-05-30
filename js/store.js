@@ -1,16 +1,16 @@
 /* ================================================
    store.js
    Gerenciamento de Estado Centralizado (Redux-Pattern)
-   Prepara a base para remoção das mutações do array global.
+   Reatividade Fina (V4 - Side-Effects Delegados)
    ================================================ */
 window.Store = (function() {
     'use strict';
     
     let state = { topicos: [], activeTabId: null };
-    const subscribers = [];
-    let isBatching = false; // Controle anti-layout-thrashing
+    const globalSubscribers = [];
+    const granularSubscribers = new Map();
+    let isBatching = false;
 
-    // Utilitário de Imutabilidade Segura (Modo Estrito)
     const deepFreeze = obj => {
         if (obj && typeof obj === 'object' && !Object.isFrozen(obj)) {
             Object.keys(obj).forEach(prop => deepFreeze(obj[prop]));
@@ -19,16 +19,30 @@ window.Store = (function() {
         return obj;
     };
 
-    function notifySubscribers() {
+    function subscribeAction(actionType, callback) {
+        if (!granularSubscribers.has(actionType)) {
+            granularSubscribers.set(actionType, new Set());
+        }
+        granularSubscribers.get(actionType).add(callback);
+        
+        return function unsubscribe() {
+            granularSubscribers.get(actionType).delete(callback);
+        };
+    }
+
+    function clearGranularSubscriptions() {
+        granularSubscribers.clear();
+    }
+
+    function forceGlobalNotify() {
         if (!isBatching) {
             isBatching = true;
-            // Microtask queue: garante que múltiplos dispatches síncronos disparem apenas 1 render
             Promise.resolve().then(() => {
                 const frozenState = deepFreeze(state);
-                subscribers.forEach(fn => fn(frozenState));
+                globalSubscribers.forEach(fn => fn(frozenState));
                 isBatching = false;
                 
-                // Side-effects (Auto-Save) processados após a renderização
+                // Side-effects centrais são exclusividade da notificação global
                 if (window.salvarBackupAutomatico) window.salvarBackupAutomatico();
                 if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
             });
@@ -36,9 +50,10 @@ window.Store = (function() {
     }
 
     function dispatch(action) {
-        // SHALLOW COPY: Alta performance. Copiamos o root, preservando referências internas
         let newState = { ...state };
         if (state.topicos) newState.topicos = [...state.topicos];
+
+        let targetNodeInfo = null;
 
         switch (action.type) {
             case 'LOAD_BACKUP':
@@ -65,22 +80,24 @@ window.Store = (function() {
                 newState.topicos = newState.topicos.map(t => 
                     t.id === topicoId ? { ...t, [campo]: novoTexto } : t
                 );
+                targetNodeInfo = { type: 'preamble', topicoId, campo, texto: novoTexto };
                 break;
             }
 
             case 'UPDATE_MAIN_ANNOTATION': {
-                const { topicoId, parentIndex, novoTexto } = action.payload;
+                const { topicoId, parentIndex, novoTexto, uuid } = action.payload;
                 newState.topicos = newState.topicos.map(t => {
                     if (t.id !== topicoId) return t;
                     const newAnots = [...t.anotacoes];
                     newAnots[parentIndex] = { ...newAnots[parentIndex], conteudo: novoTexto };
                     return { ...t, anotacoes: newAnots };
                 });
+                targetNodeInfo = { type: 'main-card', uuid, texto: novoTexto };
                 break;
             }
 
             case 'UPDATE_SUB_ANNOTATION': {
-                const { topicoId, parentIndex, viewSource, localIndex, novoTexto } = action.payload;
+                const { topicoId, parentIndex, viewSource, localIndex, novoTexto, uuid } = action.payload;
                 newState.topicos = newState.topicos.map(t => {
                     if (t.id !== topicoId) return t;
                     const newAnots = [...t.anotacoes];
@@ -103,11 +120,12 @@ window.Store = (function() {
                     newAnots[parentIndex] = an;
                     return { ...t, anotacoes: newAnots };
                 });
+                targetNodeInfo = { type: 'sub-card', uuid, texto: novoTexto };
                 break;
             }
 
             case 'UPDATE_CORRELATED_ITEM': {
-                const { topicoId, parentIndex, cIdx, novoTexto } = action.payload;
+                const { topicoId, parentIndex, cIdx, novoTexto, uuid } = action.payload;
                 newState.topicos = newState.topicos.map(t => {
                     if (t.id !== topicoId) return t;
                     const newAnots = [...t.anotacoes];
@@ -118,17 +136,27 @@ window.Store = (function() {
                     newAnots[parentIndex] = an;
                     return { ...t, anotacoes: newAnots };
                 });
+                targetNodeInfo = { type: 'correlated-card', uuid, texto: novoTexto };
                 break;
             }
         }
 
         state = newState;
-        notifySubscribers();
+
+        // O Dispatcher agora apenas NOTIFICA, sem executar side-effects.
+        if (targetNodeInfo && granularSubscribers.has(action.type) && granularSubscribers.get(action.type).size > 0) {
+            granularSubscribers.get(action.type).forEach(fn => fn(targetNodeInfo));
+        } else {
+            forceGlobalNotify();
+        }
     }
 
     return { 
         getState: () => deepFreeze(state), 
         dispatch, 
-        subscribe: (fn) => subscribers.push(fn) 
+        subscribe: (fn) => globalSubscribers.push(fn),
+        subscribeAction,
+        clearGranularSubscriptions,
+        forceGlobalNotify
     };
 })();
