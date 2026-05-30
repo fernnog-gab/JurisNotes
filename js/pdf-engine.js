@@ -255,7 +255,7 @@ window.PdfEngine = (function () {
                         _pdfReadTracker.observe(pageContainer);
                     }
 
-                    await _deps.onPdfCarregado(isRetomada);
+                    await _deps.onPdfCarregado(isRetomada, arrayBuffer);
                 })
                 .catch(err => {
                     console.error('Erro ao processar PDF:', err);

@@ -196,7 +196,7 @@ document.addEventListener("DOMContentLoaded", () => {
             validarPdf: (buffer) => BackupManager.validarPdf(buffer),
             iniciarSessaoBackup: (name, buffer) => BackupManager.iniciarSessao(name, buffer),
             habilitarFerramentas: habilitarFerramentasDeTrabalho,
-            onPdfCarregado: async (isRetomada) => {
+            onPdfCarregado: async (isRetomada, arrayBuffer) => {
                 if (isRetomada) {
                     modoRetomada = false;
                     trocarAba('leitura');
@@ -215,35 +215,30 @@ document.addEventListener("DOMContentLoaded", () => {
                     document.getElementById('backup-modal-backdrop').style.display = 'block';
                     document.getElementById('modal-ativar-backup').style.display = 'flex';
 
-                    // 2. Processamento Assíncrono em Background (Fire and Forget)
-                    if (window.PjeParser && window.PdfEngine && PdfEngine.getPdfDoc()) {
+                    // 2. Processamento Assíncrono via Worker (Fire and Forget)
+                    if (window.PjeParser && arrayBuffer) {
                         exibirToast('Analisando sumário do processo em segundo plano...', 'aviso');
                         
-                        PjeParser.mapearAtalhos(PdfEngine.getPdfDoc())
+                        PjeParser.mapearAtalhos(arrayBuffer)
                             .then(async (atalhos) => {
                                 if (atalhos.contestacao || atalhos.contestacaoRe2 || atalhos.sentenca) {
-                                    // Atualiza a numeração interna e as cores
                                     window.ShortcutManager.setState({
                                         contestacao: atalhos.contestacao || null,
                                         contestacaoRe2: atalhos.contestacaoRe2 || null,
                                         sentenca: atalhos.sentenca || null
                                     });
                                     
-                                    // FORÇA DE SEGURANÇA: Garante que os botões fiquem visíveis na tela
                                     window.ShortcutManager.toggleVisibility(true);
                                     
-                                    // Salva os atalhos encontrados diretamente no backup do usuário
                                     if (typeof salvarBackupAutomatico === 'function') {
                                         await salvarBackupAutomatico();
                                     }
-                                    
                                     exibirToast('Atalhos da Contestação/Sentença preenchidos com sucesso!', 'sucesso');
                                 } else {
-                                    // Caso o sumário não exista ou o robô não encontre os itens
                                     exibirToast('Análise concluída: Sumário padrão não encontrado.', 'aviso');
                                 }
                             })
-                            .catch(e => console.warn('[Juris Notes] Erro não-bloqueante no Parser PJe:', e));
+                            .catch(e => console.warn('[Juris Notes] Erro não-bloqueante no Parser Worker:', e));
                     }
                 }
             }
