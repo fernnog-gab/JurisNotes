@@ -252,81 +252,65 @@ function acionarNovoNoIdeia() {
 
 function excluirAnotacao() {
     if (!_menuAnotacaoCtx) return;
-    
     const { topicoId, index } = _menuAnotacaoCtx;
     const topico = topicos.find(t => t.id === topicoId);
-    
-    if (!topico || !topico.anotacoes[index]) return;
-
     const cardAlvo = topico.anotacoes[index];
+
+    // Validação de impacto estrutural
     const temCorrelacionados = cardAlvo.itensCorrelacionados && cardAlvo.itensCorrelacionados.length > 0;
-    
-    // 1. Alertas de Segurança Contextuais
-    let msgConfirmacao = 'Excluir esta prova e suas anotações? A ação não pode ser desfeita.';
-    if (temCorrelacionados) {
-        msgConfirmacao = 'Esta prova lidera um grupo. Ao excluí-la, a próxima prova do grupo será promovida a Principal, preservando sua tese e anotações. Confirma?';
-    }
+    const temSub = cardAlvo.subAnotacoes && cardAlvo.subAnotacoes.length > 0;
 
-    if (!confirm(msgConfirmacao)) {
-        document.getElementById('annotation-context-menu').style.display = 'none';
-        return;
-    }
-
-    // 2. Roteamento de Mutação (Deleção vs Promoção)
     if (temCorrelacionados) {
-        // --- FLUXO DE PROMOÇÃO DE HERDEIRO ---
-        // Cria um clone profundo para evitar vazamento de referências na engine JavaScript
+        const msg = '⚠️ ATENÇÃO: Esta prova é um Card Mestre e agrupa outros itens.\n\nDeseja excluir apenas esta prova principal e PROMOVER a próxima do grupo para assumir o seu lugar?';
+        if (!confirm(msg)) return;
+
+        // Clone profundo para evitar mutação cruzada (Garante a integridade do grupo)
         const cloneProfundo = structuredClone(cardAlvo);
+        const novoMainCard = cloneProfundo.itensCorrelacionados.shift(); 
         
-        // O primeiro filho herda a posição de mestre
-        const novoMestre = cloneProfundo.itensCorrelacionados.shift();
-        
-        // Transferência da "Coroa" (Tese jurídica e demais irmãos)
-        novoMestre.tese = cloneProfundo.tese;
-        novoMestre.itensCorrelacionados = cloneProfundo.itensCorrelacionados;
-        
-        // Preservação do Raciocínio (Nós de Ideia)
-        // Junta as anotações do mestre excluído com as do novo mestre
-        const subMestreOriginal = cloneProfundo.subAnotacoes || [];
-        const subMestreNovo = novoMestre.subAnotacoes || [];
-        novoMestre.subAnotacoes = [...subMestreOriginal, ...subMestreNovo];
+        // O herdeiro assume a tese e a tutela dos irmãos restantes
+        novoMainCard.tese = cloneProfundo.tese; 
+        novoMainCard.itensCorrelacionados = cloneProfundo.itensCorrelacionados;
 
-        // Atualização Atômica no Estado Local
-        topico.anotacoes[index] = novoMestre;
-        
-        // Fallback de atualização via Store caso implementado futuramente
-        if (window.Store && typeof window.Store.dispatch === 'function') {
-             window.Store.dispatch({ type: 'UPDATE_ITEM', payload: { topicoId, index, item: novoMestre } });
+        // 1. Mutação DIRETA na memória global (Garante o funcionamento sem depender do Store)
+        topico.anotacoes[index] = novoMainCard;
+
+        // 2. Despacho secundário (Mantém o log de estado se o Redux/Store estiver ativo)
+        if (window.Store) {
+            window.Store.dispatch({ type: 'UPDATE_ITEM', payload: { topicoId, index, novoItem: novoMainCard } });
         }
-
+        
+        exibirToast('Prova principal excluída. Item agrupado promovido a Mestre.', 'sucesso');
+        
     } else {
-        // --- FLUXO DE DELEÇÃO ATÔMICA (Solteiro) ---
-        if (window.Store && typeof window.Store.dispatch === 'function') {
-            window.Store.dispatch({ type: 'DELETE_ITEM', payload: { topicoId, index } });
-        } else {
-            topico.anotacoes.splice(index, 1);
+        // Deleção Padrão
+        let msg = 'Excluir esta prova? A ação não pode ser desfeita.';
+        if (temSub) {
+            msg = 'Excluir esta prova e todos os seus Nós de Ideia atrelados a ela?';
         }
+        if (!confirm(msg)) return;
+
+        // 1. Mutação DIRETA na memória global
+        topico.anotacoes.splice(index, 1);
+
+        // 2. Despacho secundário
+        if (window.Store) {
+            window.Store.dispatch({ type: 'DELETE_ITEM', payload: { topicoId, index } });
+        }
+        
+        exibirToast('Anotação excluída com sucesso.', 'sucesso');
     }
 
-    // 3. Sincronização Garantida e Limpeza de Contexto
-    _menuAnotacaoCtx = null;
-    document.getElementById('annotation-context-menu').style.display = 'none';
-
-    // Disparo imperativo da renderização (Necessário na arquitetura transitória)
+    // A SOLUÇÃO DO BUG: Execução INCONDICIONAL
+    // Fora de qualquer bloco "if". A tela repinta instantaneamente e reorganiza os números.
     renderizarTopicos(); 
     salvarBackupAutomatico();
-
-    // 4. Repintura Segura do PDF (Evitando Layout Thrashing)
-    // Aguarda o DOM do painel de histórico atualizar antes de sincronizar o Canvas do PDF
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            if (window.sincronizarHighlightsGerais) {
-                window.sincronizarHighlightsGerais();
-            }
-        });
-    });
-
-    exibirToast(temCorrelacionados ? 'Prova excluída. Grupo reestruturado.' : 'Anotação excluída.', 'sucesso');
+    if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
+    
+    // Limpeza rigorosa do menu contextual e ponteiros
+    _menuAnotacaoCtx = null;
+    const menuCtx = document.getElementById('annotation-context-menu');
+    if (menuCtx) menuCtx.style.display = 'none';
 }
 
 let _reordenarCtx = null;
