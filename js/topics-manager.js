@@ -155,7 +155,7 @@ window.TopicsManager = (function () {
             // Renderiza o cabeçalho com o botão Clickable e Ícone de Play
             htmlConteudo = `
                 <div class="card-audio">
-                    <div class="audio-icon-box clickable-audio" title="Ouvir este trecho específico" data-action="tocar-audio" data-inicio="${inicioNum}" data-fim="${fimNum}">
+                    <div class="audio-icon-box clickable-audio" title="Ouvir este trecho específico" onclick="AudioManager.tocarTrecho(${inicioNum}, ${fimNum})">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <polygon points="5 3 19 12 5 21 5 3"></polygon>
                         </svg>
@@ -220,7 +220,7 @@ window.TopicsManager = (function () {
         let htmlComentario = '';
 
         if (anotacao.tipo === 'texto') {
-            htmlConteudo = `<p class="card-texto" data-node-uuid="${anotacao.uuid}">"${renderizarMarkdownSeguro(escaparHTML(anotacao.conteudo))}"</p>`;
+            htmlConteudo = `<p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(anotacao.conteudo))}"</p>`;
             if (anotacao.comentario) htmlComentario = `<div class="card-comentario"><strong>Observação:</strong> ${escaparHTML(anotacao.comentario)}</div>`;
         } else if (anotacao.tipo === 'imagem') {
             htmlConteudo = `
@@ -256,32 +256,25 @@ window.TopicsManager = (function () {
         }
 
         function gerarBarraAcoes(isCorrelacionado, cIdx) {
-            const tipoDoItem = isCorrelacionado && cIdx != null ? anotacao.itensCorrelacionados[cIdx].tipo : anotacao.tipo;
-            const acaoEditar = isCorrelacionado ? 'editar-item-correlacionado' : 'editar-anotacao';
-            const acaoExcluir = isCorrelacionado ? 'excluir-correlacionado' : 'excluir-anotacao';
-            const cIdxVal = cIdx != null ? cIdx : 'null';
+            // Injeção segura do cIdx no contexto do botão (resolve o bug da falta de índice)
+            const ctxCidx = isCorrelacionado && cIdx != null ? `, cIdx: ${cIdx}` : '';
             
-            const btnEditar = tipoDoItem === 'texto' ? `
-                <button title="Editar Texto" 
-                        data-action="${acaoEditar}" 
-                        data-topico="${activeTabId}" 
-                        data-index="${index}" 
-                        data-cidx="${cIdxVal}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                </button>` : '';
+            // Verifica o tipo do item na hierarquia correta (principal vs correlacionado)
+            const tipoDoItem = isCorrelacionado && cIdx != null ? anotacao.itensCorrelacionados[cIdx].tipo : anotacao.tipo;
+            
+            // Direciona para a função de edição adequada
+            const acaoEditar = isCorrelacionado ? 'editarItemCorrelacionado()' : 'editarAnotacao()';
+            
+            const btnEditar = tipoDoItem === 'texto' ? `<button title="Editar Texto" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}${ctxCidx}}; ${acaoEditar}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>` : '';
+            
+            const paramMove = isCorrelacionado ? `'${activeTabId}', ${index}, ${cIdx}` : `'${activeTabId}', ${index}, null`;
             
             return `
             <div class="card-actions-bar">
                 ${btnEditar}
-                <button title="Adicionar Nó de Ideia" data-action="novo-no" data-topico="${activeTabId}" data-index="${index}" data-cidx="${cIdxVal}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                </button>
-                <button title="Mover / Reordenar" data-action="abrir-smart-move" data-topico="${activeTabId}" data-index="${index}" data-cidx="${cIdxVal}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><polyline points="8 7 12 3 16 7"></polyline><line x1="12" y1="12" x2="12" y2="3"></line></svg>
-                </button>
-                <button class="delete-btn" title="Excluir" data-action="${acaoExcluir}" data-topico="${activeTabId}" data-index="${index}" data-cidx="${cIdxVal}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                </button>
+                <button title="Adicionar Nó de Ideia" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}${ctxCidx}}; acionarNovoNoIdeia()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                <button title="Mover / Reordenar" onclick="abrirModalSmartMove(${paramMove})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><polyline points="8 7 12 3 16 7"></polyline><line x1="12" y1="12" x2="12" y2="3"></line></svg></button>
+                <button class="delete-btn" title="Excluir" onclick="${isCorrelacionado ? `excluirItemCorrelacionado('${activeTabId}', ${index}, ${cIdx})` : `_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}}; excluirAnotacao()`}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
             </div>`;
         }
 
@@ -353,14 +346,10 @@ window.TopicsManager = (function () {
                             <!-- NOVO CONTRATO AQUI: Passamos viewSource E localIndex antes do event -->
                             <div class="${badgeClass}"
                                  title="Opções desta ideia secundária"
-                                 data-action="abrir-menu-sub"
-                                 data-topico="${activeTabId}"
-                                 data-index="${index}"
-                                 data-viewsource="${sub.viewSource}"
-                                 data-localindex="${sub.localIndex}">
+                                 onclick="abrirMenuSubAnotacao('${activeTabId}', ${index}, '${sub.viewSource}', ${sub.localIndex}, event)">
                                 ${label}
                             </div>
-                            <div class="sub-text-content" data-node-uuid="${sub.uuid}">${textoFormatado}</div>
+                            <div class="sub-text-content">${textoFormatado}</div>
                             <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">
                                 Ler texto completo ▾
                             </button>
@@ -382,7 +371,7 @@ window.TopicsManager = (function () {
                 let cComent = '';
                 
                 if (item.tipo === 'texto') {
-                    cConteudo = `<p class="card-texto" data-node-uuid="${item.uuid}">"${renderizarMarkdownSeguro(escaparHTML(item.conteudo))}"</p>`;
+                    cConteudo = `<p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(item.conteudo))}"</p>`;
                     if (item.comentario) cComent = `<div class="card-comentario"><strong>Observação:</strong> ${escaparHTML(item.comentario)}</div>`;
                 } else if (item.tipo === 'imagem') {
                     cConteudo = `<div class="image-resize-wrapper" title="Arraste para redimensionar"><img class="card-imagem" src="${item.conteudo}" alt="Agrupamento"></div>`;
@@ -413,12 +402,7 @@ window.TopicsManager = (function () {
                                 <span class="polo-tag doc-tag">${item.documento ? escaparHTML(item.documento) : escaparHTML(item.polo)}</span>
                                 ${(item.documento && item.polo && item.polo !== item.documento) ? `<span class="polo-tag ${itemTag}">${escaparHTML(item.polo)}</span>` : ''}
                             </div>
-                            <span class="card-meta" style="cursor:pointer;" title="Clique: Copiar | Shift+Clique: Editar folha | Ctrl+Clique: Ir ao PDF" 
-                                  data-action="meta-click"
-                                  data-topico="${activeTabId}"
-                                  data-index="${index}"
-                                  data-iscorrelated="true"
-                                  data-cidx="${cIdx}">${itemMeta}</span>
+                            <span class="card-meta" style="cursor:pointer;" title="Clique: Copiar | Shift+Clique: Editar folha | Ctrl+Clique: Ir ao PDF" onclick="handleMetaClick(event, '${activeTabId}', ${index}, true, ${cIdx})">${itemMeta}</span>
                         </div>
                         ${cConteudo}
                         ${cComent}
@@ -430,8 +414,8 @@ window.TopicsManager = (function () {
 
         // Wrapper Master Flex atualizado para envelopar a hierarquia inteira
         const wrapperMaster = `
-            <div class="timeline-item-master ${alignClass}" id="timeline-wrapper-${anotacao.uuid}">
-                <div class="main-card-wrapper" data-uuid="${anotacao.uuid}" data-cidx="main"
+            <div class="timeline-item-master ${alignClass}" id="timeline-wrapper-${anotacao.uuid || index}">
+                <div class="main-card-wrapper" data-uuid="${anotacao.uuid || index}" data-cidx="main"
                      ondragover="DnDManager.dragOver(event)"
                      ondrop="DnDManager.drop(event, '${activeTabId}', ${index}, 'main')"
                      ondragenter="DnDManager.dragEnter(event)"
@@ -443,20 +427,14 @@ window.TopicsManager = (function () {
                              ondragend="DnDManager.dragEnd(event)"
                              style="background-color: ${_activeTopicoCor}; color: ${corTextoBadge}; cursor: grab;" 
                              title="Arraste para trocar o Card Mestre, ou Clique para Nomear Tese"
-                             data-action="abrir-tese" 
-                             data-topico="${activeTabId}" 
-                             data-index="${index}">
+                             onclick="abrirModalTese('${activeTabId}', ${index})">
                             ${numero}
                         </div>
                     </div>
                     <div class="annotation-card ${bgZoneClass} ${bgPoloClass}">
                         <div class="card-header">
                             <div style="display:flex; gap:6px;">${tagsHtml}</div>
-                            <span class="card-meta" style="cursor:pointer;" title="Clique: Copiar | Shift+Clique: Editar folha | Ctrl+Clique: Ir ao PDF" 
-                                  data-action="meta-click"
-                                  data-topico="${activeTabId}"
-                                  data-index="${index}"
-                                  data-iscorrelated="false">${metaTexto}</span>
+                            <span class="card-meta" style="cursor:pointer;" title="Clique: Copiar | Shift+Clique: Editar folha | Ctrl+Clique: Ir ao PDF" onclick="handleMetaClick(event, '${activeTabId}', ${index}, false)">${metaTexto}</span>
                         </div>
                         ${htmlConteudo}
                         ${htmlComentario}
@@ -505,7 +483,7 @@ window.TopicsManager = (function () {
                 e.stopPropagation();
                 
                 const scrollContainer = document.getElementById('history-container');
-                const targetId = `timeline-wrapper-${anotacao.uuid}`; // Reconciliação via UUID
+                const targetId = `timeline-wrapper-${anotacao.uuid || index}`; // Reconciliação via UUID
                 const targetElement = document.getElementById(targetId);
                 
                 if (targetElement && scrollContainer) {
@@ -593,36 +571,36 @@ window.TopicsManager = (function () {
         const corTextoTese = obterCorContraste(_activeTopicoCor);
 
         // NOVO: Painel Preâmbulo Estático gerado incondicionalmente
-            const preambleHtml = `
-                <div class="topic-preamble-panel">
-                    <div class="preamble-card preamble-alegacao" data-action="abrir-preambulo" data-topico="${activeTabId}" data-campo="alegacoes">
-                        <div class="preamble-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                        </div>
-                        <div class="preamble-content">
-                            <span class="preamble-title">Razões Recursais</span>
-                            ${topicoAtivo.alegacoes ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.alegacoes)) : '<span class="preamble-empty">Clique para redigir as alegações recursais...</span>'}
-                        </div>
+        const preambleHtml = `
+            <div class="topic-preamble-panel">
+                <div class="preamble-card preamble-alegacao" onclick="abrirEdicaoPreambulo('${activeTabId}', 'alegacoes')">
+                    <div class="preamble-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                     </div>
-                    <div class="preamble-card preamble-origem" data-action="abrir-preambulo" data-topico="${activeTabId}" data-campo="fundamentos">
-                        <div class="preamble-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 21V7l6-4 6 4v14"></path></svg>
-                        </div>
-                        <div class="preamble-content">
-                            <span class="preamble-title">Fundamentos da Origem</span>
-                            ${topicoAtivo.fundamentos ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.fundamentos)) : '<span class="preamble-empty">Clique para redigir os fundamentos da sentença...</span>'}
-                        </div>
+                    <div class="preamble-content">
+                        <span class="preamble-title">Razões Recursais</span>
+                        ${topicoAtivo.alegacoes ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.alegacoes)) : '<span class="preamble-empty">Clique para redigir as alegações recursais...</span>'}
                     </div>
-                    <div class="preamble-card preamble-veredito" data-action="abrir-preambulo" data-topico="${activeTabId}" data-campo="veredito">
-                        <div class="preamble-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
-                        </div>
-                        <div class="preamble-content">
-                            <span class="preamble-title">Veredito / Conclusão</span>
-                            ${topicoAtivo.veredito ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.veredito)) : '<span class="preamble-empty">Clique para definir o veredito final deste tópico...</span>'}
-                        </div>
+                </div>
+                <div class="preamble-card preamble-origem" onclick="abrirEdicaoPreambulo('${activeTabId}', 'fundamentos')">
+                    <div class="preamble-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 21V7l6-4 6 4v14"></path></svg>
                     </div>
-                </div>`;
+                    <div class="preamble-content">
+                        <span class="preamble-title">Fundamentos da Origem</span>
+                        ${topicoAtivo.fundamentos ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.fundamentos)) : '<span class="preamble-empty">Clique para redigir os fundamentos da sentença...</span>'}
+                    </div>
+                </div>
+                <div class="preamble-card preamble-veredito" onclick="abrirEdicaoPreambulo('${activeTabId}', 'veredito')">
+                    <div class="preamble-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+                    </div>
+                    <div class="preamble-content">
+                        <span class="preamble-title">Veredito / Conclusão</span>
+                        ${topicoAtivo.veredito ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.veredito)) : '<span class="preamble-empty">Clique para definir o veredito final deste tópico...</span>'}
+                    </div>
+                </div>
+            </div>`;
 
         let conteudoCentralHtml = '';
 
@@ -673,7 +651,7 @@ window.TopicsManager = (function () {
                         const txt = escaparHTML(an.tese);
 
                         sumarioHtml += `
-                            <div class="thesis-badge ${matureClass}" data-action="abrir-tese" data-topico="${activeTabId}" data-index="${idx}">
+                            <div class="thesis-badge ${matureClass}" onclick="abrirModalTese('${activeTabId}', ${idx})">
                                 <div class="thesis-badge-inner" ${bgStyle}>
                                     <span class="num" style="background-color: ${_activeTopicoCor}; color: ${corTextoTese};">${idx + 1}</span> 
                                     <span class="texto-tese">${txt}</span>
@@ -905,66 +883,3 @@ window.TopicsManager = (function () {
     };
 
 })();
-
-/* ================================================
-   MÁQUINA DE INTERCEPTAÇÃO CIRÚRGICA (SIDE-EFFECTS E DOM)
-   ================================================ */
-document.addEventListener("DOMContentLoaded", () => {
-    if (!window.Store) return;
-
-    // Utilitário de Efeitos Colaterais Seguros (Só chamado se o DOM for manipulado com sucesso)
-    function triggerSuccessSideEffects() {
-        if (window.salvarBackupAutomatico) window.salvarBackupAutomatico();
-        if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
-        if (window.desenharConexoes) requestAnimationFrame(() => window.desenharConexoes());
-    }
-
-    // Assinante 1: Textos dos Cards (Main, Sub, Correlated)
-    function atualizarNoTexto(nodeInfo) {
-        const textElement = document.querySelector(`[data-node-uuid="${nodeInfo.uuid}"]`);
-        
-        if (!textElement) {
-            console.warn(`[Reatividade] Nó ${nodeInfo.uuid} ausente. Fallback Global acionado.`);
-            window.Store.forceGlobalNotify();
-            return;
-        }
-
-        const textoSanitizado = window.TopicsManager.escaparHTML(nodeInfo.texto);
-        const markdownRenderizado = window.TopicsManager.renderizarMarkdownSeguro(textoSanitizado);
-        
-        if (textElement.tagName.toLowerCase() === 'p') {
-            textElement.innerHTML = `"${markdownRenderizado}"`; // Preserva aspas do layout
-        } else {
-            textElement.innerHTML = markdownRenderizado;
-        }
-
-        triggerSuccessSideEffects();
-    }
-
-    // Assinante 2: Campos de Preâmbulo do Tópico
-    function atualizarNoPreambulo(nodeInfo) {
-        const preambleContent = document.querySelector(`.preamble-card[data-campo="${nodeInfo.campo}"] .preamble-content`);
-        
-        if (!preambleContent) {
-            console.warn(`[Reatividade] Preâmbulo ${nodeInfo.campo} ausente. Fallback Global acionado.`);
-            window.Store.forceGlobalNotify();
-            return;
-        }
-
-        const tituloMap = { alegacoes: 'Razões Recursais', fundamentos: 'Fundamentos da Origem', veredito: 'Veredito / Conclusão' };
-        const textoSanitizado = window.TopicsManager.escaparHTML(nodeInfo.texto);
-        
-        preambleContent.innerHTML = `
-            <span class="preamble-title">${tituloMap[nodeInfo.campo] || 'Preâmbulo'}</span>
-            ${nodeInfo.texto ? window.TopicsManager.renderizarMarkdownSeguro(textoSanitizado) : '<span class="preamble-empty">Clique para redigir...</span>'}
-        `;
-
-        triggerSuccessSideEffects();
-    }
-
-    // Vinculação Total
-    window.Store.subscribeAction('UPDATE_MAIN_ANNOTATION', atualizarNoTexto);
-    window.Store.subscribeAction('UPDATE_SUB_ANNOTATION', atualizarNoTexto);
-    window.Store.subscribeAction('UPDATE_CORRELATED_ITEM', atualizarNoTexto);
-    window.Store.subscribeAction('UPDATE_TOPIC_PREAMBLE', atualizarNoPreambulo);
-});
