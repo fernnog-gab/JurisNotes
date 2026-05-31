@@ -3,9 +3,9 @@
    Gerenciamento de Menus, Formatação Segura (Markdown) e Ações
    ================================================ */
 
-let _menuAnotacaoCtx = null;
-let _menuSubAnotacaoCtx = null;
-let _editContext = null;
+var _menuAnotacaoCtx = null;
+var _menuSubAnotacaoCtx = null;
+var _editContext = null;
 
 /* --- MENUS CONTEXTUAIS --- */
 function abrirMenuAnotacao(topicoId, index, event) {
