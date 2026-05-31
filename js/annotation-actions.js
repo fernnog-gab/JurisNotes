@@ -252,22 +252,81 @@ function acionarNovoNoIdeia() {
 
 function excluirAnotacao() {
     if (!_menuAnotacaoCtx) return;
+    
     const { topicoId, index } = _menuAnotacaoCtx;
     const topico = topicos.find(t => t.id === topicoId);
-    if (!confirm('Excluir esta anotação? A ação não pode ser desfeita.')) return;
     
-    // Disparo para o Store (Transição arquitetural para Fase 4)
-    if (window.Store) {
-        window.Store.dispatch({ type: 'DELETE_ITEM', payload: { topicoId, index } });
-    } else {
-        // Fallback imediato mantendo a funcionalidade nativa
-        topico.anotacoes.splice(index, 1);
-        renderizarTopicos(); salvarBackupAutomatico();
-        if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
+    if (!topico || !topico.anotacoes[index]) return;
+
+    const cardAlvo = topico.anotacoes[index];
+    const temCorrelacionados = cardAlvo.itensCorrelacionados && cardAlvo.itensCorrelacionados.length > 0;
+    
+    // 1. Alertas de Segurança Contextuais
+    let msgConfirmacao = 'Excluir esta prova e suas anotações? A ação não pode ser desfeita.';
+    if (temCorrelacionados) {
+        msgConfirmacao = 'Esta prova lidera um grupo. Ao excluí-la, a próxima prova do grupo será promovida a Principal, preservando sua tese e anotações. Confirma?';
     }
-    
-    exibirToast('Anotação excluída.', 'sucesso');
+
+    if (!confirm(msgConfirmacao)) {
+        document.getElementById('annotation-context-menu').style.display = 'none';
+        return;
+    }
+
+    // 2. Roteamento de Mutação (Deleção vs Promoção)
+    if (temCorrelacionados) {
+        // --- FLUXO DE PROMOÇÃO DE HERDEIRO ---
+        // Cria um clone profundo para evitar vazamento de referências na engine JavaScript
+        const cloneProfundo = structuredClone(cardAlvo);
+        
+        // O primeiro filho herda a posição de mestre
+        const novoMestre = cloneProfundo.itensCorrelacionados.shift();
+        
+        // Transferência da "Coroa" (Tese jurídica e demais irmãos)
+        novoMestre.tese = cloneProfundo.tese;
+        novoMestre.itensCorrelacionados = cloneProfundo.itensCorrelacionados;
+        
+        // Preservação do Raciocínio (Nós de Ideia)
+        // Junta as anotações do mestre excluído com as do novo mestre
+        const subMestreOriginal = cloneProfundo.subAnotacoes || [];
+        const subMestreNovo = novoMestre.subAnotacoes || [];
+        novoMestre.subAnotacoes = [...subMestreOriginal, ...subMestreNovo];
+
+        // Atualização Atômica no Estado Local
+        topico.anotacoes[index] = novoMestre;
+        
+        // Fallback de atualização via Store caso implementado futuramente
+        if (window.Store && typeof window.Store.dispatch === 'function') {
+             window.Store.dispatch({ type: 'UPDATE_ITEM', payload: { topicoId, index, item: novoMestre } });
+        }
+
+    } else {
+        // --- FLUXO DE DELEÇÃO ATÔMICA (Solteiro) ---
+        if (window.Store && typeof window.Store.dispatch === 'function') {
+            window.Store.dispatch({ type: 'DELETE_ITEM', payload: { topicoId, index } });
+        } else {
+            topico.anotacoes.splice(index, 1);
+        }
+    }
+
+    // 3. Sincronização Garantida e Limpeza de Contexto
     _menuAnotacaoCtx = null;
+    document.getElementById('annotation-context-menu').style.display = 'none';
+
+    // Disparo imperativo da renderização (Necessário na arquitetura transitória)
+    renderizarTopicos(); 
+    salvarBackupAutomatico();
+
+    // 4. Repintura Segura do PDF (Evitando Layout Thrashing)
+    // Aguarda o DOM do painel de histórico atualizar antes de sincronizar o Canvas do PDF
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            if (window.sincronizarHighlightsGerais) {
+                window.sincronizarHighlightsGerais();
+            }
+        });
+    });
+
+    exibirToast(temCorrelacionados ? 'Prova excluída. Grupo reestruturado.' : 'Anotação excluída.', 'sucesso');
 }
 
 let _reordenarCtx = null;
