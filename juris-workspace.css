@@ -525,48 +525,7 @@
 .sub-input-btn-icon.cancel:hover { background: #ffebee; color: #c62828; border-color: #ef9a9a; }
 .btn-add-sub { display: none !important; }
 
-/* ================================================
-   Classes de Drag & Drop de Ideias Secundárias
-   ================================================ */
-
-/* 1. Alça de arrasto focada apenas no crachá */
-.sub-badge {
-    cursor: grab;
-}
-.sub-badge:active {
-    cursor: grabbing;
-}
-
-/* 2. Efeito fantasma da ideia sendo movida */
-.sub-annotation-item.sub-dragging {
-    opacity: 0.4;
-    transform: scale(0.98);
-    transition: transform 0.15s ease, opacity 0.15s ease;
-}
-
-/* 3. ESCUDO: Desliga o mouse nos textos filhos durante o arrasto para não bugar a Drop Zone */
-body.is-dragging-subnode .sub-annotation-card *,
-body.is-dragging-subnode .annotation-card * {
-    pointer-events: none !important;
-}
-
-/* 4. DROP ZONE 1: Entre Nós de Ideia (Reordenação). 
-   Válido para qualquer lado da tela. Usa border-top e cor de fundo sutil. */
-.sub-annotation-item.sub-drop-zone-node {
-    border-top: 3px dashed var(--trt-blue-mid);
-    /* Opcional: highlight de fundo na caixa inteira para dar mais clareza */
-}
-.sub-annotation-item.sub-drop-zone-node .sub-annotation-card {
-    background-color: var(--trt-light-bg, #f4f7f9);
-}
-
-/* 5. DROP ZONE 2: Sobre Cards (Transplante). 
-   Usa OUTLINE negativo para desenhar a borda POR DENTRO, não afetando o layout Zigue-Zague */
-.annotation-card.sub-drop-zone-card {
-    outline: 3px dashed var(--trt-blue-mid) !important;
-    outline-offset: -3px; 
-    background-color: rgba(26, 58, 92, 0.04) !important;
-}
+/* Classes de Drag & Drop de Ideias Secundárias removidas na refatoração */
 
 /* ================================================
    7. MODAIS E POPUPS GERAIS
