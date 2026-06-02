@@ -341,19 +341,11 @@ window.TopicsManager = (function () {
                 const bordaFaseClass = `borda-fase-${faseSub}`;
 
                 return `
-                    <div class="sub-annotation-item" 
-                         data-source="${sub.viewSource}"
-                         ondragover="SubNodeDnDManager.dragOver(event)"
-                         ondragenter="SubNodeDnDManager.dragEnterNode(event)"
-                         ondragleave="SubNodeDnDManager.dragLeave(event)"
-                         ondrop="SubNodeDnDManager.dropOnNode(event, '${activeTabId}', ${index}, '${sub.viewSource}', ${sub.localIndex})">
+                    <div class="sub-annotation-item" data-source="${sub.viewSource}">
                         <div class="sub-annotation-card ${bordaFaseClass}">
                             <!-- NOVO CONTRATO AQUI: Passamos viewSource E localIndex antes do event -->
                             <div class="${badgeClass}"
-                                 draggable="true" 
-                                 ondragstart="SubNodeDnDManager.dragStart(event, '${activeTabId}', ${index}, '${sub.viewSource}', ${sub.localIndex})"
-                                 ondragend="SubNodeDnDManager.dragEnd(event)"
-                                 title="Arraste pelo número para mover, ou clique para opções"
+                                 title="Opções desta ideia secundária"
                                  onclick="abrirMenuSubAnotacao('${activeTabId}', ${index}, '${sub.viewSource}', ${sub.localIndex}, event)">
                                 ${label}
                             </div>
@@ -404,11 +396,7 @@ window.TopicsManager = (function () {
                             <path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l-4-4m4 4l4-4" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </div>
-                    <div class="annotation-card correlated-card fase-${typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(item.documento) : 4}"
-                         ondragover="SubNodeDnDManager.dragOver(event)"
-                         ondragenter="SubNodeDnDManager.dragEnterCard(event)"
-                         ondragleave="SubNodeDnDManager.dragLeave(event)"
-                         ondrop="SubNodeDnDManager.dropOnCard(event, '${activeTabId}', ${index}, ${cIdx})">
+                    <div class="annotation-card correlated-card fase-${typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(item.documento) : 4}">
                         <div class="card-header">
                             <div style="display:flex; gap:6px;">
                                 <span class="polo-tag doc-tag">${item.documento ? escaparHTML(item.documento) : escaparHTML(item.polo)}</span>
@@ -443,11 +431,7 @@ window.TopicsManager = (function () {
                             ${numero}
                         </div>
                     </div>
-                    <div class="annotation-card ${bgZoneClass} ${bgPoloClass}"
-                         ondragover="SubNodeDnDManager.dragOver(event)"
-                         ondragenter="SubNodeDnDManager.dragEnterCard(event)"
-                         ondragleave="SubNodeDnDManager.dragLeave(event)"
-                         ondrop="SubNodeDnDManager.dropOnCard(event, '${activeTabId}', ${index}, 'main')">
+                    <div class="annotation-card ${bgZoneClass} ${bgPoloClass}">
                         <div class="card-header">
                             <div style="display:flex; gap:6px;">${tagsHtml}</div>
                             <span class="card-meta" style="cursor:pointer;" title="Clique: Copiar | Shift+Clique: Editar folha | Ctrl+Clique: Ir ao PDF" onclick="handleMetaClick(event, '${activeTabId}', ${index}, false)">${metaTexto}</span>
