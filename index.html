@@ -281,6 +281,18 @@
         </button>
 
         <hr style="width: 100%; border: 0; border-top: 1px solid #eee; margin: 4px 0;">
+        <span style="font-size: 0.7rem; color: #888; padding: 4px 8px; font-weight: bold; text-transform: uppercase;">Movimentação:</span>
+
+        <button class="ann-action-btn" style="justify-content: flex-start; gap: 8px; width: 100%;" title="Mover Posição" onclick="acionarReordenarSub()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><polyline points="8 7 12 3 16 7"></polyline><line x1="12" y1="12" x2="12" y2="3"></line></svg>
+            <span style="font-size: 0.8rem;">Reordenar Posição</span>
+        </button>
+        <button class="ann-action-btn" style="justify-content: flex-start; gap: 8px; width: 100%;" title="Transferir de Ideia" onclick="abrirModalTransferirSubAnotacao()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>
+            <span style="font-size: 0.8rem;">Transferir para Outra Prova</span>
+        </button>
+
+        <hr style="width: 100%; border: 0; border-top: 1px solid #eee; margin: 4px 0;">
 
         <!-- AÇÕES ORIGINAIS -->
         <button class="ann-action-btn" style="justify-content: flex-start; gap: 8px; width: 100%;" onclick="editarSubAnotacao()">
@@ -569,6 +581,27 @@
         <div class="wizard-actions">
             <button class="chip-btn chip-cancelar" onclick="fecharModalReordenar()">✕ Cancelar</button>
             <button class="chip-btn chip-autora" onclick="confirmarReordenacaoPosicao()">✔ Confirmar</button>
+        </div>
+    </div>
+
+    <!-- BACKDROP E MODAL: TRANSFERÊNCIA DE SUB-NÓS -->
+    <div id="transferir-sub-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.40); z-index: 4004;" onclick="fecharModalTransferirSub()"></div>
+
+    <div id="modal-transferir-sub" class="crop-wizard-popup" style="display:none; z-index: 4005;">
+        <div class="wizard-header">🚀 Transferir Nó de Ideia</div>
+        <p class="popup-label">Para qual Ideia Principal este nó deve ser enviado?</p>
+        <p style="font-size: 0.75rem; color: #666; margin-bottom: 8px;">Digite o número da ideia de destino (Ex: 2).</p>
+        
+        <input type="number" id="input-transferir-sub-destino" class="topic-select" placeholder="Nº da Ideia (Ex: 2)" min="1" oninput="carregarSubAlvosTransferencia()">
+        
+        <div id="transfer-sub-target-box" style="display:none; margin-top: 12px; flex-direction: column; gap: 6px;">
+            <p class="popup-label">Esta ideia agrupa várias provas. Escolha o destino exato:</p>
+            <select id="select-transferir-sub-alvo" class="topic-select"></select>
+        </div>
+
+        <div class="wizard-actions">
+            <button class="chip-btn chip-cancelar" onclick="fecharModalTransferirSub()">✕ Cancelar</button>
+            <button class="chip-btn chip-autora" onclick="confirmarTransferenciaSub()">✔ Confirmar</button>
         </div>
     </div>
 
