@@ -525,7 +525,35 @@
 .sub-input-btn-icon.cancel:hover { background: #ffebee; color: #c62828; border-color: #ef9a9a; }
 .btn-add-sub { display: none !important; }
 
-/* Classes de Drag & Drop de Ideias Secundárias removidas na refatoração */
+/* ================================================
+   Classes de Drag & Drop de Ideias Secundárias
+   ================================================ */
+.sub-badge { cursor: grab; }
+.sub-badge:active { cursor: grabbing; }
+
+.sub-annotation-item.sub-dragging {
+    opacity: 0.4;
+    transform: scale(0.98);
+}
+
+/* Drop Zone para reordenar Ideias */
+.sub-annotation-item.sub-drop-zone-node > .sub-annotation-card {
+    border-top: 3px dashed var(--trt-blue-mid);
+    background-color: var(--trt-light-bg, #f4f7f9);
+}
+
+/* Drop Zone para Transplantar Ideia em um Card (Via ::after para não conflitar) */
+.annotation-card { position: relative; }
+.annotation-card.sub-drop-zone-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 3px dashed var(--trt-blue-mid);
+    background-color: rgba(26, 58, 92, 0.05);
+    border-radius: inherit;
+    z-index: 10;
+    pointer-events: none;
+}
 
 /* ================================================
    7. MODAIS E POPUPS GERAIS
