@@ -338,7 +338,23 @@ function excluirSubAnotacao() {
     document.getElementById('sub-annotation-context-menu').style.display = 'none';
 }
 
-// Função reordenarSubAnotacao removida arquiteturalmente (Automação Inteligente de Distribuição)
+/* ================================================
+   1. ATUALIZAÇÃO: REORDENAÇÃO DE SUB-NÓS (Integração)
+   ================================================ */
+
+// Função acionada pelo novo botão no menu contextual
+function acionarReordenarSub() {
+    if (!_menuSubAnotacaoCtx) return;
+    
+    const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
+    const alvo = _resolverSubAlvo(topico, _menuSubAnotacaoCtx.parentIndex, _menuSubAnotacaoCtx.viewSource);
+    const total = alvo.subAnotacoes.length;
+    
+    if (total <= 1) return exibirToast('Apenas uma anotação existente neste grupo.', 'aviso');
+    
+    abrirModalReordenar('sub', _menuSubAnotacaoCtx.topicoId, _menuSubAnotacaoCtx.parentIndex, total, _menuSubAnotacaoCtx.localIndex);
+    document.getElementById('sub-annotation-context-menu').style.display = 'none';
+}
 
 function abrirModalReordenar(tipo, topicoId, index, total, subIndex = null) {
     _reordenarCtx = { tipo, topicoId, index, total, subIndex };
@@ -369,6 +385,11 @@ function confirmarReordenacaoPosicao() {
     if (_reordenarCtx.tipo === 'main') {
         const [item] = topico.anotacoes.splice(_reordenarCtx.index, 1);
         topico.anotacoes.splice(novaPos - 1, 0, item);
+    } else if (_reordenarCtx.tipo === 'sub') {
+        // Novo suporte arquitetural para nós de ideia
+        const alvo = _resolverSubAlvo(topico, _reordenarCtx.index, _menuSubAnotacaoCtx.viewSource);
+        const [item] = alvo.subAnotacoes.splice(_reordenarCtx.subIndex, 1);
+        alvo.subAnotacoes.splice(novaPos - 1, 0, item);
     }
 
     renderizarTopicos(); salvarBackupAutomatico();
@@ -376,6 +397,118 @@ function confirmarReordenacaoPosicao() {
     fecharModalReordenar();
     exibirToast('Item reposicionado com sucesso.', 'sucesso');
     _menuAnotacaoCtx = null;
+    _menuSubAnotacaoCtx = null;
+}
+
+/* ================================================
+   2. NOVA FUNCIONALIDADE: TRANSFERÊNCIA INTELIGENTE
+   ================================================ */
+
+function abrirModalTransferirSubAnotacao() {
+    if (!_menuSubAnotacaoCtx) return;
+    document.getElementById('sub-annotation-context-menu').style.display = 'none';
+    
+    document.getElementById('input-transferir-sub-destino').value = '';
+    document.getElementById('transfer-sub-target-box').style.display = 'none';
+    document.getElementById('select-transferir-sub-alvo').innerHTML = '';
+    
+    document.getElementById('transferir-sub-backdrop').style.display = 'block';
+    document.getElementById('modal-transferir-sub').style.display = 'flex';
+    
+    setTimeout(() => document.getElementById('input-transferir-sub-destino').focus(), 50);
+}
+
+function fecharModalTransferirSub() {
+    document.getElementById('transferir-sub-backdrop').style.display = 'none';
+    document.getElementById('modal-transferir-sub').style.display = 'none';
+}
+
+// Helper: Extrai um snippet seguro para montar os rótulos do select
+function _gerarSnippetCard(item) {
+    const docTag = item.documento || item.polo || 'Item não nomeado';
+    let snippet = '';
+    
+    if (item.tipo === 'texto') {
+        // Remove quebras de linha e limita a 25 caracteres
+        const limpo = item.conteudo.replace(/<[^>]*>?/gm, '').substring(0, 25);
+        snippet = `[T] "${limpo}..."`;
+    } else if (item.tipo === 'audio') {
+        snippet = `[Áudio]`;
+    } else if (item.tipo === 'imagem') {
+        snippet = `[Imagem]`;
+    }
+    return `${docTag} - ${snippet}`;
+}
+
+function carregarSubAlvosTransferencia() {
+    if (!_menuSubAnotacaoCtx) return;
+    const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
+    const inputVal = parseInt(document.getElementById('input-transferir-sub-destino').value, 10);
+    
+    const targetBox = document.getElementById('transfer-sub-target-box');
+    const select = document.getElementById('select-transferir-sub-alvo');
+    
+    select.innerHTML = '';
+    targetBox.style.display = 'none';
+
+    if (isNaN(inputVal) || inputVal < 1 || inputVal > topico.anotacoes.length) return;
+
+    const cardDestino = topico.anotacoes[inputVal - 1];
+    
+    // Identificou um Grupo. Requisita especificação do usuário com rótulos ricos.
+    if (cardDestino.itensCorrelacionados && cardDestino.itensCorrelacionados.length > 0) {
+        select.appendChild(new Option(`🌟 Mestre: ${_gerarSnippetCard(cardDestino)}`, 'main'));
+        
+        cardDestino.itensCorrelacionados.forEach((item, idx) => {
+            select.appendChild(new Option(`↳ Anexo: ${_gerarSnippetCard(item)}`, idx));
+        });
+        
+        targetBox.style.display = 'flex';
+    }
+}
+
+function confirmarTransferenciaSub() {
+    if (!_menuSubAnotacaoCtx) return;
+    
+    const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
+    const destinoTarget = parseInt(document.getElementById('input-transferir-sub-destino').value, 10);
+    
+    if (isNaN(destinoTarget) || destinoTarget < 1 || destinoTarget > topico.anotacoes.length) {
+        return exibirToast(`Destino inválido. Escolha um número entre 1 e ${topico.anotacoes.length}.`, 'erro');
+    }
+    
+    const destinoIndex = destinoTarget - 1;
+    const cardDestino = topico.anotacoes[destinoIndex];
+    let alvoFinal = cardDestino; 
+    let alvoViewSource = 'main';
+    
+    if (cardDestino.itensCorrelacionados && cardDestino.itensCorrelacionados.length > 0) {
+        const selectVal = document.getElementById('select-transferir-sub-alvo').value;
+        if (selectVal !== 'main') {
+            alvoViewSource = selectVal;
+            alvoFinal = cardDestino.itensCorrelacionados[parseInt(selectVal, 10)];
+        }
+    }
+
+    const alvoOrigem = _resolverSubAlvo(topico, _menuSubAnotacaoCtx.parentIndex, _menuSubAnotacaoCtx.viewSource);
+
+    // VALIDAÇÃO CRÍTICA: Auto-Colisão
+    // Se a origem e o destino apontam para a exata mesma posição do array e sub-card
+    if (destinoIndex === _menuSubAnotacaoCtx.parentIndex && alvoViewSource === String(_menuSubAnotacaoCtx.viewSource)) {
+        fecharModalTransferirSub();
+        return exibirToast('O nó já pertence a esta prova. Nenhuma alteração realizada.', 'aviso');
+    }
+
+    // Mutação Segura: Extrai da origem e injeta no destino
+    const noTransferido = alvoOrigem.subAnotacoes.splice(_menuSubAnotacaoCtx.localIndex, 1)[0];
+    
+    if (!alvoFinal.subAnotacoes) alvoFinal.subAnotacoes = [];
+    alvoFinal.subAnotacoes.push(noTransferido);
+    
+    fecharModalTransferirSub();
+    renderizarTopicos();
+    salvarBackupAutomatico();
+    exibirToast(`Nó transferido com sucesso!`, 'sucesso');
     _menuSubAnotacaoCtx = null;
 }
 
