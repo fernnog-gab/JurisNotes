@@ -791,86 +791,75 @@ window.SubNodeDnDManager = {
     dragStart: function(e, topicoId, parentIndex, viewSource, localIndex) {
         e.stopPropagation();
         this.draggedNode = { topicoId, parentIndex, viewSource, localIndex };
-        
-        // Pinta a linha inteira de fantasma
+        document.body.classList.add('is-dragging-subnode');
         e.currentTarget.closest('.sub-annotation-item').classList.add('sub-dragging');
-        
         e.dataTransfer.effectAllowed = 'move';
-        // Payload Fingerprinting: Assinatura exclusiva para sub-nós
-        e.dataTransfer.setData('juris/subnode', 'true'); 
+        e.dataTransfer.setData('text/plain', 'subnode');
     },
 
     dragOver: function(e) {
-        if (!e.dataTransfer.types.includes('juris/subnode')) return;
+        if (!this.draggedNode) return;
         e.preventDefault(); 
         e.dataTransfer.dropEffect = 'move';
     },
 
     dragEnterNode: function(e) {
-        if (!e.dataTransfer.types.includes('juris/subnode')) return;
+        if (!this.draggedNode) return;
         e.preventDefault();
-        e.stopPropagation();
         e.currentTarget.classList.add('sub-drop-zone-node');
     },
 
     dragEnterCard: function(e) {
-        if (!e.dataTransfer.types.includes('juris/subnode')) return;
+        if (!this.draggedNode) return;
         e.preventDefault();
-        e.stopPropagation();
         e.currentTarget.classList.add('sub-drop-zone-card');
     },
 
     dragLeave: function(e) {
-        e.stopPropagation();
+        if (!this.draggedNode) return;
         e.currentTarget.classList.remove('sub-drop-zone-node', 'sub-drop-zone-card');
     },
 
     dragEnd: function(e) {
+        document.body.classList.remove('is-dragging-subnode');
         const item = e.currentTarget.closest('.sub-annotation-item');
         if (item) item.classList.remove('sub-dragging');
-        
         document.querySelectorAll('.sub-drop-zone-node, .sub-drop-zone-card')
                 .forEach(el => el.classList.remove('sub-drop-zone-node', 'sub-drop-zone-card'));
         this.draggedNode = null;
     },
 
     dropOnCard: function(e, destTopicoId, destParentIndex, destViewSource) {
-        if (!e.dataTransfer.types.includes('juris/subnode')) return;
+        if (!this.draggedNode) return;
         e.preventDefault();
         e.stopPropagation();
-        this._processDrop(e, destTopicoId, destParentIndex, destViewSource, null);
+        this._processDrop(destTopicoId, destParentIndex, destViewSource, null);
     },
 
     dropOnNode: function(e, destTopicoId, destParentIndex, destViewSource, destLocalIndex) {
-        if (!e.dataTransfer.types.includes('juris/subnode')) return;
+        if (!this.draggedNode) return;
         e.preventDefault();
         e.stopPropagation();
-        this._processDrop(e, destTopicoId, destParentIndex, destViewSource, destLocalIndex);
+        this._processDrop(destTopicoId, destParentIndex, destViewSource, destLocalIndex);
     },
 
-    _processDrop: function(e, destTopicoId, destParentIndex, destViewSource, destLocalIndex) {
-        this.dragEnd(e);
+    _processDrop: function(destTopicoId, destParentIndex, destViewSource, destLocalIndex) {
         const src = this.draggedNode;
-        if (!src) return;
+        this.dragEnd({ currentTarget: document.createElement('div') });
 
-        // Aborta se soltou no mesmo lugar exato
         if (src.topicoId === destTopicoId && src.parentIndex === destParentIndex && 
             src.viewSource === destViewSource && src.localIndex === destLocalIndex) return;
 
         const topico = topicos.find(t => t.id === destTopicoId);
-        if (!topico) return;
         
-        // 1. Extração da Origem
         const originAlvo = _resolverSubAlvo(topico, src.parentIndex, src.viewSource);
         const [noMovido] = originAlvo.subAnotacoes.splice(src.localIndex, 1);
 
-        // Ajuste de índice reverso (mesmo array)
         let adjustedDestIndex = destLocalIndex;
         if (src.parentIndex === destParentIndex && src.viewSource === destViewSource) {
             if (destLocalIndex !== null && src.localIndex < destLocalIndex) adjustedDestIndex--;
         }
 
-        // 2. Inserção no Destino
         const destAlvo = _resolverSubAlvo(topico, destParentIndex, destViewSource);
         if (!destAlvo.subAnotacoes) destAlvo.subAnotacoes = [];
         
@@ -880,10 +869,17 @@ window.SubNodeDnDManager = {
             destAlvo.subAnotacoes.splice(adjustedDestIndex, 0, noMovido); 
         }
 
-        // 3. Efetivação
+        // RECONSTRUÇÃO DO DOM
         renderizarTopicos();
         salvarBackupAutomatico();
         if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
         exibirToast('Nó de Ideia realocado com sucesso.', 'sucesso');
+        
+        // CRÍTICO: Força o recálculo do SVG após o layout Zigue-Zague ter sido aplicado
+        requestAnimationFrame(() => {
+            if (window.TopicsManager && window.TopicsManager.desenharConexoes) {
+                window.TopicsManager.desenharConexoes();
+            }
+        });
     }
 };
