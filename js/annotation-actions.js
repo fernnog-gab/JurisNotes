@@ -785,4 +785,105 @@ function fecharTooltipRapido() {
     }
 }
 
-// window.SubDnDManager removido na refatoração de limpeza
+window.SubNodeDnDManager = {
+    draggedNode: null,
+
+    dragStart: function(e, topicoId, parentIndex, viewSource, localIndex) {
+        e.stopPropagation();
+        this.draggedNode = { topicoId, parentIndex, viewSource, localIndex };
+        
+        // Pinta a linha inteira de fantasma
+        e.currentTarget.closest('.sub-annotation-item').classList.add('sub-dragging');
+        
+        e.dataTransfer.effectAllowed = 'move';
+        // Payload Fingerprinting: Assinatura exclusiva para sub-nós
+        e.dataTransfer.setData('juris/subnode', 'true'); 
+    },
+
+    dragOver: function(e) {
+        if (!e.dataTransfer.types.includes('juris/subnode')) return;
+        e.preventDefault(); 
+        e.dataTransfer.dropEffect = 'move';
+    },
+
+    dragEnterNode: function(e) {
+        if (!e.dataTransfer.types.includes('juris/subnode')) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.currentTarget.classList.add('sub-drop-zone-node');
+    },
+
+    dragEnterCard: function(e) {
+        if (!e.dataTransfer.types.includes('juris/subnode')) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.currentTarget.classList.add('sub-drop-zone-card');
+    },
+
+    dragLeave: function(e) {
+        e.stopPropagation();
+        e.currentTarget.classList.remove('sub-drop-zone-node', 'sub-drop-zone-card');
+    },
+
+    dragEnd: function(e) {
+        const item = e.currentTarget.closest('.sub-annotation-item');
+        if (item) item.classList.remove('sub-dragging');
+        
+        document.querySelectorAll('.sub-drop-zone-node, .sub-drop-zone-card')
+                .forEach(el => el.classList.remove('sub-drop-zone-node', 'sub-drop-zone-card'));
+        this.draggedNode = null;
+    },
+
+    dropOnCard: function(e, destTopicoId, destParentIndex, destViewSource) {
+        if (!e.dataTransfer.types.includes('juris/subnode')) return;
+        e.preventDefault();
+        e.stopPropagation();
+        this._processDrop(e, destTopicoId, destParentIndex, destViewSource, null);
+    },
+
+    dropOnNode: function(e, destTopicoId, destParentIndex, destViewSource, destLocalIndex) {
+        if (!e.dataTransfer.types.includes('juris/subnode')) return;
+        e.preventDefault();
+        e.stopPropagation();
+        this._processDrop(e, destTopicoId, destParentIndex, destViewSource, destLocalIndex);
+    },
+
+    _processDrop: function(e, destTopicoId, destParentIndex, destViewSource, destLocalIndex) {
+        this.dragEnd(e);
+        const src = this.draggedNode;
+        if (!src) return;
+
+        // Aborta se soltou no mesmo lugar exato
+        if (src.topicoId === destTopicoId && src.parentIndex === destParentIndex && 
+            src.viewSource === destViewSource && src.localIndex === destLocalIndex) return;
+
+        const topico = topicos.find(t => t.id === destTopicoId);
+        if (!topico) return;
+        
+        // 1. Extração da Origem
+        const originAlvo = _resolverSubAlvo(topico, src.parentIndex, src.viewSource);
+        const [noMovido] = originAlvo.subAnotacoes.splice(src.localIndex, 1);
+
+        // Ajuste de índice reverso (mesmo array)
+        let adjustedDestIndex = destLocalIndex;
+        if (src.parentIndex === destParentIndex && src.viewSource === destViewSource) {
+            if (destLocalIndex !== null && src.localIndex < destLocalIndex) adjustedDestIndex--;
+        }
+
+        // 2. Inserção no Destino
+        const destAlvo = _resolverSubAlvo(topico, destParentIndex, destViewSource);
+        if (!destAlvo.subAnotacoes) destAlvo.subAnotacoes = [];
+        
+        if (adjustedDestIndex === null) {
+            destAlvo.subAnotacoes.push(noMovido); 
+        } else {
+            destAlvo.subAnotacoes.splice(adjustedDestIndex, 0, noMovido); 
+        }
+
+        // 3. Efetivação
+        renderizarTopicos();
+        salvarBackupAutomatico();
+        if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
+        exibirToast('Nó de Ideia realocado com sucesso.', 'sucesso');
+    }
+};
