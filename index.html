@@ -83,6 +83,13 @@
                     </svg>
                 </button>
 
+                <button class="icon-btn" id="btn-login-user" onclick="toggleLoginMenu(event)" title="Acessar Conta (Firebase)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                </button>
+
                 <!-- ── Separador Delicado ─────────────────────────────── -->
                 <hr class="toolbar-separator">
 
@@ -108,6 +115,13 @@
                 <button class="icon-btn" id="btn-ferramenta-audio" onclick="AudioManager.iniciarSessao()" title="Analisar Audiência (Áudio)" disabled>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line>
+                    </svg>
+                </button>
+
+                <button class="icon-btn" id="btn-arquivo-futuro" title="Funcionalidade Futura (Arquivo)" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                        <polyline points="13 2 13 9 20 9"></polyline>
                     </svg>
                 </button>
 
@@ -704,5 +718,20 @@
             </button>
         </div>
     </div>
+
+    <!-- PAINEL DE ACESSO SEGURO (FIREBASE) -->
+    <div id="login-menu" class="floating-panel-base" style="display: none; flex-direction: column; min-width: 220px; padding: 16px; gap: 10px;">
+        <div style="font-size: 0.9rem; font-weight: bold; color: var(--trt-blue); margin-bottom: 4px; text-align: center;">
+            Acesso Seguro
+        </div>
+        <input type="email" id="login-email" class="login-input" placeholder="Seu E-mail" autocomplete="email">
+        <input type="password" id="login-senha" class="login-input" placeholder="Sua Senha" autocomplete="current-password">
+        <button class="chip-btn chip-autora" style="background: var(--trt-blue); color: white; border-color: var(--trt-blue); margin-top: 4px;" onclick="FirebaseAuth.realizarLogin()">
+            ✔ Autenticar
+        </button>
+    </div>
+
+    <!-- SCRIPT DE AUTENTICAÇÃO -->
+    <script src="js/firebase-auth.js"></script>
 </body>
 </html>

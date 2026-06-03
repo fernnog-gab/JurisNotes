@@ -536,3 +536,51 @@ body[data-active-tab="leitura"] #idea-markers-list {
 @keyframes fade-in-logo { to { opacity: 1; } }
 @keyframes slide-up-slogan { to { opacity: 1; transform: translateY(0); } }
 @keyframes splash-loading { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
+
+/* ================================================
+   AJUSTES DE SCROLL E AUTENTICAÇÃO
+   ================================================ */
+
+/* Ocultação de Scrollbars da Sidebar (Firefox e WebKit) */
+.sidebar {
+    scrollbar-width: none;
+}
+.sidebar::-webkit-scrollbar {
+    display: none; 
+}
+
+/* Estado Logado do Botão de Usuário */
+#btn-login-user.is-logged-in {
+    color: #39FF14; 
+    border-color: rgba(57, 255, 20, 0.4);
+    background: rgba(57, 255, 20, 0.1);
+}
+#btn-login-user.is-logged-in svg {
+    filter: drop-shadow(0 0 4px rgba(57, 255, 20, 0.5));
+}
+
+/* Base arquitetural para painéis flutuantes (Login) */
+.floating-panel-base {
+    position: fixed;
+    z-index: var(--z-floating-panel);
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: var(--shadow-md);
+}
+
+/* Input dedicado para formulários, evitando colisão com tag <select> */
+.login-input {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: #fdfdfd;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+}
+.login-input:focus {
+    border-color: var(--trt-blue-mid);
+    background: #ffffff;
+}
