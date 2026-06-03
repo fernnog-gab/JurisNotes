@@ -71,6 +71,33 @@ window.sincronizarHighlightsGerais = function() {
 };
 
 /* ================================================
+   CONTROLE DE INTERFACE DE AUTENTICAÇÃO
+   ================================================ */
+window.toggleLoginMenu = function(event) {
+    event.stopPropagation();
+    const menu = document.getElementById('login-menu');
+    const jurisMenu = document.getElementById('juris-menu');
+    const isVisible = menu.style.display === 'flex';
+    
+    // Prevenção de Colisão: Fecha o menu principal se estiver aberto
+    if (jurisMenu && jurisMenu.style.display === 'flex') {
+        jurisMenu.style.display = 'none';
+    }
+    
+    if (!isVisible) {
+        menu.style.display = 'flex';
+        const rect = event.currentTarget.getBoundingClientRect();
+        // Posicionamento absoluto fixo, livre de scroll
+        menu.style.left = (rect.right + 12) + 'px';
+        menu.style.top = rect.top + 'px';
+        
+        setTimeout(() => document.getElementById('login-email').focus(), 50);
+    } else {
+        menu.style.display = 'none';
+    }
+};
+
+/* ================================================
    MÓDULO DE ATALHOS FLUTUANTES (SHORTCUT MANAGER)
    ================================================ */
 window.ShortcutManager = (function() {
@@ -791,6 +818,12 @@ document.addEventListener('click', function (e) {
     const menuJuris = document.getElementById('juris-menu');
     if (menuJuris && menuJuris.style.display === 'flex' && !menuJuris.contains(e.target) && !e.target.closest('.sidebar-logo-container')) {
         menuJuris.style.display = 'none';
+    }
+
+    // --- Fechamento seguro do menu de login ---
+    const loginMenu = document.getElementById('login-menu');
+    if (loginMenu && loginMenu.style.display === 'flex' && !loginMenu.contains(e.target) && !e.target.closest('#btn-login-user')) {
+        loginMenu.style.display = 'none';
     }
 });
 
