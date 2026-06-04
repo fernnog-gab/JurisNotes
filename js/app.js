@@ -343,8 +343,6 @@ window.toggleModoFoco = function(ativar) {
 };
 
 function trocarAba(aba) {
-    // 1. ELEVAÇÃO DE ESTADO (State Hoisting)
-    // Informa ao CSS de toda a aplicação qual é a aba atual
     document.body.dataset.activeTab = aba;
 
     document.getElementById('pdf-container').style.display     = aba === 'leitura'   ? 'flex'  : 'none';
@@ -353,12 +351,19 @@ function trocarAba(aba) {
     document.getElementById('tab-historico').classList.toggle('active', aba === 'historico');
 
     const isAnotacoes = (aba === 'historico' && topicos.length > 0);
+    const isLeitura   = (aba === 'leitura');
     
     const btnExportar = document.getElementById('btn-exportar-topico');
     if (btnExportar) btnExportar.style.display = isAnotacoes ? 'flex' : 'none';
     
     const btnAcervo = document.getElementById('btn-acervo-modelos');
     if (btnAcervo) btnAcervo.style.display = isAnotacoes ? 'flex' : 'none';
+
+    const btnTexto = document.getElementById('btn-ferramenta-texto');
+    if (btnTexto) btnTexto.style.display = isLeitura ? 'flex' : 'none';
+
+    const btnRecorte = document.getElementById('btn-ferramenta-recorte');
+    if (btnRecorte) btnRecorte.style.display = isLeitura ? 'flex' : 'none';
 
     const fabContainer = document.getElementById('scroll-fab-container');
     if (fabContainer) {
@@ -1287,7 +1292,9 @@ async function confirmarSalvarModelo() {
 function abrirModalAcervo() {
     if (!window.AcervoManager) return exibirToast('Conecte-se ao Firebase primeiro.', 'erro');
     
-    // UI Síncrona
+    // INJETADO: Efeito visual sem duplicar CSS
+    document.getElementById('history-container').classList.add('pdf-foco-ativo');
+
     document.getElementById('wizard-backdrop').style.display = 'block';
     document.getElementById('modal-acervo-inserir').style.display = 'flex';
     
@@ -1305,15 +1312,28 @@ function abrirModalAcervo() {
         modelos.forEach(mod => {
             const item = document.createElement('div');
             item.className = 'acervo-item';
-            item.innerHTML = `<div class="acervo-item-titulo">${TopicsManager.escaparHTML(mod.nome)}</div><div style="font-size:0.7rem; color:#888;">${mod.nos.length} nó(s) salvos</div>`;
             
-            item.onclick = () => {
+            // INJETADO: Header com botão de edição independente
+            item.innerHTML = `
+                <div class="acervo-item-header">
+                    <div>
+                        <div class="acervo-item-titulo">${TopicsManager.escaparHTML(mod.nome)}</div>
+                        <div style="font-size:0.7rem; color:#888;">${mod.nos.length} nó(s) salvos</div>
+                    </div>
+                    <button class="acervo-action-btn" title="Editar este modelo" onclick="abrirEdicaoModeloAcervo(event, '${mod.id}')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    </button>
+                </div>`;
+            
+            item.onclick = (e) => {
+                // Previne que o clique no botão editar ative a seleção
+                if (e.target.closest('.acervo-action-btn')) return;
+
                 document.querySelectorAll('#lista-acervo-geral .acervo-item').forEach(el => el.classList.remove('selected'));
                 item.classList.add('selected');
                 _modeloSelecionadoId = mod.id;
                 _modeloSelecionadoNodes = mod.nos;
                 
-                // Pré-visualização RICA com Ícones
                 const previewHtml = mod.nos.map(n => `
                     <div class="acervo-node-preview">
                         ${getIconeAcervoSVG(n.intencao)}
@@ -1332,6 +1352,9 @@ function abrirModalAcervo() {
 }
 
 function fecharModalAcervo() {
+    // INJETADO: Remoção do efeito visual
+    document.getElementById('history-container').classList.remove('pdf-foco-ativo');
+    
     document.getElementById('wizard-backdrop').style.display = 'none';
     document.getElementById('modal-acervo-inserir').style.display = 'none';
 }
@@ -1367,3 +1390,72 @@ function confirmarInsercaoAcervo() {
     fecharModalAcervo();
     exibirToast('Modelo injetado com sucesso!', 'sucesso');
 }
+
+/* ================================================
+   NOVO: GERENCIAMENTO E EDIÇÃO DE MODELOS DO ACERVO
+   ================================================ */
+window.abrirEdicaoModeloAcervo = async function(event, modeloId) {
+    if(event) event.stopPropagation(); 
+    
+    document.getElementById('modal-acervo-inserir').style.display = 'none';
+    
+    // Traz os dados frescos
+    const modelos = await AcervoManager.carregarModelos();
+    const modelo = modelos.find(m => m.id === modeloId);
+    if(!modelo) return;
+
+    document.getElementById('edit-modelo-nome').textContent = modelo.nome;
+    const container = document.getElementById('lista-edicao-nos-acervo');
+    container.innerHTML = '';
+
+    modelo.nos.forEach((no, index) => {
+        const box = document.createElement('div');
+        box.className = 'acervo-node-edit-box';
+        
+        box.innerHTML = `
+            <div style="padding-top: 8px;">${typeof getIconeAcervoSVG === 'function' ? getIconeAcervoSVG(no.intencao) : '📄'}</div>
+            <textarea class="acervo-node-edit-textarea" id="edit-no-${modeloId}-${index}">${TopicsManager.escaparHTML(no.texto)}</textarea>
+            <div style="display:flex; flex-direction:column; gap:4px;">
+                <button class="acervo-action-btn" title="Salvar Alteração de Texto" onclick="salvarTextoNoAcervo('${modeloId}', ${index})">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </button>
+                <button class="acervo-action-btn delete-btn" title="Excluir Nó" onclick="excluirNoAcervo('${modeloId}', ${index})">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+            </div>
+        `;
+        container.appendChild(box);
+    });
+
+    document.getElementById('modal-editar-modelo-acervo').style.display = 'flex';
+};
+
+window.fecharModalEdicaoAcervo = function() {
+    document.getElementById('modal-editar-modelo-acervo').style.display = 'none';
+    abrirModalAcervo(); // Retorna graciosamente à tela de inserção
+};
+
+window.salvarTextoNoAcervo = async function(modeloId, nodeIndex) {
+    const textarea = document.getElementById(`edit-no-${modeloId}-${nodeIndex}`);
+    const novoTexto = textarea.value.trim();
+    if(!novoTexto) return exibirToast('O texto não pode ser vazio.', 'aviso');
+
+    try {
+        await AcervoManager.atualizarNoDoModelo(modeloId, nodeIndex, { texto: novoTexto });
+        exibirToast('Texto atualizado com sucesso!', 'sucesso');
+    } catch(e) { 
+        exibirToast('Erro ao atualizar na nuvem.', 'erro'); 
+    }
+};
+
+window.excluirNoAcervo = async function(modeloId, nodeIndex) {
+    if(!confirm('Tem certeza que deseja excluir este nó definitivamente do modelo?')) return;
+    
+    try {
+        await AcervoManager.removerNoDoModelo(modeloId, nodeIndex);
+        exibirToast('Nó excluído com sucesso.', 'sucesso');
+        abrirEdicaoModeloAcervo(null, modeloId); // Recarrega a UI com o array novo
+    } catch(e) { 
+        exibirToast('Erro ao excluir nó.', 'erro'); 
+    }
+};

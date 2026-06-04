@@ -1,5 +1,5 @@
 import { app, auth } from './firebase-auth.js'; 
-import { getFirestore, collection, doc, setDoc, getDocs, updateDoc, arrayUnion, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, getDocs, updateDoc, arrayUnion, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const db = getFirestore(app);
 
@@ -97,5 +97,54 @@ window.AcervoManager = (function() {
         return modelos;
     }
 
-    return { salvarNovoModelo, adicionarNoAModelo, carregarModelos };
+    // Funções Seguras de Escrita Direta (Bypassing Cache)
+    async function atualizarNoDoModelo(modeloId, nodeIndex, dadosAtualizados) {
+        const uid = getUserId();
+        if (!uid) throw new Error("Usuário não autenticado.");
+        
+        const docRef = doc(db, "usuarios", uid, "acervo", modeloId);
+        
+        // 1. Fetch da fonte de verdade em tempo real
+        const docSnap = await getDoc(docRef);
+        if (!docSnap.exists()) throw new Error("Modelo não encontrado na nuvem.");
+        
+        const dadosModelo = docSnap.data();
+        if (!dadosModelo.nos || !dadosModelo.nos[nodeIndex]) return;
+
+        // 2. Mutação Segura
+        dadosModelo.nos[nodeIndex] = { ...dadosModelo.nos[nodeIndex], ...dadosAtualizados };
+        
+        // 3. Update e Invalidação de Cache
+        await updateDoc(docRef, { nos: dadosModelo.nos, atualizadoEm: Date.now() });
+        modelosEmCache = []; 
+    }
+
+    async function removerNoDoModelo(modeloId, nodeIndex) {
+        const uid = getUserId();
+        if (!uid) throw new Error("Usuário não autenticado.");
+        
+        const docRef = doc(db, "usuarios", uid, "acervo", modeloId);
+        
+        // 1. Fetch da fonte de verdade
+        const docSnap = await getDoc(docRef);
+        if (!docSnap.exists()) throw new Error("Modelo não encontrado na nuvem.");
+        
+        const dadosModelo = docSnap.data();
+        if (!dadosModelo.nos) return;
+
+        // 2. Remoção do nó alvo
+        dadosModelo.nos.splice(nodeIndex, 1); 
+        
+        // 3. Update e Invalidação de Cache
+        await updateDoc(docRef, { nos: dadosModelo.nos, atualizadoEm: Date.now() });
+        modelosEmCache = []; 
+    }
+
+    return { 
+        salvarNovoModelo, 
+        adicionarNoAModelo, 
+        carregarModelos, 
+        atualizarNoDoModelo, 
+        removerNoDoModelo 
+    };
 })();
