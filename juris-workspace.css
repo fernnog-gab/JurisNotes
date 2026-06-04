@@ -1359,4 +1359,16 @@
 
 .acervo-node-edit-box .svg-icon-wrapper.modal-static-badge svg {
     margin: 0;
+    stroke: currentColor !important; 
+    fill: none !important;
+}
+
+/* Ajuste Estrutural do Gerenciador de Tags */
+#modal-gerenciar-tags .wizard-header + div {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+#input-nova-tag {
+    flex: 1; /* Força o input a ocupar o espaço vazio */
 }
