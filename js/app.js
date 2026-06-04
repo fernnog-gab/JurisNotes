@@ -1227,21 +1227,57 @@ async function confirmarSalvarModelo() {
     if (!_noAlvoParaSalvar) return;
     
     const isNovo = document.querySelector('input[name="modo_salvar_modelo"]:checked').value === 'novo';
+    // Referência ao botão do modal para controle de loading/estado
+    const btnConfirmar = document.querySelector('#btn-confirmar-salvar-modelo') || document.querySelector('#modal-salvar-modelo button.btn-primario') || document.querySelector('#modal-salvar-modelo .chip-autora');
+    
+    let textoOriginalBtn = 'Confirmar';
+    if (btnConfirmar) {
+        textoOriginalBtn = btnConfirmar.innerHTML;
+        // 1. TRAVA DE INTERFACE (Evita duplo clique e vazamento de state)
+        btnConfirmar.disabled = true;
+        btnConfirmar.style.opacity = '0.7';
+        btnConfirmar.innerHTML = '⌛ Salvando...';
+    }
+
     try {
         if (isNovo) {
             const nome = document.getElementById('input-nome-modelo').value.trim();
-            if (!nome) return exibirToast('Defina um nome para o modelo.', 'aviso');
-            exibirToast('Salvando na nuvem...', 'aviso');
+            if (!nome) {
+                exibirToast('Defina um nome para o modelo.', 'aviso');
+                return; // O Finally irá destravar o botão
+            }
             await AcervoManager.salvarNovoModelo(nome, _noAlvoParaSalvar);
         } else {
-            if (!_modeloSelecionadoId) return exibirToast('Selecione um modelo existente.', 'aviso');
-            exibirToast('Anexando ao modelo...', 'aviso');
+            if (!_modeloSelecionadoId) {
+                exibirToast('Selecione um modelo existente.', 'aviso');
+                return;
+            }
             await AcervoManager.adicionarNoAModelo(_modeloSelecionadoId, _noAlvoParaSalvar);
         }
-        fecharModalSalvarModelo();
+        
+        // 2. SUCESSO: Apenas aqui nós fechamos o modal (o fechamento limpa o _noAlvoParaSalvar)
+        fecharModalSalvarModelo(); 
         exibirToast('Nó salvo no acervo com sucesso!', 'sucesso');
+
     } catch (e) {
-        exibirToast('Erro ao salvar. Verifique sua conexão.', 'erro');
+        // 3. CAPTURA DE ERRO: A UI confia na camada de dados
+        console.error("[Juris Notes UI] Transação abortada:", e);
+        
+        if (e.isCustom) {
+            exibirToast(e.message, 'erro'); // Erro processado e amigável
+        } else {
+            exibirToast(`Falha: ${e.message}`, 'erro');
+        }
+        
+        // Em caso de erro, a modal NÃO FECHA. O usuário não perde os dados digitados.
+
+    } finally {
+        // 4. RESTAURAÇÃO DE ESTADO (Independente de sucesso, falha ou early return)
+        if (btnConfirmar) {
+            btnConfirmar.disabled = false;
+            btnConfirmar.style.opacity = '1';
+            btnConfirmar.innerHTML = textoOriginalBtn;
+        }
     }
 }
 
