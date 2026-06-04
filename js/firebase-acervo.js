@@ -1,5 +1,5 @@
 import { app, auth } from './firebase-auth.js'; 
-import { getFirestore, collection, doc, setDoc, getDocs, updateDoc, arrayUnion, query, orderBy, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, getDocs, updateDoc, arrayUnion, query, orderBy, getDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const db = getFirestore(app);
 
@@ -158,6 +158,57 @@ window.AcervoManager = (function() {
         modelosEmCache = []; // Invalidação agressiva de cache
     }
 
+    async function salvarConfigTags(tagsArray) {
+        const uid = getUserId();
+        if (!uid) throw new Error("Usuário não autenticado.");
+        const docRef = doc(db, "usuarios", uid, "config", "tagsGerais");
+        await setDoc(docRef, { lista: tagsArray, atualizadoEm: Date.now() });
+    }
+
+    async function carregarConfigTags() {
+        const uid = getUserId();
+        if (!uid) return [];
+        const docRef = doc(db, "usuarios", uid, "config", "tagsGerais");
+        const docSnap = await getDoc(docRef);
+        return docSnap.exists() && docSnap.data().lista ? docSnap.data().lista : [];
+    }
+
+    async function atualizarTagEmTodosModelos(tagAntiga, tagNova) {
+        const uid = getUserId();
+        if (!uid) throw new Error("Usuário não autenticado.");
+        
+        const modelos = await carregarModelos();
+        const batch = writeBatch(db); // Transação Atômica Segura
+        let operacoes = 0;
+
+        modelos.forEach(mod => {
+            if (mod.tags && mod.tags.includes(tagAntiga)) {
+                let novasTags = mod.tags;
+                if (tagNova === null) {
+                    novasTags = mod.tags.filter(t => t !== tagAntiga); // Exclusão
+                } else {
+                    novasTags = mod.tags.map(t => t === tagAntiga ? tagNova : t); // Renomeação
+                }
+                const docRef = doc(db, "usuarios", uid, "acervo", mod.id);
+                batch.update(docRef, { tags: novasTags });
+                operacoes++;
+            }
+        });
+
+        if (operacoes > 0) {
+            await batch.commit();
+            modelosEmCache = []; // Limpa cache
+        }
+    }
+
+    async function atualizarTagsDoModelo(modeloId, tagsMarcadas) {
+        const uid = getUserId();
+        if (!uid) throw new Error("Usuário não autenticado.");
+        const docRef = doc(db, "usuarios", uid, "acervo", modeloId);
+        await updateDoc(docRef, { tags: tagsMarcadas, atualizadoEm: Date.now() });
+        modelosEmCache = [];
+    }
+
     return { 
         salvarNovoModelo, 
         adicionarNoAModelo, 
@@ -165,6 +216,10 @@ window.AcervoManager = (function() {
         atualizarNoDoModelo, 
         removerNoDoModelo,
         renomearModelo,
-        excluirModeloCompleto
+        excluirModeloCompleto,
+        salvarConfigTags,
+        carregarConfigTags,
+        atualizarTagEmTodosModelos,
+        atualizarTagsDoModelo
     };
 })();
