@@ -1139,36 +1139,54 @@ async function acionarCriacaoBackup() {
 // Variáveis de Estado Isolado para o Acervo
 let _noAlvoParaSalvar = null;
 let _modeloSelecionadoId = null;
+let _modeloSelecionadoNodes = [];
+
+// --- HELPER VISUAL (Fábrica de SVGs) ---
+function getIconeAcervoSVG(intencao) {
+    const map = {
+        'comando': `<svg viewBox="0 0 24 24" fill="none" stroke="#c62828" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>`,
+        'texto': `<svg viewBox="0 0 24 24" fill="none" stroke="#1565c0" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>`,
+        'nota': `<svg viewBox="0 0 24 24" fill="none" stroke="#616161" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`,
+        'premissa': `<svg viewBox="0 0 24 24" fill="none" stroke="#7b1fa2" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>`,
+        'fundamentacao': `<svg viewBox="0 0 24 24" fill="none" stroke="#00695c" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>`,
+        'refutacao': `<svg viewBox="0 0 24 24" fill="none" stroke="#8B4513" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>`,
+        'preliminar': `<svg viewBox="0 0 24 24" fill="none" stroke="#5d4037" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`
+    };
+    return map[intencao] || map['premissa'];
+}
+
+// --- HELPER DE BUSCA DA UI ---
+window.filtrarListaUI = function(termo, listaId) {
+    const termoMin = termo.toLowerCase();
+    const items = document.querySelectorAll(`#${listaId} .acervo-item`);
+    items.forEach(item => {
+        const titulo = item.querySelector('.acervo-item-titulo').textContent.toLowerCase();
+        item.style.display = titulo.includes(termoMin) ? 'flex' : 'none';
+    });
+};
 
 // ==========================================
 // MÓDULO 1: SALVAR NO ACERVO
 // ==========================================
 function abrirModalSalvarModelo() {
-    if (typeof _menuSubAnotacaoCtx === 'undefined' || !_menuSubAnotacaoCtx) {
-        exibirToast('Contexto do nó perdido.', 'erro');
-        return;
-    }
+    if (!window.AcervoManager) return exibirToast('Conecte-se ao Firebase primeiro.', 'erro');
+    if (typeof _menuSubAnotacaoCtx === 'undefined' || !_menuSubAnotacaoCtx) return;
     
     const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
-    
-    // Fallback inline para _resolverSubAlvo, caso não esteja visível no escopo global
     const alvo = (typeof _resolverSubAlvo === 'function') 
         ? _resolverSubAlvo(topico, _menuSubAnotacaoCtx.parentIndex, _menuSubAnotacaoCtx.viewSource)
         : topico.anotacoes[_menuSubAnotacaoCtx.parentIndex];
     
-    // Captura segura da referência em memória
     _noAlvoParaSalvar = alvo.subAnotacoes[_menuSubAnotacaoCtx.localIndex];
 
     document.getElementById('sub-annotation-context-menu').style.display = 'none';
-    
-    // Reset da Interface
     document.querySelector('input[name="modo_salvar_modelo"][value="novo"]').checked = true;
     document.getElementById('input-nome-modelo').value = '';
-    document.getElementById('input-busca-modelo').value = '';
-    toggleModoSalvarModelo();
     
+    // UI Síncrona
     document.getElementById('wizard-backdrop').style.display = 'block';
     document.getElementById('modal-salvar-modelo').style.display = 'flex';
+    toggleModoSalvarModelo(); 
 }
 
 function toggleModoSalvarModelo() {
@@ -1177,8 +1195,25 @@ function toggleModoSalvarModelo() {
     document.getElementById('box-modelo-existente').style.display = isNovo ? 'none' : 'block';
     
     if (!isNovo) {
-        // [FUTURO STUB: Disparar renderização/leitura do Firebase na div #lista-modelos-salvar]
-        console.log("Integração Firebase: Carregar modelos existentes para agrupamento.");
+        const container = document.getElementById('lista-modelos-salvar');
+        container.innerHTML = '<div class="acervo-loader"></div>';
+        
+        AcervoManager.carregarModelos().then(modelos => {
+            container.innerHTML = modelos.length === 0 ? '<p style="text-align:center; font-size:0.8rem;">Nenhum modelo encontrado.</p>' : '';
+            modelos.forEach(mod => {
+                const item = document.createElement('div');
+                item.className = 'acervo-item';
+                item.innerHTML = `<div class="acervo-item-titulo">${TopicsManager.escaparHTML(mod.nome)}</div><div style="font-size:0.7rem; color:#888;">${mod.nos.length} nó(s) salvos</div>`;
+                item.onclick = () => {
+                    document.querySelectorAll('#lista-modelos-salvar .acervo-item').forEach(el => el.classList.remove('selected'));
+                    item.classList.add('selected');
+                    _modeloSelecionadoId = mod.id;
+                };
+                container.appendChild(item);
+            });
+        }).catch(() => {
+            container.innerHTML = '<p style="color:red; font-size:0.8rem;">Erro ao conectar. Faça login.</p>';
+        });
     }
 }
 
@@ -1188,82 +1223,106 @@ function fecharModalSalvarModelo() {
     _noAlvoParaSalvar = null;
 }
 
-function confirmarSalvarModelo() {
+async function confirmarSalvarModelo() {
     if (!_noAlvoParaSalvar) return;
     
     const isNovo = document.querySelector('input[name="modo_salvar_modelo"]:checked').value === 'novo';
-    const payload = structuredClone(_noAlvoParaSalvar);
-    
-    if (isNovo) {
-        const nome = document.getElementById('input-nome-modelo').value.trim();
-        if (!nome) return exibirToast('Defina um nome para o modelo.', 'aviso');
-        
-        // [FUTURO STUB: Escrita Firebase - SetDoc Novo Modelo com payload (Node Array)]
-        console.log(`Integração Firebase: Salvar novo modelo "${nome}" com 1 nó.`, payload);
-    } else {
-        // [FUTURO STUB: Escrita Firebase - UpdateDoc Modelo Existente (ArrayUnion)]
-        console.log(`Integração Firebase: Adicionar nó ao modelo existente.`, payload);
+    try {
+        if (isNovo) {
+            const nome = document.getElementById('input-nome-modelo').value.trim();
+            if (!nome) return exibirToast('Defina um nome para o modelo.', 'aviso');
+            exibirToast('Salvando na nuvem...', 'aviso');
+            await AcervoManager.salvarNovoModelo(nome, _noAlvoParaSalvar);
+        } else {
+            if (!_modeloSelecionadoId) return exibirToast('Selecione um modelo existente.', 'aviso');
+            exibirToast('Anexando ao modelo...', 'aviso');
+            await AcervoManager.adicionarNoAModelo(_modeloSelecionadoId, _noAlvoParaSalvar);
+        }
+        fecharModalSalvarModelo();
+        exibirToast('Nó salvo no acervo com sucesso!', 'sucesso');
+    } catch (e) {
+        exibirToast('Erro ao salvar. Verifique sua conexão.', 'erro');
     }
-    
-    fecharModalSalvarModelo();
-    exibirToast('Nó salvo no acervo com sucesso!', 'sucesso');
 }
 
 // ==========================================
 // MÓDULO 2: INSERIR DO ACERVO
 // ==========================================
 function abrirModalAcervo() {
-    document.getElementById('input-pesquisa-acervo').value = '';
-    document.getElementById('input-destino-acervo').value = '';
-    document.getElementById('box-destino-acervo').style.display = 'none';
-    document.getElementById('btn-inserir-acervo').style.display = 'none';
-    _modeloSelecionadoId = null;
+    if (!window.AcervoManager) return exibirToast('Conecte-se ao Firebase primeiro.', 'erro');
     
-    // [FUTURO STUB: Leitura Firebase - Popular div #lista-acervo-geral]
-    // A seleção de um item no DOM atualizará a variável _modeloSelecionadoId e mostrará a caixa de destino.
-    
+    // UI Síncrona
     document.getElementById('wizard-backdrop').style.display = 'block';
     document.getElementById('modal-acervo-inserir').style.display = 'flex';
+    
+    document.getElementById('input-pesquisa-acervo').value = '';
+    document.getElementById('box-destino-acervo').style.display = 'none';
+    document.getElementById('box-preview-acervo').style.display = 'none';
+    document.getElementById('btn-inserir-acervo').style.display = 'none';
+    _modeloSelecionadoId = null; _modeloSelecionadoNodes = [];
+    
+    const container = document.getElementById('lista-acervo-geral');
+    container.innerHTML = '<div class="acervo-loader"></div>';
+    
+    AcervoManager.carregarModelos().then(modelos => {
+        container.innerHTML = modelos.length === 0 ? '<p style="text-align:center; font-size:0.8rem;">Acervo vazio.</p>' : '';
+        modelos.forEach(mod => {
+            const item = document.createElement('div');
+            item.className = 'acervo-item';
+            item.innerHTML = `<div class="acervo-item-titulo">${TopicsManager.escaparHTML(mod.nome)}</div><div style="font-size:0.7rem; color:#888;">${mod.nos.length} nó(s) salvos</div>`;
+            
+            item.onclick = () => {
+                document.querySelectorAll('#lista-acervo-geral .acervo-item').forEach(el => el.classList.remove('selected'));
+                item.classList.add('selected');
+                _modeloSelecionadoId = mod.id;
+                _modeloSelecionadoNodes = mod.nos;
+                
+                // Pré-visualização RICA com Ícones
+                const previewHtml = mod.nos.map(n => `
+                    <div class="acervo-node-preview">
+                        ${getIconeAcervoSVG(n.intencao)}
+                        <span class="acervo-node-text">${TopicsManager.escaparHTML(n.texto)}</span>
+                    </div>
+                `).join('');
+                
+                document.getElementById('box-preview-acervo').innerHTML = previewHtml;
+                document.getElementById('box-preview-acervo').style.display = 'block';
+                document.getElementById('box-destino-acervo').style.display = 'block';
+                document.getElementById('btn-inserir-acervo').style.display = 'block';
+            };
+            container.appendChild(item);
+        });
+    }).catch(() => container.innerHTML = '<p style="color:red; text-align:center;">Erro ao conectar.</p>');
 }
 
 function fecharModalAcervo() {
     document.getElementById('wizard-backdrop').style.display = 'none';
     document.getElementById('modal-acervo-inserir').style.display = 'none';
-    _modeloSelecionadoId = null;
 }
 
 function confirmarInsercaoAcervo() {
-    const destinoInput = document.getElementById('input-destino-acervo').value;
-    const destinoIdx = parseInt(destinoInput, 10) - 1;
-    
+    if (_modeloSelecionadoNodes.length === 0) return;
+
+    const destinoIdx = parseInt(document.getElementById('input-destino-acervo').value, 10) - 1;
     const topicoId = typeof TopicsManager !== 'undefined' ? TopicsManager.getActiveTabId() : null;
-    if (!topicoId) return;
     
+    if (!topicoId) return;
     const topico = topicos.find(t => t.id === topicoId);
     
     if (isNaN(destinoIdx) || destinoIdx < 0 || destinoIdx >= topico.anotacoes.length) {
         return exibirToast('Número de Ideia Principal inválido.', 'erro');
     }
 
-    // [FUTURO STUB: Obter array de nós do Firebase usando _modeloSelecionadoId]
-    // Simulando recebimento dos nós salvos:
-    const nodesDoModeloFirebase = []; 
-    
-    if (nodesDoModeloFirebase.length === 0) {
-        // Simulação de proteção para prosseguir em teste de UI
-        fecharModalAcervo();
-        return exibirToast('Simulação: Modelo inserido na Ideia (Firebase pendente).', 'sucesso');
-    }
-
     const cardDestino = topico.anotacoes[destinoIdx];
     if (!cardDestino.subAnotacoes) cardDestino.subAnotacoes = [];
     
-    // Processo rigoroso de Clonagem e injeção de UUID seguro (crypto API)
-    nodesDoModeloFirebase.forEach(node => {
-        const clonedNode = structuredClone(node);
-        clonedNode.uuid = 'id-' + crypto.randomUUID(); 
-        clonedNode.timestamp = Date.now();
-        cardDestino.subAnotacoes.push(clonedNode);
+    _modeloSelecionadoNodes.forEach(node => {
+        cardDestino.subAnotacoes.push({
+            uuid: 'id-' + crypto.randomUUID(),
+            texto: node.texto,
+            intencao: node.intencao,
+            timestamp: Date.now()
+        });
     });
 
     renderizarTopicos();
