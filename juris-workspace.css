@@ -1232,3 +1232,26 @@
     margin-right: 4px;
     margin-bottom: 4px;
 }
+
+/* Loading e Preview do Acervo */
+.acervo-loader {
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    border-left-color: var(--trt-blue);
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    animation: spin 1s linear infinite;
+    margin: 16px auto;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+.acervo-node-preview {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0; border-bottom: 1px solid #eee;
+}
+.acervo-node-preview:last-child { border-bottom: none; }
+.acervo-node-preview svg { width: 16px; height: 16px; flex-shrink: 0; }
+.acervo-node-text {
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
+    color: #555; font-style: italic;
+}

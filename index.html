@@ -755,7 +755,7 @@
 
         <div id="box-modelo-existente" style="display: none;">
             <p class="popup-label">Buscar modelo existente:</p>
-            <input type="text" id="input-busca-modelo" class="topic-select" placeholder="Digite para buscar..." autocomplete="off">
+            <input type="text" id="input-busca-modelo" class="topic-select" placeholder="Digite para buscar..." autocomplete="off" oninput="filtrarListaUI(this.value, 'lista-modelos-salvar')">
             <div id="lista-modelos-salvar" class="doc-list-container" style="margin-top: 8px; max-height: 120px;">
             </div>
         </div>
@@ -768,10 +768,12 @@
 
     <div id="modal-acervo-inserir" class="crop-wizard-popup" style="display:none; z-index: 4005; min-width: 420px;">
         <div class="wizard-header">Acervo de Modelos</div>
-        <input type="text" id="input-pesquisa-acervo" class="topic-select" placeholder="Pesquisar modelo..." style="margin-bottom: 12px;">
+        <input type="text" id="input-pesquisa-acervo" class="topic-select" placeholder="Pesquisar modelo..." style="margin-bottom: 12px;" oninput="filtrarListaUI(this.value, 'lista-acervo-geral')">
         
         <div id="lista-acervo-geral" class="doc-list-container" style="max-height: 220px;">
         </div>
+
+        <div id="box-preview-acervo" style="display:none; margin-top: 8px; background: #fafafa; padding: 8px; border-radius: 6px; border: 1px dashed #ccc; font-size: 0.8rem; max-height: 110px; overflow-y: auto;"></div>
 
         <div id="box-destino-acervo" style="display:none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color);">
             <p class="popup-label">Destino (Nº do Card de Ideia Principal):</p>
@@ -796,7 +798,8 @@
         </button>
     </div>
 
-    <!-- SCRIPT DE AUTENTICAÇÃO -->
+    <!-- SCRIPT DE AUTENTICAÇÃO E ACERVO -->
     <script type="module" src="js/firebase-auth.js"></script>
+    <script type="module" src="js/firebase-acervo.js"></script>
 </body>
 </html>
