@@ -1315,6 +1315,11 @@ async function confirmarSalvarModelo() {
 // ==========================================
 function abrirModalAcervo() {
     if (!window.AcervoManager) return exibirToast('Conecte-se ao Firebase primeiro.', 'erro');
+
+    // Carrega tags globais antes de abrir o modal
+    if (typeof AcervoManager.carregarConfigTags === 'function') {
+        AcervoManager.carregarConfigTags().then(tags => { _tagsGlobais = tags; });
+    }
     
     // INJETADO: Efeito visual sem duplicar CSS
     document.getElementById('history-container').classList.add('pdf-foco-ativo');
@@ -1429,17 +1434,17 @@ window.abrirEdicaoModeloAcervo = async function(event, modeloId) {
 
     document.getElementById('edit-modelo-nome').textContent = modelo.nome;
     
-    // NOVO: Renderiza Checkboxes de Tags
+    // INJEÇÃO DA UI DE VÍNCULO (Checkboxes)
     const containerTags = document.getElementById('container-checkboxes-tags');
     containerTags.innerHTML = _tagsGlobais.map(tag => {
         const isChecked = (modelo.tags || []).includes(tag) ? 'checked' : '';
         return `
-            <label style="font-size:0.75rem; display:flex; align-items:center; gap:4px; cursor:pointer;" class="acervo-tag-chip">
+            <label class="acervo-tag-chip" style="cursor:pointer;">
                 <input type="checkbox" class="modelo-tag-checkbox" value="${TopicsManager.escaparHTML(tag)}" ${isChecked} onchange="atualizarTagsModelo('${modeloId}')"> 
-                ${TopicsManager.escaparHTML(tag)}
+                &nbsp;${TopicsManager.escaparHTML(tag)}
             </label>
         `;
-    }).join('') || '<span style="font-size:0.7rem; color:#888;">Nenhuma tag cadastrada no sistema.</span>';
+    }).join('') || '<span style="font-size:0.7rem; color:#888;">Nenhuma tag cadastrada.</span>';
 
     const container = document.getElementById('lista-edicao-nos-acervo');
     container.innerHTML = '';
@@ -1509,11 +1514,12 @@ window.fecharModalGerenciarTags = function() {
 function renderizarListaTagsGlobais() {
     const container = document.getElementById('lista-tags-globais');
     container.innerHTML = _tagsGlobais.map((tag, idx) => `
-        <div style="display:flex; justify-content:space-between; align-items:center; background:#fafafa; padding:6px 10px; border:1px solid #eee; border-radius:4px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#fafafa; padding:6px 10px; border:1px solid #eee; border-radius:4px; margin-bottom:4px;">
             <span class="acervo-tag-chip">${TopicsManager.escaparHTML(tag)}</span>
-            <button class="acervo-action-btn delete-btn" onclick="excluirTagGlobal(${idx})">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            </button>
+            <div style="display:flex; gap:4px;">
+                <button class="acervo-action-btn" onclick="editarTagGlobal(${idx})" title="Renomear Tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+                <button class="acervo-action-btn delete-btn" onclick="excluirTagGlobal(${idx})" title="Excluir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+            </div>
         </div>
     `).join('') || '<p style="font-size:0.8rem; color:#888;">Nenhuma tag criada.</p>';
 }
@@ -1536,27 +1542,49 @@ window.adicionarTagGlobal = async function() {
     }
 };
 
+window.editarTagGlobal = async function(idx) {
+    const tagAntiga = _tagsGlobais[idx];
+    const novoNome = prompt('Renomear tag (atualizará todos os modelos):', tagAntiga);
+    if (!novoNome || novoNome.trim() === '' || novoNome.trim() === tagAntiga) return;
+    
+    const nomeLimpo = novoNome.trim();
+    if (_tagsGlobais.includes(nomeLimpo)) return exibirToast('Esta tag já existe.', 'erro');
+
+    _tagsGlobais[idx] = nomeLimpo; // Update local optimista
+    try {
+        await AcervoManager.salvarConfigTags(_tagsGlobais);
+        await AcervoManager.atualizarTagEmTodosModelos(tagAntiga, nomeLimpo);
+        renderizarListaTagsGlobais();
+        exibirToast('Tag renomeada com sucesso!', 'sucesso');
+    } catch(e) { 
+        _tagsGlobais[idx] = tagAntiga; // Rollback
+        exibirToast('Erro ao renomear tag.', 'erro'); 
+    }
+};
+
 window.excluirTagGlobal = async function(idx) {
-    if(!confirm('Excluir esta tag? Ela será removida de todos os modelos futuramente.')) return;
+    const tagAntiga = _tagsGlobais[idx];
+    if(!confirm(`Excluir a tag "${tagAntiga}"?\nEla será removida de todos os modelos que a utilizam.`)) return;
+    
     const removida = _tagsGlobais.splice(idx, 1)[0];
     try {
-        if(window.AcervoManager && typeof AcervoManager.salvarConfigTags === 'function') {
-            await AcervoManager.salvarConfigTags(_tagsGlobais);
-        }
+        await AcervoManager.salvarConfigTags(_tagsGlobais);
+        await AcervoManager.atualizarTagEmTodosModelos(removida, null); // Null = Excluir dos modelos
         renderizarListaTagsGlobais();
+        exibirToast('Tag excluída.', 'sucesso');
     } catch(e) { 
-        _tagsGlobais.splice(idx, 0, removida); 
+        _tagsGlobais.splice(idx, 0, removida); // Rollback
         exibirToast('Erro ao excluir tag.', 'erro');
     }
 };
 
 window.atualizarTagsModelo = async function(modeloId) {
-    if (!window.AcervoManager || typeof AcervoManager.atualizarTagsDoModelo !== 'function') return;
+    if (!window.AcervoManager) return;
     const marcados = Array.from(document.querySelectorAll('.modelo-tag-checkbox:checked')).map(cb => cb.value);
     try {
         await AcervoManager.atualizarTagsDoModelo(modeloId, marcados);
     } catch (e) {
-        exibirToast('Erro ao associar tag ao modelo.', 'erro');
+        exibirToast('Erro ao salvar tag no modelo.', 'erro');
     }
 };
 
