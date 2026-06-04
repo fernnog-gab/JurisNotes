@@ -118,10 +118,12 @@
                     </svg>
                 </button>
 
-                <button class="icon-btn" id="btn-arquivo-futuro" title="Funcionalidade Futura (Arquivo)" disabled>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-                        <polyline points="13 2 13 9 20 9"></polyline>
+                <button class="icon-btn" id="btn-arquivo-futuro" title="Funcionalidade Futura (Arquivo de Fichário)" disabled>
+                    <!-- Novo SVG: Formato de caixa de arquivo de aço/fichário antigo -->
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="20" height="5" x="2" y="3" rx="1"/>
+                        <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/>
+                        <path d="M10 12h4"/>
                     </svg>
                 </button>
 
@@ -732,6 +734,6 @@
     </div>
 
     <!-- SCRIPT DE AUTENTICAÇÃO -->
-    <script src="js/firebase-auth.js"></script>
+    <script type="module" src="js/firebase-auth.js"></script>
 </body>
 </html>
