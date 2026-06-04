@@ -816,18 +816,23 @@
         </div>
     </div>
 
-    <!-- MODAL GERENCIAR TAGS -->
-    <div id="modal-gerenciar-tags" class="crop-wizard-popup" style="display:none; z-index: 4007;">
+    <!-- MODAL GERENCIAR TAGS (HTML Limpo) -->
+    <div id="modal-gerenciar-tags" class="crop-wizard-popup" style="display:none; z-index: 4007; min-width: 380px;">
         <div class="wizard-header">🏷️ Gerenciar Tags Globais</div>
-        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-            <input type="text" id="input-nova-tag" class="topic-select" placeholder="Nova tag (ex: Dano Moral)" style="flex: 1;">
-            <button class="chip-btn chip-autora" style="background: var(--creme-neon-bg, #FDFCE5); color: var(--creme-neon-text, #4A4A32); border: 1px solid var(--creme-neon-border, #EBE6C5);" onclick="adicionarTagGlobal()">+ Adicionar</button>
+        
+        <!-- Área da Barra de Busca e Botão -->
+        <div style="display: flex; gap: 8px; margin-bottom: 12px; align-items: stretch;">
+            <input type="text" id="input-nova-tag" class="topic-select" placeholder="Digite uma nova tag (Ex: Dano Moral)" style="flex: 1; margin: 0;">
+            <button class="chip-btn chip-autora" style="width: auto; padding: 0 16px; background: var(--creme-neon-bg, #FDFCE5); color: var(--creme-neon-text, #4A4A32); border: 1px solid var(--creme-neon-border, #EBE6C5);" onclick="adicionarTagGlobal()">+ Adicionar</button>
         </div>
-        <div id="lista-tags-globais" class="doc-list-container" style="max-height: 150px; padding: 8px; display: flex; flex-direction: column; gap: 6px;">
-            <!-- Lista de tags via JS -->
+        
+        <!-- Área da Lista -->
+        <div id="lista-tags-globais" class="doc-list-container" style="max-height: 180px; padding: 8px; display: flex; flex-direction: column; gap: 6px;">
+            <!-- Lista de tags será injetada aqui via JS -->
         </div>
+        
         <div class="wizard-actions">
-            <button class="chip-btn chip-cancelar" onclick="fecharModalGerenciarTags()">✕ Fechar</button>
+            <button class="chip-btn chip-cancelar" onclick="fecharModalGerenciarTags()">✕ Voltar ao Acervo</button>
         </div>
     </div>
 
