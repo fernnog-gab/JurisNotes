@@ -125,16 +125,13 @@
                 </button>
 
                 <button class="icon-btn" id="btn-acervo-modelos" title="Acervo de Modelos" style="display: none;" onclick="abrirModalAcervo()">
-                    <div style="display:flex; flex-direction:column; align-items:center; gap: 2px;">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px;">
-                            <rect width="20" height="5" x="2" y="3" rx="1"/>
-                            <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/>
-                            <path d="M10 12h4"/>
-                        </svg>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width: 12px; height: 12px; margin-top: -4px;">
-                            <path d="M5 12h14M12 5l7 7-7 7"/>
-                        </svg>
-                    </div>
+                    <svg class="icone-creme-neon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 24px; height: 24px;">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <line x1="10" y1="9" x2="8" y2="9"/>
+                    </svg>
                 </button>
                 
             </div>
@@ -763,7 +760,15 @@
 
     <div id="modal-acervo-inserir" class="crop-wizard-popup" style="display:none; z-index: 4005;">
         <div class="wizard-header">Acervo de Modelos</div>
-        <input type="text" id="input-pesquisa-acervo" class="topic-select" placeholder="Pesquisar modelo..." style="margin-bottom: 12px;" oninput="filtrarListaUI(this.value, 'lista-acervo-geral')">
+        <div style="display: flex; gap: 8px; margin-bottom: 12px; width: 100%;">
+            <input type="text" id="input-pesquisa-acervo" class="topic-select" placeholder="Pesquisar modelo ou tag..." style="flex: 1;" oninput="filtrarListaUI(this.value, 'lista-acervo-geral')">
+            <button class="acervo-action-btn tag-btn-creme" title="Gerenciar Tags" onclick="abrirModalGerenciarTags()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                    <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                </svg>
+            </button>
+        </div>
         
         <div id="lista-acervo-geral" class="doc-list-container" style="max-height: 220px;">
         </div>
@@ -795,6 +800,13 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
         </div>
+
+        <div id="area-associar-tags" style="margin-top: 12px; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; background: #fafafa;">
+            <p class="popup-label" style="margin-bottom: 6px;">Etiquetas (Tags) do Modelo:</p>
+            <div id="container-checkboxes-tags" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <!-- Checkboxes gerados via JS -->
+            </div>
+        </div>
         
         <div id="lista-edicao-nos-acervo" class="doc-list-container" style="max-height: 50vh; overflow-y: auto; padding: 10px; margin-top: 12px;">
             <!-- Preenchido via JS -->
@@ -802,6 +814,21 @@
 
         <div class="wizard-actions">
             <button class="chip-btn chip-cancelar" onclick="fecharModalEdicaoAcervo()">✕ Fechar e Voltar</button>
+        </div>
+    </div>
+
+    <!-- MODAL GERENCIAR TAGS -->
+    <div id="modal-gerenciar-tags" class="crop-wizard-popup" style="display:none; z-index: 4007;">
+        <div class="wizard-header">🏷️ Gerenciar Tags Globais</div>
+        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+            <input type="text" id="input-nova-tag" class="topic-select" placeholder="Nova tag (ex: Dano Moral)" style="flex: 1;">
+            <button class="chip-btn chip-autora" style="background: var(--creme-neon-bg, #FDFCE5); color: var(--creme-neon-text, #4A4A32); border: 1px solid var(--creme-neon-border, #EBE6C5);" onclick="adicionarTagGlobal()">+ Adicionar</button>
+        </div>
+        <div id="lista-tags-globais" class="doc-list-container" style="max-height: 150px; padding: 8px; display: flex; flex-direction: column; gap: 6px;">
+            <!-- Lista de tags via JS -->
+        </div>
+        <div class="wizard-actions">
+            <button class="chip-btn chip-cancelar" onclick="fecharModalGerenciarTags()">✕ Fechar</button>
         </div>
     </div>
 
