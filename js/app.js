@@ -1155,10 +1155,21 @@ function getIconeAcervoSVG(intencao) {
         'premissa': `<svg viewBox="0 0 24 24" fill="none" stroke="#7b1fa2" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>`,
         'fundamentacao': `<svg viewBox="0 0 24 24" fill="none" stroke="#00695c" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>`,
         'refutacao': `<svg viewBox="0 0 24 24" fill="none" stroke="#8B4513" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>`,
-        'preliminar': `<svg viewBox="0 0 24 24" fill="none" stroke="#5d4037" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`
+        'preliminar': `<svg viewBox="0 0 24 24" fill="none" stroke="#5d4037" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`,
+        // NOVO: Adicionado o Veredito para cobrir o gap de domínio.
+        'veredito': `<svg viewBox="0 0 24 24" fill="none" stroke="#e65100" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`
     };
     return map[intencao] || map['premissa'];
 }
+
+// Função pura para atualizar visualmente o ícone sem mutar o banco de dados
+window.atualizarIconeAcervoUI = function(selectElement) {
+    const container = selectElement.closest('.acervo-node-edit-box');
+    const iconDiv = container.querySelector('.svg-icon-wrapper');
+    if (iconDiv && typeof getIconeAcervoSVG === 'function') {
+        iconDiv.innerHTML = getIconeAcervoSVG(selectElement.value);
+    }
+};
 
 // --- HELPER DE BUSCA DA UI ---
 window.filtrarListaUI = function(termo, listaId) {
@@ -1399,7 +1410,6 @@ window.abrirEdicaoModeloAcervo = async function(event, modeloId) {
     
     document.getElementById('modal-acervo-inserir').style.display = 'none';
     
-    // Traz os dados frescos
     const modelos = await AcervoManager.carregarModelos();
     const modelo = modelos.find(m => m.id === modeloId);
     if(!modelo) return;
@@ -1408,15 +1418,39 @@ window.abrirEdicaoModeloAcervo = async function(event, modeloId) {
     const container = document.getElementById('lista-edicao-nos-acervo');
     container.innerHTML = '';
 
+    // Dicionário Estrito Alinhado com o Domínio de Ícones
+    const listaIntencoes = [
+        { val: 'premissa', label: 'Premissa Lógica' },
+        { val: 'comando', label: 'Comando Direto' },
+        { val: 'texto', label: 'Texto Fixo' },
+        { val: 'nota', label: 'Nota Oculta' },
+        { val: 'veredito', label: 'Veredito / Conclusão' },
+        { val: 'fundamentacao', label: 'Fundamentação Legal' },
+        { val: 'refutacao', label: 'Refutação (Mérito)' },
+        { val: 'preliminar', label: 'Filtro / Prejudicial' }
+    ];
+
     modelo.nos.forEach((no, index) => {
         const box = document.createElement('div');
         box.className = 'acervo-node-edit-box';
         
+        const optionsHtml = listaIntencoes.map(i => 
+            `<option value="${i.val}" ${no.intencao === i.val ? 'selected' : ''}>${i.label}</option>`
+        ).join('');
+
+        // Notar a classe .svg-icon-wrapper acoplada na div do SVG para alvo do JS
         box.innerHTML = `
-            <div style="padding-top: 8px;">${typeof getIconeAcervoSVG === 'function' ? getIconeAcervoSVG(no.intencao) : '📄'}</div>
-            <textarea class="acervo-node-edit-textarea" id="edit-no-${modeloId}-${index}">${TopicsManager.escaparHTML(no.texto)}</textarea>
+            <div class="svg-icon-wrapper" style="padding-top: 8px;">
+                ${typeof getIconeAcervoSVG === 'function' ? getIconeAcervoSVG(no.intencao) : '📄'}
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+                <select id="edit-intencao-${modeloId}-${index}" class="topic-select" style="padding: 4px 8px; font-size: 0.75rem; width: fit-content;" onchange="window.atualizarIconeAcervoUI(this)">
+                    ${optionsHtml}
+                </select>
+                <textarea class="acervo-node-edit-textarea" id="edit-no-${modeloId}-${index}" style="width: 100%;">${TopicsManager.escaparHTML(no.texto)}</textarea>
+            </div>
             <div style="display:flex; flex-direction:column; gap:4px;">
-                <button class="acervo-action-btn" title="Salvar Alteração de Texto" onclick="salvarTextoNoAcervo('${modeloId}', ${index})">
+                <button class="acervo-action-btn" title="Salvar Alteração" onclick="salvarTextoNoAcervo('${modeloId}', ${index})">
                     <svg viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
                 </button>
                 <button class="acervo-action-btn delete-btn" title="Excluir Nó" onclick="excluirNoAcervo('${modeloId}', ${index})">
@@ -1437,24 +1471,53 @@ window.fecharModalEdicaoAcervo = function() {
 
 window.salvarTextoNoAcervo = async function(modeloId, nodeIndex) {
     const textarea = document.getElementById(`edit-no-${modeloId}-${nodeIndex}`);
+    const seletor = document.getElementById(`edit-intencao-${modeloId}-${nodeIndex}`);
+    
     const novoTexto = textarea.value.trim();
+    const novaIntencao = seletor ? seletor.value : 'premissa';
+
     if(!novoTexto) return exibirToast('O texto não pode ser vazio.', 'aviso');
 
     try {
-        await AcervoManager.atualizarNoDoModelo(modeloId, nodeIndex, { texto: novoTexto });
-        exibirToast('Texto atualizado com sucesso!', 'sucesso');
+        await AcervoManager.atualizarNoDoModelo(modeloId, nodeIndex, { 
+            texto: novoTexto, 
+            intencao: novaIntencao 
+        });
+        exibirToast('Atualizado com sucesso!', 'sucesso');
+        // A UI local já foi atualizada pelo onchange, não há necessidade de re-renderizar todo o modal.
     } catch(e) { 
         exibirToast('Erro ao atualizar na nuvem.', 'erro'); 
     }
 };
 
 window.excluirNoAcervo = async function(modeloId, nodeIndex) {
-    if(!confirm('Tem certeza que deseja excluir este nó definitivamente do modelo?')) return;
+    const modelos = await AcervoManager.carregarModelos();
+    const modelo = modelos.find(m => m.id === modeloId);
+    if (!modelo) return;
+
+    // Guarda de Segurança: Limpeza de pasta raiz
+    if (modelo.nos.length === 1) {
+        const confirmacao = confirm(`ATENÇÃO: Este é o último nó do modelo!\n\nAo excluí-lo, o modelo "${modelo.nome}" será inteiramente apagado do acervo.\nDeseja continuar?`);
+        if (!confirmacao) return;
+
+        try {
+            await AcervoManager.excluirModeloCompleto(modeloId);
+            exibirToast('Último nó removido e modelo excluído.', 'sucesso');
+            fecharModalEdicaoAcervo();
+            abrirModalAcervo(); // Re-render mestre
+        } catch(e) { 
+            exibirToast('Erro de permissão ou rede ao excluir o modelo.', 'erro'); 
+        }
+        return; // Interrompe o fluxo (Fail-Fast)
+    } 
+
+    // Fluxo padrão para nós comuns
+    if (!confirm('Tem certeza que deseja excluir este nó do modelo?')) return;
     
     try {
         await AcervoManager.removerNoDoModelo(modeloId, nodeIndex);
         exibirToast('Nó excluído com sucesso.', 'sucesso');
-        abrirEdicaoModeloAcervo(null, modeloId); // Recarrega a UI com o array novo
+        abrirEdicaoModeloAcervo(null, modeloId); // Re-render local
     } catch(e) { 
         exibirToast('Erro ao excluir nó.', 'erro'); 
     }
