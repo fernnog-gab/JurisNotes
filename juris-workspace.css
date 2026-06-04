@@ -1255,3 +1255,55 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
     color: #555; font-style: italic;
 }
+
+/* Ampliação Segura dos Modais de Acervo */
+#modal-acervo-inserir,
+#modal-editar-modelo-acervo {
+    width: 80vw;
+    max-width: 900px;
+}
+
+#lista-acervo-geral {
+    max-height: 40vh;
+}
+
+/* UI de Edição do Acervo */
+.acervo-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.acervo-action-btn {
+    background: transparent;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.acervo-action-btn:hover { background: #f0f4f8; color: var(--trt-blue); }
+.acervo-action-btn.delete-btn:hover { background: #ffebee; color: #c62828; }
+.acervo-action-btn svg { width: 16px; height: 16px; pointer-events: none; }
+
+.acervo-node-edit-box {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    background: #fafafa;
+}
+
+.acervo-node-edit-textarea {
+    flex: 1; min-height: 60px; font-family: inherit; font-size: 0.85rem;
+    padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;
+    resize: vertical; outline: none; transition: border-color 0.2s;
+}
+.acervo-node-edit-textarea:focus { border-color: var(--trt-blue-mid); background: white; }
