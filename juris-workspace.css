@@ -594,12 +594,13 @@
     border-radius: 12px; padding: 20px; box-shadow: 0 12px 48px rgba(0, 0, 0, 0.28);
     z-index: var(--z-wizard-modal);
     min-width: 360px; max-width: 90vw;
+    max-height: 90vh; overflow-y: auto;
     display: flex; flex-direction: column; gap: 12px;
 }
 
 .wizard-header { font-size: 1.05rem; font-weight: 800; color: var(--trt-blue); border-bottom: 2px solid var(--trt-light-bg); padding-bottom: 8px; margin-bottom: 4px; }
 .wizard-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; padding-top: 12px; border-top: 1px solid #eee; }
-.crop-preview-container { text-align: center; background: var(--trt-light-bg); border: 2px dashed var(--border-color); border-radius: 8px; padding: 12px; max-height: 260px; overflow-y: auto; }
+.crop-preview-container { text-align: center; background: var(--trt-light-bg); border: 2px dashed var(--border-color); border-radius: 8px; padding: 12px; max-height: 40vh; overflow-y: auto; }
 .crop-preview-container img { max-width: 100%; border-radius: 4px; box-shadow: var(--shadow-sm); }
 .wizard-polo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
@@ -835,7 +836,7 @@
 .audio-icon-box svg { width: 20px; height: 20px; }
 .audio-card-meta { line-height: 1.5; }
 .audio-card-meta strong { color: var(--trt-blue-mid); }
-.audio-card-meta span { font-size: 0.85rem; color: #555; }
+.audio-card-meta span:not([class]) { font-size: 0.85rem; color: #555; }
 
 /* Redimensionamento automático do ícone de áudio em cards filhos */
 .correlated-card .audio-icon-box {

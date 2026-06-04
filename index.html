@@ -799,11 +799,28 @@
         <div style="font-size: 0.9rem; font-weight: bold; color: var(--trt-blue); margin-bottom: 4px; text-align: center;">
             Acesso Seguro
         </div>
-        <input type="email" id="login-email" class="login-input" placeholder="Seu E-mail" autocomplete="email">
-        <input type="password" id="login-senha" class="login-input" placeholder="Sua Senha" autocomplete="current-password">
-        <button class="chip-btn chip-autora" style="background: var(--trt-blue); color: white; border-color: var(--trt-blue); margin-top: 4px;" onclick="FirebaseAuth.realizarLogin()">
-            ✔ Autenticar
-        </button>
+        
+        <!-- Loader visual temporário enquanto o Firebase verifica a sessão -->
+        <div id="login-loading-state" style="text-align: center; color: #888; font-size: 0.85rem; display: block;">
+            Verificando sessão...
+        </div>
+
+        <!-- ESTADO 1: Deslogado (Inicia oculto) -->
+        <div id="login-form-state" style="display: none; flex-direction: column; gap: 10px;">
+            <input type="email" id="login-email" class="login-input" placeholder="Seu E-mail" autocomplete="email">
+            <input type="password" id="login-senha" class="login-input" placeholder="Sua Senha" autocomplete="current-password">
+            <button class="chip-btn chip-autora" style="background: var(--trt-blue); color: white; border-color: var(--trt-blue); margin-top: 4px;" onclick="FirebaseAuth.realizarLogin()">
+                ✔ Autenticar
+            </button>
+        </div>
+
+        <!-- ESTADO 2: Logado (Inicia oculto) -->
+        <div id="login-logged-state" style="display: none; flex-direction: column; gap: 10px; text-align: center;">
+            <p style="font-size: 0.85rem; color: #555;">Sessão ativa. Conectado à nuvem.</p>
+            <button class="chip-btn chip-re" style="margin-top: 4px;" onclick="FirebaseAuth.realizarLogout()">
+                Sair da Conta
+            </button>
+        </div>
     </div>
 
     <!-- SCRIPT DE AUTENTICAÇÃO E ACERVO -->
