@@ -54,6 +54,7 @@ const DOC_CONFIG = [
     { label: 'Sentença',                  polo: 'Juízo',        tipo: 'neutro', fase: 3 },
     { label: 'Sentença de Embargos de Declaração', polo: 'Juízo', tipo: 'neutro', fase: 3 },
     { label: 'Laudo Pericial',            polo: 'Perito',       tipo: 'neutro', fase: 4 },
+    { label: 'Audiência de Instrução',    polo: null,           tipo: 'dual',   fase: 4 },
     { label: 'Prova Documental Genérica', polo: null,           tipo: 'dual',   fase: 4 }
 ];
 

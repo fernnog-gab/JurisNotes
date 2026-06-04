@@ -4,7 +4,7 @@
    ================================================ */
 // 1. Importamos as ferramentas do Google (direto da nuvem)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 // 2. COLE AQUI AS SUAS CHAVES DO FIREBASE
 const firebaseConfig = {
@@ -32,6 +32,36 @@ window.FirebaseAuth = (function() {
                 if (e.key === 'Enter') realizarLogin();
             });
         }
+
+        // OBSERVER REATIVO: A única fonte de verdade da UI de autenticação
+        onAuthStateChanged(auth, (user) => {
+            const loadingState = document.getElementById('login-loading-state');
+            const formState = document.getElementById('login-form-state');
+            const loggedState = document.getElementById('login-logged-state');
+            const btnIcon = document.getElementById('btn-login-user');
+
+            if (loadingState) loadingState.style.display = 'none';
+
+            if (user) {
+                // Usuário VALIDADO (Seja via login novo ou refresh de página)
+                if (formState) formState.style.display = 'none';
+                if (loggedState) loggedState.style.display = 'flex';
+                
+                if (btnIcon) {
+                    btnIcon.classList.add('is-logged-in');
+                    btnIcon.title = `Conectado como: ${user.email}`;
+                }
+            } else {
+                // Usuário DESLOGADO
+                if (loggedState) loggedState.style.display = 'none';
+                if (formState) formState.style.display = 'flex';
+                
+                if (btnIcon) {
+                    btnIcon.classList.remove('is-logged-in');
+                    btnIcon.title = "Acessar Conta (Firebase)";
+                }
+            }
+        });
     }
 
     function realizarLogin() {
@@ -43,31 +73,16 @@ window.FirebaseAuth = (function() {
             return;
         }
 
-        // ==========================================
-        // CONEXÃO REAL COM O BANCO DE DADOS AQUI
-        // ==========================================
         signInWithEmailAndPassword(auth, email, senha)
-            .then((userCredential) => {
-                // SUCESSO: O Google validou a senha!
-                const user = userCredential.user;
-                console.log(`[Firebase] Conectado com sucesso: ${user.email}`);
-                
-                // Muda a cor do botão para verde-limão
-                const btn = document.getElementById('btn-login-user');
-                if (btn) {
-                    btn.classList.add('is-logged-in');
-                    btn.title = `Conectado como: ${user.email}`;
-                }
-                
+            .then(() => {
+                // Sucesso: Apenas limpa a senha e fecha o modal.
+                // A troca visual da UI será feita AUTOMATICAMENTE pelo Observer.
                 document.getElementById('login-menu').style.display = 'none';
-                document.getElementById('login-senha').value = ''; // Limpa a senha
-                
+                document.getElementById('login-senha').value = ''; 
                 if (window.exibirToast) exibirToast('Conectado à nuvem com sucesso!', 'sucesso');
             })
             .catch((error) => {
-                // ERRO: Senha errada ou usuário não existe
                 console.error("[Firebase Erro]", error.code, error.message);
-                
                 if (error.code === 'auth/invalid-credential') {
                     if (window.exibirToast) exibirToast('E-mail ou senha incorretos.', 'erro');
                 } else {
@@ -76,7 +91,17 @@ window.FirebaseAuth = (function() {
             });
     }
 
-    return { init, realizarLogin };
+    function realizarLogout() {
+        signOut(auth).then(() => {
+            // Sucesso: Apenas fecha o modal. O Observer cuidará de resetar a UI.
+            document.getElementById('login-menu').style.display = 'none';
+            if (window.exibirToast) exibirToast('Sessão da nuvem encerrada.', 'sucesso');
+        }).catch(() => {
+            if (window.exibirToast) exibirToast('Erro ao sair da conta.', 'erro');
+        });
+    }
+
+    return { init, realizarLogin, realizarLogout };
 })();
 
 document.addEventListener("DOMContentLoaded", () => {
