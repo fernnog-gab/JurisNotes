@@ -1,5 +1,5 @@
 import { app, auth } from './firebase-auth.js'; 
-import { getFirestore, collection, doc, setDoc, getDocs, updateDoc, arrayUnion, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, getDocs, updateDoc, arrayUnion, query, orderBy, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const db = getFirestore(app);
 
@@ -140,11 +140,31 @@ window.AcervoManager = (function() {
         modelosEmCache = []; 
     }
 
+    async function renomearModelo(modeloId, novoNome) {
+        const uid = getUserId();
+        if (!uid) throw new Error("Usuário não autenticado.");
+        
+        const docRef = doc(db, "usuarios", uid, "acervo", modeloId);
+        await updateDoc(docRef, { nome: novoNome, atualizadoEm: Date.now() });
+        modelosEmCache = []; // Invalidação agressiva de cache
+    }
+
+    async function excluirModeloCompleto(modeloId) {
+        const uid = getUserId();
+        if (!uid) throw new Error("Usuário não autenticado.");
+        
+        const docRef = doc(db, "usuarios", uid, "acervo", modeloId);
+        await deleteDoc(docRef);
+        modelosEmCache = []; // Invalidação agressiva de cache
+    }
+
     return { 
         salvarNovoModelo, 
         adicionarNoAModelo, 
         carregarModelos, 
         atualizarNoDoModelo, 
-        removerNoDoModelo 
+        removerNoDoModelo,
+        renomearModelo,
+        excluirModeloCompleto
     };
 })();

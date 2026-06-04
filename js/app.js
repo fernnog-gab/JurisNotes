@@ -1459,3 +1459,43 @@ window.excluirNoAcervo = async function(modeloId, nodeIndex) {
         exibirToast('Erro ao excluir nó.', 'erro'); 
     }
 };
+
+// --- CONTROLLERS DE CICLO DE VIDA DE MODELOS GLOBAIS ---
+window.acionarRenomearModeloAtual = async function() {
+    // Busca a fonte de verdade na UI ou memória atual
+    if (!_modeloSelecionadoId) return exibirToast('Nenhum modelo selecionado.', 'erro');
+    
+    const nomeElemento = document.getElementById('edit-modelo-nome');
+    const nomeAtual = nomeElemento.textContent;
+    
+    const novoNome = prompt('Digite o novo nome para este modelo:', nomeAtual);
+    
+    if (novoNome === null || novoNome.trim() === '' || novoNome.trim() === nomeAtual) return;
+
+    try {
+        await AcervoManager.renomearModelo(_modeloSelecionadoId, novoNome.trim());
+        exibirToast('Modelo renomeado com sucesso!', 'sucesso');
+        // Re-renderização Parcial: Atualiza a UI sem piscar o modal inteiro
+        nomeElemento.textContent = novoNome.trim();
+    } catch(e) {
+        exibirToast('Erro ao renomear modelo na nuvem.', 'erro');
+    }
+};
+
+window.acionarExcluirModeloAtual = async function() {
+    if (!_modeloSelecionadoId) return;
+    
+    const nomeAtual = document.getElementById('edit-modelo-nome').textContent;
+    const confirmacao = confirm(`ATENÇÃO: Você está prestes a excluir definitivamente o modelo "${nomeAtual}" e todos os seus dados.\n\nEsta ação NÃO pode ser desfeita. Confirmar exclusão?`);
+    
+    if (!confirmacao) return;
+
+    try {
+        await AcervoManager.excluirModeloCompleto(_modeloSelecionadoId);
+        exibirToast('Modelo excluído permanentemente.', 'sucesso');
+        fecharModalEdicaoAcervo(); // Desmonta a view de edição
+        abrirModalAcervo(); // Invoca a lista mestre (que forçará refresh pois o cache foi zerado)
+    } catch(e) {
+        exibirToast('Erro de permissão ou rede ao excluir o modelo.', 'erro');
+    }
+};
