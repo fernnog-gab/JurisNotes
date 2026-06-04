@@ -352,8 +352,13 @@ function trocarAba(aba) {
     document.getElementById('tab-leitura').classList.toggle('active',   aba === 'leitura');
     document.getElementById('tab-historico').classList.toggle('active', aba === 'historico');
 
+    const isAnotacoes = (aba === 'historico' && topicos.length > 0);
+    
     const btnExportar = document.getElementById('btn-exportar-topico');
-    if (btnExportar) btnExportar.style.display = (aba === 'historico' && topicos.length > 0) ? 'flex' : 'none';
+    if (btnExportar) btnExportar.style.display = isAnotacoes ? 'flex' : 'none';
+    
+    const btnAcervo = document.getElementById('btn-acervo-modelos');
+    if (btnAcervo) btnAcervo.style.display = isAnotacoes ? 'flex' : 'none';
 
     const fabContainer = document.getElementById('scroll-fab-container');
     if (fabContainer) {
@@ -1115,18 +1120,155 @@ async function acionarCriacaoBackup() {
         exibirToast('Backup ancorado! Salvamento automático ativado.', 'sucesso');
         
     } catch (err) {
-        // RASTREAMENTO DETALHADO DO ERRO
-        console.error("[JURIS LOG FATAL] Falha ao criar arquivo de backup:");
-        console.error("Nome do Erro:", err.name);
-        console.error("Mensagem:", err.message);
-        
-        if (err.name === 'AbortError') {
-            console.log("[JURIS LOG] O usuário cancelou a janela de salvar.");
-            exibirToast('Você cancelou a criação do backup. Clique novamente para tentar.', 'aviso');
-        } else if (err.name === 'SecurityError' || err.name === 'NotAllowedError') {
-            exibirToast('O navegador bloqueou a gravação. Verifique as permissões de download.', 'erro');
-        } else {
-            exibirToast('Erro desconhecido ao tentar criar o arquivo.', 'erro');
+            // RASTREAMENTO DETALHADO DO ERRO
+            console.error("[JURIS LOG FATAL] Falha ao criar arquivo de backup:");
+            console.error("Nome do Erro:", err.name);
+            console.error("Mensagem:", err.message);
+            
+            if (err.name === 'AbortError') {
+                console.log("[JURIS LOG] O usuário cancelou a janela de salvar.");
+                exibirToast('Você cancelou a criação do backup. Clique novamente para tentar.', 'aviso');
+            } else if (err.name === 'SecurityError' || err.name === 'NotAllowedError') {
+                exibirToast('O navegador bloqueou a gravação. Verifique as permissões de download.', 'erro');
+            } else {
+                exibirToast('Erro desconhecido ao tentar criar o arquivo.', 'erro');
+            }
         }
     }
+
+// Variáveis de Estado Isolado para o Acervo
+let _noAlvoParaSalvar = null;
+let _modeloSelecionadoId = null;
+
+// ==========================================
+// MÓDULO 1: SALVAR NO ACERVO
+// ==========================================
+function abrirModalSalvarModelo() {
+    if (typeof _menuSubAnotacaoCtx === 'undefined' || !_menuSubAnotacaoCtx) {
+        exibirToast('Contexto do nó perdido.', 'erro');
+        return;
+    }
+    
+    const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
+    
+    // Fallback inline para _resolverSubAlvo, caso não esteja visível no escopo global
+    const alvo = (typeof _resolverSubAlvo === 'function') 
+        ? _resolverSubAlvo(topico, _menuSubAnotacaoCtx.parentIndex, _menuSubAnotacaoCtx.viewSource)
+        : topico.anotacoes[_menuSubAnotacaoCtx.parentIndex];
+    
+    // Captura segura da referência em memória
+    _noAlvoParaSalvar = alvo.subAnotacoes[_menuSubAnotacaoCtx.localIndex];
+
+    document.getElementById('sub-annotation-context-menu').style.display = 'none';
+    
+    // Reset da Interface
+    document.querySelector('input[name="modo_salvar_modelo"][value="novo"]').checked = true;
+    document.getElementById('input-nome-modelo').value = '';
+    document.getElementById('input-busca-modelo').value = '';
+    toggleModoSalvarModelo();
+    
+    document.getElementById('wizard-backdrop').style.display = 'block';
+    document.getElementById('modal-salvar-modelo').style.display = 'flex';
+}
+
+function toggleModoSalvarModelo() {
+    const isNovo = document.querySelector('input[name="modo_salvar_modelo"]:checked').value === 'novo';
+    document.getElementById('box-modelo-novo').style.display = isNovo ? 'block' : 'none';
+    document.getElementById('box-modelo-existente').style.display = isNovo ? 'none' : 'block';
+    
+    if (!isNovo) {
+        // [FUTURO STUB: Disparar renderização/leitura do Firebase na div #lista-modelos-salvar]
+        console.log("Integração Firebase: Carregar modelos existentes para agrupamento.");
+    }
+}
+
+function fecharModalSalvarModelo() {
+    document.getElementById('wizard-backdrop').style.display = 'none';
+    document.getElementById('modal-salvar-modelo').style.display = 'none';
+    _noAlvoParaSalvar = null;
+}
+
+function confirmarSalvarModelo() {
+    if (!_noAlvoParaSalvar) return;
+    
+    const isNovo = document.querySelector('input[name="modo_salvar_modelo"]:checked').value === 'novo';
+    const payload = structuredClone(_noAlvoParaSalvar);
+    
+    if (isNovo) {
+        const nome = document.getElementById('input-nome-modelo').value.trim();
+        if (!nome) return exibirToast('Defina um nome para o modelo.', 'aviso');
+        
+        // [FUTURO STUB: Escrita Firebase - SetDoc Novo Modelo com payload (Node Array)]
+        console.log(`Integração Firebase: Salvar novo modelo "${nome}" com 1 nó.`, payload);
+    } else {
+        // [FUTURO STUB: Escrita Firebase - UpdateDoc Modelo Existente (ArrayUnion)]
+        console.log(`Integração Firebase: Adicionar nó ao modelo existente.`, payload);
+    }
+    
+    fecharModalSalvarModelo();
+    exibirToast('Nó salvo no acervo com sucesso!', 'sucesso');
+}
+
+// ==========================================
+// MÓDULO 2: INSERIR DO ACERVO
+// ==========================================
+function abrirModalAcervo() {
+    document.getElementById('input-pesquisa-acervo').value = '';
+    document.getElementById('input-destino-acervo').value = '';
+    document.getElementById('box-destino-acervo').style.display = 'none';
+    document.getElementById('btn-inserir-acervo').style.display = 'none';
+    _modeloSelecionadoId = null;
+    
+    // [FUTURO STUB: Leitura Firebase - Popular div #lista-acervo-geral]
+    // A seleção de um item no DOM atualizará a variável _modeloSelecionadoId e mostrará a caixa de destino.
+    
+    document.getElementById('wizard-backdrop').style.display = 'block';
+    document.getElementById('modal-acervo-inserir').style.display = 'flex';
+}
+
+function fecharModalAcervo() {
+    document.getElementById('wizard-backdrop').style.display = 'none';
+    document.getElementById('modal-acervo-inserir').style.display = 'none';
+    _modeloSelecionadoId = null;
+}
+
+function confirmarInsercaoAcervo() {
+    const destinoInput = document.getElementById('input-destino-acervo').value;
+    const destinoIdx = parseInt(destinoInput, 10) - 1;
+    
+    const topicoId = typeof TopicsManager !== 'undefined' ? TopicsManager.getActiveTabId() : null;
+    if (!topicoId) return;
+    
+    const topico = topicos.find(t => t.id === topicoId);
+    
+    if (isNaN(destinoIdx) || destinoIdx < 0 || destinoIdx >= topico.anotacoes.length) {
+        return exibirToast('Número de Ideia Principal inválido.', 'erro');
+    }
+
+    // [FUTURO STUB: Obter array de nós do Firebase usando _modeloSelecionadoId]
+    // Simulando recebimento dos nós salvos:
+    const nodesDoModeloFirebase = []; 
+    
+    if (nodesDoModeloFirebase.length === 0) {
+        // Simulação de proteção para prosseguir em teste de UI
+        fecharModalAcervo();
+        return exibirToast('Simulação: Modelo inserido na Ideia (Firebase pendente).', 'sucesso');
+    }
+
+    const cardDestino = topico.anotacoes[destinoIdx];
+    if (!cardDestino.subAnotacoes) cardDestino.subAnotacoes = [];
+    
+    // Processo rigoroso de Clonagem e injeção de UUID seguro (crypto API)
+    nodesDoModeloFirebase.forEach(node => {
+        const clonedNode = structuredClone(node);
+        clonedNode.uuid = 'id-' + crypto.randomUUID(); 
+        clonedNode.timestamp = Date.now();
+        cardDestino.subAnotacoes.push(clonedNode);
+    });
+
+    renderizarTopicos();
+    if (typeof salvarBackupAutomatico === 'function') salvarBackupAutomatico();
+    
+    fecharModalAcervo();
+    exibirToast('Modelo injetado com sucesso!', 'sucesso');
 }
