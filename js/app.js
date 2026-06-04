@@ -1162,22 +1162,35 @@ function getIconeAcervoSVG(intencao) {
     return map[intencao] || map['premissa'];
 }
 
-// Função pura para atualizar visualmente o ícone sem mutar o banco de dados
+// Estado em Memória (Config Tags Globais)
+let _tagsGlobais = [];
+
+// Função pura para atualizar visualmente o ícone (Refatorada com modificador modal-static-badge)
 window.atualizarIconeAcervoUI = function(selectElement) {
     const container = selectElement.closest('.acervo-node-edit-box');
     const iconDiv = container.querySelector('.svg-icon-wrapper');
+    const intencao = selectElement.value;
+    
     if (iconDiv && typeof getIconeAcervoSVG === 'function') {
-        iconDiv.innerHTML = getIconeAcervoSVG(selectElement.value);
+        iconDiv.innerHTML = getIconeAcervoSVG(intencao);
+        iconDiv.className = `svg-icon-wrapper sub-badge has-intent intencao-${intencao} modal-static-badge`;
     }
 };
 
-// --- HELPER DE BUSCA DA UI ---
+// --- HELPER DE BUSCA DA UI (Otimizado via Dataset) ---
 window.filtrarListaUI = function(termo, listaId) {
-    const termoMin = termo.toLowerCase();
+    const termoMin = termo.toLowerCase().trim();
     const items = document.querySelectorAll(`#${listaId} .acervo-item`);
+    
     items.forEach(item => {
         const titulo = item.querySelector('.acervo-item-titulo').textContent.toLowerCase();
-        item.style.display = titulo.includes(termoMin) ? 'flex' : 'none';
+        const tagsData = (item.dataset.tags || '').toLowerCase();
+
+        if (titulo.includes(termoMin) || tagsData.includes(termoMin)) {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = 'none';
+        }
     });
 };
 
@@ -1415,6 +1428,19 @@ window.abrirEdicaoModeloAcervo = async function(event, modeloId) {
     if(!modelo) return;
 
     document.getElementById('edit-modelo-nome').textContent = modelo.nome;
+    
+    // NOVO: Renderiza Checkboxes de Tags
+    const containerTags = document.getElementById('container-checkboxes-tags');
+    containerTags.innerHTML = _tagsGlobais.map(tag => {
+        const isChecked = (modelo.tags || []).includes(tag) ? 'checked' : '';
+        return `
+            <label style="font-size:0.75rem; display:flex; align-items:center; gap:4px; cursor:pointer;" class="acervo-tag-chip">
+                <input type="checkbox" class="modelo-tag-checkbox" value="${TopicsManager.escaparHTML(tag)}" ${isChecked} onchange="atualizarTagsModelo('${modeloId}')"> 
+                ${TopicsManager.escaparHTML(tag)}
+            </label>
+        `;
+    }).join('') || '<span style="font-size:0.7rem; color:#888;">Nenhuma tag cadastrada no sistema.</span>';
+
     const container = document.getElementById('lista-edicao-nos-acervo');
     container.innerHTML = '';
 
@@ -1438,9 +1464,11 @@ window.abrirEdicaoModeloAcervo = async function(event, modeloId) {
             `<option value="${i.val}" ${no.intencao === i.val ? 'selected' : ''}>${i.label}</option>`
         ).join('');
 
-        // Notar a classe .svg-icon-wrapper acoplada na div do SVG para alvo do JS
+        // Injeção de classes para cor inicial instantânea sem piscar tela
+        const iconClass = `svg-icon-wrapper sub-badge has-intent intencao-${no.intencao} modal-static-badge`;
+
         box.innerHTML = `
-            <div class="svg-icon-wrapper" style="padding-top: 8px;">
+            <div class="${iconClass}">
                 ${typeof getIconeAcervoSVG === 'function' ? getIconeAcervoSVG(no.intencao) : '📄'}
             </div>
             <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
@@ -1462,6 +1490,74 @@ window.abrirEdicaoModeloAcervo = async function(event, modeloId) {
     });
 
     document.getElementById('modal-editar-modelo-acervo').style.display = 'flex';
+};
+
+// ================================================
+// CRUD GLOBAL DE TAGS
+// ================================================
+window.abrirModalGerenciarTags = function() {
+    document.getElementById('modal-acervo-inserir').style.display = 'none';
+    renderizarListaTagsGlobais();
+    document.getElementById('modal-gerenciar-tags').style.display = 'flex';
+};
+
+window.fecharModalGerenciarTags = function() {
+    document.getElementById('modal-gerenciar-tags').style.display = 'none';
+    abrirModalAcervo();
+};
+
+function renderizarListaTagsGlobais() {
+    const container = document.getElementById('lista-tags-globais');
+    container.innerHTML = _tagsGlobais.map((tag, idx) => `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#fafafa; padding:6px 10px; border:1px solid #eee; border-radius:4px;">
+            <span class="acervo-tag-chip">${TopicsManager.escaparHTML(tag)}</span>
+            <button class="acervo-action-btn delete-btn" onclick="excluirTagGlobal(${idx})">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+        </div>
+    `).join('') || '<p style="font-size:0.8rem; color:#888;">Nenhuma tag criada.</p>';
+}
+
+window.adicionarTagGlobal = async function() {
+    const input = document.getElementById('input-nova-tag');
+    const valor = input.value.trim();
+    if(!valor || _tagsGlobais.includes(valor)) return exibirToast('Tag inválida ou já existe.', 'erro');
+    
+    _tagsGlobais.push(valor);
+    try {
+        if(window.AcervoManager && typeof AcervoManager.salvarConfigTags === 'function') {
+            await AcervoManager.salvarConfigTags(_tagsGlobais);
+        }
+        input.value = '';
+        renderizarListaTagsGlobais();
+    } catch(e) { 
+        exibirToast('Erro ao salvar tag.', 'erro'); 
+        _tagsGlobais.pop(); 
+    }
+};
+
+window.excluirTagGlobal = async function(idx) {
+    if(!confirm('Excluir esta tag? Ela será removida de todos os modelos futuramente.')) return;
+    const removida = _tagsGlobais.splice(idx, 1)[0];
+    try {
+        if(window.AcervoManager && typeof AcervoManager.salvarConfigTags === 'function') {
+            await AcervoManager.salvarConfigTags(_tagsGlobais);
+        }
+        renderizarListaTagsGlobais();
+    } catch(e) { 
+        _tagsGlobais.splice(idx, 0, removida); 
+        exibirToast('Erro ao excluir tag.', 'erro');
+    }
+};
+
+window.atualizarTagsModelo = async function(modeloId) {
+    if (!window.AcervoManager || typeof AcervoManager.atualizarTagsDoModelo !== 'function') return;
+    const marcados = Array.from(document.querySelectorAll('.modelo-tag-checkbox:checked')).map(cb => cb.value);
+    try {
+        await AcervoManager.atualizarTagsDoModelo(modeloId, marcados);
+    } catch (e) {
+        exibirToast('Erro ao associar tag ao modelo.', 'erro');
+    }
 };
 
 window.fecharModalEdicaoAcervo = function() {
