@@ -89,6 +89,9 @@ window.AcervoManager = (function() {
         
         const modelos = [];
         querySnapshot.forEach((docSnap) => {
+            // TRAVA DE SEGURANÇA: Ignora o nosso arquivo de tags na listagem de modelos
+            if (docSnap.id === "--CONFIG-TAGS--") return;
+            
             // Usa docSnap.id como chave primária real (Correção de Bug do Relatório)
             modelos.push({ id: docSnap.id, ...docSnap.data() });
         });
@@ -161,14 +164,18 @@ window.AcervoManager = (function() {
     async function salvarConfigTags(tagsArray) {
         const uid = getUserId();
         if (!uid) throw new Error("Usuário não autenticado.");
-        const docRef = doc(db, "usuarios", uid, "config", "tagsGerais");
+        
+        // MUDANÇA: Agora salva dentro da coleção 'acervo' para herdar suas permissões
+        const docRef = doc(db, "usuarios", uid, "acervo", "--CONFIG-TAGS--");
         await setDoc(docRef, { lista: tagsArray, atualizadoEm: Date.now() });
     }
 
     async function carregarConfigTags() {
         const uid = getUserId();
         if (!uid) return [];
-        const docRef = doc(db, "usuarios", uid, "config", "tagsGerais");
+        
+        // MUDANÇA: Lê do novo caminho autorizado
+        const docRef = doc(db, "usuarios", uid, "acervo", "--CONFIG-TAGS--");
         const docSnap = await getDoc(docRef);
         return docSnap.exists() && docSnap.data().lista ? docSnap.data().lista : [];
     }
