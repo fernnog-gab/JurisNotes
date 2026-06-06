@@ -34,8 +34,11 @@
     <!-- 1. Estilos Base, Variáveis Globais e Estrutura Principal (Core) -->
 <link rel="stylesheet" href="juris-core.css?v=2.0.0">
 
-<!-- 2. Funcionalidades, Modais, Cards e Fichário (Workspace) -->
-<link rel="stylesheet" href="juris-workspace.css?v=2.0.0">
+<!-- 2. Ferramentas Globais, PDF, Áudio e Modais (Ferramentas de Entrada) -->
+<link rel="stylesheet" href="juris-reader-tools.css?v=3.0.0">
+
+<!-- 3. Fichário, Timeline, Fases Metodológicas e Acervo (Síntese e Saída) -->
+<link rel="stylesheet" href="juris-timeline-cards.css?v=3.0.0">
 </head>
 <body>
     
@@ -697,8 +700,8 @@
     <!-- NOVO: Módulo agnóstico de Leitura Automatizada do PJe -->
     <script src="js/pje-parser.js"></script>
     
-<script src="js/app-core.js"></script>
-<script src="js/acervo-controller.js"></script>
+    <script src="app-core.js"></script>
+    <script src="acervo-controller.js"></script>
 
     
     <div id="quick-intent-tooltip" class="quick-tooltip" style="display: none;"></div>
