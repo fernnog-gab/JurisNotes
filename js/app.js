@@ -1353,6 +1353,11 @@ function abrirModalAcervo() {
             const item = document.createElement('div');
             item.className = 'acervo-item';
             
+            // ==========================================
+            // CORREÇÃO ESTRUTURAL: Injeção de metadados para busca (One-liner seguro)
+            // ==========================================
+            item.dataset.tags = mod.tags?.filter(Boolean).join(' ').toLowerCase() || '';
+            
             // INJETADO: Header com botão de edição independente
             const htmlTags = (mod.tags && mod.tags.length > 0) 
                 ? `<div class="acervo-item-tags-lista">${mod.tags.map(t => `<span class="acervo-tag-chip">${TopicsManager.escaparHTML(t)}</span>`).join('')}</div>`
