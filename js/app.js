@@ -1194,6 +1194,17 @@ window.filtrarListaUI = function(termo, listaId) {
     });
 };
 
+// Utilitário de Performance
+window.debounce = function(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+};
+// Cria a versão protegida com atraso de 300ms
+window.filtrarListaUIDebounced = window.debounce(window.filtrarListaUI, 300);
+
 // ==========================================
 // MÓDULO 1: SALVAR NO ACERVO
 // ==========================================
@@ -1435,27 +1446,27 @@ window.abrirEdicaoModeloAcervo = async function(event, modeloId) {
     
     document.getElementById('modal-acervo-inserir').style.display = 'none';
     
+    // CORREÇÃO CRÍTICA (Bug 1 e 2): Ancorando a referência global de edição
+    _modeloSelecionadoId = modeloId;
+
     const modelos = await AcervoManager.carregarModelos();
     const modelo = modelos.find(m => m.id === modeloId);
     if(!modelo) return;
 
     document.getElementById('edit-modelo-nome').textContent = modelo.nome;
-    
-    // Sincroniza estado local com os dados do modelo
     _tagsModeloEmEdicao = modelo.tags ? [...modelo.tags] : [];
     
-    // REESCRITA CIRÚRGICA: Trocamos os checkboxes pelo Autocomplete
     const containerTags = document.getElementById('container-checkboxes-tags');
+    // REMOÇÃO DOS HANDLERS INLINE INSEGUROS (XSS Protection)
     containerTags.innerHTML = `
         <div style="position: relative; width: 100%;">
             <input type="text" id="input-busca-tags-modelo" class="topic-select" placeholder="Digite para buscar e vincular uma tag..." 
                 oninput="filtrarDropdownTags(this.value)" 
                 onfocus="abrirDropdownTags()" 
-                onblur="fecharDropdownTags()"> <!-- Blur limpo, sem setTimeout -->
+                onblur="fecharDropdownTags()">
             <div id="dropdown-tags-modelo" class="tags-dropdown-menu" style="display: none;"></div>
         </div>
         <div id="container-tags-selecionadas" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; width: 100%;">
-            <!-- Chips injetados via JS -->
         </div>
     `;
 
@@ -1464,7 +1475,6 @@ window.abrirEdicaoModeloAcervo = async function(event, modeloId) {
     const container = document.getElementById('lista-edicao-nos-acervo');
     container.innerHTML = '';
 
-    // Dicionário Estrito Alinhado com o Domínio de Ícones
     const listaIntencoes = [
         { val: 'premissa', label: 'Premissa Lógica' },
         { val: 'comando', label: 'Comando Direto' },
@@ -1484,7 +1494,6 @@ window.abrirEdicaoModeloAcervo = async function(event, modeloId) {
             `<option value="${i.val}" ${no.intencao === i.val ? 'selected' : ''}>${i.label}</option>`
         ).join('');
 
-        // Injeção de classes para cor inicial instantânea sem piscar tela
         const iconClass = `svg-icon-wrapper sub-badge has-intent intencao-${no.intencao} modal-static-badge`;
 
         box.innerHTML = `
@@ -1569,22 +1578,75 @@ window.filtrarDropdownTags = function(termo) {
     const termoMin = termo.toLowerCase().trim();
     const dropdown = document.getElementById('dropdown-tags-modelo');
     
-    // Filtra: contém o termo E não está selecionada ainda
     const tagsDisponiveis = _tagsGlobais.filter(t => 
         t.toLowerCase().includes(termoMin) && !_tagsModeloEmEdicao.includes(t)
     );
 
-    if (tagsDisponiveis.length === 0) {
-        dropdown.innerHTML = `<div style="padding:10px 12px; font-size:0.8rem; color:#888;">Nenhuma tag disponível.</div>`;
+    let html = '';
+
+    if (tagsDisponiveis.length === 0 && !termoMin) {
+        html = `<div style="padding:10px 12px; font-size:0.8rem; color:#888;">Nenhuma tag disponível.</div>`;
     } else {
-        dropdown.innerHTML = tagsDisponiveis.map(tag => `
-            <!-- SOLUÇÃO DOM NATIVA: onmousedown + preventDefault bloqueia o onblur do input -->
-            <div class="tag-dropdown-item" onmousedown="event.preventDefault(); adicionarTagAoModelo('${TopicsManager.escaparHTML(tag)}', '${_modeloSelecionadoId}')">
+        // USO DE DATA-ATTRIBUTES (Prevenção XSS / JS Injection)
+        html += tagsDisponiveis.map(tag => `
+            <div class="tag-dropdown-item" data-action="vincular" data-tag="${TopicsManager.escaparHTML(tag)}">
                 + ${TopicsManager.escaparHTML(tag)}
             </div>
         `).join('');
     }
+
+    const tagExataExiste = _tagsGlobais.some(t => t.toLowerCase() === termoMin);
+    
+    if (termoMin && !tagExataExiste && !_tagsModeloEmEdicao.includes(termo)) {
+        html += `
+            <div class="tag-dropdown-item criar-nova" data-action="criar" data-tag="${TopicsManager.escaparHTML(termo)}">
+                ✨ Criar e vincular nova tag: <strong>${TopicsManager.escaparHTML(termo)}</strong>
+            </div>
+        `;
+    }
+
+    dropdown.innerHTML = html;
     dropdown.style.display = 'block';
+};
+
+// DELEGAÇÃO DE EVENTOS PARA O DROPDOWN (Registrado globalmente uma vez)
+document.addEventListener('mousedown', function(event) {
+    const dropdownItem = event.target.closest('.tag-dropdown-item');
+    if (!dropdownItem) return;
+
+    // Se clicou num item do dropdown, não deixa o input perder o foco matando a interface
+    event.preventDefault(); 
+
+    const action = dropdownItem.dataset.action;
+    const tag = dropdownItem.dataset.tag;
+
+    if (!tag || !_modeloSelecionadoId) return;
+
+    if (action === 'vincular') {
+        window.adicionarTagAoModelo(tag, _modeloSelecionadoId);
+    } else if (action === 'criar') {
+        window.criarEAdicionarTagInline(tag);
+    }
+});
+
+// FUNÇÃO DE CRIAÇÃO OTIMISTA COM ROLLBACK DETERMINÍSTICO
+window.criarEAdicionarTagInline = async function(novaTag) {
+    const tag = novaTag.trim();
+    if(!tag) return;
+
+    _tagsGlobais.push(tag);
+
+    try {
+        if(window.AcervoManager && typeof AcervoManager.salvarConfigTags === 'function') {
+            await AcervoManager.salvarConfigTags(_tagsGlobais);
+        }
+        await window.adicionarTagAoModelo(tag, _modeloSelecionadoId);
+        exibirToast(`Tag "${tag}" criada e vinculada com sucesso!`, 'sucesso');
+    } catch(e) {
+        // Rollback Seguro: Filtra a tag exata, evitando Race Conditions
+        _tagsGlobais = _tagsGlobais.filter(t => t !== tag);
+        exibirToast('Falha de conexão. A tag não pôde ser salva.', 'erro');
+    }
 };
 
 // ================================================
@@ -1668,15 +1730,7 @@ window.excluirTagGlobal = async function(idx) {
     }
 };
 
-window.atualizarTagsModelo = async function(modeloId) {
-    if (!window.AcervoManager) return;
-    const marcados = Array.from(document.querySelectorAll('.modelo-tag-checkbox:checked')).map(cb => cb.value);
-    try {
-        await AcervoManager.atualizarTagsDoModelo(modeloId, marcados);
-    } catch (e) {
-        exibirToast('Erro ao salvar tag no modelo.', 'erro');
-    }
-};
+// Função window.atualizarTagsModelo removida (código morto higienizado)
 
 window.fecharModalEdicaoAcervo = function() {
     document.getElementById('modal-editar-modelo-acervo').style.display = 'none';
