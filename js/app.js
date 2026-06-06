@@ -1343,11 +1343,16 @@ function abrirModalAcervo() {
             item.className = 'acervo-item';
             
             // INJETADO: Header com botão de edição independente
+            const htmlTags = (mod.tags && mod.tags.length > 0) 
+                ? `<div class="acervo-item-tags-lista">${mod.tags.map(t => `<span class="acervo-tag-chip">${TopicsManager.escaparHTML(t)}</span>`).join('')}</div>`
+                : '';
+
             item.innerHTML = `
                 <div class="acervo-item-header">
-                    <div>
+                    <div style="flex: 1;">
                         <div class="acervo-item-titulo">${TopicsManager.escaparHTML(mod.nome)}</div>
                         <div style="font-size:0.7rem; color:#888;">${mod.nos.length} nó(s) salvos</div>
+                        ${htmlTags} <!-- Renderização Segura das Tags -->
                     </div>
                     <button class="acervo-action-btn" title="Editar este modelo" onclick="abrirEdicaoModeloAcervo(event, '${mod.id}')">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
@@ -1421,8 +1426,10 @@ function confirmarInsercaoAcervo() {
 }
 
 /* ================================================
-   NOVO: GERENCIAMENTO E EDIÇÃO DE MODELOS DO ACERVO
+   NOVO: GERENCIAMENTO E EDIÇÃO DE MODELOS DO ACERVO E TAGS
    ================================================ */
+let _tagsModeloEmEdicao = []; // Fonte de verdade local da UI
+
 window.abrirEdicaoModeloAcervo = async function(event, modeloId) {
     if(event) event.stopPropagation(); 
     
@@ -1434,17 +1441,25 @@ window.abrirEdicaoModeloAcervo = async function(event, modeloId) {
 
     document.getElementById('edit-modelo-nome').textContent = modelo.nome;
     
-    // INJEÇÃO DA UI DE VÍNCULO (Checkboxes)
+    // Sincroniza estado local com os dados do modelo
+    _tagsModeloEmEdicao = modelo.tags ? [...modelo.tags] : [];
+    
+    // REESCRITA CIRÚRGICA: Trocamos os checkboxes pelo Autocomplete
     const containerTags = document.getElementById('container-checkboxes-tags');
-    containerTags.innerHTML = _tagsGlobais.map(tag => {
-        const isChecked = (modelo.tags || []).includes(tag) ? 'checked' : '';
-        return `
-            <label class="acervo-tag-chip" style="cursor:pointer;">
-                <input type="checkbox" class="modelo-tag-checkbox" value="${TopicsManager.escaparHTML(tag)}" ${isChecked} onchange="atualizarTagsModelo('${modeloId}')"> 
-                &nbsp;${TopicsManager.escaparHTML(tag)}
-            </label>
-        `;
-    }).join('') || '<span style="font-size:0.7rem; color:#888;">Nenhuma tag cadastrada.</span>';
+    containerTags.innerHTML = `
+        <div style="position: relative; width: 100%;">
+            <input type="text" id="input-busca-tags-modelo" class="topic-select" placeholder="Digite para buscar e vincular uma tag..." 
+                oninput="filtrarDropdownTags(this.value)" 
+                onfocus="abrirDropdownTags()" 
+                onblur="fecharDropdownTags()"> <!-- Blur limpo, sem setTimeout -->
+            <div id="dropdown-tags-modelo" class="tags-dropdown-menu" style="display: none;"></div>
+        </div>
+        <div id="container-tags-selecionadas" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; width: 100%;">
+            <!-- Chips injetados via JS -->
+        </div>
+    `;
+
+    renderizarTagsSelecionadas(modeloId);
 
     const container = document.getElementById('lista-edicao-nos-acervo');
     container.innerHTML = '';
@@ -1495,6 +1510,81 @@ window.abrirEdicaoModeloAcervo = async function(event, modeloId) {
     });
 
     document.getElementById('modal-editar-modelo-acervo').style.display = 'flex';
+};
+
+// Renderização dos Chips e Optimistic UI
+function renderizarTagsSelecionadas(modeloId) {
+    const container = document.getElementById('container-tags-selecionadas');
+    container.innerHTML = _tagsModeloEmEdicao.map(tag => `
+        <div class="acervo-tag-chip">
+            ${TopicsManager.escaparHTML(tag)}
+            <span class="chip-remover" onclick="removerTagDoModelo('${TopicsManager.escaparHTML(tag)}', '${modeloId}')">×</span>
+        </div>
+    `).join('') || '<span style="font-size:0.75rem; color:#888;">Nenhuma tag vinculada.</span>';
+}
+
+window.adicionarTagAoModelo = async function(tagStr, modeloId) {
+    if (_tagsModeloEmEdicao.includes(tagStr)) return;
+
+    // Optimistic UI: Atualiza a tela imediatamente
+    _tagsModeloEmEdicao.push(tagStr);
+    renderizarTagsSelecionadas(modeloId);
+    document.getElementById('input-busca-tags-modelo').value = '';
+    fecharDropdownTags();
+
+    // Persistência assíncrona
+    try { 
+        await AcervoManager.atualizarTagsDoModelo(modeloId, _tagsModeloEmEdicao); 
+    } catch (e) { 
+        // Rollback em caso de erro de rede
+        _tagsModeloEmEdicao.pop();
+        renderizarTagsSelecionadas(modeloId);
+        exibirToast('Erro de rede ao salvar tag.', 'erro'); 
+    }
+};
+
+window.removerTagDoModelo = async function(tagStr, modeloId) {
+    // Optimistic UI
+    const index = _tagsModeloEmEdicao.indexOf(tagStr);
+    if (index === -1) return;
+    
+    _tagsModeloEmEdicao.splice(index, 1);
+    renderizarTagsSelecionadas(modeloId);
+
+    try { 
+        await AcervoManager.atualizarTagsDoModelo(modeloId, _tagsModeloEmEdicao); 
+    } catch (e) { 
+        // Rollback
+        _tagsModeloEmEdicao.splice(index, 0, tagStr);
+        renderizarTagsSelecionadas(modeloId);
+        exibirToast('Erro ao remover tag.', 'erro'); 
+    }
+};
+
+// Lógica do Dropdown Seguro (Event Delegation)
+window.abrirDropdownTags = function() { filtrarDropdownTags(document.getElementById('input-busca-tags-modelo').value); };
+window.fecharDropdownTags = function() { document.getElementById('dropdown-tags-modelo').style.display = 'none'; };
+
+window.filtrarDropdownTags = function(termo) {
+    const termoMin = termo.toLowerCase().trim();
+    const dropdown = document.getElementById('dropdown-tags-modelo');
+    
+    // Filtra: contém o termo E não está selecionada ainda
+    const tagsDisponiveis = _tagsGlobais.filter(t => 
+        t.toLowerCase().includes(termoMin) && !_tagsModeloEmEdicao.includes(t)
+    );
+
+    if (tagsDisponiveis.length === 0) {
+        dropdown.innerHTML = `<div style="padding:10px 12px; font-size:0.8rem; color:#888;">Nenhuma tag disponível.</div>`;
+    } else {
+        dropdown.innerHTML = tagsDisponiveis.map(tag => `
+            <!-- SOLUÇÃO DOM NATIVA: onmousedown + preventDefault bloqueia o onblur do input -->
+            <div class="tag-dropdown-item" onmousedown="event.preventDefault(); adicionarTagAoModelo('${TopicsManager.escaparHTML(tag)}', '${_modeloSelecionadoId}')">
+                + ${TopicsManager.escaparHTML(tag)}
+            </div>
+        `).join('');
+    }
+    dropdown.style.display = 'block';
 };
 
 // ================================================
