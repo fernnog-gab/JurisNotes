@@ -1312,6 +1312,61 @@
 /* ================================================
    14. ESTILOS DO GERENCIADOR DE TAGS E ACERVO
    ================================================ */
+/* Sistema Autocomplete do Acervo */
+.tags-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    width: 100%;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    max-height: 180px;
+    overflow-y: auto;
+    z-index: 100;
+}
+
+.tag-dropdown-item {
+    padding: 10px 12px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--text-dark);
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.tag-dropdown-item:last-child { border-bottom: none; }
+.tag-dropdown-item:hover { 
+    background: var(--trt-light-bg); 
+    color: var(--trt-blue); 
+    font-weight: 600; 
+}
+
+/* Remoção de Tag (Chip) */
+.chip-remover {
+    cursor: pointer;
+    margin-left: 8px;
+    font-size: 1rem;
+    line-height: 0.8;
+    color: #a0a090;
+    font-weight: bold;
+    transition: color 0.2s, transform 0.1s;
+}
+
+.chip-remover:hover { 
+    color: #c62828; 
+    transform: scale(1.2);
+}
+
+/* Espaçamento na Lista Geral */
+.acervo-item-tags-lista {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
 :root {
     --creme-neon-bg: #FDFCE5;
     --creme-neon-stroke: #F2E8A6;

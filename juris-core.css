@@ -503,6 +503,20 @@ body[data-active-tab="leitura"] #idea-markers-list {
     animation: fade-in-logo 1s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
 }
 
+/* Branding: Título da Splash Screen */
+.splash-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 2.8rem;
+    color: #ffffff;
+    margin-top: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    opacity: 0;
+    transform: translateY(15px);
+    /* Animação encadeada: surge logo após a logo e antes do slogan */
+    animation: slide-up-slogan 0.8s ease 0.2s forwards; 
+}
+
 .splash-slogan {
     margin-top: 24px;
     font-size: 1.15rem;
