@@ -1,0 +1,1797 @@
+/* === VARIÁVEIS & RESET === */
+
+/* === NOVA PALETA: OURO & CREME (Light Mode Premium) === */
+:root {
+    /* Fundos — quentes, não clínicos */
+    --bg: #F5F1E9;               /* Creme-marfim */
+    --surface: #FAF7F2;          /* Surface levemente aquecida */
+    --card: #FFFFFF;             /* Cards brancos mantêm legibilidade máxima */
+
+    /* Ouro — accent principal */
+    --primary: #C9A84C;          /* Ouro Imperial */
+    --primary-hover: #B8922F;    /* Hover mais escuro */
+    --primary-dark: #8B6914;     /* Ouro Profundo */
+
+    /* Tema Premium Dark Gold (Centralizado) */
+    --premium-gradient: linear-gradient(145deg, #1C1A17 0%, #252118 100%);
+    --premium-border: rgba(201, 168, 76, 0.4);
+    --premium-gold-sub: rgba(201, 168, 76, 0.8);
+
+    /* Semânticas */
+    --success: #4CAF7C;          /* Esmeralda — receita */
+    --danger: #E05252;           /* Rubi — despesa */
+    --warning: #D4A450;          /* Âmbar — atenção */
+
+    /* Texto — quente, não frio */
+    --text: #1C1A17;             /* Quase-preto aquecido */
+    --text-light: #6B6150;       /* Marrom médio */
+
+    /* Bordas */
+    --border: rgba(201, 168, 76, 0.22); /* Ouro translúcido */
+}
+
+* { 
+    box-sizing: border-box; 
+    margin: 0; 
+    padding: 0; 
+    font-family: 'DM Sans', 'Segoe UI', system-ui, -apple-system, sans-serif; 
+}
+
+body { 
+    background-color: var(--bg); 
+    color: var(--text); 
+    display: flex; 
+    flex-direction: column; 
+    min-height: 100vh; 
+}
+
+/* === UTILITÁRIOS === */
+.hidden { display: none !important; }
+
+/* === CABEÇALHO === */
+header { 
+    background-color: var(--surface); 
+    color: var(--text); 
+    padding: 1rem 2rem; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center;
+    border-bottom: 3px solid var(--primary);      /* Âncora de identidade: borda dourada */
+    box-shadow: 0 2px 12px rgba(201, 168, 76, 0.1);
+}
+
+.app-logo {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    object-fit: contain; /* Ajustado de cover para contain para evitar recortes */
+    box-shadow: 0 2px 6px rgba(201, 168, 76, 0.2);
+}
+
+header h1 { 
+    font-size: 1.5rem; 
+    font-weight: 600; 
+    color: var(--primary); 
+    margin: 0;
+}
+
+/* Estilo para o badge de versão no cabeçalho */
+.version-badge-inline {
+    background-color: var(--card);
+    color: var(--text-light);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+}
+
+/* === LAYOUT PRINCIPAL === */
+main { padding: 2rem; flex: 1; max-width: 1200px; margin: 0 auto; width: 100%; }
+
+.card { 
+    background: var(--card); 
+    padding: 1.5rem; 
+    border-radius: 12px; 
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); 
+    margin-bottom: 1.5rem; 
+    border: 1px solid var(--border);
+}
+
+/* === DASHBOARD VIEW === */
+#dashboard-view { 
+    display: flex; 
+    flex-direction: column; 
+    min-height: calc(100vh - 160px); 
+}
+
+.dashboard-header {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+/* --- SALDO ATUAL --- */
+#card-saldo-atual {
+    border: 2px solid var(--primary);
+    background: linear-gradient(135deg, #FFFFFF 55%, rgba(201,168,76,0.06) 100%);
+    padding: 2.5rem 1.5rem;
+}
+
+#card-saldo-atual p {
+    font-size: 0.78rem;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 700;
+}
+
+#card-saldo-atual h2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 3rem;
+    color: var(--primary);
+    margin-top: 0.5rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+/* --- PROJEÇÃO FINAL --- */
+#card-saldo-mes {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1.2rem 1.5rem;
+}
+
+#card-saldo-mes p {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+#card-saldo-mes h2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.75rem;
+    color: var(--text);
+    margin-top: 0.4rem;
+    font-weight: 700;
+}
+
+/* --- SUMMARY-CARD --- */
+.summary-card {
+    margin-bottom: 0;
+    text-align: center;
+}
+
+.summary-card p {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.summary-card h2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 2.5rem;
+    color: var(--text);
+    margin-top: 0.5rem;
+    font-weight: 700;
+}
+
+.summary-card.negative h2 { color: var(--danger); }
+
+/* Container de Orçamentos Fixados */
+.dashboard-body { flex: 1; }
+
+.section-title { 
+    font-size: 1rem; 
+    color: var(--text-light); 
+    margin-bottom: 1rem; 
+    text-transform: uppercase; 
+    letter-spacing: 0.5px; 
+}
+
+.horizontal-scroll {
+    display: flex;
+    overflow-x: auto;
+    gap: 1rem;
+    padding-bottom: 1rem;
+    scroll-snap-type: x mandatory;
+}
+
+.horizontal-scroll::-webkit-scrollbar { height: 6px; }
+.horizontal-scroll::-webkit-scrollbar-thumb { background-color: var(--border); border-radius: 4px; }
+
+/* Atualização do Card Fixado para tema Premium Dark Gold */
+/* 1. Garante que o Card principal seja sempre Branco */
+.pinned-card {
+    background: #FFFFFF !important; /* Fundo branco puro */
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+    min-width: 260px;
+    padding: 1.2rem;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+}
+
+/* Container Flexbox (A "mola" protetora entre categoria e valor) */
+.pinned-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    font-size: 0.95rem;
+    gap: 1rem;
+    margin-bottom: 0.8rem;
+}
+
+/* 2. Configura o Subcard (Chip) com fundo preto e fonte dourada */
+.pinned-card-header span:first-child, 
+.pinned-category-chip {
+    /* Fundo preto elegante (gradiente escuro da paleta Premium) */
+    background: linear-gradient(145deg, #1C1A17 0%, #252118 100%) !important;
+    /* Fonte Ouro Imperial */
+    color: var(--primary) !important; 
+    
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    border: 1px solid rgba(201, 168, 76, 0.4);
+    font-weight: 600;
+    
+    /* Mantém a regra de quebra de linha para nomes longos */
+    white-space: normal; 
+    word-wrap: break-word;
+    line-height: 1.3;
+    max-width: 65%;
+    text-align: center;
+}
+
+/* 3. Ajusta os valores (texto à direita) para legibilidade no fundo branco */
+.pinned-card-header span:last-child, .pinned-card-value {
+    color: var(--text) !important; 
+    white-space: nowrap;
+    text-align: right;
+    margin-top: 0; 
+    font-size: 0.92rem;
+    letter-spacing: 0.3px;
+    flex-shrink: 0; /* CRÍTICO: Impede que números grandes sejam espremidos ou quebrem de linha */
+}
+
+/* Menu de Ações (Bottom) */
+.action-menu {
+    display: flex;
+    gap: 1rem;
+}
+
+.bottom-menu {
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+}
+
+/* Aumento de 25% nos Botões do Menu Inferior e Cores Personalizadas */
+.bottom-menu .icon-btn { 
+    width: 60px; 
+    height: 60px; 
+}
+
+.bottom-menu .icon-btn svg { 
+    width: 30px; 
+    height: 30px; 
+}
+
+.btn-extrato { color: #000000 !important; } /* Alterado para preto puro */
+.btn-orcamento { color: #2D5A27 !important; } /* Alterado para verde musgo escuro */
+
+.icon-btn {
+    background-color: var(--card);
+    color: var(--primary);
+    border: 1px solid var(--border);
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.icon-btn:hover {
+    background-color: var(--primary);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    border-color: var(--primary);
+}
+
+/* Feedback tátil para mobile */
+.icon-btn:active {
+    transform: scale(0.95);
+}
+
+.icon-btn svg { width: 24px; height: 24px; }
+
+/* Gráfico de Barras Minimalista */
+.chart-card-header {
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.chart-card-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.chart-card-title-row h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: 1.1rem;
+}
+
+/* Agrupamento de ícones no topo do painel */
+.action-group-right {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+/* Regras aplicadas dinamicamente via JS apenas durante a geração do PDF */
+.pdf-export-mode {
+    padding: 30px !important;
+    background: var(--bg) !important;
+}
+
+/* Oculta botões que não devem aparecer na impressão */
+.pdf-export-mode .action-group-right {
+    display: none !important;
+}
+
+/* Estilo do cabeçalho injetado para o PDF */
+.pdf-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 25px;
+    border-bottom: 2px solid var(--primary);
+    padding-bottom: 15px;
+}
+
+.pdf-header img {
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+}
+
+.pdf-header h2 {
+    color: var(--primary);
+    font-family: 'Playfair Display', serif;
+    margin: 0;
+}
+
+.chart-month-chip {
+    display: inline-block;
+    background: var(--premium-gradient, linear-gradient(135deg, #2a2318 0%, #3d3325 100%));
+    color: var(--primary);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 0.25rem 0.85rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    align-self: flex-start;
+}
+
+.category-chart-totals {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.75rem;
+    flex-wrap: wrap;
+}
+
+.chart-total-item {
+    flex: 1;
+    min-width: 90px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.65rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.chart-total-label {
+    font-size: 0.72rem;
+    color: var(--text-light);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.chart-total-value {
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.chart-total-value.income  { color: var(--success); }
+.chart-total-value.expense { color: var(--danger); }
+.chart-total-value.balance-pos { color: var(--success); }
+.chart-total-value.balance-neg { color: var(--danger); }
+
+.chart-section-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-light);
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.chart-section-block {
+    margin-bottom: 1.5rem;
+}
+
+.bar-fill-income {
+    height: 100%;
+    background-color: var(--success);
+    border-radius: 4px;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chart-card h3 {
+    margin-bottom: 1.5rem;
+    color: var(--text);
+    font-size: 1.1rem;
+}
+
+.simple-bar-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.bar-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.bar-label {
+    width: 140px;
+    font-size: 0.9rem;
+    color: var(--text-light);
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+}
+
+.bar-track {
+    flex: 1;
+    height: 8px;
+    background-color: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    background-color: var(--danger);
+    border-radius: 4px;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bar-value {
+    width: 90px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+/* ── Gráfico: linha-pai de grupo ── */
+.bar-row-parent {
+    margin-top: 0.6rem;
+    padding: 0.3rem 0;
+    border-top: 1px solid var(--border);
+    transition: opacity 0.15s;
+}
+.bar-row-parent:first-child { border-top: none; margin-top: 0; }
+.bar-row-parent:hover { opacity: 0.85; }
+
+.bar-label-parent { font-weight: 700; }
+
+.group-chevron {
+    font-size: 0.6rem;
+    display: inline-block;
+    margin-right: 0.3rem;
+    transition: transform 0.2s;
+    vertical-align: middle;
+}
+
+/* ── Gráfico: linha-filho (indentada) ── */
+.bar-row-child {
+    opacity: 0.85;
+    animation: fadeInRow 0.2s ease;
+}
+.bar-row-child.hidden { display: none; }
+
+@keyframes fadeInRow {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 0.85; transform: translateY(0); }
+}
+
+/* === GERENCIAMENTO VIEW === */
+#management-view .grid-layout {
+    display: flex; 
+    flex-direction: column; 
+    gap: 2rem; 
+    max-width: 1000px; /* Expande graciosamente, mas evita distorção em telas Ultra-Wide */
+    margin: 0 auto; /* Centraliza o conteúdo na tela */
+    width: 100%;
+}
+
+#view-form {
+    max-width: 500px; /* Formulários não devem esticar na tela toda */
+    margin: 0 auto; /* Centraliza o formulário no meio da tela do PC */
+    width: 100%;
+}
+
+.nav-bar {
+    margin-bottom: 1.5rem;
+}
+
+.btn-voltar {
+    background: none;
+    border: none;
+    color: var(--text-light);
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    transition: color 0.2s;
+}
+
+.btn-voltar:hover { color: var(--primary); }
+
+h3 { margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; font-size: 1.1rem; }
+
+/* === FORMULÁRIOS === */
+form { display: flex; flex-direction: column; gap: 1rem; }
+label { font-size: 0.85rem; font-weight: 600; color: var(--text-light); }
+input, select { 
+    padding: 0.75rem; 
+    border: 1px solid var(--border); 
+    border-radius: 6px; 
+    font-size: 0.95rem; 
+    background-color: #fafafa;
+    transition: border-color 0.2s;
+}
+input:focus, select:focus { outline: none; border-color: var(--primary); background-color: #fff; }
+
+button[type="submit"] { 
+    background-color: var(--primary); 
+    color: white; 
+    border: none; 
+    cursor: pointer; 
+    font-weight: 600; 
+    padding: 0.8rem;
+    border-radius: 6px;
+    transition: background-color 0.2s; 
+    margin-top: 0.5rem;
+}
+button[type="submit"]:hover { background-color: var(--primary-hover); }
+
+/* =============================================
+   CHIP CÍCLICO — FORMULÁRIO (Evolução Plan 1b)
+   ============================================= */
+.payment-chip-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.4rem 0.85rem;
+    border-radius: 20px;
+    border: 1.5px dashed var(--border);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    user-select: none;
+    transition: all 0.2s ease;
+    width: fit-content;
+    margin-top: 0.25rem;
+}
+
+.payment-chip-toggle:hover {
+    filter: brightness(0.94);
+    transform: scale(1.03);
+}
+
+.payment-chip-toggle:active {
+    animation: pulse-chip 0.15s ease-out;
+}
+
+@keyframes pulse-chip {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.92); }
+    100% { transform: scale(1); }
+}
+
+.chip-state-blank {
+    background: var(--surface);
+    color: var(--text-light);
+    border-style: dashed;
+    border-color: var(--border);
+}
+
+.chip-state-debito {
+    background: rgba(37, 99, 235, 0.1);
+    color: #2563EB;
+    border-style: solid;
+    border-color: rgba(37, 99, 235, 0.35);
+}
+
+.chip-state-cartao1 {
+    background: rgba(5, 150, 105, 0.1);
+    color: #059669;
+    border-style: solid;
+    border-color: rgba(5, 150, 105, 0.35);
+}
+
+.chip-state-cartao2 {
+    background: rgba(124, 58, 237, 0.1);
+    color: #7C3AED;
+    border-style: solid;
+    border-color: rgba(124, 58, 237, 0.35);
+}
+
+/* === SELETOR DE MÊS & COLLAPSIBLE === */
+.month-selector-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.icon-btn-small {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    align-items: center;
+    color: var(--primary);
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.icon-btn-small:hover {
+    background-color: var(--primary);
+    color: white;
+}
+
+.calendar-icon {
+    width: 18px;
+    height: 18px;
+}
+
+.hidden-date-picker {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.collapsible-card { padding: 0; overflow: hidden; }
+.collapsible-card summary {
+    padding: 1.5rem;
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    color: var(--text);
+}
+.collapsible-card .chevron { transition: transform 0.2s; }
+.collapsible-card[open] .chevron { transform: rotate(180deg); }
+.collapsible-content { padding: 0 1.5rem 1.5rem 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+
+/* === TABELAS & RESPONSIVIDADE === */
+.table-responsive { overflow-x: auto; width: 100%; }
+table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+.receita { color: var(--success); font-weight: 600; }
+.despesa { color: var(--danger); font-weight: 600; }
+.actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+.actions button { 
+    width: 32px; height: 32px; background: transparent; border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+}
+
+/* =============================================
+   CHIPS DO EXTRATO (read-only, exibição)
+   ============================================= */
+.payment-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+.chip-debito  { background: rgba(37,99,235,0.1);   color:#2563EB; border:1px solid rgba(37,99,235,0.25); }
+.chip-cartao1 { background: rgba(5,150,105,0.1);   color:#059669; border:1px solid rgba(5,150,105,0.25); }
+.chip-cartao2 { background: rgba(124,58,237,0.1);  color:#7C3AED; border:1px solid rgba(124,58,237,0.25); }
+
+.extract-info-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* === MODAL / DIALOG === */
+dialog { margin: auto; border: none; border-radius: 12px; max-width: 500px; width: 90%; padding: 0; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+dialog::backdrop { background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(4px); }
+.dialog-header { padding: 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+#changelog-content { padding: 1.5rem; max-height: 400px; overflow-y: auto; }
+
+/* === AUTENTICAÇÃO E HEADER === */
+.header-actions { display: flex; align-items: center; gap: 1rem; }
+.auth-container { position: relative; }
+
+.popover-panel {
+    position: absolute;
+    top: calc(100% + 15px);
+    right: 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+    width: 260px;
+    z-index: 100;
+}
+
+.popover-panel form { display: flex; flex-direction: column; gap: 0.8rem; }
+.popover-panel input { padding: 0.6rem; font-size: 0.9rem; }
+
+/* Redução da fonte do E-mail para evitar quebra */
+#user-email-display {
+    font-size: 0.8rem;
+    word-break: break-all;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.btn-block { width: 100%; margin-top: 0.2rem; }
+
+/* Reestilização do Botão Sair da Conta */
+#btn-logout {
+    background-color: var(--bg) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0.8rem;
+    transition: all 0.2s;
+}
+
+#btn-logout:hover {
+    background-color: var(--border) !important;
+}
+
+@media (max-width: 900px) {
+    .dashboard-header { grid-template-columns: 1fr; }
+}
+
+/* --- BARRAS DE PROGRESSO DO ORÇAMENTO --- */
+.budget-row { margin-bottom: 1.2rem; }
+.progress-track {
+    width: 100%;
+    height: 14px;
+    background-color: var(--border);
+    border-radius: 7px;
+    overflow: hidden;
+}
+.progress-fill {
+    height: 100%;
+    border-radius: 7px;
+    transition: width 0.4s ease-in-out;
+}
+.status-ok { background-color: var(--success); }
+.status-warning { background-color: var(--warning); }
+.status-danger { background-color: var(--danger); }
+
+/* CARD TOTALIZADOR DE ORÇAMENTO */
+.budget-total-summary {
+    margin-top: 1.5rem;
+    padding: 1.2rem 1.5rem;
+    background: var(--bg);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    border-top: 3px solid var(--primary);
+}
+
+.budget-total-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.8rem;
+}
+
+.budget-total-label {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.budget-total-values {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.budget-total-footer {
+    margin-top: 0.6rem;
+    font-size: 0.8rem;
+    color: var(--text-light);
+    text-align: right;
+}
+
+/* ── Componentes internos do budget-row (estilos faltantes) ── */
+.budget-meta-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.budget-meta-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.budget-meta-info strong {
+    font-size: 0.9rem;
+    line-height: 1.3;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.budget-status-icon {
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+.btn-pin {
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-light);
+    transition: color 0.2s, background 0.2s, border-color 0.2s;
+    flex-shrink: 0;
+}
+
+.btn-pin.pinned {
+    color: var(--primary);
+    border-color: var(--primary);
+    background: rgba(201, 168, 76, 0.1);
+}
+
+.budget-micro-copy {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--text-light);
+    margin-top: 0.3rem;
+}
+
+.danger-text  { color: var(--danger) !important; }
+.warning-text { color: var(--warning) !important; }
+
+/* Badge indicadora do Projetor de Gastos (Ciclo Personalizado) */
+.cycle-badge {
+    font-size: 0.7rem;
+    color: var(--primary-dark);
+    background: rgba(201, 168, 76, 0.12);
+    border: 1px solid rgba(201, 168, 76, 0.3);
+    border-radius: 4px;
+    padding: 0.15rem 0.45rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+/* ── Orçamentos agrupados por Categoria Principal ─────────── */
+.budget-group-section {
+    margin-bottom: 0.75rem;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+.budget-group-header {
+    padding: 0.6rem 0.85rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.budget-group-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.4rem;
+}
+
+.budget-group-name {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    line-height: 1;
+}
+
+.budget-group-total {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text-light);
+    white-space: nowrap;
+}
+
+/* Barra de progresso do grupo: mais fina que as das subcategorias */
+.budget-group-bar {
+    height: 5px;
+    border-radius: 3px;
+}
+
+.budget-group-items {
+    background: var(--card);
+    padding: 0 0.85rem;
+}
+
+/* Dentro do grupo, cada budget-row usa divisor em vez de margin */
+.budget-group-items .budget-row {
+    margin-bottom: 0;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.budget-group-items .budget-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0.5rem;
+}
+
+/* NAVEGAÇÃO DE MÊS NO DASHBOARD */
+.dashboard-month-nav {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+    padding: 0.5rem 0;
+    margin-bottom: 0.5rem;
+}
+
+.nav-actions {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+}
+
+.dashboard-month-label {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    min-width: 160px;
+    text-align: center;
+    letter-spacing: 0.2px;
+}
+
+/* --- REFINAMENTO VISUAL DO EXTRATO --- */
+#extract-table { border-collapse: collapse; width: 100%; }
+
+.day-group-header td {
+    background-color: #F1F5F9;
+    color: #64748B;
+    font-weight: 700;
+    font-size: 0.8rem;
+    padding: 0.6rem 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+
+.extract-row td {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(201, 168, 76, 0.1);
+    vertical-align: middle;
+}
+
+.extract-info strong {
+    color: var(--text);
+    font-size: 1rem;
+    display: block;
+    margin-bottom: 0.2rem;
+}
+
+.extract-info small { color: var(--text-light); }
+
+.day-balance-row td {
+    text-align: right;
+    padding: 0.8rem 1rem 1.5rem 1rem;
+    font-size: 0.9rem;
+    color: var(--text-light);
+}
+
+.day-balance-row span {
+    font-weight: 700;
+    color: var(--success);
+    margin-left: 0.5rem;
+}
+
+.day-balance-row span.despesa { color: var(--danger); }
+
+/* === CONFERÊNCIA DE LANÇAMENTOS === */
+
+/* Span clicável do nome do lançamento */
+.extract-name {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 4px;
+    padding: 1px 3px;
+    margin: -1px -3px;
+    transition: background 0.15s ease, font-weight 0.15s ease;
+    user-select: none;
+}
+
+.extract-name:hover {
+    background: rgba(201, 168, 76, 0.10);
+}
+
+.extract-name:active {
+    transform: scale(0.97);
+}
+
+/* Estado: conferido */
+.extract-name.confirmed {
+    font-weight: 700;
+    color: var(--text);
+}
+
+/* Ícone de check que aparece ao lado do nome conferido */
+.confirm-check-icon {
+    flex-shrink: 0;
+    color: var(--primary-dark);
+    opacity: 0.85;
+}
+
+/* Linha inteira quando conferida — sutil, sem cores gritantes */
+.extract-row.confirmed td {
+    opacity: 0.72;
+}
+
+/* === BOTÃO DE FILTRO DO EXTRATO === */
+.btn-filter-extract {
+    background: var(--card);
+    color: var(--text-light);
+    border: 1px solid var(--border);
+    transition: all 0.2s ease;
+}
+
+/* Modo 1 — apenas conferidos: destaque suave dourado */
+.btn-filter-extract[data-filter-mode="1"] {
+    background: rgba(201, 168, 76, 0.12);
+    color: var(--primary-dark);
+    border-color: rgba(201, 168, 76, 0.5);
+    box-shadow: 0 0 0 2px rgba(201, 168, 76, 0.18);
+}
+
+/* Modo 2 — apenas pendentes: destaque neutro escuro */
+.btn-filter-extract[data-filter-mode="2"] {
+    background: rgba(28, 26, 23, 0.07);
+    color: var(--text);
+    border-color: rgba(28, 26, 23, 0.25);
+    box-shadow: 0 0 0 2px rgba(28, 26, 23, 0.08);
+}
+
+.btn-filter-extract:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+/* TOAST NOTIFICATIONS (Design Clean/Minimalista) */
+.toast-container {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 9999;
+    pointer-events: none;
+}
+
+.toast {
+    background-color: var(--text); /* Fundo escuro (quase preto aquecido da paleta) */
+    color: var(--bg); /* Texto claro na cor do fundo creme */
+    padding: 14px 28px;
+    border-radius: 50px; /* Bordas totalmente arredondadas */
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: center;
+    border: 1px solid var(--primary-dark); /* Harmonia com a paleta Ouro */
+    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Toast de Marcos extraído para reports.css */
+
+/* Toast de Marcos extraído par/* Report Hub extraído para reports.css */a reports.css */
+
+/* === ESTILOS PREMIUM DARK GOLD (Injeção de Identidade Visual) === */
+
+/* Para Cards (Ex: Projeção Final do Mês) */
+.theme-dark-gold {
+    background: var(--premium-gradient) !important;
+    border: 1px solid var(--premium-border) !important;
+}
+
+.theme-dark-gold p {
+    color: var(--premium-gold-sub) !important; 
+}
+
+.theme-dark-gold h2 {
+    color: var(--primary) !important; 
+}
+
+/* Garante que valores negativos no card de fim de mês ainda fiquem vermelhos */
+.theme-dark-gold.negative h2 {
+    color: var(--danger) !important; 
+}
+
+/* Para Botões e Ícones Interativos */
+.btn-dark-gold {
+    background: var(--premium-gradient) !important;
+    color: var(--primary) !important;
+    border: 1px solid var(--premium-border) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-dark-gold:hover {
+    border-color: rgba(201, 168, 76, 0.8) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+    color: var(--primary) !important;
+}
+
+/* Ajuste específico para o botão de voltar não parecer "apertado" com o fundo escuro */
+button.btn-voltar.btn-dark-gold {
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    color: var(--primary);
+}
+
+/* =============================================
+   GERENCIADOR DE CATEGORIAS — CategoryManager
+   Adicionado no Plano 1.0.5
+   ============================================= */
+
+/* Corpo interno do painel */
+.category-manager-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Linha de input + botões */
+.category-input-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* Ajuste no container para os três elementos (Select, Input e Botão) */
+.category-input-row select#category-manager-parent {
+    flex: 1;
+    min-width: 170px;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.875rem;
+    background-color: var(--surface);
+    color: var(--text);
+}
+
+.category-input-row input[type="text"]#new-category-input {
+    flex: 2;
+    min-width: 180px;
+}
+
+/* Botão primário pequeno (Adicionar / Salvar) */
+.btn-primary-sm {
+    padding: 0.5rem 1rem;
+    background-color: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.2s;
+}
+.btn-primary-sm:hover { opacity: 0.85; }
+
+/* Botão fantasma pequeno (Cancelar) */
+.btn-ghost-sm {
+    padding: 0.5rem 0.9rem;
+    background: none;
+    color: var(--text-light);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.2s, color 0.2s;
+}
+.btn-ghost-sm:hover { border-color: var(--primary); color: var(--primary); }
+
+/* Lista de categorias */
+#category-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+/* Item individual */
+#category-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.55rem 0.85rem;
+    border-radius: 8px;
+    background-color: var(--surface);
+    border: 1px solid transparent;
+    transition: border-color 0.2s;
+}
+#category-list li:hover {
+    border-color: var(--border);
+}
+
+/* Nome da categoria */
+#category-list li .cat-name {
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+/* Badge "protegida" */
+#category-list li .cat-protected-badge {
+    font-size: 0.7rem;
+    color: var(--text-light);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.1rem 0.4rem;
+    font-weight: 400;
+}
+
+/* Badge visual indicando o grupo pai na listagem */
+.cat-parent-badge {
+    font-size: 0.7rem;
+    color: var(--primary-dark);
+    background: rgba(201, 168, 76, 0.15);
+    border: 1px solid rgba(201, 168, 76, 0.4);
+    border-radius: 4px;
+    padding: 0.1rem 0.4rem;
+    margin-left: 0.5rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* Grupo de ações (editar/excluir) */
+#category-list li .cat-actions {
+    display: flex;
+    gap: 0.3rem;
+    align-items: center;
+}
+#category-list li .cat-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.3rem;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    color: var(--text-light);
+    transition: color 0.2s;
+    width: auto;
+    height: auto;
+}
+#category-list li .cat-actions button:hover { color: var(--primary); border: none; }
+#category-list li .cat-actions button.btn-delete:hover { color: var(--danger); }
+
+/* Item em modo de edição ativo */
+#category-list li.is-editing {
+    border-color: var(--primary);
+    background-color: rgba(201, 168, 76, 0.06);
+}
+
+/* ── CategoryManager: cabeçalho de grupo na lista ── */
+#category-list .cat-group-header {
+    list-style: none;
+    display: block;
+    cursor: default;
+}
+
+/* =============================================
+   PAINEL DE LANÇAMENTOS POR CATEGORIA
+   (Orçamentos em Destaque — Clique no nome)
+   ============================================= */
+
+/* Botão-chip clicável: herda a identidade visual do chip escuro,
+   com reset dos defaults de <button> e feedback interativo */
+.pinned-category-btn {
+    /* Reset de botão */
+    -webkit-appearance: none;
+    appearance: none;
+    font-family: inherit;
+
+    /* Identidade visual: chip Dark Gold (replica o span:first-child) */
+    background: linear-gradient(145deg, #1C1A17 0%, #252118 100%);
+    color: var(--primary);
+    border: 1px solid rgba(201, 168, 76, 0.4);
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.3;
+    max-width: 65%;
+    white-space: normal;
+    word-wrap: break-word;
+    text-align: center;
+
+    /* Sinal de interatividade */
+    cursor: pointer;
+    transition: opacity 0.18s ease, box-shadow 0.18s ease, transform 0.12s ease;
+}
+
+.pinned-category-btn:hover {
+    opacity: 0.85;
+    box-shadow: 0 0 0 2px rgba(201, 168, 76, 0.35), 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.pinned-category-btn:active {
+    transform: scale(0.96);
+}
+
+/* --- Lista de lançamentos dentro do dialog --- */
+
+/* Cabeçalho de resumo: N lançamentos + total */
+.cat-tx-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.7rem 1rem;
+    margin-bottom: 0.8rem;
+    background: var(--surface);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-light);
+}
+
+.cat-tx-total {
+    color: var(--danger);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+/* Lista sem marcadores */
+.cat-tx-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Item individual de lançamento */
+.cat-tx-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    transition: border-color 0.15s;
+}
+
+.cat-tx-item:hover {
+    border-color: var(--primary);
+}
+
+/* Item de lançamento recorrente/projetado: visual diferenciado */
+.cat-tx-item.projected {
+    background: var(--surface);
+    border-style: dashed;
+}
+
+/* Lado esquerdo: descrição + badge */
+.cat-tx-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.cat-tx-desc {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Badge "Recorrente" para lançamentos projetados */
+.cat-tx-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-light);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.1rem 0.45rem;
+    align-self: flex-start;
+}
+
+/* Lado direito: data + valor */
+.cat-tx-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.2rem;
+    flex-shrink: 0;
+}
+
+.cat-tx-date {
+    font-size: 0.78rem;
+    color: var(--text-light);
+}
+
+.cat-tx-amount {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--danger);
+}
+
+/* Estado vazio */
+.cat-tx-empty {
+    text-align: center;
+    color: var(--text-light);
+    font-size: 0.9rem;
+    padding: 2rem 1rem;
+}
+
+/* Lançadores e Termômetro de Imprevistos extraídos para reports.css */
+
+/* === CARDS DE SINCRONIZAÇÃO (SyncModule) === */
+.sync-cards-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    width: 100%;
+}
+.sync-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.8rem 1rem;
+    border-radius: 12px;
+    cursor: pointer;
+    border: 1px solid;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    overflow: hidden;
+}
+.sync-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+.sync-card:active {
+    transform: scale(0.98);
+}
+.sync-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.sync-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.sync-title {
+    font-weight: 700;
+    font-size: 0.85rem;
+    line-height: 1.2;
+}
+.sync-date-display {
+    font-size: 0.75rem;
+    font-weight: 600;
+    opacity: 0.85;
+}
+.hidden-sync-date {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+/* Aplicação das cores do payment-config.js */
+.sync-debito { background: rgba(37,99,235,0.08); color: #2563EB; border-color: rgba(37,99,235,0.25); }
+.sync-cartao1 { background: rgba(5,150,105,0.08); color: #059669; border-color: rgba(5,150,105,0.25); }
+.sync-cartao2 { background: rgba(124,58,237,0.08); color: #7C3AED; border-color: rgba(124,58,237,0.25); }
+
+@media (max-width: 600px) {
+    .sync-cards-container { gap: 0.5rem; }
+    .sync-card { flex-direction: column; text-align: center; gap: 0.3rem; padding: 0.6rem; }
+    .sync-title { font-size: 0.8rem; }
+    .sync-date-display { font-size: 0.7rem; }
+}
+
+/* =============================================
+   BOTÕES FLUTUANTES DE ROLAGEM (EXTRATO)
+   ============================================= */
+.floating-scroll-controls {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 9000; /* Abaixo do toast (9999) mas acima do resto */
+    pointer-events: none; /* Permite clicar através do container invisível */
+}
+
+/* --- CORES DOS ATALHOS DE FATURA NO EXTRATO --- */
+#btn-scroll-passai {
+    color: #059669; /* Verde Passaí */
+    border-color: rgba(5, 150, 105, 0.3);
+}
+#btn-scroll-passai:hover {
+    background-color: #059669;
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(5, 150, 105, 0.3);
+}
+
+#btn-scroll-cef {
+    color: #7C3AED; /* Roxo CEF */
+    border-color: rgba(124, 58, 237, 0.3);
+}
+#btn-scroll-cef:hover {
+    background-color: #7C3AED;
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(124, 58, 237, 0.3);
+}
+
+.floating-scroll-btn {
+    background-color: var(--card);
+    color: var(--primary);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 46px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.2s, box-shadow 0.2s;
+    pointer-events: auto; /* Reativa o clique apenas nos botões */
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.floating-scroll-btn:hover {
+    background-color: var(--primary);
+    color: #fff;
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 6px 16px rgba(201, 168, 76, 0.25);
+}
+
+.floating-scroll-btn:active {
+    transform: translateY(0) scale(0.95);
+}
+
+/* Estado Oculto (quando no topo ou rodapé) */
+.floating-scroll-btn.hidden {
+    opacity: 0;
+    transform: translateY(15px) scale(0.9);
+    pointer-events: none;
+}
+
+/* Responsividade para telas menores */
+@media (max-width: 600px) {
+    .floating-scroll-controls {
+        bottom: 20px;
+        right: 20px;
+    }
+    .floating-scroll-btn {
+        width: 40px;
+        height: 40px;
+    }
+}
+
+/* === INDICADOR DE SINCRONIZAÇÃO EM SEGUNDO PLANO === */
+#background-sync-indicator {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--premium-gradient);
+    color: var(--primary);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 1000;
+    border: 1px solid var(--premium-border);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+#background-sync-indicator.active {
+    opacity: 1;
+}
+
+.spin-icon {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    100% { transform: rotate(360deg); }
+}
+
+/* Animação acelerada por GPU para transições rápidas de interface */
+.fade-in-fast {
+    animation: fadeInDashboard 150ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes fadeInDashboard {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* === COMPONENTE DE RITMO (PACING) === */
+.pace-indicator {
+    margin-top: 0.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.pace-track {
+    width: 100%;
+    height: 6px;
+    background-color: var(--border);
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+}
+/* Linha do Tempo: Fundo neutro que cresce com os dias */
+.pace-time-bar {
+    position: absolute;
+    top: 0; left: 0; height: 100%;
+    background-color: #94A3B8; /* Slate 400 */
+    opacity: 0.4;
+    border-right: 2px solid #64748B;
+    z-index: 1;
+}
+/* Linha de Consumo real: Sobreposta ao tempo */
+.pace-spend-bar {
+    position: absolute;
+    top: 0; left: 0; height: 100%;
+    z-index: 2;
+    transition: width 0.5s ease;
+}
+/* Cores do Pacing herdadas dos status do sistema */
+.pace-spend-bar.status-ok { background-color: var(--success); }
+.pace-spend-bar.status-warning { background-color: var(--warning); }
+.pace-spend-bar.status-danger { background-color: var(--danger); }
+
+.pace-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--text-light);
+    font-weight: 500;
+}
+
+/* Skeleton para o Modal Assíncrono */
+.skeleton-box {
+    height: 1.5rem;
+    background: linear-gradient(90deg, var(--surface) 25%, var(--border) 50%, var(--surface) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+}
+@keyframes skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
