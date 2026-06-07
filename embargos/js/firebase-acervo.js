@@ -1,4 +1,4 @@
-import { app, auth } from './firebase-auth.js'; 
+import { app, auth } from './ed_firebase-auth.js'; 
 import { getFirestore, collection, doc, setDoc, getDocs, updateDoc, arrayUnion, query, orderBy, getDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const db = getFirestore(app);
