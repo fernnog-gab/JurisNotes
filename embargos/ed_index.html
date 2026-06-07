@@ -32,13 +32,13 @@
 </script>
     
     <!-- 1. Estilos Base, Variáveis Globais e Estrutura Principal (Core) -->
-<link rel="stylesheet" href="juris-core.css?v=2.0.0">
+<link rel="stylesheet" href="ed_juris-core.css?v=2.0.0">
 
 <!-- 2. Ferramentas Globais, PDF, Áudio e Modais (Ferramentas de Entrada) -->
-<link rel="stylesheet" href="juris-reader-tools.css?v=3.0.0">
+<link rel="stylesheet" href="ed_juris-reader-tools.css?v=3.0.0">
 
 <!-- 3. Fichário, Timeline, Fases Metodológicas e Acervo (Síntese e Saída) -->
-<link rel="stylesheet" href="juris-timeline-cards.css?v=3.0.0">
+<link rel="stylesheet" href="ed_juris-timeline-cards.css?v=3.0.0">
 </head>
 <body>
     
@@ -610,7 +610,7 @@
             🧠 Guia Metodológico: Nós de Ideia
             <button style="float:right; background:none; border:none; cursor:pointer; font-size:1.2rem; color:#999;" onclick="fecharModalAjuda()">✕</button>
         </div>
-        <iframe src="guia-ia.html" style="width: 100%; height: calc(100% - 60px); border: none; background: #fdfdfd;"></iframe>
+        <iframe src="ed_guia-ia.html" style="width: 100%; height: calc(100% - 60px); border: none; background: #fdfdfd;"></iframe>
     </div>
 
     <!-- Backdrop dedicado para Reordenação (Evita conflito com o Wizard) -->
@@ -699,21 +699,21 @@
 
     <!-- DEPENDÊNCIAS DE RENDERIZAÇÃO E ESTADO (Keyed Morphing) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/morphdom/2.7.4/morphdom-umd.min.js"></script>
-    <script src="js/store.js"></script>
+    <script src="js/ed_store.js"></script>
     
-    <script src="js/backup-manager.js"></script>
-    <script src="js/topics-manager.js"></script>
-    <script src="js/interaction-tools.js"></script>
-    <script src="js/audio-manager.js"></script>
-    <script src="js/annotation-actions.js"></script>
-    <script src="js/export-manager.js"></script>
-    <script src="js/pdf-engine.js"></script>
+    <script src="js/ed_backup-manager.js"></script>
+    <script src="js/ed_topics-manager.js"></script>
+    <script src="js/ed_interaction-tools.js"></script>
+    <script src="js/ed_audio-manager.js"></script>
+    <script src="js/ed_annotation-actions.js"></script>
+    <script src="js/ed_export-manager.js"></script>
+    <script src="js/ed_pdf-engine.js"></script>
     
     <!-- NOVO: Módulo agnóstico de Leitura Automatizada do PJe -->
-    <script src="js/pje-parser.js"></script>
+    <script src="js/ed_pje-parser.js"></script>
     
-<script src="js/app-core.js"></script>
-<script src="js/acervo-controller.js"></script>
+<script src="js/ed_app-core.js"></script>
+<script src="js/ed_acervo-controller.js"></script>
 
     
     <div id="quick-intent-tooltip" class="quick-tooltip" style="display: none;"></div>
@@ -890,7 +890,7 @@
     </div>
 
     <!-- SCRIPT DE AUTENTICAÇÃO E ACERVO -->
-    <script type="module" src="js/firebase-auth.js"></script>
-    <script type="module" src="js/firebase-acervo.js"></script>
+    <script type="module" src="js/ed_firebase-auth.js"></script>
+    <script type="module" src="js/ed_firebase-acervo.js"></script>
 </body>
 </html>
