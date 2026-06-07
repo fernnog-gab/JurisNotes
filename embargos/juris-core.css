@@ -297,7 +297,12 @@ body.theme-anotacoes-jasmine {
     font-weight: 600;
     cursor: pointer;
     transition: background-color 0.2s, color 0.2s;
-    text-align: center;
+    /* --- NOVAS REGRAS DE ALINHAMENTO DA TAG --- */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    /* ------------------------------------------ */
     width: auto;
     border-radius: 8px 8px 0 0;
     margin-right: 2px;
@@ -305,6 +310,24 @@ body.theme-anotacoes-jasmine {
 
 .tab-btn:hover { color: var(--trt-blue); background: #e8ecef; }
 .tab-btn.active { background-color: var(--trt-blue); color: #ffffff; border-bottom: none; }
+
+/* Tag Identificadora de Módulo nas Abas */
+.tab-module-badge {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    line-height: 1;
+}
+
+/* Paleta de Cor: Embargos de Declaração */
+.badge-ed {
+    background-color: #D500B5; /* Fúcsia */
+    color: #FFFFFF;            /* Fonte Branca */
+}
 
 /* ================================================
    4. COMPONENTES UI GENÉRICOS E TAGS
