@@ -114,7 +114,7 @@
                 <hr class="toolbar-separator">
 
                 <!-- ── GRUPO 2: Ferramentas de Trabalho Diário ───────── -->
-                <button class="icon-btn" id="btn-novo-topico" onclick="criarTopicoPrompt()" title="Criar Tópico Recursal" disabled>
+                <button class="icon-btn" id="btn-novo-topico" onclick="criarTopicoPrompt()" title="Criar Vício a Analisar" disabled>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
                     </svg>
@@ -223,11 +223,17 @@
                     <input type="radio" name="modo_agrupar_popup" value="agrupar" onchange="toggleAgruparPopup()"> Agrupar a Existente
                 </label>
             </div>
-            <input type="number" id="input-ideia-popup" class="topic-select" style="display:none;" placeholder="Nº da Ideia (ex: 1)" min="1">
+            <select id="vicio-popup-select" class="topic-select" style="margin-top: 6px;">
+                <option value="">Selecione o Vício Alegado...</option>
+                <option value="omissao">Omissão</option>
+                <option value="contradicao">Contradição</option>
+                <option value="erro">Erro Material / Obscuridade</option>
+            </select>
+            <input type="number" id="input-ideia-popup" class="topic-select" style="display:none; margin-top:6px;" placeholder="Nº da Ideia (ex: 1)" min="1">
         </div>
 
         <div id="popup-step-doc">
-            <p class="popup-label">Fase Metodológica e Documento:</p>
+            <p class="popup-label">Fase de Auditoria e Documento:</p>
             <div class="phase-tabs" id="popup-phase-tabs"></div>
             <div id="lista-docs-popup" class="doc-list-container"></div>
             <button class="chip-btn chip-cancelar" style="margin-top: 12px;" onclick="fecharPopupClassificacao()">✕ Cancelar</button>
@@ -409,12 +415,18 @@
                     <input type="radio" name="modo_agrupar_wizard" value="agrupar" onchange="toggleAgruparWizard()"> Agrupar a Existente
                 </label>
             </div>
-            <input type="number" id="input-ideia-wizard" class="topic-select" style="display:none;" placeholder="Nº da Ideia (ex: 1)" min="1">
+            <select id="vicio-wizard-select" class="topic-select" style="margin-top: 6px;">
+                <option value="">Selecione o Vício Alegado...</option>
+                <option value="omissao">Omissão</option>
+                <option value="contradicao">Contradição</option>
+                <option value="erro">Erro Material / Obscuridade</option>
+            </select>
+            <input type="number" id="input-ideia-wizard" class="topic-select" style="display:none; margin-top:6px;" placeholder="Nº da Ideia (ex: 1)" min="1">
         </div>
 
         <div id="wizard-topic-color-feedback" style="height: 0; border-radius: 4px 4px 0 0; margin-bottom: 8px; transition: height 0.2s, background-color 0.2s;"></div>
         <div id="wizard-step-doc">
-            <p class="popup-label">Fase Metodológica e Documento:</p>
+            <p class="popup-label">Fase de Auditoria e Documento:</p>
             <div class="phase-tabs" id="wizard-phase-tabs"></div>
             <div id="lista-docs-wizard" class="doc-list-container" style="max-height: 140px;"></div>
             <div class="wizard-actions">
