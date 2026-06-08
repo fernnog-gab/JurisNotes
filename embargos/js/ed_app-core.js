@@ -600,13 +600,16 @@ function identificarFaseMetodologica(docNome) {
         if (conf) return conf.fase;
     }
     const upper = docNome.toUpperCase();
-    if (upper.includes('RECURSO') || upper.includes('CONTRARRAZÕES')) return 1;
+    
+    // Regex e Lógica blindada contra colisão de ED vs Sentença
+    if (upper.includes('SENTENÇA') || upper.includes('ACÓRDÃO') || upper.includes('DECISÃO')) return 3;
+    if (upper.includes('EMBARGOS') || upper.includes('CONTRAMINUTA')) return 1; // Embargos só cai aqui se NÃO contiver Sentença/Acórdão
+    if (upper.includes('RECURSO') || upper.includes('CONTRARRAZÕES')) return 2; // Passa a ser Fase 2
     if (upper.includes('INICIAL') || upper.includes('CONTEST') || upper.includes('IMPUGNAÇÃO')) return 2;
-    if (upper.includes('SENTENÇA') || upper.includes('ACÓRDÃO') || upper.includes('DECISÃO') || upper.includes('EMBARGOS')) return 3;
     return 4; 
 }
 
-async function salvarAnotacao(tipo, conteudo, documento, polo, topicoId, comentario = '', targetParentIndex = null, anchorPageOverride = null) {
+async function salvarAnotacao(tipo, conteudo, documento, polo, topicoId, comentario = '', targetParentIndex = null, anchorPageOverride = null, vicioAlegado = null) {
     const capturedHighlights = (tipo === 'texto' || tipo === 'imagem') && _tempHighlightState.rects 
         ? structuredClone(_tempHighlightState.rects) : null;
     const capturedPagina = _tempHighlightState.paginaFisica;
@@ -635,7 +638,6 @@ async function salvarAnotacao(tipo, conteudo, documento, polo, topicoId, comenta
     };
 
     if (capturedHighlights) novaExtracao.highlightRects = capturedHighlights;
-
     const faseNova = identificarFaseMetodologica(documento);
 
     if (targetParentIndex !== null && targetParentIndex !== '') {
@@ -644,12 +646,20 @@ async function salvarAnotacao(tipo, conteudo, documento, polo, topicoId, comenta
         parentNode.itensCorrelacionados.push(novaExtracao);
         exibirToast(`Item agrupado à Ideia ${parseInt(targetParentIndex) + 1}.`);
     } else {
+        // --- NOVA LÓGICA DE INJEÇÃO E PROPAGAÇÃO DO VÍCIO ---
+        if (vicioAlegado) {
+            novaExtracao.vicio = vicioAlegado; // Injeta no Card
+            // Propaga para o Tópico (Base para o Dashboard de Maturidade)
+            if (!topicoAlvo.vicio) topicoAlvo.vicio = vicioAlegado;
+        }
+
         novaExtracao.subAnotacoes = [];
         novaExtracao.itensCorrelacionados = [];
         
+        // Ajuste de Terminologia no Aviso de Pulo Metodológico
         const temFase2 = topicoAlvo.anotacoes.some(a => identificarFaseMetodologica(a.documento) === 2);
         if (faseNova === 3 && !temFase2) {
-            exibirToast("Atenção: Você avançou para a Sentença. Já verificou a Inicial/Contestação?", "aviso");
+            exibirToast("Atenção: Cadê a peça de provocação original (RO/Contestação) para validar o ED?", "aviso");
         } else {
             exibirToast(`Anotação salva em "${topicoAlvo.nome}".`);
         }

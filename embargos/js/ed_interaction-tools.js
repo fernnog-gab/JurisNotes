@@ -43,16 +43,19 @@ window.toggleModoFoco = function(ativar) {
 
 // --- CONFIGURAÇÃO CENTRAL DE DOCUMENTOS ---
 const DOC_CONFIG = [
+    { label: 'Embargos de Declaração',    polo: null,           tipo: 'dual',   fase: 1 },
+    { label: 'Contraminuta aos EDs',      polo: null,           tipo: 'dual',   fase: 1 },
+    
+    { label: 'Recurso Ordinário',         polo: null,           tipo: 'dual',   fase: 2 },
+    { label: 'Recurso Adesivo',           polo: null,           tipo: 'dual',   fase: 2 },
+    { label: 'Contrarrazões ao RO',       polo: null,           tipo: 'dual',   fase: 2 },
     { label: 'Petição Inicial',           polo: 'Parte Autora', tipo: 'auto',   fase: 2 },
     { label: 'Contestação',               polo: 'Parte Ré',     tipo: 'auto',   fase: 2 },
     { label: 'Impugnação à Contestação',  polo: 'Parte Autora', tipo: 'auto',   fase: 2 },
-    { label: 'Recurso Ordinário',         polo: null,           tipo: 'dual',   fase: 1 },
-    { label: 'Recurso Adesivo',           polo: null,           tipo: 'dual',   fase: 1 },
-    { label: 'Contrarrazões',             polo: null,           tipo: 'dual',   fase: 1 },
-    { label: 'Quesitos',                  polo: null,           tipo: 'dual',   fase: 4 },
-    { label: 'Quesitos Complementares',   polo: null,           tipo: 'dual',   fase: 4 },
-    { label: 'Sentença',                  polo: 'Juízo',        tipo: 'neutro', fase: 3 },
-    { label: 'Sentença de Embargos de Declaração', polo: 'Juízo', tipo: 'neutro', fase: 3 },
+    
+    { label: 'Acórdão Embargado',         polo: 'Juízo',        tipo: 'neutro', fase: 3 },
+    { label: 'Sentença Embargada',        polo: 'Juízo',        tipo: 'neutro', fase: 3 },
+    
     { label: 'Laudo Pericial',            polo: 'Perito',       tipo: 'neutro', fase: 4 },
     { label: 'Audiência de Instrução',    polo: null,           tipo: 'dual',   fase: 4 },
     { label: 'Prova Documental Genérica', polo: null,           tipo: 'dual',   fase: 4 }
@@ -61,6 +64,7 @@ const DOC_CONFIG = [
 let _docSelecionado = null;
 let _isWizardContext = false;
 let _pendingTargetIndex = null;
+let _wizardVicioSelecionado = null; // Variável global de transporte para o vício
 
 function renderizarFasesModais(context) {
     const tabsContainer = document.getElementById(`${context}-phase-tabs`);
@@ -68,8 +72,10 @@ function renderizarFasesModais(context) {
     if (!tabsContainer || !listContainer) return;
     
     const fases = [
-        { id: 1, nome: '1. Recurso' }, { id: 2, nome: '2. Gênese' },
-        { id: 3, nome: '3. Sentença' }, { id: 4, nome: '4. Provas' }
+        { id: 1, nome: '1. Escopo' },
+        { id: 2, nome: '2. Provocação' },
+        { id: 3, nome: '3. Decisão' },
+        { id: 4, nome: '4. Validação' }
     ];
 
     tabsContainer.innerHTML = '';
@@ -96,17 +102,17 @@ function renderizarFasesModais(context) {
 }
 
 function toggleAgruparPopup() {
-    const agrupar = document.querySelector('input[name="modo_agrupar_popup"]:checked').value === 'agrupar';
-    const input = document.getElementById('input-ideia-popup');
-    input.style.display = agrupar ? 'block' : 'none';
-    if(agrupar) input.focus();
+    const isAgrupar = document.querySelector('input[name="modo_agrupar_popup"]:checked').value === 'agrupar';
+    document.getElementById('input-ideia-popup').style.display = isAgrupar ? 'block' : 'none';
+    document.getElementById('vicio-popup-select').style.display = isAgrupar ? 'none' : 'block';
+    if(isAgrupar) document.getElementById('input-ideia-popup').focus();
 }
 
 function toggleAgruparWizard() {
-    const agrupar = document.querySelector('input[name="modo_agrupar_wizard"]:checked').value === 'agrupar';
-    const input = document.getElementById('input-ideia-wizard');
-    input.style.display = agrupar ? 'block' : 'none';
-    if(agrupar) input.focus();
+    const isAgrupar = document.querySelector('input[name="modo_agrupar_wizard"]:checked').value === 'agrupar';
+    document.getElementById('input-ideia-wizard').style.display = isAgrupar ? 'block' : 'none';
+    document.getElementById('vicio-wizard-select').style.display = isAgrupar ? 'none' : 'block';
+    if(isAgrupar) document.getElementById('input-ideia-wizard').focus();
 }
 
 function processarAgrupamento(topicoId, inputId) {
@@ -132,9 +138,21 @@ function selecionarDocumento(docLabel, polo, context) {
 
     const inputId = context === 'popup' ? 'input-ideia-popup' : 'input-ideia-wizard';
     const targetIndex = processarAgrupamento(topicoId, inputId);
-    if (targetIndex === false) return;
+    if (targetIndex === false) return; // Erro validado pelo input de agrupamento
 
     _pendingTargetIndex = targetIndex;
+    _wizardVicioSelecionado = null;
+
+    // NOVO: Validação Antecipada. Trava ANTES de pedir polo.
+    if (targetIndex === null) {
+        const vicioSelectId = context === 'popup' ? 'vicio-popup-select' : 'vicio-wizard-select';
+        const vicio = document.getElementById(vicioSelectId).value;
+        if (!vicio) {
+            exibirToast('Por favor, classifique o Vício Alegado antes de prosseguir.', 'erro');
+            return; // Bloqueia fluxo
+        }
+        _wizardVicioSelecionado = vicio;
+    }
 
     if (polo === 'DUAL') {
         _docSelecionado = docLabel;
@@ -164,14 +182,15 @@ function voltarParaDocumentos(context, event) {
 function executarSalvamento(docLabel, polo, topicoId, targetIndex, context) {
     if (context === 'popup') {
         const comentario = document.getElementById('comentario-input').value.trim();
-        salvarAnotacao(pendingTipo, pendingConteudo, docLabel, polo, topicoId, comentario, targetIndex);
+        salvarAnotacao(pendingTipo, pendingConteudo, docLabel, polo, topicoId, comentario, targetIndex, null, _wizardVicioSelecionado);
         fecharPopupClassificacao();
     } else {
         _ultimoTopicoUsadoId = topicoId;
         const comentario = document.getElementById('crop-comment-input').value.trim();
-        salvarAnotacao('imagem', _wizardImagemCapturada, docLabel, polo, topicoId, comentario, targetIndex);
+        salvarAnotacao('imagem', _wizardImagemCapturada, docLabel, polo, topicoId, comentario, targetIndex, null, _wizardVicioSelecionado);
         fecharTudoWizard();
     }
+    _wizardVicioSelecionado = null; // Libera memória
 }
 
 /* ================================================
@@ -326,6 +345,11 @@ function fecharTudoWizard() {
     document.getElementById('crop-wizard-step1').style.display = 'none';
     document.getElementById('crop-wizard-step2').style.display = 'none';
     document.getElementById('wizard-backdrop').style.display   = 'none';
+    
+    // LIMPEZA DE ESTADO DE COMPONENTES
+    const vicioWizard = document.getElementById('vicio-wizard-select');
+    if (vicioWizard) vicioWizard.value = ''; // FIX: State Leakage Evitado
+
     _wizardTopicoSelecionado = null;
     _wizardImagemCapturada   = null;
     
@@ -347,7 +371,10 @@ function fecharPopupClassificacao() {
 
     document.getElementById('popup-step-polo').style.display = 'none';
     document.getElementById('popup-step-doc').style.display = 'block';
+    
+    // LIMPEZA DE ESTADO DE COMPONENTES
     document.getElementById('input-ideia-popup').value = '';
+    document.getElementById('vicio-popup-select').value = ''; // FIX: State Leakage Evitado
 
     const txtArea = document.getElementById('comentario-input');
     if (txtArea) {
