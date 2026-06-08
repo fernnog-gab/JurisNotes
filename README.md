@@ -14,125 +14,143 @@ O Juris Notes age como um "Fichário Inteligente" que inverte a lógica: o asses
 
 ---
 
-## 2. A Metodologia das 4 Fases e Zonas Visuais
+## 2. A Metodologia das 4 Fases e Zonas Visuais (Fluxo Padrão - Recurso Ordinário)
 
-Para combater a carga cognitiva e organizar o raciocínio jurídico, o Juris Notes divide o processo de extração e análise em **4 Fases Metodológicas Essenciais**. Cada fase possui um propósito lógico e uma identidade visual (cor) própria, que acompanha o recorte desde a captura até a exportação final:
+Para combater a carga cognitiva e organizar o raciocínio jurídico, o sistema divide a extração em **4 Fases Metodológicas Essenciais**. Cada fase possui um propósito lógico e uma identidade visual (cor):
 
 ### 🟦 FASE 1: O Recurso (O Filtro) — Cor: Azul
-* **Propósito:** Delimitar a fronteira da atuação do Tribunal (Efeito Devolutivo). É aqui que identificamos exatamente do que a parte está reclamando.
+* **Propósito:** Delimitar a fronteira da atuação do Tribunal (Efeito Devolutivo). Identificamos exatamente do que a parte reclama.
 * **Peças Típicas:** Recurso Ordinário, Recurso Adesivo, Contrarrazões.
-* **Impacto Visual:** Cards extraídos nesta fase ganham um fundo azul suave. Eles sempre serão ordenados no topo do painel, pois são a lente através da qual todo o resto do processo será lido.
+* **Impacto Visual:** Sempre ordenados no topo do painel. É a lente através da qual o resto do processo será lido.
 
 ### 🟩 FASE 2: A Gênese (A Origem) — Cor: Verde
-* **Propósito:** Compreender como a lide nasceu. Impede que o julgador seja surpreendido por inovações recursais (pedidos que não estavam na inicial) ou argumentos de defesa que não foram levantados na contestação.
+* **Propósito:** Compreender como a lide nasceu. Impede surpresas por inovações recursais ou argumentos não levantados na contestação.
 * **Peças Típicas:** Petição Inicial, Contestação, Impugnação à Contestação.
-* **Impacto Visual:** Fundo verde suave. Agrupa-se logo abaixo do recurso, estabelecendo o cenário original do conflito processual.
 
 ### 🟪 FASE 3: O Julgamento (A Sentença) — Cor: Roxo
 * **Propósito:** Analisar o que o Juízo de 1º grau decidiu e quais foram os fundamentos adotados.
-* **Peças Típicas:** Sentença, Sentença de Embargos de Declaração.
-* **Impacto Visual:** Fundo roxo suave. Se o usuário tentar recortar a Sentença *antes* de ter passado pela Gênese (Fase 2), o sistema emite um alerta não-intrusivo sugerindo a leitura da Inicial/Contestação para evitar o "efeito túnel".
+* **Peças Típicas:** Sentença.
 
 ### 🟧 FASE 4: A Validação (As Provas) — Cor: Laranja
-* **Propósito:** É o acervo probatório bruto. Onde a verdade real é confrontada com as alegações das fases anteriores.
-* **Peças Típicas:** Prova Documental Genérica, Laudos Periciais, Quesitos, Oitivas de Audiência (Áudio/Transcrição).
-* **Impacto Visual:** Fundo laranja. É a fase final de agrupamento, onde o assessor vincula a prova concreta às teses levantadas.
+* **Propósito:** É o acervo probatório bruto. Onde a verdade real é confrontada com as alegações.
+* **Peças Típicas:** Prova Documental Genérica, Laudos Periciais, Oitivas de Audiência (Áudio/Transcrição).
+
+### O Dashboard de Maturidade (Termômetro de Teses - RO)
+No fluxo padrão, cada tese possui uma barra de progresso em "vidro fosco". Se a tese agrupa elementos de todas as fases metodológicas essenciais (ex: Recurso + Sentença + Provas), o card se preenche de cores e atinge sua maturidade máxima, ganhando um efeito de **estrela giratória** (sinalizando que está segura para exportação).
 
 ---
 
-## 3. O Dashboard de Maturidade (Termômetro de Teses)
+## 3. Mudança de Paradigma: Arquitetura em Hub e Ecossistemas Isolados
 
-No topo da tela de Anotações, o sistema gera automaticamente um **Sumário de Teses**. Com a metodologia das 4 fases, esse sumário atua como um **Dashboard de Maturidade**:
+Com a maturação da ferramenta, percebeu-se que **diferentes incidentes processuais exigem "vieses cognitivos" completamente diferentes** por parte do assessor. O fluxo de um Recurso Ordinário (RO) não atende à dinâmica restrita dos Embargos de Declaração (ED). 
 
-1. **Preenchimento por Fases:** Cada tese criada no painel funciona como uma barra de progresso em formato de "vidro fosco". Se você atrelou a essa tese um recorte do Recurso (Azul) e da Sentença (Roxo), o fundo da tese exibirá um gradiente com essas duas cores.
-2. **Visualização Rápida de Lacunas:** Basta olhar para o topo da tela para saber se uma tese está manca. (Ex: *Falta analisar as provas? A tese não terá a cor laranja.*)
-3. **Tese Blindada (100%):** Quando o assessor agrupa elementos das 4 fases em uma mesma tese, o card atinge sua maturidade máxima. Ele ganha um efeito visual de **estrela giratória**, sinalizando que aquela tese está completa, segura e pronta para ser exportada para a Inteligência Artificial redigir.
+Para acomodar isso de forma segura, o Juris Notes adotou uma **Arquitetura em Hub (Estado de Transição)**:
+
+* **O Hub de Entrada (`/`):** Uma tela inicial de *Onboarding* onde o usuário declara a natureza da sua análise (Recurso Ordinário vs. Embargos de Declaração) antes de carregar o processo.
+* **Silos Funcionais Isolados (`/ro` e `/ed`):** A aplicação foi dividida em diretórios independentes. Atualmente, a pasta `/ed` é um clone da principal, mas receberá adaptações cirúrgicas exclusivas (poda de ferramentas de mérito e novas intenções de IA). Essa separação garante que possamos inovar no fluxo de embargos sem risco de quebrar ou engessar o sistema maduro do RO.
+* **Ecossistemas de Backup Próprios:** Cada painel gera e lê seu próprio arquivo `.json` de backup e possui sua própria estrutura de formatação para IA, evitando contaminação de dados entre incidentes processuais distintos.
 
 ---
 
-## 4. Arquitetura da Aplicação
+## 4. Metodologia Adaptada: O Incidente de Embargos de Declaração (ED)
+
+Quando o sistema entra no **"Modo ED"**, as 4 cores são mantidas, mas a cognição por trás delas sofre uma mutação para atuar como uma **Lente de Auditoria Estrita**. Em ED, não se discute a justiça da decisão, mas sim a sua higidez estrutural.
+
+*(Nota: A atribuição de cores neste módulo se dará por um "Modal de Classificação" em desenvolvimento, onde o usuário define os critérios da peça extraída e o sistema aplica a cor lógica).*
+
+### 🟦 FASE 1: A Lente de Auditoria (O Escopo do Vício) — Cor: Azul
+* **Propósito:** Delimitar estritamente qual é a falha estrutural alegada (Omissão, Contradição ou Erro Material). 
+* **A "Mágica" Cognitiva:** O card Azul atua como uma viseira para o assessor. Qualquer argumento subsequente que tente rediscutir a justiça da decisão (fuga de escopo) será mentalmente barrado, pois não responde ao recorte Azul.
+
+### 🟩 FASE 2: O Limite da Provocação (A Gênese) — Cor: Verde
+* **Propósito:** Confirmar o prequestionamento ou a provocação original. O juízo não pode ser omisso sobre algo que nunca lhe foi pedido. (Recortes da Inicial, Contestação ou RO originário).
+* **A "Mágica" Cognitiva:** Se o assessor não encontrar nada para colorir de Verde, a tese cai por inovação recursal. A prova visual da inovação é a própria ausência da cor Verde.
+
+### 🟪 FASE 3: O Alvo da Crítica (A Decisão Embargada) — Cor: Roxo
+* **Propósito:** Isolar a fundamentação sob ataque para auditar se o vício apontado no recorte Azul realmente existe. (Acórdão ou Sentença embargada).
+* **A "Mágica" Cognitiva (A Dinâmica da Contradição):** Se a Fase 1 (Azul) alegou *Contradição*, o assessor é forçado a extrair dois recortes Roxos conflitantes da decisão. O visual de **um card Roxo brigando com outro card Roxo** evidencia que a contradição é interna. Contradição com a prova (Roxo vs. Laranja) é denunciada visualmente como incabível.
+
+### 🟧 FASE 4: A Prova Material do Vício (Validação Restrita) — Cor: Laranja
+* **Propósito:** Comprovar documentalmente apenas erros materiais evidentes (ex: data trocada) ou ignorância de jurisprudência vinculante.
+* **A "Mágica" Cognitiva (O Guardrail - A definir):** O sistema monitorará a extração. Se o assessor fizer recortes extensos de provas fáticas na cor Laranja, surgirá um alerta: *"Atenção: Em ED, a reavaliação de provas fáticas configura rejulgamento do mérito."*
+
+### Dashboard de Maturidade Dinâmico em ED *(Em desenvolvimento)*
+No Modo ED, a estrela de 100% obedece a **fórmulas lógicas exclusivas** de acordo com o vício alegado:
+* **Omissão:** Maturidade = Azul + Verde + Roxo *(A prova Laranja é dispensável)*.
+* **Contradição:** Maturidade = Azul + Roxo + Roxo *(Confronto de premissas do juiz)*.
+* **Erro Material:** Maturidade = Azul + Roxo + Laranja *(Evidência cirúrgica do erro)*.
+
+---
+
+## 5. Arquitetura Geral da Aplicação
 
 Aplicação **Client-Side Only (sem backend)**. Toda a lógica de leitura, extração e salvamento roda inteiramente no navegador do usuário, garantindo **Sigilo Judicial Absoluto** (os dados do processo nunca vão para um servidor na nuvem sem o consentimento do usuário via botão de exportação manual).
 
 > ⚠️ **Restrição Crítica**: A aplicação usa a **File System Access API** (para backup transparente local). Funciona exclusivamente em navegadores baseados em Chromium (Google Chrome 86+, Microsoft Edge 86+, Opera). **Não suportado no Firefox e Safari.**
 
-> 🛡️ **Gestão de Mídia Local**: Para manter a leveza do arquivo de backup (`.json`) e garantir o sigilo, os PDFs e arquivos de áudio (`.mp3`) **não** são embutidos dentro dele. O sistema salva apenas as coordenadas geométricas e temporais. Ao retomar uma sessão, o usuário precisa apontar novamente para os arquivos originais em sua máquina, e o Juris Notes reconstrói o mapa de anotações instantaneamente.
+> 🛡️ **Gestão de Mídia Local**: Para manter a leveza do arquivo de backup (`.json`) e garantir o sigilo, os PDFs e arquivos de áudio (`.mp3`) **não** são embutidos dentro dele. O sistema salva apenas as coordenadas geométricas e temporais via Hashes. Ao retomar uma sessão, o usuário precisa apontar novamente para os arquivos originais em sua máquina.
 
 ---
 
-## 5. Funcionalidades e Evolução do Projeto
+## 6. Funcionalidades e Evolução do Projeto
 
 ### v1.0 a v3.0 — Fundação e Extração
 - Carregamento assíncrono de PDFs via PDF.js com renderização *lazy load*.
 - Recorte de imagens, textos e mapeamento de audiências em MP3.
-- Integração LLM (Exportação em Markdown otimizado) e Validação Anti-Corrupção SHA-256.
+- Integração LLM (Exportação em Markdown) e Validação Anti-Corrupção SHA-256.
 
 ### v4.0 — Ergonomia e Nós de Ideia
 - Fundo de leitura confortável (*Jasmine* e *Branco*).
 - Separação entre a Prova Bruta (Main Card) e a Conclusão do Assessor (Nós de Ideia/Sub-anotações).
 
 ### v5.0 — Inteligência Metodológica e Zonas Visuais
-- **Modal de Extração por Mini-Abas:** Categorização das peças em 4 fases metodológicas diretamente no momento do recorte.
-- **Zonas Visuais de Cores:** Pintura automática do fundo dos cards (Azul, Verde, Roxo, Laranja) criando um mapa cognitivo da cronologia da lide.
-- **Smart Sort (Reordenação Inteligente):** Independentemente da ordem em que o assessor lê o PDF, o sistema realoca o card automaticamente para a Zona (Fase) correta, garantindo que o Recurso fique acima da Sentença, e a Inicial fique entre eles.
-- **Dashboard de Maturidade:** Indicador de completude (gradiente colorido e selo giratório) no Sumário de Teses.
-- **Retrocompatibilidade Autônoma:** Backups antigos lidos pelo sistema deduzem a fase da peça pelo nome digitado no passado, colorindo e organizando os processos antigos instantaneamente sem retrabalho manual.
+- **Modal de Extração por Mini-Abas:** Categorização das peças nas 4 fases diretamente no momento do recorte.
+- **Smart Sort (Reordenação Inteligente):** O sistema realoca o card automaticamente para a Zona (Fase) correta, independentemente da ordem em que o assessor lê o PDF.
+- **Dashboard de Maturidade Padrão:** Indicador de completude de teses no RO.
 
-### v6.0 — Exportação Inteligente e Integração com o Mestre de Gabinete (Versão Atual)
-- **Arquitetura "Roteiro do Diretor":** O arquivo exportado deixou de ser uma tentativa de resumo do processo e passou a funcionar como um *payload cognitivo estruturado*. Ele não entrega a "carne" dos fatos, mas sim o "esqueleto": a matriz dialética, as premissas inconstroversas, a base legal vinculada e o veredito pretendido.
-- **Mapeamento por Tags XML:** Os Nós de Ideia agora são triados automaticamente por intenção e ejetados para as tags XML correspondentes que o modelo externo ("Mestre de Gabinete") consome.
-- **Âncora de Fase Processual por Ideia:** Cada bloco de prova exportado declara explicitamente seu contexto processual (fase e polo), fornecendo ao LLM a referência narrativa.
-- **Fila de Download Sequencial Segura:** O download das imagens-prova usa uma fila `async/await` encadeada, eliminando colisões e falhas silenciosas.
+### v6.0 — Arquitetura Hub, Modo ED e Integração Mestre de Gabinete (Atual)
+- **Hub e Silos Separados:** Divisão entre o ambiente Padrão (RO) e o ambiente restrito para Embargos de Declaração (ED).
+- **Arquitetura "Roteiro do Diretor":** O arquivo exportado funciona como um *payload cognitivo estruturado*, entregando o "esqueleto" (matriz dialética) para o LLM via tags XML.
+- **Fila de Download Sequencial Segura:** Download de imagens-prova via fila assíncrona encadeada.
 
 ---
 
-## 6. Guia de Uso Rápido
+## 7. Guia de Uso Rápido
 
 ### Iniciando a Extração
-1. Clique em **Novo Processo** (ícone de arquivo) e carregue o PDF.
-2. Salve o arquivo de backup `.json` (ele atualizará sozinho a cada ação).
-3. Crie as abas dos tópicos recursais (ex: "Adicional de Insalubridade").
-4. Selecione textos, recorte imagens ou áudios. No modal que se abrir, **escolha a Fase Metodológica (1 a 4)** correspondente à peça.
+1. Escolha a natureza do incidente (RO ou ED) no **Hub de Entrada**.
+2. Clique em **Novo Processo** e carregue o PDF.
+3. Salve o arquivo de backup `.json` (ele atualizará sozinho a cada ação).
+4. Crie as abas dos tópicos recursais (ou vícios alegados).
+5. Selecione textos, recorte imagens ou áudios e classifique a fase correspondente no modal.
 
 ### Retomando um Processo em Andamento (Backup)
-1. Clique no botão **Retomar Processo** (ícone de pasta com seta na barra lateral) e selecione o arquivo de backup `.json` salvo na sua máquina.
-2. Em seguida, o sistema pedirá para você carregar o arquivo PDF correspondente. O Juris Notes fará uma checagem de integridade (Hash SHA-256) para garantir que o PDF selecionado é exatamente o mesmo do backup original.
-3. **Reconectando Áudios (MP3):** Se o seu backup continha recortes de oitivas de audiência, o navegador bloqueará o carregamento automático do áudio por motivos de segurança. Você verá um **ícone de microfone laranja pulsante** no topo da tela. Clique nele para anexar o arquivo MP3 e reativar imediatamente o player e seus recortes.
+1. Escolha o módulo correto (RO ou ED).
+2. Clique em **Retomar Processo** e selecione o arquivo `.json`.
+3. Carregue o arquivo PDF correspondente (validado via Hash SHA-256).
+4. **Reconectando Áudios (MP3):** Clique no **ícone de microfone laranja pulsante** para reanexar os áudios locais por questões de segurança do navegador.
 
 ### Desenvolvendo a Tese e Exportando para a IA
-
-1. Ao extrair os fatos, nomeie a tese clicando no círculo numérico do card (ex: "EPI não neutralizou agente"). Ela subirá para o Dashboard de Maturidade.
-2. Continue extraindo provas, sentenças e iniciais, agrupando-as na tese criada. Observe o card no topo se preencher de cores.
-3. Nos **Nós de Ideia** de cada card, use as intenções para direcionar o modelo externo:
-   - **Premissa:** Um fato incontroverso que o LLM não deve questionar.
-   - **Fundamentação:** Uma súmula, OJ ou artigo de lei obrigatório.
-   - **Veredito:** A conclusão pretendida pelo magistrado para aquela tese.
-   - **Comando:** Instrução direta de estilo ou direcionamento para redação.
-   - **Texto:** Trecho de redação para ser copiado literalmente.
-4. Quando a tese atingir a maturidade (ou estiver satisfeito), vá até a barra lateral e clique na **Seta para Cima** (Exportar). O sistema gerará:
-   - Um arquivo `Pacote_JurisNotes_[topico].md` — o "Roteiro do Diretor".
-   - Um arquivo `.png` por imagem-prova capturada.
-
-5. No modelo externo configurado com o **Mestre de Gabinete** (ex.: Gem do Gemini), anexe **em conjunto**:
-   - O arquivo `Pacote_JurisNotes_[topico].md` gerado.
-   - Os PDFs completos do processo relevantes ao tópico.
-   - As imagens-prova baixadas.
+1. Extraia e agrupe os recortes sob as teses criadas. Observe o Dashboard de Maturidade sinalizar o progresso ou apontar falhas cognitivas.
+2. Nos **Nós de Ideia**, classifique a intenção (Premissa, Fundamentação, Veredito, etc.).
+3. Clique em **Exportar** (Seta para Cima) para gerar o pacote (`.md` estruturado + imagens).
+4. No modelo externo (ex: Gemini/ChatGPT), faça o upload do Pacote, dos PDFs e das imagens em conjunto.
 
 ---
 
-## 7. Estrutura de Arquivos do Repositório (Módulos)
+## 8. Estrutura de Arquivos do Repositório (Por Silo)
 
-A base de código utiliza um padrão modular isolado, garantindo fácil manutenção:
+Cada diretório (`/ro` e `/ed`) possui sua própria estrutura modular espelhada, garantindo isolamento:
 
 | Arquivo | Responsabilidade |
 |---------|------------------|
-| `index.html` | Estrutura semântica, importação de dependências e modais metodológicos de abas. |
+| `index.html` | Estrutura semântica, importação de dependências e modais. |
 | `juris-core.css` | Variáveis globais, Z-Index, paletas e estrutura base responsiva. |
-| `juris-workspace.css` | Sistema das Zonas Visuais (Cores por fase), Dashboard de Maturidade e UI do PDF. |
-| `app.js` | Orquestrador global, Smart Sort (reordenação lógica) e motor de heurística metodológica. |
-| `topics-manager.js` | Renderização do fichário, painel de teses (gradiente dinâmico de maturidade). |
-| `backup-manager.js` | Persistência local (API de File System) e cálculo de Hashes Criptográficos. |
-| `export-manager.js` | Geração do payload estruturado, montagem da Matriz Dialética com âncoras processuais e injeção de tags XML. |
-| `audio-manager.js` | Controle de playback, reconexão segura de MP3, marcação de tempos e classificação de oitivas. |
-| `interaction-tools.js`| Wizards de captura, gerenciamento do `DOC_CONFIG` (com fases) e modais. |
-| `annotation-actions.js`| CRUD de anotações, reordenação manual e lógica interativa dos cards. |
+| `juris-workspace.css` | Sistema das Zonas Visuais (Cores), Dashboard e UI do PDF. |
+| `app.js` | Orquestrador global, Smart Sort e motor heurístico. |
+| `topics-manager.js` | Renderização do fichário, painel de teses (maturidade). |
+| `backup-manager.js` | Persistência local (API File System) e Hashes Criptográficos. |
+| `export-manager.js` | Geração do payload estruturado e injeção de tags XML para o LLM. |
+| `audio-manager.js` | Controle de playback, reconexão de MP3 e marcações. |
+| `interaction-tools.js`| Wizards de captura, configuração das fases (DOC_CONFIG) e modais. |
+| `annotation-actions.js`| CRUD de anotações e reordenação manual de cards. |
