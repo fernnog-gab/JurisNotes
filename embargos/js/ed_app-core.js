@@ -531,14 +531,14 @@ async function novoProcesso(event) {
    GESTÃO DE TÓPICOS E ANOTAÇÕES
    ================================================ */
 function criarTopicoPrompt() {
-    const nome = prompt('Digite o nome do Tópico Recursal:\n(ex: Admissibilidade, Mérito — Dano Moral, Honorários)');
+    const nome = prompt('Digite o Vício Alegado sob análise:\n(ex: Omissão — Horas Extras, Contradição — Multa, Erro Material)');
     if (!nome || !nome.trim()) return;
 
     const nomeLimpo  = nome.trim();
     const duplicado  = topicos.some(t => t.nome.toLowerCase() === nomeLimpo.toLowerCase());
 
     if (duplicado) {
-        exibirToast(`Já existe um tópico com o nome "${nomeLimpo}".`, 'aviso');
+        exibirToast(`Já existe uma análise para o vício "${nomeLimpo}".`, 'aviso');
         return;
     }
 
@@ -548,7 +548,7 @@ function criarTopicoPrompt() {
     renderizarTopicos();
     salvarBackupAutomatico();
     trocarAba('historico');
-    exibirToast(`Tópico "${nomeLimpo}" criado.`);
+    exibirToast(`Análise do vício "${nomeLimpo}" iniciada.`);
 }
 
 function renderizarTopicos() {
