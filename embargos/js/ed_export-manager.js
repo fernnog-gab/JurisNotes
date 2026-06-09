@@ -37,111 +37,191 @@ window.ExportManager = (function () {
     };
 
     /**
-     * Utilitário de pausa para cadência de execução assíncrona
+     * Sanitiza conteúdo para evitar quebras no Markdown
      */
-    const _sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    function _safeMD(str, prefixo = '') {
+        if (!str) return '';
+        return String(str).replace(/\n/g, prefixo);
+    }
 
     /**
-     * Sanitiza strings prevenindo quebras acidentais de templates literais XML/Markdown
+     * Sanitiza atributos para injeção segura em tags XML.
+     * Previne quebra de payload por aspas duplas no nome do vício.
      */
-    function _safeMD(str) {
+    function _escapeXmlAttr(str) {
         if (!str) return '';
         return String(str)
             .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
     }
 
     /**
-     * Motor Privado Unificado de Geração de Payloads Estruturados em Markdown/XML
+     * Formata a citação oficial de referência cruzada.
      */
-    function _gerarMarkdown(topico, contexto = 'RO') {
-        const config = ESQUEMAS_CONTEXTO[contexto] || ESQUEMAS_CONTEXTO['RO'];
-        let md = `# ${config.tituloTopico}: ${topico.nome.toUpperCase()}\n\n`;
+    function _formatarCitacaoOficial(pjeId, pagina) {
+        const strId = pjeId   ? `Id ${pjeId}`   : 'Id não idt.';
+        const strFl = pagina  ? `fl ${pagina}`  : 'fl não idt.';
+        return `(${strId} - ${strFl})`;
+    }
 
-        // 1. COMPILAÇÃO DO PREÂMBULO FIXO (Camada de Direcionamento)
-        md += `<RoteiroDiretor>\n`;
-        md += `  <incidente_processual>${contexto === 'ED' ? 'Embargos de Declaração' : 'Recurso Ordinário'}</incidente_processual>\n`;
-        // Injeta o vício alegado primário do tópico, se existir
-        if (contexto === 'ED' && topico.vicio) {
-            const vicioLabel = topico.vicio.charAt(0).toUpperCase() + topico.vicio.slice(1);
-            md += `  <classificacao_vicio_primario>${vicioLabel}</classificacao_vicio_primario>\n`;
-        }
-        md += `  <diretriz_cognitiva>${config.diretrizIA}</diretriz_cognitiva>\n`;
-        md += `</RoteiroDiretor>\n\n`;
+    /**
+     * Gera nome estruturado para download de imagens
+     */
+    function _gerarNomeArquivoImagem(topicoId, numIdeia, numSub = null) {
+        const hierarquia = numSub ? `${numIdeia}_sub_${numSub}` : `${numIdeia}`;
+        return `Evidencia_ED_${topicoId}_Card_${hierarquia}.png`;
+    }
 
-        md += `## SEÇÃO I — ELEMENTOS BALIZADORES DE DIRECIONAMENTO\n\n`;
-        md += `<${config.tagAlegacao}>\n${_safeMD(topico.alegacoes || 'Nenhum apontamento registrado.')}\n</${config.tagAlegacao}>\n\n`;
-        md += `<${config.tagFundamento}>\n${_safeMD(topico.fundamentos || 'Nenhum trecho colado.')}\n</${config.tagFundamento}>\n\n`;
-        md += `<${config.tagVeredito}>\n${_safeMD(topico.veredito || 'Nenhuma conclusão delimitada.')}\n</${config.tagVeredito}>\n\n`;
+    /**
+     * Motor Privado de Geração de Payload (Roteiro do Diretor em XML/MD)
+     */
+    function _gerarMarkdown(topico) {
+        const config = ESQUEMAS_CONTEXTO['ED'];
+        const dataGeracao = new Date().toLocaleString('pt-BR');
+        const safeFormatTime = (sec) => window.AudioManager?.formatTime ? window.AudioManager.formatTime(sec) : `${Math.floor(sec/60)}' ${Math.floor(sec%60)}''`;
 
-        md += `## SEÇÃO II — ${config.rotuloSeccao}\n\n`;
+        // Coleta de escopo global
+        const barreirasAdmissibilidade = [];
+        const jurisprudenciaVinculante = [];
+
+        let md = `---\n*Pacote de Auditoria Estrutural ED gerado em ${dataGeracao}*\n---\n\n`;
+        md += `# ${config.tituloTopico}: **${(topico.nome || 'Não Nomeado').toUpperCase()}**\n\n`;
+
+        // 1. COMPILAÇÃO DO PREÂMBULO FIXO
+        md += `<roteiro_diretor_llm>\n`;
+        md += `  <incidente_processual>Embargos de Declaração</incidente_processual>\n`;
+        md += `  <diretriz_cognitiva_vinculante>${config.diretrizIA}</diretriz_cognitiva_vinculante>\n`;
+        md += `</roteiro_diretor_llm>\n\n`;
+
+        md += `## SEÇÃO I — ESCOPO DO VÍCIO APONTADO\n\n`;
+        md += `<${config.tagAlegacao}>\n${_safeMD(topico.alegacoes || 'Nenhum vício descrito.')}\n</${config.tagAlegacao}>\n\n`;
+        md += `<${config.tagFundamento}>\n${_safeMD(topico.fundamentos || 'Nenhum trecho da decisão embargada colado.')}\n</${config.tagFundamento}>\n\n`;
+        
+        md += `## SEÇÃO II — ${config.rotuloSeccao}\n`;
+        md += `*Atenção IA: Aqui estão as provas documentais do vício formal. Não analise mérito.*\n\n`;
 
         if (!topico.anotacoes || topico.anotacoes.length === 0) {
-            md += `*Nenhum elemento probatório fático foi anexado a este tópico.*\n`;
-            return md;
+            md += `*Nenhum elemento processual foi anexado para auditoria.*\n`;
+        } else {
+            // 2. ITERAÇÃO PROFUNDA COM ENVELOPAMENTO XML (Mitigação de Lost in the Middle)
+            topico.anotacoes.forEach((an, idx) => {
+                const numIdeia = idx + 1;
+                const refCitacao = _formatarCitacaoOficial(an.pjeId, an.pagina);
+                const tituloVicio = an.tese ? an.tese : (topico.vicio || 'Análise de Higidez');
+
+                md += `<analise_de_evidencia id="${numIdeia}" escopo_auditoria="${_escapeXmlAttr(tituloVicio)}">\n`;
+                
+                const faseContexto  = an.fase || an.documento || 'Não especificado';
+                const poloContexto  = an.polo || 'N/A';
+                md += `<contexto_processual>Fase: ${faseContexto} | Polo: ${poloContexto} | Ref: ${refCitacao}</contexto_processual>\n\n`;
+
+                md += `<fato_bruto_auditado>\n`;
+                const docLabel = `**[${an.documento || 'Elemento'}] (${poloContexto}) ${refCitacao}:**`;
+
+                if (an.tipo === 'texto') {
+                    md += `- ${docLabel} ${_safeMD(an.conteudo, ' ')}\n`;
+                } else if (an.tipo === 'imagem') {
+                    const imgNome = _gerarNomeArquivoImagem(topico.id, numIdeia);
+                    md += `- ${docLabel}\n  > 🖼️ **[IMAGEM FORNECIDA PARA CONFERÊNCIA]** (Nome: \`${imgNome}\`).\n  > 🧠 *Apontamento do Assessor:* ${_safeMD(an.comentario || 'Verifique a falha estrutural demonstrada na imagem.', '\n  > ')}\n`;
+                } else if (an.tipo === 'audio') {
+                    try {
+                        const ad = JSON.parse(an.conteudo);
+                        const oradorFinal = ad.role || ad.oradorStr || 'Orador não idt.';
+                        md += `- ${docLabel} 🎙️ **[OITIVA REGISTRADA]** (${oradorFinal} — ${safeFormatTime(ad.inicio)} a ${safeFormatTime(ad.fim)}).\n`;
+                        if (an.comentario) md += `  > 🧠 *Observação:* ${_safeMD(an.comentario, '\n  > ')}\n`;
+                        if (ad.transcricao) md += `  > 📜 *Degravação Literal:* "${_safeMD(ad.transcricao, '\n  > ')}"\n`;
+                    } catch (e) {
+                        md += `- ${docLabel} 🎙️ **[ÁUDIO]** *Resumo:* ${_safeMD(an.comentario || 'Sem comentário.', '\n  > ')}\n`;
+                    }
+                }
+
+                // Sub-provas Correlacionadas (Essencial para ED: Ex: Recurso vs Sentença)
+                if (an.itensCorrelacionados && an.itensCorrelacionados.length > 0) {
+                    an.itensCorrelacionados.forEach((corr, corrIdx) => {
+                        const numSub = corrIdx + 1;
+                        const cRefCitacao = _formatarCitacaoOficial(corr.pjeId, corr.pagina);
+                        const cDocLabel = `  ↳ *Confronto Direto [${corr.documento || 'Doc'}] (${corr.polo || 'Polo'}) ${cRefCitacao}:*`;
+
+                        if (corr.tipo === 'texto') {
+                            md += `${cDocLabel} ${_safeMD(corr.comentario ? corr.comentario : (corr.conteudo || ''), ' ')}\n`;
+                        } else if (corr.tipo === 'imagem') {
+                            md += `${cDocLabel}\n    > 🖼️ **[IMAGEM ANEXA: \`${_gerarNomeArquivoImagem(topico.id, numIdeia, numSub)}\`]**\n    > 🧠 *Apontamento:* ${_safeMD(corr.comentario || 'Avalie a incongruência.', '\n    > ')}\n`;
+                        }
+                    });
+                }
+                
+                md += `</fato_bruto_auditado>\n\n`;
+
+                // 3. INJEÇÃO DE DIRETRIZES LOCAIS (Vocabulário Agressivo para ED)
+                const imprimirNos = (listaNos, refContexto) => {
+                    if (!listaNos || listaNos.length === 0) return;
+                    
+                    md += `<diretrizes_de_auditoria_do_assessor>\n`;
+                    listaNos.forEach((sub) => {
+                        const intencao = sub.intencao || 'premissa';
+                        if (intencao === 'nota') return; // Ignora notas ocultas
+                        
+                        const textoSanitizado = _safeMD(sub.texto, '\n  ');
+
+                        if (intencao === 'premissa') {
+                            md += `[CONSTATAÇÃO FORMAL INQUESTIONÁVEL${refContexto}]: ${textoSanitizado}\n`;
+                        } else if (intencao === 'refutacao') {
+                            md += `[AFASTAMENTO DO VÍCIO OBRIGATÓRIO - INEXISTÊNCIA DE FALHA${refContexto}]: ${textoSanitizado}\n`;
+                        } else if (intencao === 'comando') {
+                            md += `[COMANDO DE REDAÇÃO ESTRITO${refContexto}]: ${textoSanitizado}\n`;
+                        } else if (intencao === 'texto') {
+                            md += `[COPIAR E COLAR EXATAMENTE ESTE TEXTO${refContexto}]: "${textoSanitizado}"\n`;
+                        } else if (intencao === 'fundamentacao') {
+                            jurisprudenciaVinculante.push(`[Aplicável ao item ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                        } else if (intencao === 'preliminar') {
+                            barreirasAdmissibilidade.push(`[Item ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                        }
+                    });
+                    md += `</diretrizes_de_auditoria_do_assessor>\n`;
+                };
+
+                imprimirNos(an.subAnotacoes, '');
+
+                if (an.itensCorrelacionados && an.itensCorrelacionados.length > 0) {
+                    an.itensCorrelacionados.forEach((corr) => {
+                        if (corr.subAnotacoes && corr.subAnotacoes.length > 0) {
+                            imprimirNos(corr.subAnotacoes, ` (Referente ao Anexo: ${corr.documento || 'Documento'})`);
+                        }
+                    });
+                }
+
+                md += `</analise_de_evidencia>\n\n`;
+            });
         }
 
-        // 2. ITERAÇÃO PROFUNDA DA ÁRVORE DE ANOTAÇÕES (Preservação de Intenções v3.1.1)
-        topico.anotacoes.forEach((anotacao, idx) => {
-            if (anotacao.intencao === 'nota') return; // Filtro de Notas Internas Ocultas
+        // 4. INJEÇÃO GLOBAL (Bordas do Payload)
+        if (barreirasAdmissibilidade.length > 0) {
+            md += `<barreiras_de_admissibilidade_dos_embargos>\n`;
+            md += `*Atenção IA: Resolva estes óbices (ex: intempestividade, inovação recursal) ANTES de auditar o mérito dos embargos.*\n`;
+            md += barreirasAdmissibilidade.map(c => `* 🛑 ${c}`).join('\n') + '\n';
+            md += `</barreiras_de_admissibilidade_dos_embargos>\n\n`;
+        }
 
-            const numCard = idx + 1;
-            md += `### [CARD_EVIDENCIA_${numCard}] (Documento: ${anotacao.documento || 'Não Identificado'})\n`;
-            md += `- **Polo Vinculado:** ${anotacao.polo || 'Neutro'}\n`;
-            // Injeta o vício individual apontado na hora da captura da prova
-            if (contexto === 'ED' && anotacao.vicio) {
-                const vicioLabel = anotacao.vicio.charAt(0).toUpperCase() + anotacao.vicio.slice(1);
-                md += `- **Vício Apontado na Prova:** ${vicioLabel}\n`;
-            }
-            if (anotacao.pagina) md += `- **Localização Processual:** fl. ${anotacao.pagina}\n`;
-            md += `\n<DADO_BRUTO_PROVA>\n`;
+        if (jurisprudenciaVinculante.length > 0) {
+            md += `<base_legal_e_jurisprudencial>\n`;
+            md += jurisprudenciaVinculante.map(c => `* ⚖️ ${c}`).join('\n') + '\n';
+            md += `</base_legal_e_jurisprudencial>\n\n`;
+        }
 
-            if (anotacao.tipo === 'texto') {
-                md += `"${_safeMD(anotacao.conteudo)}"\n`;
-            } else if (anotacao.tipo === 'imagem') {
-                const nomeImg = `imagem_prova_${topico.id}_${numCard}.png`;
-                md += `![Evidência Visual Contextual](./imagens/${nomeImg})\n`;
-            } else if (anotacao.tipo === 'audio') {
-                md += `[Metadados de Oitiva de Audiência Assinalados]\n`;
-            }
-
-            md += `</DADO_BRUTO_PROVA>\n`;
-
-            if (anotacao.comentario) {
-                md += `<analise_valotativa_assessor>\n${_safeMD(anotacao.comentario)}\n</analise_valotativa_assessor>\n`;
-            }
-
-            // Processamento dos Nós de Ideia Secundários Anexados (Sub-Anotações)
-            if (anotacao.subAnotacoes && anotacao.subAnotacoes.length > 0) {
-                md += `\n  \n`;
-                anotacao.subAnotacoes.forEach((sub, sIdx) => {
-                    const tagIntencao = sub.intencao || 'premissa_logica';
-                    md += `  <no_ideia_secundario foco="${tagIntencao}">\n`;
-                    md += `    ${_safeMD(sub.texto)}\n`;
-                    md += `  </no_ideia_secundario>\n`;
-                });
-            }
-
-            // Iteração Segura sobre Itens Correlacionados (Sub-provas Agrupadas)
-            if (anotacao.itensCorrelacionados && anotacao.itensCorrelacionados.length > 0) {
-                md += `\n  <provas_faticas_correlacionadas_agrupadas>\n`;
-                anotacao.itensCorrelacionados.forEach((item, cIdx) => {
-                    md += `    <sub_evidencia id="${numCard}_${cIdx}" tipo="${item.type || 'mídia'}">\n`;
-                    md += `      ${_safeMD(item.conteudo || item.comentario)}\n`;
-                    md += `    </sub_evidencia>\n`;
-                });
-                md += `  </provas_faticas_correlacionadas_agrupadas>\n`;
-            }
-
-            md += `\n---\n\n`;
-        });
+        if (topico.veredito && topico.veredito.trim() !== '') {
+            md += `<${config.tagVeredito}>\n`;
+            md += `[CONCLUSÃO OBRIGATÓRIA]: ${topico.veredito.replace(/\n/g, ' ')}\n`;
+            md += `\n*Redija o dispositivo final (Acolher/Rejeitar) obedecendo estritamente a este veredito.*\n`;
+            md += `</${config.tagVeredito}>\n`;
+        }
 
         return md;
     }
 
     /**
-     * Simula o download nativo do arquivo em formato Markdown no Navegador
+     * Download seguro do arquivo Markdown
      */
     function _downloadArquivo(nomeArquivo, conteudoTexto) {
         const blob = new Blob([conteudoTexto], { type: 'text/markdown;charset=utf-8;' });
@@ -156,95 +236,93 @@ window.ExportManager = (function () {
     }
 
     /**
-     * Varre as anotações compilando uma fila sequencial estável de blobs de imagens.
-     * Utiliza execução assíncrona para contornar bloqueios anti-spam dos navegadores.
+     * Download sequencial seguro de imagens (Herdado do RO - Previne bloqueio de navegador)
      */
-    async function _executarFilaDeDownloads(topico) {
-        if (!topico.anotacoes || !Array.isArray(topico.anotacoes)) return;
-
-        // Extrai todas as imagens (principais e correlacionadas) para uma fila plana
-        const filaDownloads = [];
-
-        topico.anotacoes.forEach((an, idx) => {
-            if (an.tipo === 'imagem' && an.conteudo && an.conteudo.startsWith('blob:')) {
-                filaDownloads.push({
-                    url: an.conteudo,
-                    nome: `imagem_prova_${topico.id}_${idx + 1}.png`
-                });
-            }
-            
-            if (an.itensCorrelacionados && Array.isArray(an.itensCorrelacionados)) {
-                an.itensCorrelacionados.forEach((subItem, sIdx) => {
-                    if (subItem.tipo === 'imagem' && subItem.conteudo && subItem.conteudo.startsWith('blob:')) {
-                        filaDownloads.push({
-                            url: subItem.conteudo,
-                            nome: `imagem_prova_${topico.id}_${idx + 1}_sub_${sIdx + 1}.png`
-                        });
-                    }
-                });
-            }
-        });
-
-        // Processa a fila com delay estratégico simulando o clique humano
-        for (const arquivo of filaDownloads) {
+    async function _downloadImagemSegura(base64Data, nomeArquivoBase) {
+        try {
+            const response = await fetch(base64Data);
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
-            link.href = arquivo.url;
-            link.setAttribute('download', arquivo.nome);
+            link.href = url;
+            link.download = nomeArquivoBase;
             document.body.appendChild(link);
             link.click();
-            document.body.removeChild(link); // Limpeza imediata do DOM para não vazar memória
-            
-            // Pausa de 350ms para evitar bloqueio de múltiplos downloads
-            await _sleep(350); 
+            document.body.removeChild(link);
+            await new Promise(resolve => setTimeout(resolve, 50));
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error(`[ExportManager ED] Falha ao baixar imagem "${nomeArquivoBase}":`, e);
         }
     }
 
-    /**
-     * ========================================================================
-     * API PÚBLICA EXPOSTA DO MÓDULO (ENCAPSULAMENTO SEGURO IIFE)
-     * ========================================================================
-     */
+    async function _executarFilaDeDownloads(fila) {
+        if (!fila || fila.length === 0) return;
+        _deps.exibirToast(`Iniciando download de ${fila.length} evidência(s)...`, 'info');
+        for (const item of fila) {
+            await _downloadImagemSegura(item.dados, item.nome);
+            await new Promise(resolve => setTimeout(resolve, 650)); // Delay estratégico
+        }
+        _deps.exibirToast('Todas as evidências foram baixadas.', 'sucesso');
+    }
+
+    // ========================================================================
+    // API PÚBLICA
+    // ========================================================================
     return {
-        // Inicializador de dependências restaurado para o app-core
         init: function (dependencies) {
             _deps = { ..._deps, ...dependencies };
         },
 
-        // Agora é uma função assíncrona para permitir o controle da fila
-        exportarTopicoAtivo: async function (contexto = 'RO') {
+        exportarTopicoAtivo: async function () {
             const activeTabId = _deps.getActiveTabId();
             
             if (!activeTabId) {
-                console.warn("[ExportManager] Nenhuma aba ativa identificada para exportação.");
+                _deps.exibirToast("Selecione um tópico de Embargos antes de exportar.", 'aviso');
                 return;
             }
 
-            // Busca segura e validação rigorosa do tipo de retorno
             const topicosArray = _deps.getTopicos();
-            
-            if (!Array.isArray(topicosArray)) {
-                console.error("[ExportManager] Falha crítica: getTopicos() não retornou um array válido.");
-                return;
-            }
-
             const topicoAtivo = topicosArray.find(t => t.id === activeTabId);
 
-            if (!topicoAtivo) {
-                alert("Erro: Não foi possível mapear os dados do tópico ativo.");
+            if (!topicoAtivo || !topicoAtivo.anotacoes || topicoAtivo.anotacoes.length === 0) {
+                _deps.exibirToast("O tópico está vazio ou inválido.", 'aviso');
                 return;
             }
 
-            const config = ESQUEMAS_CONTEXTO[contexto] || ESQUEMAS_CONTEXTO['RO'];
-            const nomeArquivoFinal = `${config.prefixoArquivo}${topicoAtivo.nome.replace(/[^a-zA-Z0-9]/g, '_')}.md`;
+            try {
+                // 1. Gera e baixa o Markdown
+                const config = ESQUEMAS_CONTEXTO['ED'];
+                const nomeSanitizado = (topicoAtivo.nome || 'Exportacao_ED').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+                const nomeArquivoFinal = `${config.prefixoArquivo}${nomeSanitizado}.md`;
+                
+                const payloadTexto = _gerarMarkdown(topicoAtivo);
+                _downloadArquivo(nomeArquivoFinal, payloadTexto);
 
-            // Execução do pipeline
-            const payloadTexto = _gerarMarkdown(topicoAtivo, contexto);
-            
-            // 1. Download síncrono do arquivo Markdown
-            _downloadArquivo(nomeArquivoFinal, payloadTexto);
+                _deps.exibirToast('Payload de ED gerado! Preparando imagens...', 'sucesso');
 
-            // 2. Disparo sequencial e assíncrono das evidências atreladas
-            await _executarFilaDeDownloads(topicoAtivo);
+                // 2. Prepara e dispara fila de imagens
+                const filaDeDownloads = [];
+                topicoAtivo.anotacoes.forEach((an, idx) => {
+                    const numIdeia = idx + 1;
+                    if (an.tipo === 'imagem') {
+                        filaDeDownloads.push({ dados: an.conteudo, nome: _gerarNomeArquivoImagem(topicoAtivo.id, numIdeia) });
+                    }
+                    if (an.itensCorrelacionados && an.itensCorrelacionados.length > 0) {
+                        an.itensCorrelacionados.forEach((corr, corrIdx) => {
+                            if (corr.tipo === 'imagem') {
+                                filaDeDownloads.push({ dados: corr.conteudo, nome: _gerarNomeArquivoImagem(topicoAtivo.id, numIdeia, corrIdx + 1) });
+                            }
+                        });
+                    }
+                });
+
+                await _executarFilaDeDownloads(filaDeDownloads);
+
+            } catch (error) {
+                console.error('[ExportManager ED] Erro crítico na exportação:', error);
+                _deps.exibirToast('Erro ao exportar Embargos. Verifique o console.', 'erro');
+            }
         }
     };
 

@@ -117,6 +117,19 @@ window.ExportManager = (function () {
     }
 
     /**
+     * Sanitiza atributos para injeção segura em tags XML.
+     * Previne quebra de payload por aspas duplas no nome da tese.
+     */
+    function _escapeXmlAttr(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
+    /**
      * Achata a hierarquia da anotação (Mestre + Correlacionados) para
      * inferência de contexto processual.
      * ATUALIZAÇÃO: Radar de palavras-chave expandido para cobrir os novos atos de Execução.
@@ -153,9 +166,8 @@ window.ExportManager = (function () {
         const dataGeracao = new Date().toLocaleString('pt-BR');
         const safeFormatTime = (sec) => window.AudioManager?.formatTime ? window.AudioManager.formatTime(sec) : `${Math.floor(sec/60)}' ${Math.floor(sec%60)}''`;
 
-        // Coletores para os blocos globais de arquitetura
+        // Preservação Correta: Preliminares e Leis têm escopo GLOBAL. Comandos têm escopo LOCAL (removido do array).
         const preliminaresInjetadas = [];
-        const comandosInjetados    = [];
         const baseLegalObrigatoria = [];
 
         // BUFFER 1: Cabeçalho
@@ -164,19 +176,22 @@ window.ExportManager = (function () {
         mdCabecalho += `# TÓPICO RECURSAL: **${(topico.nome || 'Tópico Sem Nome').toUpperCase()}**\n\n`;
 
         // BUFFER 2: Matriz Dialética (Processamento O(n))
-        let mdMatriz = `## MATRIZ DIALÉTICA E MAPEAMENTO PROBATÓRIO\n*Atenção IA: Esta é a sua fonte de premissas fáticas inconstroversas (Premissa Menor). Integre as âncoras (Id - fl) buscando nos PDFs anexos os detalhes de contexto de cada folha citada. Nunca presuma fatos fora destes blocos.*\n\n`;
+        let mdMatriz = `## MATRIZ DIALÉTICA E MAPEAMENTO PROBATÓRIO\n*Atenção IA: Esta é a sua fonte de premissas fáticas incontroversas (Premissa Menor). Nunca presuma fatos fora destes blocos.*\n\n`;
 
         // Iteração Cronológica mantida intacta (Preservação de Closures)
         topico.anotacoes.forEach((an, index) => {
             const numIdeia    = index + 1;
             const refCitacao  = _formatarCitacaoOficial(an.pjeId, an.pagina);
-            const tituloIdeia = an.tese ? an.tese : '[Tese não nomeada pelo assessor — inferir do conteúdo probatório abaixo]';
-
-            mdMatriz += `### 📌 IDEIA ${numIdeia}: ${tituloIdeia}\n\n`;
+            const tituloIdeia = an.tese ? an.tese : 'Tese não nomeada pelo assessor';
+            
+            // INÍCIO DO ENVELOPAMENTO XML (Com escape seguro de atributos)
+            mdMatriz += `<analise_da_prova id="${numIdeia}" tese="${_escapeXmlAttr(tituloIdeia)}">\n`;
 
             const faseContexto  = an.fase      || an.documento || 'Não especificado';
             const poloContexto  = an.polo      || 'N/A';
-            mdMatriz += `> 📂 *Contexto Processual:* **${faseContexto}** | Polo: **${poloContexto}** | Referência: **${refCitacao}**\n\n`;
+            mdMatriz += `<contexto_processual>Fase: ${faseContexto} | Polo: ${poloContexto} | Referência: ${refCitacao}</contexto_processual>\n\n`;
+
+            mdMatriz += `<fato_bruto_inconteste>\n`;
 
             const docLabel = `**[${an.documento || 'Elemento'}] (${an.polo || 'Sem polo'}) ${refCitacao}:**`;
 
@@ -184,18 +199,15 @@ window.ExportManager = (function () {
                 mdMatriz += `- ${docLabel} ${an.conteudo.replace(/\n/g, ' ')}\n`;
             } else if (an.tipo === 'imagem') {
                 const imgNome = _gerarNomeArquivoImagem(numIdeia, null, an.pjeId, an.pagina);
-                mdMatriz += `- ${docLabel}\n`;
-                mdMatriz += `  > 🖼️ **[IMAGEM FORNECIDA PELO ASSESSOR]** (Nome do arquivo: \`${imgNome}\`).\n`;
-                mdMatriz += `  > 🧠 *Comentário Humano:* ${_safeMD(an.comentario || 'Extraia a informação desta imagem e integre à fundamentação.', '\n  > ')}\n`;
+                mdMatriz += `- ${docLabel}\n  > 🖼️ **[IMAGEM FORNECIDA]** (Nome: \`${imgNome}\`).\n  > 🧠 *Comentário Humano:* ${_safeMD(an.comentario || 'Integrar à fundamentação.', '\n  > ')}\n`;
             } else if (an.tipo === 'audio') {
                 try {
                     const ad = JSON.parse(an.conteudo);
                     const oradorFinal = ad.role || ad.oradorStr || 'Orador não idt.';
                     mdMatriz += `- ${docLabel} 🎙️ **[OITIVA DE AUDIÊNCIA]** (${oradorFinal} — ${safeFormatTime(ad.inicio)} a ${safeFormatTime(ad.fim)}).\n`;
                     
-                    if (an.comentario) mdMatriz += `  > 🧠 *Observação / Contexto do Assessor:* ${_safeMD(an.comentario, '\n  > ')}\n`;
+                    if (an.comentario) mdMatriz += `  > 🧠 *Observação:* ${_safeMD(an.comentario, '\n  > ')}\n`;
                     if (ad.transcricao) mdMatriz += `  > 📜 *Degravação Literal:* "${_safeMD(ad.transcricao, '\n  > ')}"\n`;
-                    if (!an.comentario && !ad.transcricao) mdMatriz += `  > 🧠 *Sem transcrição ou observações registradas.*\n`;
                 } catch (e) {
                     mdMatriz += `- ${docLabel} 🎙️ **[ÁUDIO]** *Resumo:* ${_safeMD(an.comentario || 'Sem comentário.', '\n  > ')}\n`;
                 }
@@ -208,51 +220,49 @@ window.ExportManager = (function () {
                     const cDocLabel   = `  ↳ *Confronto [${corr.documento || 'Doc'}] (${corr.polo || 'Polo'}) ${cRefCitacao}:*`;
 
                     if (corr.tipo === 'texto') {
-                        const txt = corr.comentario ? corr.comentario : (corr.conteudo || '');
-                        mdMatriz += `${cDocLabel} ${_safeMD(txt, ' ')}\n`;
+                        mdMatriz += `${cDocLabel} ${_safeMD(corr.comentario ? corr.comentario : (corr.conteudo || ''), ' ')}\n`;
                     } else if (corr.tipo === 'imagem') {
-                        const imgNomeSub = _gerarNomeArquivoImagem(numIdeia, numSub, corr.pjeId, corr.pagina);
-                        mdMatriz += `${cDocLabel}\n`;
-                        mdMatriz += `    > 🖼️ **[IMAGEM ANEXA: \`${imgNomeSub}\`]**\n`;
-                        mdMatriz += `    > 🧠 *Comentário:* ${_safeMD(corr.comentario || 'Analise a ligação técnica.', '\n    > ')}\n`;
+                        mdMatriz += `${cDocLabel}\n    > 🖼️ **[IMAGEM ANEXA: \`${_gerarNomeArquivoImagem(numIdeia, numSub, corr.pjeId, corr.pagina)}\`]**\n    > 🧠 *Comentário:* ${_safeMD(corr.comentario || 'Analise a ligação técnica.', '\n    > ')}\n`;
                     } else if (corr.tipo === 'audio') {
                         try {
                             const ad = JSON.parse(corr.conteudo);
                             const oradorFinal = ad.role || ad.oradorStr || 'Orador não idt.';
-                            mdMatriz += `${cDocLabel} 🎙️ **[OITIVA DE AUDIÊNCIA]** (${oradorFinal} — ${safeFormatTime(ad.inicio)} a ${safeFormatTime(ad.fim)}).\n`;
-                            
-                            if (corr.comentario) mdMatriz += `    > 🧠 *Observação / Contexto:* ${_safeMD(corr.comentario, '\n    > ')}\n`;
-                            if (ad.transcricao) mdMatriz += `    > 📜 *Degravação Literal:* "${_safeMD(ad.transcricao, '\n    > ')}"\n`;
-                            if (!corr.comentario && !ad.transcricao) mdMatriz += `    > 🧠 *Sem observações registradas.*\n`;
+                            mdMatriz += `${cDocLabel} 🎙️ **[OITIVA]** (${oradorFinal} — ${safeFormatTime(ad.inicio)} a ${safeFormatTime(ad.fim)}).\n`;
+                            if (corr.comentario) mdMatriz += `    > 🧠 *Observação:* ${_safeMD(corr.comentario, '\n    > ')}\n`;
+                            if (ad.transcricao) mdMatriz += `    > 📜 *Degravação:* "${_safeMD(ad.transcricao, '\n    > ')}"\n`;
                         } catch (e) {
-                            mdMatriz += `${cDocLabel} 🎙️ **[ÁUDIO]** *Contexto:* ${_safeMD(corr.comentario || 'Informativo ausente.', '\n    > ')}\n`;
+                            mdMatriz += `${cDocLabel} 🎙️ **[ÁUDIO]** *Contexto:* ${_safeMD(corr.comentario || 'Ausente.', '\n    > ')}\n`;
                         }
                     }
                 });
             }
 
+            mdMatriz += `</fato_bruto_inconteste>\n\n`;
+
             // Closure preservada: Manipulação segura dos arrays via referência local
             const imprimirNos = (listaNos, refContexto) => {
                 if (!listaNos || listaNos.length === 0) return;
                 
+                mdMatriz += `<diretrizes_vinculantes_do_assessor>\n`;
                 listaNos.forEach((sub) => {
                     const intencao = sub.intencao || 'premissa';
                     const textoSanitizado = _safeMD(sub.texto, '\n  ');
 
                     if (intencao === 'premissa') {
-                        mdMatriz += `\n  💡 **Premissa Lógica do Assessor (Incontroversa)${refContexto}:** ${textoSanitizado}\n`;
+                        mdMatriz += `[PREMISSA LÓGICA INQUESTIONÁVEL${refContexto}]: ${textoSanitizado}\n`;
                     } else if (intencao === 'refutacao') {
-                        mdMatriz += `\n  🛡️ **Refutação de Mérito / Afastamento de Tese${refContexto}:** ${textoSanitizado}\n`;
+                        mdMatriz += `[AFASTAMENTO DE TESE OBRIGATÓRIO${refContexto}]: ${textoSanitizado}\n`;
                     } else if (intencao === 'comando') {
-                        comandosInjetados.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                        mdMatriz += `[COMANDO DE EXECUÇÃO ESTRITA${refContexto}]: ${textoSanitizado}\n`;
                     } else if (intencao === 'texto') {
-                        comandosInjetados.push(`[Ideia ${numIdeia}${refContexto} — TEXTO FIXO]: Incorpore: "${textoSanitizado}"`);
+                        mdMatriz += `[COPIAR E COLAR EXATAMENTE ESTE TEXTO${refContexto}]: "${textoSanitizado}"\n`;
                     } else if (intencao === 'fundamentacao') {
                         baseLegalObrigatoria.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
                     } else if (intencao === 'preliminar') {
                         preliminaresInjetadas.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
                     }
                 });
+                mdMatriz += `</diretrizes_vinculantes_do_assessor>\n`;
             };
 
             imprimirNos(an.subAnotacoes, '');
@@ -268,7 +278,7 @@ window.ExportManager = (function () {
                 });
             }
 
-            mdMatriz += `\n---\n\n`; 
+            mdMatriz += `</analise_da_prova>\n\n`; 
         });
 
         // BUFFER 3: Montagem das Tags XML Estruturais (Condicionais sem fallbacks vazios)
@@ -306,12 +316,6 @@ window.ExportManager = (function () {
                 mdTags += `**Fundamentos da Origem (Por que o juiz decidiu assim):**\n${_safeMD(topico.fundamentos, '\n')}\n\n`;
             }
             mdTags += `</relatorio_do_conflito>\n\n`;
-        }
-
-        if (comandosInjetados.length > 0) {
-            mdTags += `<comandos_para_a_minuta>\n`;
-            mdTags += comandosInjetados.map(c => `* ${c}`).join('\n') + '\n';
-            mdTags += `</comandos_para_a_minuta>\n\n`;
         }
 
         if (baseLegalObrigatoria.length > 0) {
