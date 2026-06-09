@@ -1,11 +1,18 @@
 /**
  * ============================================================================
- * ed_export-manager.js — v6.0 Core Architect
+ * ed_export-manager.js — v6.0 Core Architect (Refatorado)
  * Módulo Orquestrador de Payload Estruturado para Modelos de Linguagem (LLM)
  * ============================================================================
  */
 window.ExportManager = (function () {
     'use strict';
+
+    // Armazém local para as dependências injetadas pelo orquestrador (app-core)
+    let _deps = {
+        getTopicos: () => [],
+        exibirToast: () => {},
+        getActiveTabId: () => null
+    };
 
     // CONFIGURAÇÃO CENTRALIZADA DE CONTEXTOS PROCESSUAIS (Arquitetura Base-2)
     const ESQUEMAS_CONTEXTO = {
@@ -28,6 +35,11 @@ window.ExportManager = (function () {
             diretrizIA: "Atue estritamente sob a lente de auditoria da higidez formal da decisão. Limite-se a sanar Omissão, Contradição ou Erro Material. É EXPRESSAMENTE PROIBIDO reexaminar provas de mérito fático ou promover o rejulgamento da causa. Adote os princípios do Visual Law e Linguagem Simples: formalidade acessível, clareza absoluta e eliminação de hermetismos jurídicos."
         }
     };
+
+    /**
+     * Utilitário de pausa para cadência de execução assíncrona
+     */
+    const _sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
     /**
      * Sanitiza strings prevenindo quebras acidentais de templates literais XML/Markdown
@@ -134,34 +146,47 @@ window.ExportManager = (function () {
     }
 
     /**
-     * Varre as anotações do tópico compilando uma fila sequencial estável de blobs de imagens
+     * Varre as anotações compilando uma fila sequencial estável de blobs de imagens.
+     * Utiliza execução assíncrona para contornar bloqueios anti-spam dos navegadores.
      */
-    function _executarFilaDeDownloads(topico) {
-        if (!topico.anotacoes) return;
-        
-        let linkFalso = document.createElement('a');
-        document.body.appendChild(linkFalso);
+    async function _executarFilaDeDownloads(topico) {
+        if (!topico.anotacoes || !Array.isArray(topico.anotacoes)) return;
+
+        // Extrai todas as imagens (principais e correlacionadas) para uma fila plana
+        const filaDownloads = [];
 
         topico.anotacoes.forEach((an, idx) => {
             if (an.tipo === 'imagem' && an.conteudo && an.conteudo.startsWith('blob:')) {
-                linkFalso.href = an.conteudo;
-                linkFalso.setAttribute('download', `imagem_prova_${topico.id}_${idx + 1}.png`);
-                linkFalso.click();
+                filaDownloads.push({
+                    url: an.conteudo,
+                    nome: `imagem_prova_${topico.id}_${idx + 1}.png`
+                });
             }
             
-            // Coleta imagens presentes dentro de itens agrupados secundários
-            if (an.itensCorrelacionados) {
+            if (an.itensCorrelacionados && Array.isArray(an.itensCorrelacionados)) {
                 an.itensCorrelacionados.forEach((subItem, sIdx) => {
                     if (subItem.tipo === 'imagem' && subItem.conteudo && subItem.conteudo.startsWith('blob:')) {
-                        linkFalso.href = subItem.conteudo;
-                        linkFalso.setAttribute('download', `imagem_prova_${topico.id}_${idx + 1}_sub_${sIdx + 1}.png`);
-                        linkFalso.click();
+                        filaDownloads.push({
+                            url: subItem.conteudo,
+                            nome: `imagem_prova_${topico.id}_${idx + 1}_sub_${sIdx + 1}.png`
+                        });
                     }
                 });
             }
         });
 
-        document.body.removeChild(linkFalso);
+        // Processa a fila com delay estratégico simulando o clique humano
+        for (const arquivo of filaDownloads) {
+            const link = document.createElement('a');
+            link.href = arquivo.url;
+            link.setAttribute('download', arquivo.nome);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link); // Limpeza imediata do DOM para não vazar memória
+            
+            // Pausa de 350ms para evitar bloqueio de múltiplos downloads
+            await _sleep(350); 
+        }
     }
 
     /**
@@ -170,16 +195,28 @@ window.ExportManager = (function () {
      * ========================================================================
      */
     return {
-        exportarTopicoAtivo: function (contexto = 'RO') {
-            // Recupera dinamicamente a referência da aba ativa via Gerenciador de Tópicos
-            const activeTabId = window.TopicsManager ? window.TopicsManager.getActiveTabId() : null;
+        // Inicializador de dependências restaurado para o app-core
+        init: function (dependencies) {
+            _deps = { ..._deps, ...dependencies };
+        },
+
+        // Agora é uma função assíncrona para permitir o controle da fila
+        exportarTopicoAtivo: async function (contexto = 'RO') {
+            const activeTabId = _deps.getActiveTabId();
+            
             if (!activeTabId) {
                 console.warn("[ExportManager] Nenhuma aba ativa identificada para exportação.");
                 return;
             }
 
-            // Mock/Recuperação estável do array em memória do store (ed_store.js)
-            const topicosArray = window.ed_store ? window.ed_store.getTopicos() : [];
+            // Busca segura e validação rigorosa do tipo de retorno
+            const topicosArray = _deps.getTopicos();
+            
+            if (!Array.isArray(topicosArray)) {
+                console.error("[ExportManager] Falha crítica: getTopicos() não retornou um array válido.");
+                return;
+            }
+
             const topicoAtivo = topicosArray.find(t => t.id === activeTabId);
 
             if (!topicoAtivo) {
@@ -190,14 +227,14 @@ window.ExportManager = (function () {
             const config = ESQUEMAS_CONTEXTO[contexto] || ESQUEMAS_CONTEXTO['RO'];
             const nomeArquivoFinal = `${config.prefixoArquivo}${topicoAtivo.nome.replace(/[^a-zA-Z0-9]/g, '_')}.md`;
 
-            // Execução encadeada do pipeline (Geração -> Sanatização -> Texto -> Imagens)
+            // Execução do pipeline
             const payloadTexto = _gerarMarkdown(topicoAtivo, contexto);
             
-            // 1. Entrega do esqueleto estruturado via download de texto
+            // 1. Download síncrono do arquivo Markdown
             _downloadArquivo(nomeArquivoFinal, payloadTexto);
 
-            // 2. Execução segura da fila assíncrona de mídias anexas (Sem regressão de dados)
-            _executarFilaDeDownloads(topicoAtivo);
+            // 2. Disparo sequencial e assíncrono das evidências atreladas
+            await _executarFilaDeDownloads(topicoAtivo);
         }
     };
 
