@@ -116,6 +116,25 @@ window.ExportManager = (function () {
         return texto.replace(/\n/g, prefixo);
     }
 
+    /**
+     * Achata a hierarquia da anotação (Mestre + Correlacionados) para
+     * inferência de contexto processual.
+     */
+    function _inferirContextoProcessual(anotacoes) {
+        const todosDocumentos = anotacoes.flatMap(an => {
+            const docs = [an.documento || ''];
+            if (an.itensCorrelacionados) {
+                docs.push(...an.itensCorrelacionados.map(ic => ic.documento || ''));
+            }
+            return docs;
+        });
+
+        return {
+            isExecucao: todosDocumentos.some(d => d.includes('Agravo de Petição') || d.includes('Sentença de Execução') || d.includes('Embargos à Execução') || d.includes('Atos de Execução') || d.includes('Contraminuta')),
+            isAI: todosDocumentos.some(d => d.includes('Agravo de Instrumento'))
+        };
+    }
+
     // ─── GERADOR DE MARKDOWN ──────────────────────────────────────────────────
 
     /**
@@ -247,6 +266,19 @@ window.ExportManager = (function () {
 
         // BUFFER 3: Montagem das Tags XML Estruturais (Condicionais sem fallbacks vazios)
         let mdTags = '';
+
+        // --- INJEÇÃO DA DIRETRIZ COGNITIVA (Top-Down Context) ---
+        const contexto = _inferirContextoProcessual(topico.anotacoes);
+
+        if (contexto.isExecucao) {
+            mdTags += `<diretriz_cognitiva_ia>\n`;
+            mdTags += `*ALERTA DE SISTEMA:* O conjunto probatório deste tópico refere-se à **FASE DE EXECUÇÃO** (ex: Agravo de Petição). Seu raciocínio jurídico DEVE ser restrito aos limites da coisa julgada, cálculos de liquidação e preclusão. É terminantemente proibido reavaliar mérito da fase de conhecimento ou presumir fatos fora do estrito limite da execução.\n`;
+            mdTags += `</diretriz_cognitiva_ia>\n\n`;
+        } else if (contexto.isAI) {
+            mdTags += `<diretriz_cognitiva_ia>\n`;
+            mdTags += `*ALERTA DE SISTEMA:* O foco deste tópico é um **Agravo de Instrumento**. Sua redação deve focar primariamente em destrancar ou manter o trancamento do recurso principal, avaliando estritamente pressupostos de admissibilidade (tempestividade, preparo, deserção, transcendência).\n`;
+            mdTags += `</diretriz_cognitiva_ia>\n\n`;
+        }
 
         if (preliminaresInjetadas.length > 0) {
             mdTags += `<questoes_preliminares_e_prejudiciais>\n`;

@@ -43,19 +43,34 @@ window.toggleModoFoco = function(ativar) {
 
 // --- CONFIGURAÇÃO CENTRAL DE DOCUMENTOS ---
 const DOC_CONFIG = [
+    // FASE 1: O RECURSO
+    { label: 'Recurso Ordinário',         polo: null,           tipo: 'dual',   fase: 1 },
+    { label: 'Recurso Adesivo',           polo: null,           tipo: 'dual',   fase: 1 },
+    { label: 'Agravo de Petição',         polo: null,           tipo: 'dual',   fase: 1 },
+    { label: 'Agravo de Instrumento',     polo: null,           tipo: 'dual',   fase: 1 },
+    { label: 'Contrarrazões',             polo: null,           tipo: 'dual',   fase: 1 },
+    { label: 'Contraminuta',              polo: null,           tipo: 'dual',   fase: 1 },
+
+    // FASE 2: A GÊNESE
     { label: 'Petição Inicial',           polo: 'Parte Autora', tipo: 'auto',   fase: 2 },
     { label: 'Contestação',               polo: 'Parte Ré',     tipo: 'auto',   fase: 2 },
     { label: 'Impugnação à Contestação',  polo: 'Parte Autora', tipo: 'auto',   fase: 2 },
-    { label: 'Recurso Ordinário',         polo: null,           tipo: 'dual',   fase: 1 },
-    { label: 'Recurso Adesivo',           polo: null,           tipo: 'dual',   fase: 1 },
-    { label: 'Contrarrazões',             polo: null,           tipo: 'dual',   fase: 1 },
-    { label: 'Quesitos',                  polo: null,           tipo: 'dual',   fase: 4 },
-    { label: 'Quesitos Complementares',   polo: null,           tipo: 'dual',   fase: 4 },
+    { label: 'Cálculos de Liquidação',    polo: null,           tipo: 'dual',   fase: 2 },
+    { label: 'Embargos à Execução',       polo: 'Parte Ré',     tipo: 'auto',   fase: 2 },
+    { label: 'Impugnação à Liquidação',   polo: 'Parte Autora', tipo: 'auto',   fase: 2 },
+
+    // FASE 3: A SENTENÇA
     { label: 'Sentença',                  polo: 'Juízo',        tipo: 'neutro', fase: 3 },
     { label: 'Sentença de Embargos de Declaração', polo: 'Juízo', tipo: 'neutro', fase: 3 },
+    { label: 'Sentença de Execução',      polo: 'Juízo',        tipo: 'neutro', fase: 3 },
+
+    // FASE 4: AS PROVAS
+    { label: 'Quesitos',                  polo: null,           tipo: 'dual',   fase: 4 },
+    { label: 'Quesitos Complementares',   polo: null,           tipo: 'dual',   fase: 4 },
     { label: 'Laudo Pericial',            polo: 'Perito',       tipo: 'neutro', fase: 4 },
     { label: 'Audiência de Instrução',    polo: null,           tipo: 'dual',   fase: 4 },
-    { label: 'Prova Documental Genérica', polo: null,           tipo: 'dual',   fase: 4 }
+    { label: 'Prova Documental Genérica', polo: null,           tipo: 'dual',   fase: 4 },
+    { label: 'Atos de Execução (Penhora, etc)',polo: 'Juízo',   tipo: 'neutro', fase: 4 }
 ];
 
 let _docSelecionado = null;
@@ -139,6 +154,19 @@ function selecionarDocumento(docLabel, polo, context) {
     if (polo === 'DUAL') {
         _docSelecionado = docLabel;
         _isWizardContext = (context === 'wizard');
+        
+        // Lógica Dinâmica de UX para Fases de Execução
+        const isExecucao = ['Agravo de Petição', 'Contraminuta', 'Cálculos de Liquidação'].includes(docLabel);
+        
+        // Altera os botões visualmente sem perder os listeners
+        const btnAutora = document.querySelector(`#${context}-step-polo .chip-autora`);
+        const btnRe = document.querySelector(`#${context}-step-polo .chip-re`);
+        
+        if (btnAutora && btnRe) {
+            btnAutora.textContent = isExecucao ? '✔ Exequente' : '✔ Parte Autora';
+            btnRe.textContent = isExecucao ? '✔ Executado' : '✔ Parte Ré';
+        }
+
         document.getElementById(`${context}-step-doc`).style.display = 'none';
         document.getElementById(`${context}-doc-selecionado`).textContent = docLabel;
         document.getElementById(`${context}-step-polo`).style.display = 'block';
