@@ -270,3 +270,16 @@
 
 #modal-gerenciar-tags .wizard-header + div { display: flex; gap: 8px; align-items: center; }
 #input-nova-tag { flex: 1; }
+
+/* ================================================
+   8. CUSTOMIZAÇÃO DE WORKSPACE (CONTEXTO)
+   ================================================ */
+/* Aplicação de identidade institucional discreta e sóbria para o workspace de Embargos */
+body[data-context="ed"] .topics-content-area {
+    border-top: 3px solid #1a3a5c;
+    background-color: #fdfdfd;
+}
+
+/* Tipografias customizadas para renderização do Markdown tratado */
+.txt-largo-1 { font-size: 1.1rem; font-weight: 600; color: #1a1a1a; }
+.txt-largo-2 { font-size: 1.25rem; font-weight: 700; color: #1a3a5c; }
