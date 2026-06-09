@@ -245,12 +245,10 @@
         </div>
 
         <div id="popup-step-polo" style="display:none;">
-            <p class="popup-label">De qual parte é este documento?</p>
+            <p class="popup-label">Qualifique o documento:</p>
             <p id="popup-doc-selecionado" class="doc-highlight"></p>
-            <div style="display:flex; flex-direction:column; gap:6px;">
-                <button class="chip-btn chip-autora" onclick="confirmarPolo('Parte Autora', event)">✔ Parte Autora</button>
-                <button class="chip-btn chip-re" onclick="confirmarPolo('Parte Ré', event)">✔ Parte Ré</button>
-                <button class="chip-btn chip-cancelar" onclick="voltarParaDocumentos('popup', event)">← Voltar</button>
+            <!-- Contêiner dinâmico -->
+            <div id="popup-polo-buttons-container" style="display:flex; flex-direction:column; gap:6px;">
             </div>
         </div>
     </div>
@@ -435,14 +433,10 @@
         </div>
 
         <div id="wizard-step-polo" style="display:none;">
-            <p class="popup-label">De qual parte é este documento?</p>
+            <p class="popup-label">Qualifique o documento:</p>
             <p id="wizard-doc-selecionado" class="doc-highlight"></p>
-            <div style="display:flex; flex-direction:column; gap:6px;">
-                <button class="chip-btn chip-autora" onclick="confirmarPolo('Parte Autora', event)">✔ Parte Autora</button>
-                <button class="chip-btn chip-re" onclick="confirmarPolo('Parte Ré', event)">✔ Parte Ré</button>
-                <div class="wizard-actions">
-                    <button class="chip-btn chip-cancelar" onclick="voltarParaDocumentos('wizard', event)">← Voltar</button>
-                </div>
+            <!-- Contêiner dinâmico -->
+            <div id="wizard-polo-buttons-container" style="display:flex; flex-direction:column; gap:6px;">
             </div>
         </div>
     </div>

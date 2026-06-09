@@ -43,34 +43,37 @@ window.toggleModoFoco = function(ativar) {
 
 // --- CONFIGURAÇÃO CENTRAL DE DOCUMENTOS ---
 const DOC_CONFIG = [
-    // FASE 1: O RECURSO
-    { label: 'Recurso Ordinário',         polo: null,           tipo: 'dual',   fase: 1 },
-    { label: 'Recurso Adesivo',           polo: null,           tipo: 'dual',   fase: 1 },
-    { label: 'Agravo de Petição',         polo: null,           tipo: 'dual',   fase: 1 },
-    { label: 'Agravo de Instrumento',     polo: null,           tipo: 'dual',   fase: 1 },
-    { label: 'Contrarrazões',             polo: null,           tipo: 'dual',   fase: 1 },
-    { label: 'Contraminuta',              polo: null,           tipo: 'dual',   fase: 1 },
+    // --- FASE 1: Postulação e Recursos ---
+    { label: 'Recurso Ordinário', polo: 'DUAL', tipo: 'dual', fase: 1 },
+    { label: 'Contrarrazões', polo: 'DUAL', tipo: 'dual', fase: 1 },
+    { label: 'Agravo de Petição', polo: 'DUAL', tipo: 'dual', fase: 1, isExecucao: true },
+    { label: 'Contraminuta', polo: 'DUAL', tipo: 'dual', fase: 1, isExecucao: true },
 
-    // FASE 2: A GÊNESE
-    { label: 'Petição Inicial',           polo: 'Parte Autora', tipo: 'auto',   fase: 2 },
-    { label: 'Contestação',               polo: 'Parte Ré',     tipo: 'auto',   fase: 2 },
-    { label: 'Impugnação à Contestação',  polo: 'Parte Autora', tipo: 'auto',   fase: 2 },
-    { label: 'Cálculos de Liquidação',    polo: null,           tipo: 'dual',   fase: 2 },
-    { label: 'Embargos à Execução',       polo: 'Parte Ré',     tipo: 'auto',   fase: 2 },
-    { label: 'Impugnação à Liquidação',   polo: 'Parte Autora', tipo: 'auto',   fase: 2 },
+    // --- FASE 2: Gênese do Conflito ---
+    { label: 'Petição Inicial', polo: 'Parte Autora', tipo: 'auto', fase: 2 },
+    { label: 'Contestação', polo: 'Parte Ré', tipo: 'auto', fase: 2 },
+    // Novas Entradas Execução:
+    { label: 'Título Executivo', polo: 'Juízo / Tribunal', tipo: 'auto', fase: 2, isExecucao: true },
+    { label: 'Cálculos de Liquidação', polo: 'DUAL', tipo: 'dual', fase: 2, isExecucao: true },
+    { label: 'Embargos à Execução', polo: 'Parte Executada', tipo: 'auto', fase: 2, isExecucao: true },
+    { label: 'Impugnação aos Cálculos', polo: 'Parte Exequente', tipo: 'auto', fase: 2, isExecucao: true },
 
-    // FASE 3: A SENTENÇA
-    { label: 'Sentença',                  polo: 'Juízo',        tipo: 'neutro', fase: 3 },
-    { label: 'Sentença de Embargos de Declaração', polo: 'Juízo', tipo: 'neutro', fase: 3 },
-    { label: 'Sentença de Execução',      polo: 'Juízo',        tipo: 'neutro', fase: 3 },
+    // --- FASE 3: Sentenças e Acórdãos ---
+    { label: 'Sentença', polo: 'Juízo', tipo: 'auto', fase: 3 },
+    { label: 'Acórdão / Decisão TRT', polo: 'Juízo', tipo: 'auto', fase: 3 },
+    { label: 'Sentença de Embargos de Declaração', polo: 'Juízo', tipo: 'auto', fase: 3 },
+    // Novas Entradas Execução:
+    { label: 'Sentença de Liquidação', polo: 'Juízo', tipo: 'auto', fase: 3, isExecucao: true },
+    { label: 'Decisão de Embargos à Execução', polo: 'Juízo', tipo: 'auto', fase: 3, isExecucao: true },
 
-    // FASE 4: AS PROVAS
-    { label: 'Quesitos',                  polo: null,           tipo: 'dual',   fase: 4 },
-    { label: 'Quesitos Complementares',   polo: null,           tipo: 'dual',   fase: 4 },
-    { label: 'Laudo Pericial',            polo: 'Perito',       tipo: 'neutro', fase: 4 },
-    { label: 'Audiência de Instrução',    polo: null,           tipo: 'dual',   fase: 4 },
-    { label: 'Prova Documental Genérica', polo: null,           tipo: 'dual',   fase: 4 },
-    { label: 'Atos de Execução (Penhora, etc)',polo: 'Juízo',   tipo: 'neutro', fase: 4 }
+    // --- FASE 4: Provas e Atos Processuais ---
+    { label: 'Laudo Pericial', polo: 'Perito', tipo: 'auto', fase: 4 },
+    { label: 'Documento (Prova Pré-constituída)', polo: 'DUAL', tipo: 'dual', fase: 4 },
+    // Novas Entradas Execução (substituindo a antiga genérica):
+    { label: 'Mandado de Penhora', polo: 'Auxiliar da Justiça', tipo: 'auto', fase: 4, isExecucao: true },
+    { label: 'Bacenjud / Sisbajud', polo: 'Juízo / Tribunal', tipo: 'auto', fase: 4, isExecucao: true },
+    { label: 'Decisão / Despacho', polo: 'Juízo / Tribunal', tipo: 'auto', fase: 4, isExecucao: true },
+    { label: 'Documento / Manifestação', polo: 'DUAL', tipo: 'dual', fase: 4, isExecucao: true }
 ];
 
 let _docSelecionado = null;
@@ -155,20 +158,36 @@ function selecionarDocumento(docLabel, polo, context) {
         _docSelecionado = docLabel;
         _isWizardContext = (context === 'wizard');
         
-        // Lógica Dinâmica de UX para Fases de Execução
-        const isExecucao = ['Agravo de Petição', 'Contraminuta', 'Cálculos de Liquidação'].includes(docLabel);
+        const conf = DOC_CONFIG.find(d => d.label === docLabel);
+        const isExecucao = conf && conf.isExecucao;
+
+        const targetDocText = context === 'popup' ? 'popup-doc-selecionado' : 'wizard-doc-selecionado';
+        const targetContainer = context === 'popup' ? 'popup-polo-buttons-container' : 'wizard-polo-buttons-container';
         
-        // Altera os botões visualmente sem perder os listeners
-        const btnAutora = document.querySelector(`#${context}-step-polo .chip-autora`);
-        const btnRe = document.querySelector(`#${context}-step-polo .chip-re`);
+        document.getElementById(targetDocText).innerText = docLabel;
         
-        if (btnAutora && btnRe) {
-            btnAutora.textContent = isExecucao ? '✔ Exequente' : '✔ Parte Autora';
-            btnRe.textContent = isExecucao ? '✔ Executado' : '✔ Parte Ré';
+        let htmlBotoes = '';
+
+        if (isExecucao) {
+            htmlBotoes += `<button class="chip-btn chip-exequente" onclick="confirmarPolo('Parte Exequente', event)">✔ Parte Exequente</button>`;
+            htmlBotoes += `<button class="chip-btn chip-executada" onclick="confirmarPolo('Parte Executada', event)">✔ Parte Executada</button>`;
+            htmlBotoes += `<button class="chip-btn chip-juizo" onclick="confirmarPolo('Juízo / Tribunal', event)">🏛️ Juízo / Tribunal</button>`;
+            htmlBotoes += `<button class="chip-btn chip-auxiliar" onclick="confirmarPolo('Auxiliar da Justiça', event)">⚖️ Auxiliar da Justiça</button>`;
+        } else {
+            htmlBotoes += `<button class="chip-btn chip-autora" onclick="confirmarPolo('Parte Autora', event)">✔ Parte Autora</button>`;
+            htmlBotoes += `<button class="chip-btn chip-re" onclick="confirmarPolo('Parte Ré', event)">✔ Parte Ré</button>`;
+        }
+        
+        // Renderiza o botão Voltar com container extra se for no Wizard para preservar o layout original
+        if (context === 'popup') {
+            htmlBotoes += `<button class="chip-btn chip-cancelar" onclick="voltarParaDocumentos('popup', event)">← Voltar</button>`;
+        } else {
+            htmlBotoes += `<div class="wizard-actions" style="margin-top: 0;"><button class="chip-btn chip-cancelar" onclick="voltarParaDocumentos('wizard', event)">← Voltar</button></div>`;
         }
 
+        document.getElementById(targetContainer).innerHTML = htmlBotoes;
+
         document.getElementById(`${context}-step-doc`).style.display = 'none';
-        document.getElementById(`${context}-doc-selecionado`).textContent = docLabel;
         document.getElementById(`${context}-step-polo`).style.display = 'block';
     } else {
         executarSalvamento(docLabel, polo, topicoId, _pendingTargetIndex, context);
