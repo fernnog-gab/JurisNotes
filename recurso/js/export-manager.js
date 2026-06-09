@@ -119,6 +119,7 @@ window.ExportManager = (function () {
     /**
      * Achata a hierarquia da anotação (Mestre + Correlacionados) para
      * inferência de contexto processual.
+     * ATUALIZAÇÃO: Radar de palavras-chave expandido para cobrir os novos atos de Execução.
      */
     function _inferirContextoProcessual(anotacoes) {
         const todosDocumentos = anotacoes.flatMap(an => {
@@ -129,8 +130,14 @@ window.ExportManager = (function () {
             return docs;
         });
 
+        const palavrasChaveExecucao = [
+            'Agravo de Petição', 'Contraminuta', 'Sentença de Execução', 
+            'Embargos à Execução', 'Título Executivo', 'Cálculos', 
+            'Liquidação', 'Penhora', 'Bacenjud', 'Sisbajud', 'Impugnação'
+        ];
+
         return {
-            isExecucao: todosDocumentos.some(d => d.includes('Agravo de Petição') || d.includes('Sentença de Execução') || d.includes('Embargos à Execução') || d.includes('Atos de Execução') || d.includes('Contraminuta')),
+            isExecucao: todosDocumentos.some(doc => palavrasChaveExecucao.some(palavra => doc.includes(palavra))),
             isAI: todosDocumentos.some(d => d.includes('Agravo de Instrumento'))
         };
     }
@@ -273,6 +280,8 @@ window.ExportManager = (function () {
         if (contexto.isExecucao) {
             mdTags += `<diretriz_cognitiva_ia>\n`;
             mdTags += `*ALERTA DE SISTEMA:* O conjunto probatório deste tópico refere-se à **FASE DE EXECUÇÃO** (ex: Agravo de Petição). Seu raciocínio jurídico DEVE ser restrito aos limites da coisa julgada, cálculos de liquidação e preclusão. É terminantemente proibido reavaliar mérito da fase de conhecimento ou presumir fatos fora do estrito limite da execução.\n`;
+            // NOVA DIRETRIZ SOBRE OS ATORES DA EXECUÇÃO INSERIDA AQUI:
+            mdTags += `*PESO PROBATÓRIO:* Documentos classificados nos polos "Juízo / Tribunal" ou "Auxiliar da Justiça" representam atos oficiais do Estado. Eles possuem presunção de veracidade e devem prevalecer como premissas fáticas incontroversas frente às alegações das partes (Exequente/Executada).\n`;
             mdTags += `</diretriz_cognitiva_ia>\n\n`;
         } else if (contexto.isAI) {
             mdTags += `<diretriz_cognitiva_ia>\n`;
