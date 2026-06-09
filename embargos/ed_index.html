@@ -120,6 +120,17 @@
                     </svg>
                 </button>
 
+                 <!-- NOVO: Botão da Balança da Justiça -->
+                <button class="icon-btn" id="btn-balanca-justica" onclick="BalancaManager.abrirPainel(event)" title="Painel da Balança&#10;[Alt + B / Ctrl + Clique] para enviar HTML" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path>
+                        <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path>
+                        <path d="M7 21h10"></path>
+                        <path d="M12 3v18"></path>
+                        <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path>
+                    </svg>
+                </button>
+
                 <button class="icon-btn" id="btn-ferramenta-texto" onmousedown="event.preventDefault()" onclick="capturarTrechoSelecionado()" title="Gerar Anotação a Partir de Texto" disabled>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line>
