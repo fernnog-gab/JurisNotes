@@ -64,6 +64,7 @@ window.BackupManager = (function () {
                 processoId:        _processoId,
                 pdfHash:           _pdfHash,
                 possuiAudio:       possuiAudio,
+                balancaHtml:       window.BalancaManager ? window.BalancaManager.getHtmlState() : null,
                 versaoApp:         '7.0', // MARCO DA NOVA ARQUITETURA E LIMPEZA DE VEREDITO
                 ultimaAtualizacao: Date.now(),
                 atalhosPdf:        atalhosCapturados
@@ -244,6 +245,10 @@ window.BackupManager = (function () {
             } else {
                 window.ShortcutManager.reset();
             }
+        }
+        
+        if (window.BalancaManager) {
+            window.BalancaManager.restoreHtmlState(pacote.metadata.balancaHtml || null);
         }
 
         return pacote;

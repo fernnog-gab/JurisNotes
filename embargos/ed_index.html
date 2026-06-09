@@ -726,6 +726,7 @@
     
     <script src="js/ed_backup-manager.js"></script>
     <script src="js/ed_topics-manager.js"></script>
+    <script src="js/ed_balanca-manager.js"></script>
     <script src="js/ed_interaction-tools.js"></script>
     <script src="js/ed_audio-manager.js"></script>
     <script src="js/ed_annotation-actions.js"></script>
@@ -910,6 +911,29 @@
                 Sair da Conta
             </button>
         </div>
+    </div>
+
+    <!-- MODAL DA BALANÇA DA JUSTIÇA -->
+    <input type="file" id="upload-html-balanca" accept=".html" style="display: none;" onchange="BalancaManager.processarUpload(event)">
+
+    <div id="balanca-modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.40); z-index: var(--z-wizard-backdrop);" onclick="BalancaManager.fecharPainel()"></div>
+    <div id="balanca-painel" class="crop-wizard-popup" style="display:none; z-index: var(--z-wizard-modal); width: 92vw; height: 88vh; max-width: 1300px; padding: 0; overflow: hidden; flex-direction: column; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+        
+        <div class="wizard-header" style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: white; margin: 0; border-bottom: 2px solid var(--border-color);">
+            <span style="font-weight: 700; color: var(--trt-blue);">⚖️ Painel de Julgamento / Balança</span>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <button class="chip-btn chip-cancelar" style="padding: 6px 12px; font-size: 0.8rem;" onclick="document.getElementById('upload-html-balanca').click()">🔄 Substituir HTML</button>
+                <button style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b;" onclick="BalancaManager.fecharPainel()">✕</button>
+            </div>
+        </div>
+        
+        <div id="balanca-vazia" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--trt-light-bg);">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--border-color)" stroke-width="1.5" style="margin-bottom: 16px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+            <p style="color: #64748b; margin-bottom: 20px; font-weight: 500;">Nenhum painel HTML carregado para este processo.</p>
+            <button class="chip-btn chip-autora" style="width: auto; background: var(--trt-blue); color: white; border: none; padding: 10px 24px;" onclick="document.getElementById('upload-html-balanca').click()">Importar Arquivo .HTML</button>
+        </div>
+
+        <iframe id="balanca-iframe" style="flex: 1; border: none; width: 100%; display: none; background: white;" sandbox="allow-same-origin allow-scripts allow-forms"></iframe>
     </div>
 
     <!-- SCRIPT DE AUTENTICAÇÃO E ACERVO -->
