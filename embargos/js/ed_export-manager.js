@@ -62,6 +62,11 @@ window.ExportManager = (function () {
         // 1. COMPILAÇÃO DO PREÂMBULO FIXO (Camada de Direcionamento)
         md += `<RoteiroDiretor>\n`;
         md += `  <incidente_processual>${contexto === 'ED' ? 'Embargos de Declaração' : 'Recurso Ordinário'}</incidente_processual>\n`;
+        // Injeta o vício alegado primário do tópico, se existir
+        if (contexto === 'ED' && topico.vicio) {
+            const vicioLabel = topico.vicio.charAt(0).toUpperCase() + topico.vicio.slice(1);
+            md += `  <classificacao_vicio_primario>${vicioLabel}</classificacao_vicio_primario>\n`;
+        }
         md += `  <diretriz_cognitiva>${config.diretrizIA}</diretriz_cognitiva>\n`;
         md += `</RoteiroDiretor>\n\n`;
 
@@ -84,6 +89,11 @@ window.ExportManager = (function () {
             const numCard = idx + 1;
             md += `### [CARD_EVIDENCIA_${numCard}] (Documento: ${anotacao.documento || 'Não Identificado'})\n`;
             md += `- **Polo Vinculado:** ${anotacao.polo || 'Neutro'}\n`;
+            // Injeta o vício individual apontado na hora da captura da prova
+            if (contexto === 'ED' && anotacao.vicio) {
+                const vicioLabel = anotacao.vicio.charAt(0).toUpperCase() + anotacao.vicio.slice(1);
+                md += `- **Vício Apontado na Prova:** ${vicioLabel}\n`;
+            }
             if (anotacao.pagina) md += `- **Localização Processual:** fl. ${anotacao.pagina}\n`;
             md += `\n<DADO_BRUTO_PROVA>\n`;
 

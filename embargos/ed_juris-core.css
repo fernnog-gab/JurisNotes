@@ -374,6 +374,17 @@ body.theme-anotacoes-jasmine {
 .chip-sentenca-ed { color: #6a1b9a; border-color: #ce93d8; background: #f3e5f5; }
 .chip-perito { color: #e65100; border-color: #ffcc80; background: #fff8e1; }
 
+/* Botões Modais - Fase de Execução */
+.chip-exequente { color: #2e7d32; border-color: #81c784; background: #f1f8f1; }
+.chip-executada { color: #b71c1c; border-color: #ef9a9a; background: #fff5f5; }
+.chip-juizo     { color: #0d47a1; border-color: #90caf9; background: #e3f2fd; }
+.chip-auxiliar  { color: #e65100; border-color: #ffcc80; background: #fff8e1; }
+
+/* Tags do Fichário (reaproveitando a cor das clássicas para consistência) */
+.tag-parte-exequente   { background: #388e3c; color: #ffffff; }
+.tag-parte-executada   { background: #d32f2f; color: #ffffff; }
+.tag-auxiliar-justica  { background: #fff8e1; color: #e65100; }
+
 /* ================================================
    5. TOAST DE FEEDBACK NÃO-INTRUSIVO
    ================================================ */
