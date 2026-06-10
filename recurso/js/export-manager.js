@@ -106,14 +106,25 @@ window.ExportManager = (function () {
     }
 
     /**
+     * Remove sintaxes exclusivas de renderização da UI (ex: [[size:2]])
+     * Evita vazamento de pseudo-código inútil para o LLM.
+     */
+    function _stripInternalTags(texto) {
+        if (!texto) return '';
+        return texto.replace(/\[\[\/?size(:\d)?\]\]/g, '');
+    }
+
+    /**
      * Sanitiza textos livres do usuário para injeção segura em blocos Markdown.
      * Previne que quebras de linha (\n) escapem da formatação do blockquote ou lista.
+     * Aplica o pipeline completo: Strip UI -> Replace quebras de linha
      * @param {string} texto Conteúdo bruto.
      * @param {string} prefixo Prefixo estrutural (ex: '\n  > ' ou '\n  ').
      */
     function _safeMD(texto, prefixo = '\n  > ') {
         if (!texto) return '';
-        return texto.replace(/\n/g, prefixo);
+        const textoLimpo = _stripInternalTags(texto);
+        return textoLimpo.replace(/\n/g, prefixo);
     }
 
     /**
@@ -169,6 +180,7 @@ window.ExportManager = (function () {
         // Preservação Correta: Preliminares e Leis têm escopo GLOBAL. Comandos têm escopo LOCAL (removido do array).
         const preliminaresInjetadas = [];
         const baseLegalObrigatoria = [];
+        const vereditosLocaisInjetados = []; // NOVO: Captura de vereditos perdidos
 
         // BUFFER 1: Cabeçalho
         // Fallback defensivo para topico.nome nulo/undefined
@@ -239,15 +251,16 @@ window.ExportManager = (function () {
 
             mdMatriz += `</fato_bruto_inconteste>\n\n`;
 
-            // Closure preservada: Manipulação segura dos arrays via referência local
+            // ROTEADOR DE INTENÇÕES (Corrigido)
             const imprimirNos = (listaNos, refContexto) => {
                 if (!listaNos || listaNos.length === 0) return;
                 
                 mdMatriz += `<diretrizes_vinculantes_do_assessor>\n`;
                 listaNos.forEach((sub) => {
-                    const intencao = sub.intencao || 'premissa';
+                    const intencao = sub.intencao || 'fallback'; // NOVO: Fallback mapeado explicitamente
                     const textoSanitizado = _safeMD(sub.texto, '\n  ');
 
+                    // ESCOPO LOCAL: Fica na tag da prova
                     if (intencao === 'premissa') {
                         mdMatriz += `[PREMISSA LÓGICA INQUESTIONÁVEL${refContexto}]: ${textoSanitizado}\n`;
                     } else if (intencao === 'refutacao') {
@@ -256,10 +269,18 @@ window.ExportManager = (function () {
                         mdMatriz += `[COMANDO DE EXECUÇÃO ESTRITA${refContexto}]: ${textoSanitizado}\n`;
                     } else if (intencao === 'texto') {
                         mdMatriz += `[COPIAR E COLAR EXATAMENTE ESTE TEXTO${refContexto}]: "${textoSanitizado}"\n`;
-                    } else if (intencao === 'fundamentacao') {
-                        baseLegalObrigatoria.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                    } else if (intencao === 'fallback') {
+                        // NOVO: Evita envenenar o prompt chamando anotações livres de 'Premissas Inquestionáveis'
+                        mdMatriz += `[CONTEXTO FÁTICO COMPLEMENTAR${refContexto}]: ${textoSanitizado}\n`;
+                    } 
+                    // ESCOPO GLOBAL: Empurrado para os buffers correspondentes
+                    else if (intencao === 'fundamentacao') {
+                        baseLegalObrigatoria.push(`[Referência da Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
                     } else if (intencao === 'preliminar') {
-                        preliminaresInjetadas.push(`[Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                        preliminaresInjetadas.push(`[Referência da Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                    } else if (intencao === 'veredito') {
+                        // CORREÇÃO CRÍTICA: Captura os vereditos que antes eram perdidos
+                        vereditosLocaisInjetados.push(`[Baseado na Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
                     }
                 });
                 mdMatriz += `</diretrizes_vinculantes_do_assessor>\n`;
@@ -324,12 +345,18 @@ window.ExportManager = (function () {
             mdTags += `</base_legal_obrigatoria>\n\n`;
         }
 
-        // A Tag de Decisão SEMPRE deve ficar no final da concatenação para âncora de recência da IA.
+        // MONTAGEM DO VEREDITO ATUALIZADA (Recency Effect)
         let mdVeredito = '';
-        if (topico.veredito && topico.veredito.trim() !== '') {
+        if ((topico.veredito && topico.veredito.trim() !== '') || vereditosLocaisInjetados.length > 0) {
             mdVeredito += `<decisao_magistrado_pretendida>\n`;
-            mdVeredito += `* ${topico.veredito.replace(/\n/g, ' ')}\n`;
-            mdVeredito += `\n*Sintetize esta decisão em um dispositivo claro ao final da minuta.*\n`;
+            mdVeredito += `*Atenção IA: As instruções abaixo ditam o resultado final do recurso. Siga-as para redigir o dispositivo.*\n`;
+            
+            if (topico.veredito) mdVeredito += `* CONTEXTO GERAL: ${topico.veredito.replace(/\n/g, ' ')}\n`;
+            
+            vereditosLocaisInjetados.forEach(v => {
+                mdVeredito += `* CONCLUSÃO PARCIAL: ${v}\n`;
+            });
+            
             mdVeredito += `</decisao_magistrado_pretendida>\n`;
         }
 

@@ -37,11 +37,21 @@ window.ExportManager = (function () {
     };
 
     /**
+     * Remove sintaxes exclusivas de renderização da UI (ex: [[size:2]])
+     * Evita vazamento de pseudo-código inútil para o LLM.
+     */
+    function _stripInternalTags(texto) {
+        if (!texto) return '';
+        return String(texto).replace(/\[\[\/?size(:\d)?\]\]/g, '');
+    }
+
+    /**
      * Sanitiza conteúdo para evitar quebras no Markdown
      */
     function _safeMD(str, prefixo = '') {
         if (!str) return '';
-        return String(str).replace(/\n/g, prefixo);
+        const textoLimpo = _stripInternalTags(String(str));
+        return textoLimpo.replace(/\n/g, prefixo);
     }
 
     /**
@@ -85,6 +95,7 @@ window.ExportManager = (function () {
         // Coleta de escopo global
         const barreirasAdmissibilidade = [];
         const jurisprudenciaVinculante = [];
+        const vereditosLocaisInjetados = []; // NOVO: Captura de vereditos perdidos
 
         let md = `---\n*Pacote de Auditoria Estrutural ED gerado em ${dataGeracao}*\n---\n\n`;
         md += `# ${config.tituloTopico}: **${(topico.nome || 'Não Nomeado').toUpperCase()}**\n\n`;
@@ -160,7 +171,7 @@ window.ExportManager = (function () {
                     
                     md += `<diretrizes_de_auditoria_do_assessor>\n`;
                     listaNos.forEach((sub) => {
-                        const intencao = sub.intencao || 'premissa';
+                        const intencao = sub.intencao || 'fallback';
                         if (intencao === 'nota') return; // Ignora notas ocultas
                         
                         const textoSanitizado = _safeMD(sub.texto, '\n  ');
@@ -173,10 +184,14 @@ window.ExportManager = (function () {
                             md += `[COMANDO DE REDAÇÃO ESTRITO${refContexto}]: ${textoSanitizado}\n`;
                         } else if (intencao === 'texto') {
                             md += `[COPIAR E COLAR EXATAMENTE ESTE TEXTO${refContexto}]: "${textoSanitizado}"\n`;
+                        } else if (intencao === 'fallback') {
+                            md += `[CONTEXTO FÁTICO COMPLEMENTAR PARA AUDITORIA${refContexto}]: ${textoSanitizado}\n`;
                         } else if (intencao === 'fundamentacao') {
                             jurisprudenciaVinculante.push(`[Aplicável ao item ${numIdeia}${refContexto}]: ${textoSanitizado}`);
                         } else if (intencao === 'preliminar') {
                             barreirasAdmissibilidade.push(`[Item ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                        } else if (intencao === 'veredito') {
+                            vereditosLocaisInjetados.push(`[Auditoria da Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
                         }
                     });
                     md += `</diretrizes_de_auditoria_do_assessor>\n`;
@@ -210,9 +225,18 @@ window.ExportManager = (function () {
             md += `</base_legal_e_jurisprudencial>\n\n`;
         }
 
-        if (topico.veredito && topico.veredito.trim() !== '') {
+        if ((topico.veredito && topico.veredito.trim() !== '') || vereditosLocaisInjetados.length > 0) {
             md += `<${config.tagVeredito}>\n`;
-            md += `[CONCLUSÃO OBRIGATÓRIA]: ${topico.veredito.replace(/\n/g, ' ')}\n`;
+            md += `*Atenção IA: As instruções abaixo ditam o resultado final da auditoria deste embargo.*\n`;
+            
+            if (topico.veredito && topico.veredito.trim() !== '') {
+                md += `[CONCLUSÃO OBRIGATÓRIA GERAL]: ${topico.veredito.replace(/\n/g, ' ')}\n`;
+            }
+            
+            vereditosLocaisInjetados.forEach(v => {
+                md += `[CONCLUSÃO PARCIAL ESPECÍFICA]: ${v}\n`;
+            });
+            
             md += `\n*Redija o dispositivo final (Acolher/Rejeitar) obedecendo estritamente a este veredito.*\n`;
             md += `</${config.tagVeredito}>\n`;
         }
