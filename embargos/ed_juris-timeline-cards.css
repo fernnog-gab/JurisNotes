@@ -260,10 +260,35 @@
 .chip-remover:hover { color: #c62828; transform: scale(1.2); }
 .acervo-item-tags-lista { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
 
-:root { --creme-neon-bg: #FDFCE5; --creme-neon-stroke: #F2E8A6; --creme-neon-text: #4A4A32; --creme-neon-border: #EBE6C5; }
-.icone-creme-neon { stroke: var(--creme-neon-stroke); }
-.tag-btn-creme { background-color: var(--creme-neon-bg); border: 1px solid var(--creme-neon-border); color: var(--creme-neon-text); }
-.acervo-tag-chip { background-color: var(--creme-neon-bg); color: var(--creme-neon-text); padding: 3px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 700; border: 1px solid var(--creme-neon-border); display: inline-flex; align-items: center; }
+:root { 
+    --ed-neon-bg: #D500B5;        /* Fundo Fúcsia elegante (ED) */
+    --ed-neon-stroke: #A3008A;    /* Borda sutil fúcsia escurecida para profundidade */
+    --ed-neon-text: #FFFFFF;      /* Branco para contraste perfeito na leitura */
+}
+
+/* Novo Botão do Acervo (Cor Fúcsia com traçados Brancos) */
+.tag-btn-ed { 
+    background-color: var(--ed-neon-bg); 
+    border: 1px solid var(--ed-neon-stroke); 
+    color: var(--ed-neon-text); /* Garante que o SVG (traçados) herde o branco */
+    transition: background-color 0.2s;
+}
+.tag-btn-ed:hover {
+    background-color: #E600C4; /* Tom ligeiramente mais claro no hover */
+}
+
+/* Modificação dos Chips (Tags) dentro do painel de Acervo para usarem Fúcsia */
+.acervo-tag-chip { 
+    background-color: var(--ed-neon-bg); 
+    color: var(--ed-neon-text); 
+    padding: 3px 10px; 
+    border-radius: 12px; 
+    font-size: 0.7rem; 
+    font-weight: 700; 
+    border: 1px solid var(--ed-neon-stroke); 
+    display: inline-flex; 
+    align-items: center; 
+}
 
 .acervo-node-edit-box .svg-icon-wrapper.sub-badge.modal-static-badge { position: static; box-shadow: none; transform: none; cursor: default; align-self: flex-start; margin-top: 4px; width: auto; min-width: 28px; border-radius: 14px; padding: 2px 8px; display: flex; align-items: center; justify-content: center; }
 .acervo-node-edit-box .svg-icon-wrapper.modal-static-badge svg { margin: 0; stroke: currentColor !important; fill: none !important; }

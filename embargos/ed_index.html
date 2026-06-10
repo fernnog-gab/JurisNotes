@@ -158,7 +158,7 @@
                     </svg>
                 </button>
 
-                <button class="icon-btn tag-btn-creme" id="btn-acervo-modelos" title="Acervo de Modelos" style="display: none;" onclick="abrirModalAcervo()">
+                <button class="icon-btn tag-btn-ed" id="btn-acervo-modelos" title="Acervo de Modelos" style="display: none;" onclick="abrirModalAcervo()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 22px; height: 22px;">
                         <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
                         <line x1="4" y1="12" x2="20" y2="12"></line>
@@ -173,7 +173,9 @@
     
     <div class="main-content">
         <div class="tabs">
-            <button class="tab-btn active" id="tab-leitura" onclick="trocarAba('leitura')">Processo</button>
+            <button class="tab-btn active" id="tab-leitura" onclick="trocarAba('leitura')">
+                Processo <span id="tag-numero-processo" class="tab-module-badge badge-ed" style="display: none; margin-left: 6px; font-size: 0.65rem;"></span>
+            </button>
             <button class="tab-btn" id="tab-historico" onclick="trocarAba('historico')">
             Anotações <span class="tab-module-badge badge-ed">EMBARGOS DE DECLARAÇÃO</span>
         </button>

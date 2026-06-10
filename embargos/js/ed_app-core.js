@@ -227,6 +227,16 @@ document.addEventListener("DOMContentLoaded", () => {
             validarPdf: (buffer) => BackupManager.validarPdf(buffer),
             iniciarSessaoBackup: (name, buffer) => BackupManager.iniciarSessao(name, buffer),
             habilitarFerramentas: habilitarFerramentasDeTrabalho,
+            onProcessoIdentificado: (numeroCurto) => {
+                // Atualiza o DOM (Interface)
+                const tagProcesso = document.getElementById('tag-numero-processo');
+                if (tagProcesso) {
+                    tagProcesso.textContent = numeroCurto;
+                    tagProcesso.style.display = 'inline-block';
+                }
+                // Atualiza o Estado: Nome automático para o arquivo de Backup de Embargos
+                window._nomeArquivoSugerido = `ED_${numeroCurto}_backup.json`;
+            },
             onPdfCarregado: async (isRetomada) => {
                 if (isRetomada) {
                     modoRetomada = false;
@@ -456,6 +466,14 @@ function encerrarSessao() {
     document.getElementById('btn-exportar-topico').style.display = 'none';
     document.getElementById('current-page-display').textContent  = '1';
     document.getElementById('pdf-upload').value = '';
+
+    // NOVO: Limpeza de Estado do Número do Processo
+    const tagProcesso = document.getElementById('tag-numero-processo');
+    if (tagProcesso) {
+        tagProcesso.textContent = '';
+        tagProcesso.style.display = 'none';
+    }
+    window._nomeArquivoSugerido = null; // Reseta nome do backup
 
     ['btn-ferramenta-recorte', 'btn-ferramenta-texto', 'btn-novo-topico', 'btn-encerrar-sessao', 'btn-ferramenta-audio']
         .forEach(id => {

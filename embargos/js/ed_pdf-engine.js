@@ -236,6 +236,31 @@ window.PdfEngine = (function () {
                     const firstPage = await pdf.getPage(1);
                     const viewportCSS = firstPage.getViewport({ scale: 1.5 });
 
+                    try {
+                        const textContentFirstPage = await firstPage.getTextContent();
+                        // 1. Higieniza o texto (remove espaços e quebras de linha invisíveis)
+                        const rawString = textContentFirstPage.items.map(item => item.str).join('');
+                        const sanitizedString = rawString.replace(/\s+/g, '');
+
+                        // 2. Regex robusta CNJ: Captura 7 dígitos, 2 dígitos e 4 do ano
+                        const cnjRegex = /(\d{7})[-]?(\d{2})\.?(\d{4})\.?\d\.?\d{2}\.?\d{4}/;
+                        const match = sanitizedString.match(cnjRegex);
+
+                        if (match && typeof _deps.onProcessoIdentificado === 'function') {
+                            // Encurtamento: remove zeros à esquerda do sequencial (Ex: "0000193" vira "193")
+                            const sequencialLimpo = parseInt(match[1], 10).toString(); 
+                            const digito = match[2];
+                            const ano = match[3];
+
+                            // Monta o formato ultra-curto (Ex: 193-45.2024)
+                            const numeroUltraCurto = `${sequencialLimpo}-${digito}.${ano}`; 
+                            
+                            _deps.onProcessoIdentificado(numeroUltraCurto);
+                        }
+                    } catch (err) {
+                        console.warn("[Juris Notes ED] Falha ao tentar capturar o número do processo na capa.", err);
+                    }
+
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const pageContainer = document.createElement('div');
                         pageContainer.className = 'pdf-page-container';
