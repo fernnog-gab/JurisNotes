@@ -112,10 +112,10 @@ window.ShortcutManager = (function() {
         fav1: 'Favorito 1 (Ouro)', 
         fav2: 'Favorito 2 (Fúcsia)', 
         fav3: 'Favorito 3 (Pastel)', 
-        embargosAutora: 'Embargos (Autora)', 
-        embargosReu: 'Embargos (Ré 1)', 
-        embargosReu2: 'Embargos (Ré 2)',
-        acordao: 'Acórdão Embargado' 
+        embargosAutora: 'Agravo (Recorrente)', 
+        embargosReu: 'Agravo (Recorrido 1)', 
+        embargosReu2: 'Agravo (Recorrido 2)',
+        acordao: 'Decisão Denegatória' 
     };
 
     function updateUI() {
@@ -235,7 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     tagProcesso.style.display = 'inline-block';
                 }
                 // Atualiza o Estado: Nome automático para o arquivo de Backup de Embargos
-                window._nomeArquivoSugerido = `ED_${numeroCurto}_backup.json`;
+                window._nomeArquivoSugerido = `AI_${numeroCurto}_backup.json`;
             },
             onPdfCarregado: async (isRetomada) => {
                 if (isRetomada) {

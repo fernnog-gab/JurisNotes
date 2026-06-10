@@ -32,13 +32,13 @@
 </script>
     
     <!-- 1. Estilos Base, Variáveis Globais e Estrutura Principal (Core) -->
-<link rel="stylesheet" href="ed_juris-core.css?v=2.0.0">
+<link rel="stylesheet" href="ai_juris-core.css?v=2.0.0">
 
 <!-- 2. Ferramentas Globais, PDF, Áudio e Modais (Ferramentas de Entrada) -->
-<link rel="stylesheet" href="ed_juris-reader-tools.css?v=3.0.0">
+<link rel="stylesheet" href="ai_juris-reader-tools.css?v=3.0.0">
 
 <!-- 3. Fichário, Timeline, Fases Metodológicas e Acervo (Síntese e Saída) -->
-<link rel="stylesheet" href="ed_juris-timeline-cards.css?v=3.0.0">
+<link rel="stylesheet" href="ai_juris-timeline-cards.css?v=3.0.0">
 </head>
 <body>
     
@@ -152,13 +152,13 @@
                     </svg>
                 </button>
 
-                <button class="icon-btn" id="btn-exportar-topico" onclick="ExportManager.exportarTopicoAtivo('ED')" title="Exportar Tópico para IA (Markdown)" style="display: none;">
+                <button class="icon-btn" id="btn-exportar-topico" onclick="ExportManager.exportarTopicoAtivo('AI')" title="Exportar Tópico para IA (Markdown)" style="display: none;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line>
                     </svg>
                 </button>
 
-                <button class="icon-btn tag-btn-ed" id="btn-acervo-modelos" title="Acervo de Modelos" style="display: none;" onclick="abrirModalAcervo()">
+                <button class="icon-btn tag-btn-ai" id="btn-acervo-modelos" title="Acervo de Modelos" style="display: none;" onclick="abrirModalAcervo()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 22px; height: 22px;">
                         <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
                         <line x1="4" y1="12" x2="20" y2="12"></line>
@@ -177,7 +177,7 @@
                 Processo <span id="tag-numero-processo" class="tab-module-badge badge-ed" style="display: none; margin-left: 6px; font-size: 0.65rem;"></span>
             </button>
             <button class="tab-btn" id="tab-historico" onclick="trocarAba('historico')">
-            Anotações <span class="tab-module-badge badge-ed">EMBARGOS DE DECLARAÇÃO</span>
+            Anotações <span class="tab-module-badge badge-ai">AGRAVO DE INSTRUMENTO</span>
         </button>
             <div id="active-audio-indicator" onclick="AudioManager.alternarPlayer()" title="Audiência em andamento (Clique para abrir)" style="display: none;">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path></svg>
@@ -725,22 +725,22 @@
 
     <!-- DEPENDÊNCIAS DE RENDERIZAÇÃO E ESTADO (Keyed Morphing) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/morphdom/2.7.4/morphdom-umd.min.js"></script>
-    <script src="js/ed_store.js"></script>
+    <script src="js/ai_store.js"></script>
     
-    <script src="js/ed_backup-manager.js"></script>
-    <script src="js/ed_topics-manager.js"></script>
-    <script src="js/ed_balanca-manager.js"></script>
-    <script src="js/ed_interaction-tools.js"></script>
-    <script src="js/ed_audio-manager.js"></script>
-    <script src="js/ed_annotation-actions.js"></script>
-    <script src="js/ed_export-manager.js"></script>
-    <script src="js/ed_pdf-engine.js"></script>
+    <script src="js/ai_backup-manager.js"></script>
+    <script src="js/ai_topics-manager.js"></script>
+    <script src="js/ai_balanca-manager.js"></script>
+    <script src="js/ai_interaction-tools.js"></script>
+    <script src="js/ai_audio-manager.js"></script>
+    <script src="js/ai_annotation-actions.js"></script>
+    <script src="js/ai_export-manager.js"></script>
+    <script src="js/ai_pdf-engine.js"></script>
     
     <!-- NOVO: Módulo agnóstico de Leitura Automatizada do PJe -->
-    <script src="js/ed_pje-parser.js"></script>
+    <script src="js/ai_pje-parser.js"></script>
     
-<script src="js/ed_app-core.js"></script>
-<script src="js/ed_acervo-controller.js"></script>
+<script src="js/ai_app-core.js"></script>
+<script src="js/ai_acervo-controller.js"></script>
 
     
     <div id="quick-intent-tooltip" class="quick-tooltip" style="display: none;"></div>
@@ -940,7 +940,7 @@
     </div>
 
     <!-- SCRIPT DE AUTENTICAÇÃO E ACERVO -->
-    <script type="module" src="js/ed_firebase-auth.js"></script>
-    <script type="module" src="js/ed_firebase-acervo.js"></script>
+    <script type="module" src="js/ai_firebase-auth.js"></script>
+    <script type="module" src="js/ai_firebase-acervo.js"></script>
 </body>
 </html>

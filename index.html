@@ -25,6 +25,10 @@
             
             --color-ed-bg: #D500B5;    /* Fúcsia elegante */
             --color-ed-text: #FFFFFF;  /* Fonte Branca */
+
+            /* Cores Agravo de Instrumento */
+            --color-ai-bg: #A3E635;    /* Verde-Limão vibrante */
+            --color-ai-text: #000000;  /* Texto preto para alto contraste */
         }
 
         body {
@@ -37,7 +41,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
+            overflow-y: auto; /* CORREÇÃO: Evita corte dos cards em telas menores */
             color: #ffffff; /* Texto claro por padrão */
         }
 
@@ -58,7 +62,7 @@
         /* Painel do Hub */
         .hub-container {
             text-align: center;
-            max-width: 900px;
+            max-width: 1200px; /* CORREÇÃO: Alargado para caber 3 cards na grade */
             width: 100%;
             padding: 20px;
             animation: fade-in 1s ease 0.5s both;
@@ -146,6 +150,7 @@
 
         .card-ro .module-icon { color: var(--color-ro-bg); background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.2); }
         .card-ed .module-icon { color: var(--color-ed-bg); background: rgba(213, 0, 181, 0.1); border: 1px solid rgba(213, 0, 181, 0.2); }
+        .card-ai .module-icon { color: var(--color-ai-bg); background: rgba(163, 230, 53, 0.1); border: 1px solid rgba(163, 230, 53, 0.2); }
 
         /* Tags Gigantes */
         .module-giant-tag {
@@ -169,6 +174,11 @@
         .tag-ed-color {
             background-color: var(--color-ed-bg);
             color: var(--color-ed-text);
+        }
+
+        .tag-ai-color { 
+            background-color: var(--color-ai-bg); 
+            color: var(--color-ai-text); 
         }
 
         .module-desc { 
@@ -227,6 +237,17 @@
                 </div>
                 <div class="module-giant-tag tag-ed-color">EMBARGOS DE DECLARAÇÃO</div>
                 <p class="module-desc">Avaliação de Omissões, Contradições Internas e Erros Materiais.</p>
+            </a>
+
+            <!-- Card: Agravo de Instrumento (Aponta para ai_index.html) -->
+            <a href="agravo/ai_index.html" class="module-card card-ai">
+                <div class="module-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                    </svg>
+                </div>
+                <div class="module-giant-tag tag-ai-color">AGRAVO DE INSTRUMENTO</div>
+                <p class="module-desc">Auditoria de admissibilidade: tempestividade, preparo, representação e óbices de trânsito.</p>
             </a>
         </div>
     </div>

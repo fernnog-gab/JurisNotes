@@ -33,6 +33,16 @@ window.ExportManager = (function () {
             tagFundamento: "decisao_embargada",
             tagVeredito: "veredito_assessor",
             diretrizIA: "Atue estritamente sob a lente de auditoria da higidez formal da decisão. Limite-se a sanar Omissão, Contradição ou Erro Material. É EXPRESSAMENTE PROIBIDO reexaminar provas de mérito fático ou promover o rejulgamento da causa. Adote os princípios do Visual Law e Linguagem Simples: formalidade acessível, clareza absoluta e eliminação de hermetismos jurídicos."
+        },
+        // INJEÇÃO DA NOVA MATRIZ COGNITIVA
+        'AI': {
+            prefixoArquivo: "Pacote_AI_JurisNotes_",
+            tituloTopico: "AUDITORIA DE ADMISSIBILIDADE (AGRAVO DE INSTRUMENTO)",
+            rotuloSeccao: "MATRIZ DE VERIFICAÇÃO DE PRESSUPOSTOS",
+            tagAlegacao: "fundamentos_do_agravo",
+            tagFundamento: "decisao_denegatoria_originaria",
+            tagVeredito: "veredito_assessor_admissibilidade",
+            diretrizIA: "Atue como auditor rigoroso de pressupostos processuais. Seu objetivo é analisar estritamente se o Agravo de Instrumento merece ser conhecido (destrancando o recurso originário) com base em tempestividade, adequação, preparo e representação. Não avalie o mérito da causa principal neste momento. Justifique o preenchimento ou não dos pressupostos de forma direta e formal."
         }
     };
 
