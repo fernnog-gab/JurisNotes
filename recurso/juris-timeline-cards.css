@@ -261,8 +261,8 @@
 .acervo-item-tags-lista { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
 
 :root { 
-    --ro-neon-bg: #D4A017; 
-    --ro-neon-stroke: #B8860B; 
+    --ro-neon-bg: #FFD700; 
+    --ro-neon-stroke: #E5C100; 
     --ro-neon-text: #FFFFFF; 
 }
 .icone-ro-neon { stroke: var(--ro-neon-stroke); }
