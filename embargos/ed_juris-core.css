@@ -414,7 +414,7 @@ body.theme-anotacoes-jasmine {
 .toast-feedback.toast-erro    { border-left: 4px solid #e57373; }
 
 /* ================================================
-   6. ATALHOS FLUTUANTES (SMART SHORTCUTS)
+   6. ATALHOS FLUTUANTES (SMART SHORTCUTS) - MODO ED
    ================================================ */
 .fab-shortcut { transition: all 0.2s ease; }
 
@@ -430,20 +430,17 @@ body.theme-anotacoes-jasmine {
     border-style: solid !important;
 }
 
-/* VERDE: Recurso Autora */
-.fab-shortcut.is-active-autora { background-color: #388e3c !important; border-color: #81c784 !important; color: white !important; }
+/* ESTRELAS (Favoritos Livres) */
+.fab-shortcut.is-active-fav1 { background-color: #fbc02d !important; border-color: #f57f17 !important; color: white !important; } /* Ouro */
+.fab-shortcut.is-active-fav2 { background-color: #C51162 !important; border-color: #880E4F !important; color: white !important; } /* Fúcsia Intenso */
+.fab-shortcut.is-active-fav3 { background-color: #F8BBD0 !important; border-color: #F06292 !important; color: #880E4F !important; } /* Fúcsia Pastel */
 
-/* VERMELHO: Recurso Ré 1 e Contestação */
-.fab-shortcut.is-active-re { background-color: #d32f2f !important; border-color: #ef9a9a !important; color: white !important; }
+/* ALVOS (Embargos de Declaração) */
+.fab-shortcut.is-active-alvo-autora { background-color: #388e3c !important; border-color: #81c784 !important; color: white !important; } /* Verde Autora */
+.fab-shortcut.is-active-alvo-re { background-color: #d32f2f !important; border-color: #ef9a9a !important; color: white !important; } /* Vermelho Ré */
 
-/* BORDÔ: Recurso Ré 2 (Novo) */
-.fab-shortcut.is-active-re2 { background-color: #800020 !important; border-color: #b33939 !important; color: white !important; }
-
-/* AZUL: Sentença / Juízo */
-.fab-shortcut.is-active-juizo { background-color: var(--trt-blue) !important; border-color: #90caf9 !important; color: white !important; }
-
-/* AMARELO: Favorito / Coringa */
-.fab-shortcut.is-active-favorito { background-color: #fbc02d !important; border-color: #f57f17 !important; color: white !important; }
+/* BALANÇA (Acórdão Embargado) */
+.fab-shortcut.is-active-acordao { background-color: #D500B5 !important; border-color: #b00096 !important; color: white !important; } /* Fúcsia do Módulo ED */
 
 /* ================================================
    11. BOTÕES FLUTUANTES DE SCROLL E ÍNDICES

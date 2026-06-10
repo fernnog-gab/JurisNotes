@@ -92,18 +92,37 @@ window.toggleLoginMenu = function(event) {
    MÓDULO DE ATALHOS FLUTUANTES (SHORTCUT MANAGER)
    ================================================ */
 window.ShortcutManager = (function() {
-    let state = { favorito: null, recursoAutora: null, recursoReu: null, recursoReu2: null, contestacao: null, contestacaoRe2: null, sentenca: null };
+    // Novo formato de estado para o Módulo de Embargos de Declaração
+    let state = { fav1: null, fav2: null, fav3: null, embargosAutora: null, embargosReu: null, acordao: null };
     let currentEditingType = null;
     
-    const colors = { favorito: 'is-active-favorito', recursoAutora: 'is-active-autora', recursoReu: 'is-active-re', recursoReu2: 'is-active-re2', contestacao: 'is-active-re', contestacaoRe2: 'is-active-re2', sentenca: 'is-active-juizo' };
-    const rotulos = { favorito: 'Favorito (Coringa)', recursoAutora: 'Recurso (Autora)', recursoReu: 'Recurso (Ré 1)', recursoReu2: 'Recurso (Ré 2)', contestacao: 'Contestação (Ré 1)', contestacaoRe2: 'Contestação (Ré 2)', sentenca: 'Sentença/Acórdão' };
+    // Mapeamento das novas classes CSS criadas no arquivo core.css
+    const colors = { 
+        fav1: 'is-active-fav1', 
+        fav2: 'is-active-fav2', 
+        fav3: 'is-active-fav3', 
+        embargosAutora: 'is-active-alvo-autora', 
+        embargosReu: 'is-active-alvo-re', 
+        acordao: 'is-active-acordao' 
+    };
+    
+    // Nomenclatura atualizada
+    const rotulos = { 
+        fav1: 'Favorito 1 (Ouro)', 
+        fav2: 'Favorito 2 (Fúcsia)', 
+        fav3: 'Favorito 3 (Pastel)', 
+        embargosAutora: 'Embargos (Autora)', 
+        embargosReu: 'Embargos (Ré)', 
+        acordao: 'Acórdão Embargado' 
+    };
 
     function updateUI() {
         Object.keys(state).forEach(type => {
             const btn = document.getElementById(getFabId(type));
             if (!btn) return;
             
-            btn.classList.remove('is-empty', 'is-active-favorito', 'is-active-autora', 'is-active-re', 'is-active-re2', 'is-active-juizo');
+            // Limpa classes antigas do botão
+            btn.className = 'fab-btn fab-shortcut';
             
             if (state[type] === null) {
                 btn.classList.add('is-empty');
@@ -165,7 +184,14 @@ window.ShortcutManager = (function() {
     }
 
     function getFabId(type) {
-        const map = { favorito: 'fab-favorito', recursoAutora: 'fab-recurso-autora', recursoReu: 'fab-recurso-re', recursoReu2: 'fab-recurso-re2', contestacao: 'fab-contestacao', contestacaoRe2: 'fab-contestacao-re2', sentenca: 'fab-sentenca' };
+        const map = { 
+            fav1: 'fab-fav1', 
+            fav2: 'fab-fav2', 
+            fav3: 'fab-fav3', 
+            embargosAutora: 'fab-embargos-autora', 
+            embargosReu: 'fab-embargos-reu', 
+            acordao: 'fab-acordao' 
+        };
         return map[type];
     }
 
@@ -173,7 +199,7 @@ window.ShortcutManager = (function() {
         handleClick, updateUI, fecharModal, salvarModal,
         getState: () => state,
         setState: (newState) => { if (newState) { state = { ...state, ...newState }; updateUI(); } },
-        reset: () => { state = { favorito: null, recursoAutora: null, recursoReu: null, recursoReu2: null, contestacao: null, contestacaoRe2: null, sentenca: null }; updateUI(); },
+        reset: () => { state = { fav1: null, fav2: null, fav3: null, embargosAutora: null, embargosReu: null, acordao: null }; updateUI(); },
         toggleVisibility: (show) => {
             Object.keys(state).forEach(type => {
                 const btn = document.getElementById(getFabId(type));
@@ -217,17 +243,15 @@ document.addEventListener("DOMContentLoaded", () => {
                         exibirToast('Analisando sumário do processo em segundo plano...', 'aviso');
                         PjeParser.mapearAtalhos(PdfEngine.getPdfDoc())
                             .then(async (atalhos) => {
-                                if (atalhos.contestacao || atalhos.contestacaoRe2 || atalhos.sentenca) {
+                                if (atalhos.sentenca) {
                                     window.ShortcutManager.setState({
-                                        contestacao: atalhos.contestacao || null,
-                                        contestacaoRe2: atalhos.contestacaoRe2 || null,
-                                        sentenca: atalhos.sentenca || null
+                                        acordao: atalhos.sentenca || null // O Parser acha a "Sentença", nós mapeamos para "Acórdão" no ED.
                                     });
                                     window.ShortcutManager.toggleVisibility(true);
                                     if (typeof salvarBackupAutomatico === 'function') {
                                         await salvarBackupAutomatico();
                                     }
-                                    exibirToast('Atalhos da Contestação/Sentença preenchidos com sucesso!', 'sucesso');
+                                    exibirToast('Atalho do Acórdão Embargado preenchido automaticamente!', 'sucesso');
                                 } else {
                                     exibirToast('Análise concluída: Sumário padrão não encontrado.', 'aviso');
                                 }

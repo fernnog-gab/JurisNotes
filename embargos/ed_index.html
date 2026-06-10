@@ -677,34 +677,35 @@
         <!-- [NOVO] Sandbox para os botões de índice de ideias -->
         <div id="idea-markers-list"></div>
         
-        <button id="fab-favorito" class="fab-btn fab-shortcut is-empty" onclick="ShortcutManager.handleClick('favorito', event)" title="Favorito (Coringa)" style="display:none;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+        <!-- ESTRELAS (Favoritos Livres) -->
+        <button id="fab-fav3" class="fab-btn fab-shortcut is-empty" onclick="ShortcutManager.handleClick('fav3', event)" title="Favorito 3 (Pastel)" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
         </button>
-        <button id="fab-recurso-autora" class="fab-btn fab-shortcut is-empty" onclick="ShortcutManager.handleClick('recursoAutora', event)" title="Recurso Ordinário (Autora)" style="display:none;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="transform: scaleX(-1);"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"></path><path d="M13 19l6-6"></path><path d="M16 16l4 4"></path><path d="M19 21l2-2"></path></svg>
+        <button id="fab-fav2" class="fab-btn fab-shortcut is-empty" onclick="ShortcutManager.handleClick('fav2', event)" title="Favorito 2 (Fúcsia)" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
         </button>
-        <button id="fab-recurso-re" class="fab-btn fab-shortcut is-empty" onclick="ShortcutManager.handleClick('recursoReu', event)" title="Recurso Ordinário (Ré 1)" style="display:none;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"></path><path d="M13 19l6-6"></path><path d="M16 16l4 4"></path><path d="M19 21l2-2"></path></svg>
+        <button id="fab-fav1" class="fab-btn fab-shortcut is-empty" onclick="ShortcutManager.handleClick('fav1', event)" title="Favorito 1 (Ouro)" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
         </button>
-        <button id="fab-recurso-re2" class="fab-btn fab-shortcut is-empty" onclick="ShortcutManager.handleClick('recursoReu2', event)" title="Recurso Ordinário (Ré 2)" style="display:none;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"></path><path d="M13 19l6-6"></path><path d="M16 16l4 4"></path><path d="M19 21l2-2"></path></svg>
+
+        <!-- ALVOS (Embargos de Declaração) -->
+        <button id="fab-embargos-autora" class="fab-btn fab-shortcut is-empty" onclick="ShortcutManager.handleClick('embargosAutora', event)" title="Embargos (Autora)" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
         </button>
-        <button id="fab-contestacao" class="fab-btn fab-shortcut is-empty" onclick="ShortcutManager.handleClick('contestacao', event)" title="Contestação (Defesa)" style="display:none;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        <button id="fab-embargos-reu" class="fab-btn fab-shortcut is-empty" onclick="ShortcutManager.handleClick('embargosReu', event)" title="Embargos (Ré)" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
         </button>
-        <button id="fab-contestacao-re2" class="fab-btn fab-shortcut is-empty" onclick="ShortcutManager.handleClick('contestacaoRe2', event)" title="Contestação (Ré 2)" style="display:none;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+
+        <!-- BALANÇA (Acórdão Embargado) -->
+        <button id="fab-acordao" class="fab-btn fab-shortcut is-empty" style="margin-bottom: 8px; display:none;" onclick="ShortcutManager.handleClick('acordao', event)" title="Acórdão Embargado">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path>
+                <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path>
+                <path d="M7 21h10"></path>
+                <path d="M12 3v18"></path>
+                <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path>
+            </svg>
         </button>
-        <button id="fab-sentenca" class="fab-btn fab-shortcut is-empty" style="margin-bottom: 8px; display:none;" onclick="ShortcutManager.handleClick('sentenca', event)" title="Sentença / Acórdão (Juízo)">
-    <!-- O SVG da balança continua intacto aqui dentro -->
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path>
-        <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path>
-        <path d="M7 21h10"></path>
-        <path d="M12 3v18"></path>
-        <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path>
-    </svg>
-</button>
         <button id="btn-scroll-top" class="fab-btn is-hidden" onclick="rolarParaTopo()" title="Voltar ao Topo">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <polyline points="18 15 12 9 6 15"></polyline>
