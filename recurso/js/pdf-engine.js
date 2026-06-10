@@ -236,6 +236,22 @@ window.PdfEngine = (function () {
                     const firstPage = await pdf.getPage(1);
                     const viewportCSS = firstPage.getViewport({ scale: 1.5 });
 
+                    try {
+                        const textContentFirstPage = await firstPage.getTextContent();
+                        const rawString = textContentFirstPage.items.map(item => item.str).join('');
+                        const sanitizedString = rawString.replace(/\s+/g, '');
+
+                        const cnjRegex = /(\d{7})[-]?\d{2}\.?(\d{4})\.?\d\.?\d{2}\.?\d{4}/;
+                        const match = sanitizedString.match(cnjRegex);
+
+                        if (match && typeof _deps.onProcessoIdentificado === 'function') {
+                            const numeroCurto = `${match[1]}-${match[2]}`;
+                            _deps.onProcessoIdentificado(numeroCurto);
+                        }
+                    } catch (err) {
+                        console.warn("[Juris Notes] Falha ao tentar capturar o número do processo na capa.", err);
+                    }
+
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const pageContainer = document.createElement('div');
                         pageContainer.className = 'pdf-page-container';

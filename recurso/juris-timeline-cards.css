@@ -260,10 +260,31 @@
 .chip-remover:hover { color: #c62828; transform: scale(1.2); }
 .acervo-item-tags-lista { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
 
-:root { --creme-neon-bg: #FDFCE5; --creme-neon-stroke: #F2E8A6; --creme-neon-text: #4A4A32; --creme-neon-border: #EBE6C5; }
-.icone-creme-neon { stroke: var(--creme-neon-stroke); }
-.tag-btn-creme { background-color: var(--creme-neon-bg); border: 1px solid var(--creme-neon-border); color: var(--creme-neon-text); }
-.acervo-tag-chip { background-color: var(--creme-neon-bg); color: var(--creme-neon-text); padding: 3px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 700; border: 1px solid var(--creme-neon-border); display: inline-flex; align-items: center; }
+:root { 
+    --ro-neon-bg: #FFD700; 
+    --ro-neon-stroke: #D4AF37; 
+    --ro-neon-text: var(--trt-blue); 
+}
+.icone-ro-neon { stroke: var(--ro-neon-stroke); }
+.tag-btn-ro { 
+    background-color: var(--ro-neon-bg); 
+    border: 1px solid var(--ro-neon-stroke); 
+    color: var(--ro-neon-text); 
+}
+.tag-btn-ro:hover {
+    background-color: #E5C100;
+}
+.acervo-tag-chip { 
+    background-color: var(--ro-neon-bg); 
+    color: var(--ro-neon-text); 
+    padding: 3px 10px; 
+    border-radius: 12px; 
+    font-size: 0.7rem; 
+    font-weight: 700; 
+    border: 1px solid var(--ro-neon-stroke); 
+    display: inline-flex; 
+    align-items: center; 
+}
 
 .acervo-node-edit-box .svg-icon-wrapper.sub-badge.modal-static-badge { position: static; box-shadow: none; transform: none; cursor: default; align-self: flex-start; margin-top: 4px; width: auto; min-width: 28px; border-radius: 14px; padding: 2px 8px; display: flex; align-items: center; justify-content: center; }
 .acervo-node-edit-box .svg-icon-wrapper.modal-static-badge svg { margin: 0; stroke: currentColor !important; fill: none !important; }
