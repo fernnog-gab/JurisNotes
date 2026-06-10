@@ -261,18 +261,19 @@
 .acervo-item-tags-lista { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
 
 :root { 
-    --ro-neon-bg: #FFD700; 
-    --ro-neon-stroke: #D4AF37; 
-    --ro-neon-text: var(--trt-blue); 
+    --ro-neon-bg: #D4A017; 
+    --ro-neon-stroke: #B8860B; 
+    --ro-neon-text: #FFFFFF; 
 }
 .icone-ro-neon { stroke: var(--ro-neon-stroke); }
 .tag-btn-ro { 
     background-color: var(--ro-neon-bg); 
     border: 1px solid var(--ro-neon-stroke); 
     color: var(--ro-neon-text); 
+    transition: background-color 0.2s;
 }
 .tag-btn-ro:hover {
-    background-color: #E5C100;
+    background-color: #E5B22D;
 }
 .acervo-tag-chip { 
     background-color: var(--ro-neon-bg); 
