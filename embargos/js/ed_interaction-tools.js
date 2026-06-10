@@ -59,6 +59,8 @@ const DOC_CONFIG = [
     { label: 'Impugnação à Contestação',  polo: 'Parte Autora', tipo: 'auto',   fase: 2 },
     // Adições para Execução
     { label: 'Cálculos de Liquidação',    polo: 'DUAL',         tipo: 'dual',   fase: 2, isExecucao: true },
+    // Trava Arquitetural: Áudio mantido, mas forçado metodologicamente para Fase 2 (Provocação)
+    { label: 'Audiência de Instrução',    polo: 'DUAL',         tipo: 'dual',   fase: 2 },
 
     // --- FASE 3: A Decisão ---
     { label: 'Acórdão Embargado',         polo: 'Juízo',        tipo: 'auto',   fase: 3 },
@@ -66,14 +68,10 @@ const DOC_CONFIG = [
     // Adições para Execução
     { label: 'Sentença de Liquidação',    polo: 'Juízo',        tipo: 'auto',   fase: 3, isExecucao: true },
     
-    // --- FASE 4: Validação / Provas ---
-    { label: 'Laudo Pericial',            polo: 'Perito',       tipo: 'auto',   fase: 4 },
-    { label: 'Audiência de Instrução',    polo: 'DUAL',         tipo: 'dual',   fase: 4 },
-    { label: 'Documento (Prova Pré-constituída)', polo: 'DUAL', tipo: 'dual',   fase: 4 },
-    // Adições para Execução
-    { label: 'Mandado de Penhora',        polo: 'Auxiliar da Justiça', tipo: 'auto', fase: 4, isExecucao: true },
-    { label: 'Bacenjud / Sisbajud',       polo: 'Juízo / Tribunal', tipo: 'auto', fase: 4, isExecucao: true },
-    { label: 'Decisão / Despacho',        polo: 'Juízo / Tribunal', tipo: 'auto', fase: 4, isExecucao: true }
+    // --- FASE 4: Validação / Provas (Restrito em ED para Erros Materiais) ---
+    { label: 'Guia de Recolhimento / Comprovante', polo: 'DUAL', tipo: 'dual', fase: 4 },
+    { label: 'Petição Original (Erro Material)',   polo: 'DUAL', tipo: 'dual', fase: 4 },
+    { label: 'Súmula / Jurisprudência Vinculante', polo: 'Tribunal', tipo: 'auto', fase: 4 }
 ];
 
 let _docSelecionado = null;
@@ -224,6 +222,27 @@ function voltarParaDocumentos(context, event) {
 }
 
 function executarSalvamento(docLabel, polo, topicoId, targetIndex, context) {
+    // 1. Identificar a fase via DOC_CONFIG centralizado
+    const conf = DOC_CONFIG.find(d => d.label === docLabel);
+    const faseNova = conf ? conf.fase : 4;
+
+    // 2. Middleware (Guardrail Client-Side)
+    if (faseNova === 4 && targetIndex === null) {
+        const topicoAlvo = topicos.find(t => t.id === topicoId);
+        if (topicoAlvo) {
+            // Conta quantas provas fáticas raiz já existem
+            const qtdFase4 = topicoAlvo.anotacoes.filter(a => {
+                const aConf = DOC_CONFIG.find(d => d.label === a.documento);
+                return aConf && aConf.fase === 4;
+            }).length;
+            
+            if (qtdFase4 >= 1) { // Dispara a partir do segundo item
+                exibirToast("⚠️ Guardrail ED: Extrações extensas configuram risco de rejulgamento fático. Limite-se a falhas estruturais.", "aviso");
+            }
+        }
+    }
+
+    // 3. Execução normal e delegação ao core
     if (context === 'popup') {
         const comentario = document.getElementById('comentario-input').value.trim();
         salvarAnotacao(pendingTipo, pendingConteudo, docLabel, polo, topicoId, comentario, targetIndex, null, _wizardVicioSelecionado);

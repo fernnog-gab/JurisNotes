@@ -663,7 +663,25 @@ window.TopicsManager = (function () {
                             bgStyle = `style="background: linear-gradient(to right, ${gradients.join(', ')}), #ffffff;"`; 
                         }
 
-                        const matureClass = fasesPresentes.size === 4 ? 'mature' : '';
+                        // Lê diretamente do estado imutável (SSOT)
+                        const tipoVicio = topicoAtivo.vicio || 'omissao'; 
+                        let isMature = false;
+
+                        if (tipoVicio === 'omissao') {
+                            // Azul, Verde, Roxo
+                            isMature = fasesPresentes.has(1) && fasesPresentes.has(2) && fasesPresentes.has(3);
+                        } else if (tipoVicio === 'contradicao') {
+                            // Exige Roxo(3) vs Roxo(3). Verifica se o card mestre e correlacionados somam 2 peças da Fase 3
+                            let contadorRoxo = (typeof identificarFaseMetodologica === 'function' && identificarFaseMetodologica(an.documento) === 3) ? 1 : 0;
+                            if (an.itensCorrelacionados) {
+                                contadorRoxo += an.itensCorrelacionados.filter(ic => typeof identificarFaseMetodologica === 'function' && identificarFaseMetodologica(ic.documento) === 3).length;
+                            }
+                            isMature = fasesPresentes.has(1) && fasesPresentes.has(3) && (contadorRoxo >= 2);
+                        } else if (tipoVicio === 'erro') {
+                            isMature = fasesPresentes.has(1) && fasesPresentes.has(3) && fasesPresentes.has(4);
+                        }
+
+                        const matureClass = isMature ? 'mature' : '';
                         const txt = escaparHTML(an.tese);
 
                         sumarioHtml += `

@@ -561,24 +561,40 @@ async function novoProcesso(event) {
    GESTÃO DE TÓPICOS E ANOTAÇÕES
    ================================================ */
 function criarTopicoPrompt() {
-    const nome = prompt('Digite o Vício Alegado sob análise:\n(ex: Omissão — Horas Extras, Contradição — Multa, Erro Material)');
-    if (!nome || !nome.trim()) return;
-
-    const nomeLimpo  = nome.trim();
-    const duplicado  = topicos.some(t => t.nome.toLowerCase() === nomeLimpo.toLowerCase());
-
-    if (duplicado) {
-        exibirToast(`Já existe uma análise para o vício "${nomeLimpo}".`, 'aviso');
+    const vicioInput = prompt('Selecione o tipo de Vício:\n1 - Omissão\n2 - Contradição\n3 - Erro Material / Obscuridade');
+    if (!vicioInput) return;
+    
+    const mapaVicios = { '1': 'omissao', '2': 'contradicao', '3': 'erro' };
+    const vicioTipado = mapaVicios[vicioInput.trim()];
+    
+    if (!vicioTipado) {
+        exibirToast('Opção inválida. Digite 1, 2 ou 3.', 'erro');
         return;
     }
 
+    const nomeEspecifico = prompt('Descreva o tema (Ex: Horas Extras, Multa):');
+    if (!nomeEspecifico || !nomeEspecifico.trim()) return;
+
+    const nomeCompleto = `${vicioTipado.toUpperCase()} — ${nomeEspecifico.trim()}`;
+    
+    const duplicado = topicos.some(t => t.nome.toLowerCase() === nomeCompleto.toLowerCase());
+    if (duplicado) return exibirToast(`Já existe análise para "${nomeCompleto}".`, 'aviso');
+
     const cor = TopicsManager.obterCor(topicos.length);
-    topicos.push({ id: 'topico-' + Date.now(), nome: nomeLimpo, cor, anotacoes: [] });
+    
+    // SSOT: O vício agora nasce com o tópico.
+    topicos.push({ 
+        id: 'topico-' + Date.now(), 
+        nome: nomeCompleto, 
+        vicio: vicioTipado, // Dado estruturado vital para o ed_topics-manager.js
+        cor, 
+        anotacoes: [] 
+    });
 
     renderizarTopicos();
     salvarBackupAutomatico();
     trocarAba('historico');
-    exibirToast(`Análise do vício "${nomeLimpo}" iniciada.`);
+    exibirToast(`Análise de ${vicioTipado} iniciada.`, 'sucesso');
 }
 
 function renderizarTopicos() {

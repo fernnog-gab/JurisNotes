@@ -75,7 +75,7 @@ function definirIntencaoSubAnotacao(intencaoStr) {
         'premissa': 'Premissa Padrão',
         'veredito': 'Veredito / Conclusão',
         'fundamentacao': 'Fundamentação Legal',
-        'refutacao': 'Refutação (Mérito)',
+        'refutacao': 'Confirmação de Higidez',
         'preliminar': 'Filtro / Prejudicial'
     };
     exibirToast(`Classificado como: ${rotulos[intencaoStr]}`, 'sucesso');
@@ -877,7 +877,7 @@ function exibirTooltipRapido(intencao, event) {
         'nota': { titulo: 'Nota Oculta', texto: 'A IA NÃO lerá isso. É apenas um lembrete para você.' },
         'veredito': { titulo: 'Veredito / Conclusão', texto: 'Força a IA a concluir o tópico recursal com esta decisão.' },
         'fundamentacao': { titulo: 'Base Legal', texto: 'A IA priorizará esta lei/súmula acima de qualquer outra.' },
-        'refutacao': { titulo: 'Refutação (Mérito)', texto: 'A IA usará este argumento para derrubar a tese da parte.' },
+        'refutacao': { titulo: 'Confirmação de Higidez', texto: 'A IA usará este argumento para rejeitar o embargo e confirmar que a decisão não tem vícios.' },
         'preliminar': { titulo: 'Filtro / Prejudicial', texto: 'A IA redigirá este tópico antes de entrar no mérito.' }
     };
 
