@@ -65,6 +65,7 @@ Quando o sistema entra no **"Modo ED"**, as 4 cores são mantidas, mas a cogniç
 ### 🟩 FASE 2: O Limite da Provocação (A Gênese) — Cor: Verde
 * **Propósito:** Confirmar o prequestionamento ou a provocação original. O juízo não pode ser omisso sobre algo que nunca lhe foi pedido. (Recortes da Inicial, Contestação ou RO originário).
 * **A "Mágica" Cognitiva:** Se o assessor não encontrar nada para colorir de Verde, a tese cai por inovação recursal. A prova visual da inovação é a própria ausência da cor Verde.
+* **O Paradigma do Áudio em Omissões:** Diferente do fluxo de RO, no painel de ED, extrações de Áudio (MP3) são forçadas para a Fase 2 (Verde). O objetivo não é reavaliar o que a testemunha disse, mas apenas provar que o depoimento ocorreu e foi ignorado pelo juiz. Como "Guardrail" para a Inteligência Artificial, as degravações literais de áudio são bloqueadas no momento da exportação, impedindo que a IA alucine e tente rejulgar os fatos.
 
 ### 🟪 FASE 3: O Alvo da Crítica (A Decisão Embargada) — Cor: Roxo
 * **Propósito:** Isolar a fundamentação sob ataque para auditar se o vício apontado no recorte Azul realmente existe. (Acórdão ou Sentença embargada).
@@ -72,13 +73,16 @@ Quando o sistema entra no **"Modo ED"**, as 4 cores são mantidas, mas a cogniç
 
 ### 🟧 FASE 4: A Prova Material do Vício (Validação Restrita) — Cor: Laranja
 * **Propósito:** Comprovar documentalmente apenas erros materiais evidentes (ex: data trocada) ou ignorância de jurisprudência vinculante.
-* **A "Mágica" Cognitiva (O Guardrail - A definir):** O sistema monitorará a extração. Se o assessor fizer recortes extensos de provas fáticas na cor Laranja, surgirá um alerta: *"Atenção: Em ED, a reavaliação de provas fáticas configura rejulgamento do mérito."*
+* **A "Mágica" Cognitiva (O Guardrail Ativo):** O catálogo de documentos da Fase 4 em ED foi podado (Laudos e Audiências foram removidos). Além disso, um *Middleware Client-Side* monitora a extração. Se o assessor extrair múltiplos documentos fáticos (Laranja), o sistema emite um alerta bloqueando a carga cognitiva errada: *"Atenção: Cuidado para não reavaliar os fatos. Em Embargos, limite-se a falhas estruturais."*
 
-### Dashboard de Maturidade Dinâmico em ED *(Em desenvolvimento)*
-No Modo ED, a estrela de 100% obedece a **fórmulas lógicas exclusivas** de acordo com o vício alegado:
+### Dashboard de Maturidade Inteligente (ED)
+O sistema exige que o assessor defina tipologicamente o vício logo na criação do tópico (Omissão, Contradição ou Erro Material). A partir dessa tipagem (Single Source of Truth), a estrela de 100% de maturidade obedece a fórmulas lógicas exclusivas, sem exigir preenchimento inútil de fases:
 * **Omissão:** Maturidade = Azul + Verde + Roxo *(A prova Laranja é dispensável)*.
-* **Contradição:** Maturidade = Azul + Roxo + Roxo *(Confronto de premissas do juiz)*.
-* **Erro Material:** Maturidade = Azul + Roxo + Laranja *(Evidência cirúrgica do erro)*.
+* **Contradição:** Maturidade = Azul + Roxo + Roxo *(Confronto de duas premissas do próprio juiz. Não usa Verde nem Laranja)*.
+* **Erro Material:** Maturidade = Azul + Roxo + Laranja *(Evidência documental cirúrgica do erro)*.
+
+### Mudança de Semântica Cognitiva (Nós de Ideia)
+No ecossistema de ED, os rótulos de instrução da IA sofreram mutação. A intenção de *"Refutação (Mérito)"* — comum em Recursos Ordinários — foi substituída por **"Confirmação de Higidez"**. Isso orienta a máquina a não debater a justiça da decisão, mas sim redigir parágrafos demonstrando que a sentença embargada já era clara, completa e isenta de vícios.
 
 ---
 
