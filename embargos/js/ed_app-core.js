@@ -93,7 +93,7 @@ window.toggleLoginMenu = function(event) {
    ================================================ */
 window.ShortcutManager = (function() {
     // Novo formato de estado para o Módulo de Embargos de Declaração
-    let state = { fav1: null, fav2: null, fav3: null, embargosAutora: null, embargosReu: null, acordao: null };
+    let state = { fav1: null, fav2: null, fav3: null, embargosAutora: null, embargosReu: null, embargosReu2: null, acordao: null };
     let currentEditingType = null;
     
     // Mapeamento das novas classes CSS criadas no arquivo core.css
@@ -103,6 +103,7 @@ window.ShortcutManager = (function() {
         fav3: 'is-active-fav3', 
         embargosAutora: 'is-active-alvo-autora', 
         embargosReu: 'is-active-alvo-re', 
+        embargosReu2: 'is-active-alvo-re2',
         acordao: 'is-active-acordao' 
     };
     
@@ -112,7 +113,8 @@ window.ShortcutManager = (function() {
         fav2: 'Favorito 2 (Fúcsia)', 
         fav3: 'Favorito 3 (Pastel)', 
         embargosAutora: 'Embargos (Autora)', 
-        embargosReu: 'Embargos (Ré)', 
+        embargosReu: 'Embargos (Ré 1)', 
+        embargosReu2: 'Embargos (Ré 2)',
         acordao: 'Acórdão Embargado' 
     };
 
@@ -190,6 +192,7 @@ window.ShortcutManager = (function() {
             fav3: 'fab-fav3', 
             embargosAutora: 'fab-embargos-autora', 
             embargosReu: 'fab-embargos-reu', 
+            embargosReu2: 'fab-embargos-reu2',
             acordao: 'fab-acordao' 
         };
         return map[type];
@@ -199,7 +202,7 @@ window.ShortcutManager = (function() {
         handleClick, updateUI, fecharModal, salvarModal,
         getState: () => state,
         setState: (newState) => { if (newState) { state = { ...state, ...newState }; updateUI(); } },
-        reset: () => { state = { fav1: null, fav2: null, fav3: null, embargosAutora: null, embargosReu: null, acordao: null }; updateUI(); },
+        reset: () => { state = { fav1: null, fav2: null, fav3: null, embargosAutora: null, embargosReu: null, embargosReu2: null, acordao: null }; updateUI(); },
         toggleVisibility: (show) => {
             Object.keys(state).forEach(type => {
                 const btn = document.getElementById(getFabId(type));

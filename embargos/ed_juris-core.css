@@ -437,7 +437,8 @@ body.theme-anotacoes-jasmine {
 
 /* ALVOS (Embargos de Declaração) */
 .fab-shortcut.is-active-alvo-autora { background-color: #388e3c !important; border-color: #81c784 !important; color: white !important; } /* Verde Autora */
-.fab-shortcut.is-active-alvo-re { background-color: #d32f2f !important; border-color: #ef9a9a !important; color: white !important; } /* Vermelho Ré */
+.fab-shortcut.is-active-alvo-re { background-color: #d32f2f !important; border-color: #ef9a9a !important; color: white !important; } /* Vermelho Ré 1 */
+.fab-shortcut.is-active-alvo-re2 { background-color: #800020 !important; border-color: #b33939 !important; color: white !important; } /* Bordô/Vinho Ré 2 */
 
 /* BALANÇA (Acórdão Embargado) */
 .fab-shortcut.is-active-acordao { background-color: #D500B5 !important; border-color: #b00096 !important; color: white !important; } /* Fúcsia do Módulo ED */
