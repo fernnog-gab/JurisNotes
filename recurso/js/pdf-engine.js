@@ -238,15 +238,24 @@ window.PdfEngine = (function () {
 
                     try {
                         const textContentFirstPage = await firstPage.getTextContent();
+                        // 1. Higieniza o texto (remove espaços para evitar erros de leitura do PDF)
                         const rawString = textContentFirstPage.items.map(item => item.str).join('');
                         const sanitizedString = rawString.replace(/\s+/g, '');
 
-                        const cnjRegex = /(\d{7})[-]?\d{2}\.?(\d{4})\.?\d\.?\d{2}\.?\d{4}/;
+                        // 2. Regex atualizada para capturar 3 grupos: Sequencial, Dígito e Ano
+                        const cnjRegex = /(\d{7})[-]?(\d{2})\.?(\d{4})\.?\d\.?\d{2}\.?\d{4}/;
                         const match = sanitizedString.match(cnjRegex);
 
                         if (match && typeof _deps.onProcessoIdentificado === 'function') {
-                            const numeroCurto = `${match[1]}-${match[2]}`;
-                            _deps.onProcessoIdentificado(numeroCurto);
+                            // Converte para inteiro para remover zeros à esquerda e volta para string
+                            const sequencialLimpo = parseInt(match[1], 10).toString(); 
+                            const digito = match[2];
+                            const ano = match[3];
+
+                            // Monta o formato ultra-curto (Ex: 193-45.2024)
+                            const numeroUltraCurto = `${sequencialLimpo}-${digito}.${ano}`; 
+                            
+                            _deps.onProcessoIdentificado(numeroUltraCurto);
                         }
                     } catch (err) {
                         console.warn("[Juris Notes] Falha ao tentar capturar o número do processo na capa.", err);
