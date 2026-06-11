@@ -8,11 +8,11 @@ window.TopicsManager = (function () {
     // NOVA CAMADA DE CONFIGURAÇÃO: Dicionário Centralizado de Interface (AI)
     const AI_UI_LABELS = {
         alegacao: {
-            titulo: "Fundamentos do Agravo (Fase 1)",
+            titulo: "Fundamentos do Agravo",
             placeholder: "Clique para descrever por que a parte acha que o recurso deveria subir..."
         },
         origem: {
-            titulo: "Despacho Denegatório (Fase 3)",
+            titulo: "Despacho Denegatório",
             placeholder: "Clique para colar o trecho do juiz que trancou o recurso..."
         },
         veredito: {
