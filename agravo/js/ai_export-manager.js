@@ -42,7 +42,7 @@ window.ExportManager = (function () {
             tagAlegacao: "fundamentos_do_agravo",
             tagFundamento: "decisao_denegatoria_originaria",
             tagVeredito: "veredito_assessor_admissibilidade",
-            diretrizIA: "Atue como auditor rigoroso de pressupostos processuais. Seu objetivo é analisar estritamente se o Agravo de Instrumento merece ser conhecido (destrancando o recurso originário) com base em tempestividade, adequação, preparo e representação. Não avalie o mérito da causa principal neste momento. Justifique o preenchimento ou não dos pressupostos de forma direta e formal."
+            diretrizIA: "Atue como auditor rigoroso de pressupostos processuais. Seu objetivo é analisar estritamente se o Agravo de Instrumento merece ser conhecido (destrancando o recurso originário) com base em tempestividade, adequação, preparo e representação. Não avalie o mérito da causa principal. Preste extrema atenção à natureza do documento anexado (Ex: Guias comprovam preparo; Certidões e Manifestações comprovam tempestividade; Procurações provam representação). Justifique a admissibilidade cruzando o tipo da prova com o pressuposto alegado."
         }
     };
 
@@ -91,7 +91,8 @@ window.ExportManager = (function () {
      */
     function _gerarNomeArquivoImagem(topicoId, numIdeia, numSub = null) {
         const hierarquia = numSub ? `${numIdeia}_sub_${numSub}` : `${numIdeia}`;
-        return `Evidencia_ED_${topicoId}_Card_${hierarquia}.png`;
+        const modulo = window.JURIS_MODULE || 'AI';
+        return `Evidencia_${modulo}_${topicoId}_Card_${hierarquia}.png`;
     }
 
     /**
@@ -109,7 +110,7 @@ window.ExportManager = (function () {
         const jurisprudenciaVinculante = [];
         const vereditosLocaisInjetados = []; // NOVO: Captura de vereditos perdidos
 
-        let md = `---\n*Pacote de Auditoria Estrutural ED gerado em ${dataGeracao}*\n---\n\n`;
+        let md = `---\n*Pacote de Auditoria Estrutural ${moduleContext} gerado em ${dataGeracao}*\n---\n\n`;
         md += `# ${config.tituloTopico}: **${(topico.nome || 'Não Nomeado').toUpperCase()}**\n\n`;
 
         // 1. COMPILAÇÃO DO PREÂMBULO FIXO
@@ -123,7 +124,7 @@ window.ExportManager = (function () {
         md += `<${config.tagFundamento}>\n${_safeMD(topico.fundamentos || 'Nenhum trecho da decisão embargada colado.')}\n</${config.tagFundamento}>\n\n`;
         
         md += `## SEÇÃO II — ${config.rotuloSeccao}\n`;
-        md += `*Atenção IA: Aqui estão as provas documentais do vício formal. Não analise mérito.*\n\n`;
+        md += `*Atenção IA: Aqui estão as provas documentais extraídas. Não analise mérito trabalhista.*\n\n`;
 
         if (!topico.anotacoes || topico.anotacoes.length === 0) {
             md += `*Nenhum elemento processual foi anexado para auditoria.*\n`;
@@ -141,13 +142,13 @@ window.ExportManager = (function () {
                 md += `<contexto_processual>Fase: ${faseContexto} | Polo: ${poloContexto} | Ref: ${refCitacao}</contexto_processual>\n\n`;
 
                 md += `<fato_bruto_auditado>\n`;
-                const docLabel = `**[${an.documento || 'Elemento'}] (${poloContexto}) ${refCitacao}:**`;
+                const docLabel = `**DOCUMENTO CLASSIFICADO COMO:** [${(an.documento || 'Prova Genérica').toUpperCase()}] | **ORIGEM:** [${poloContexto.toUpperCase()}] | **LOCALIZAÇÃO:** ${refCitacao}`;
 
                 if (an.tipo === 'texto') {
-                    md += `- ${docLabel} ${_safeMD(an.conteudo, ' ')}\n`;
+                    md += `- ${docLabel}\n  > *Conteúdo Extraído:* ${_safeMD(an.conteudo, ' ')}\n`;
                 } else if (an.tipo === 'imagem') {
                     const imgNome = _gerarNomeArquivoImagem(topico.id, numIdeia);
-                    md += `- ${docLabel}\n  > 🖼️ **[IMAGEM FORNECIDA PARA CONFERÊNCIA]** (Nome: \`${imgNome}\`).\n  > 🧠 *Apontamento do Assessor:* ${_safeMD(an.comentario || 'Verifique a falha estrutural demonstrada na imagem.', '\n  > ')}\n`;
+                    md += `- ${docLabel}\n  > 🖼️ **[EVIDÊNCIA VISUAL FORNECIDA AO MODELO]** (Nome: \`${imgNome}\`).\n  > 🧠 *Nota do Assessor Judicial:* ${_safeMD(an.comentario || 'Verifique o dado contido nesta imagem em anexo.', '\n  > ')}\n`;
                 } else if (an.tipo === 'audio') {
                     try {
                         const ad = JSON.parse(an.conteudo);
@@ -314,7 +315,7 @@ window.ExportManager = (function () {
             const activeTabId = _deps.getActiveTabId();
             
             if (!activeTabId) {
-                _deps.exibirToast("Selecione um tópico de Embargos antes de exportar.", 'aviso');
+                _deps.exibirToast(`Selecione um tópico de ${window.JURIS_MODULE || 'Agravo'} antes de exportar.`, 'aviso');
                 return;
             }
 
@@ -346,7 +347,7 @@ window.ExportManager = (function () {
                 const payloadTexto = _gerarMarkdown(topicoAtivo);
                 _downloadArquivo(nomeArquivoFinal, payloadTexto);
 
-                _deps.exibirToast('Payload de ED gerado! Preparando imagens...', 'sucesso');
+                _deps.exibirToast(`Payload de ${window.JURIS_MODULE || 'AI'} gerado! Preparando imagens...`, 'sucesso');
 
                 // 2. Prepara e dispara fila de imagens
                 const filaDeDownloads = [];

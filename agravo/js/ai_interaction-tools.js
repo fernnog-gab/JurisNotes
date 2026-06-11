@@ -43,16 +43,31 @@ window.toggleModoFoco = function(ativar) {
 
 // --- CONFIGURAÇÃO CENTRAL DE DOCUMENTOS ---
 const DOC_CONFIG = [
-    { label: 'Agravo de Instrumento',             polo: 'Agravante',    tipo: 'auto', fase: 1 },
-    { label: 'Contraminuta ao Agravo',            polo: 'Agravado',     tipo: 'auto', fase: 1 },
-    { label: 'Recurso Ordinário (Trancado)',      polo: 'Agravante',    tipo: 'auto', fase: 2 },
-    { label: 'Agravo de Petição (Trancado)',      polo: 'Agravante',    tipo: 'auto', fase: 2 },
-    { label: 'Despacho Denegatório (Decisão)',    polo: 'Juízo',        tipo: 'auto', fase: 3 },
-    { label: 'Despacho de Admissibilidade',       polo: 'Juízo',        tipo: 'auto', fase: 3 },
-    { label: 'Guia de Recolhimento (Custas/GFIP)',polo: 'Agravante',    tipo: 'auto', fase: 4 },
-    { label: 'Comprovante Bancário',              polo: 'Agravante',    tipo: 'auto', fase: 4 },
-    { label: 'Certidão de Intimação/Prazo',       polo: 'Tribunal',     tipo: 'auto', fase: 4 },
-    { label: 'Procuração / Substabelecimento',    polo: 'DUAL',         tipo: 'dual', fase: 4 }
+    // FASE 1 — ESCOPO
+    { label: 'Agravo de Instrumento',                polo: 'Agravante',   tipo: 'auto', fase: 1 },
+    { label: 'Contraminuta ao Agravo',               polo: 'Agravado',    tipo: 'auto', fase: 1 },
+    
+    // FASE 2 — PROVOCAÇÃO (Recurso Originário Trancado)
+    { label: 'Recurso Ordinário (Trancado)',         polo: 'Agravante',   tipo: 'auto', fase: 2 },
+    { label: 'Agravo de Petição (Trancado)',         polo: 'Agravante',   tipo: 'auto', fase: 2 },
+    
+    // FASE 3 — DECISÃO
+    { label: 'Despacho Denegatório (1ª Instância)',  polo: 'Juízo',       tipo: 'auto', fase: 3 },
+    { label: 'Despacho de Admissibilidade',          polo: 'Juízo',       tipo: 'auto', fase: 3 },
+    { label: 'Decisão Monocrática do Relator',       polo: 'Tribunal',    tipo: 'auto', fase: 3 },
+    { label: 'Acórdão do Colegiado (TRT)',           polo: 'Tribunal',    tipo: 'auto', fase: 3 },
+    { label: 'Outras Decisões Interlocutórias',      polo: 'Tribunal',    tipo: 'auto', fase: 3 },
+    
+    // FASE 4 — VALIDAÇÃO (Provas de Pressupostos)
+    { label: 'Guia de Recolhimento (Custas/GFIP)',   polo: 'Agravante',   tipo: 'auto', fase: 4 },
+    { label: 'Comprovante Bancário',                 polo: 'Agravante',   tipo: 'auto', fase: 4 },
+    { label: 'Certidão de Intimação/Prazo',          polo: 'Secretaria',  tipo: 'auto', fase: 4 },
+    { label: 'Certidão de Publicação',               polo: 'Secretaria',  tipo: 'auto', fase: 4 },
+    { label: 'Documentos do Juízo',                  polo: 'Juízo',       tipo: 'auto', fase: 4 },
+    { label: 'Atos da Secretaria / Termos',          polo: 'FLEX',        tipo: 'dual', fase: 4 },
+    { label: 'Procuração / Substabelecimento',       polo: 'FLEX',        tipo: 'dual', fase: 4 },
+    { label: 'Manifestações das Partes',             polo: 'FLEX',        tipo: 'dual', fase: 4 },
+    { label: 'Prova Documental Genérica',            polo: 'FLEX',        tipo: 'dual', fase: 4, isGenerico: true }
 ];
 
 let _docSelecionado = null;
@@ -148,31 +163,48 @@ function selecionarDocumento(docLabel, polo, context) {
         _wizardVicioSelecionado = vicio;
     }
 
-    if (polo === 'DUAL') {
-        _docSelecionado = docLabel;
+    const conf = DOC_CONFIG.find(d => d.label === docLabel);
+
+    // TRATAMENTO PARA PROVAS GENÉRICAS (Desambiguação Semântica)
+    let nomeDocumentoFinal = docLabel;
+    if (conf && conf.isGenerico) {
+        const descricao = window.prompt("Especifique o nome deste documento genérico (Ex: Edital de Praça, Carta Precatória):", "");
+        if (descricao === null) return; // Usuário cancelou
+        nomeDocumentoFinal = descricao.trim() ? `Documento: ${descricao.trim()}` : 'Prova Documental (Não Especificada)';
+    }
+
+    if (polo === 'DUAL' || polo === 'FLEX') {
+        _docSelecionado = nomeDocumentoFinal; 
         _isWizardContext = (context === 'wizard');
         
-        const conf = DOC_CONFIG.find(d => d.label === docLabel);
         const isExecucao = conf && conf.isExecucao;
-
         const targetDocText = context === 'popup' ? 'popup-doc-selecionado' : 'wizard-doc-selecionado';
         const targetContainer = context === 'popup' ? 'popup-polo-buttons-container' : 'wizard-polo-buttons-container';
         
-        document.getElementById(targetDocText).innerText = docLabel;
+        document.getElementById(targetDocText).innerText = nomeDocumentoFinal;
         
         let htmlBotoes = '';
 
-        if (isExecucao) {
+        if (polo === 'FLEX') {
+            // Nova ramificação FLEX: Atende Conhecimento e Execução simultaneamente
+            htmlBotoes += `<button class="chip-btn chip-autora" onclick="confirmarPolo('Parte Autora / Agravante', event)">✔ P. Autora / Agravante</button>`;
+            htmlBotoes += `<button class="chip-btn chip-re" onclick="confirmarPolo('Parte Ré / Agravada', event)">✔ P. Ré / Agravada</button>`;
             htmlBotoes += `<button class="chip-btn chip-exequente" onclick="confirmarPolo('Parte Exequente', event)">✔ Parte Exequente</button>`;
             htmlBotoes += `<button class="chip-btn chip-executada" onclick="confirmarPolo('Parte Executada', event)">✔ Parte Executada</button>`;
-            htmlBotoes += `<button class="chip-btn chip-juizo" onclick="confirmarPolo('Juízo / Tribunal', event)">🏛️ Juízo / Tribunal</button>`;
-            htmlBotoes += `<button class="chip-btn chip-auxiliar" onclick="confirmarPolo('Auxiliar da Justiça', event)">⚖️ Auxiliar da Justiça</button>`;
+            htmlBotoes += `<button class="chip-btn chip-juizo" onclick="confirmarPolo('Terceiro / Secretaria', event)">🏛️ Terceiro / Secretaria</button>`;
         } else {
-            htmlBotoes += `<button class="chip-btn chip-autora" onclick="confirmarPolo('Parte Autora', event)">✔ Parte Autora</button>`;
-            htmlBotoes += `<button class="chip-btn chip-re" onclick="confirmarPolo('Parte Ré', event)">✔ Parte Ré</button>`;
+            // Preservação Estrita do Comportamento DUAL Legado (Proteção contra Regressões)
+            if (isExecucao) {
+                htmlBotoes += `<button class="chip-btn chip-exequente" onclick="confirmarPolo('Parte Exequente', event)">✔ Parte Exequente</button>`;
+                htmlBotoes += `<button class="chip-btn chip-executada" onclick="confirmarPolo('Parte Executada', event)">✔ Parte Executada</button>`;
+                htmlBotoes += `<button class="chip-btn chip-juizo" onclick="confirmarPolo('Juízo / Tribunal', event)">🏛️ Juízo / Tribunal</button>`;
+                htmlBotoes += `<button class="chip-btn chip-auxiliar" onclick="confirmarPolo('Auxiliar da Justiça', event)">⚖️ Auxiliar da Justiça</button>`;
+            } else {
+                htmlBotoes += `<button class="chip-btn chip-autora" onclick="confirmarPolo('Parte Autora', event)">✔ Parte Autora</button>`;
+                htmlBotoes += `<button class="chip-btn chip-re" onclick="confirmarPolo('Parte Ré', event)">✔ Parte Ré</button>`;
+            }
         }
         
-        // Renderiza o botão Voltar com container extra se for no Wizard para preservar o layout original
         if (context === 'popup') {
             htmlBotoes += `<button class="chip-btn chip-cancelar" onclick="voltarParaDocumentos('popup', event)">← Voltar</button>`;
         } else {
@@ -180,11 +212,10 @@ function selecionarDocumento(docLabel, polo, context) {
         }
 
         document.getElementById(targetContainer).innerHTML = htmlBotoes;
-
         document.getElementById(`${context}-step-doc`).style.display = 'none';
         document.getElementById(`${context}-step-polo`).style.display = 'block';
     } else {
-        executarSalvamento(docLabel, polo, topicoId, _pendingTargetIndex, context);
+        executarSalvamento(nomeDocumentoFinal, polo, topicoId, _pendingTargetIndex, context);
     }
 }
 
@@ -209,10 +240,11 @@ function executarSalvamento(docLabel, polo, topicoId, targetIndex, context) {
 
     // 2. Middleware (Guardrail Client-Side para AI)
     if (faseNova === 4 && targetIndex === null) {
-        // Alerta se o usuário inseriu textos/peças na Fase 4 sem associá-los adequadamente,
-        // ou se o texto selecionado for muito longo (indício de extração de mérito e não de data/valor)
-        if (pendingTipo === 'texto' && pendingConteudo && pendingConteudo.length > 500) {
-             exibirToast("⚠️ AI Guardrail: Cuidado. A fase de validação (Laranja) do AI serve para dados curtos (datas, valores). Evite extrair mérito aqui.", "aviso");
+        // Isenta documentos classificados como 'dual' (Manifestações etc.)
+        const isExtensoPermitido = conf && conf.tipo === 'dual';
+        
+        if (!isExtensoPermitido && pendingTipo === 'texto' && pendingConteudo && pendingConteudo.length > 500) {
+             exibirToast("⚠️ AI Guardrail: Cuidado. Certifique-se de extrair dados objetivos. Evite extrair mérito de peças nesta fase.", "aviso");
         }
     }
 
