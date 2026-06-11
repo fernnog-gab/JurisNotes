@@ -8,16 +8,9 @@ window.BalancaManager = (function() {
     let htmlState = null;
     let pendingTasksCount = 0;
 
-    // CONFIGURAÇÃO: Altere este seletor conforme o HTML real do seu template
-    const BALANCA_CONFIG = {
-        seletorTarefaAberta: 'input[type="checkbox"].tarefa-pendente:not(:checked)',
-        seletorAlternativo: '.contador-de-tarefas-pendentes'
-    };
-
     // Active Element Guard: Atalho Alt + B (Balança) protegido
     document.addEventListener('keydown', function(e) {
         if (e.altKey && (e.key === 'b' || e.key === 'B')) {
-            // Verifica se o usuário está digitando ativamente em algum input nativo da aplicação
             const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
             const isTyping = activeTag === 'input' || activeTag === 'textarea' || document.activeElement.isContentEditable;
             
@@ -29,7 +22,6 @@ window.BalancaManager = (function() {
     });
 
     function abrirPainel(event) {
-        // Atalho via Ctrl+Clique no botão lateral
         if (event && event.ctrlKey) {
             document.getElementById('upload-html-balanca').click();
             return;
@@ -52,42 +44,58 @@ window.BalancaManager = (function() {
         }
     }
 
-    /**
-     * Extrai tarefas usando o DOMParser estático. 
-     * Evita problemas de Sandbox/CORS do Iframe e opera diretamente na string salva.
-     */
-    function extrairContadorDeTarefas(htmlString) {
-        if (!htmlString) return 0;
-        
-        try {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(htmlString, 'text/html');
-            
-            const fallbackNode = doc.querySelector(BALANCA_CONFIG.seletorAlternativo);
-            if (fallbackNode) {
-                const num = parseInt(fallbackNode.textContent.trim(), 10);
-                if (!isNaN(num)) return num;
-            }
+    // ==========================================
+    // MOTOR DE LEITURA DE TAREFAS PRECISO
+    // ==========================================
+    function avaliarTarefasPendentes() {
+        let count = 0;
+        const iframe = document.getElementById('balanca-iframe');
 
-            const tarefas = doc.querySelectorAll(BALANCA_CONFIG.seletorTarefaAberta);
-            return tarefas.length;
-        } catch (e) {
-            console.error("[Juris Notes ED] Erro ao parsear tarefas do HTML:", e);
-            return 0;
+        // TENTATIVA 1: Ler do Iframe AO VIVO (Garante dados frescos se o painel estiver aberto na hora da exportação)
+        if (iframe && iframe.contentDocument) {
+            try {
+                const doc = iframe.contentDocument;
+                const obsList = doc.getElementById('obs-list'); // Lê exatamente do HTML importado
+                if (obsList) {
+                    // Conta os checkboxes de tarefas que NÃO estão checados
+                    const tarefasAbertas = obsList.querySelectorAll('.chk-input:not(:checked)');
+                    count = tarefasAbertas.length;
+                    return count;
+                }
+            } catch (e) {
+                // Silencia erros de CORS temporários
+            }
         }
+
+        // TENTATIVA 2: Fallback para a string salva via DOMParser (Caso o painel esteja fechado)
+        if (htmlState) {
+            try {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(htmlState, 'text/html');
+                const obsList = doc.getElementById('obs-list');
+                if (obsList) {
+                    const tarefasAbertas = obsList.querySelectorAll('.chk-input:not(:checked)');
+                    count = tarefasAbertas.length;
+                }
+            } catch (e) {
+                console.warn("[Juris Notes ED] Erro ao analisar tarefas do HTML salvo.", e);
+            }
+        }
+
+        return count;
     }
 
-    /**
-     * Concentra toda a atualização de Interface (Single Source of Truth)
-     */
-    function atualizarInterfaceEContadores() {
+    // ==========================================
+    // ATUALIZAÇÃO VISUAL CENTRALIZADA
+    // ==========================================
+    function atualizarInterface() {
         const btnBalanca = document.getElementById('btn-balanca-justica');
         const btnLembrete = document.getElementById('btn-lembretes-tarefa');
         const badge = document.getElementById('badge-tarefas');
         
         if (!btnBalanca || !btnLembrete) return;
 
-        // Atualiza Estado da Balança (HTML Carregado)
+        // Regra 1: O ícone da balança só fica carregado (Fúcsia no ED) se houver HTML
         if (htmlState) {
             btnBalanca.classList.add('is-loaded');
             btnLembrete.disabled = false;
@@ -96,22 +104,24 @@ window.BalancaManager = (function() {
             btnLembrete.disabled = true;
         }
 
-        // Computa e Atualiza Tarefas
-        pendingTasksCount = extrairContadorDeTarefas(htmlState);
+        // Regra 2: Computa e pinta as tarefas (Amarelo Semântico de Alerta)
+        pendingTasksCount = avaliarTarefasPendentes();
 
         if (pendingTasksCount > 0) {
             btnLembrete.classList.add('has-tasks');
-            badge.style.display = 'flex';
-            badge.textContent = pendingTasksCount > 99 ? '99+' : pendingTasksCount;
+            if (badge) {
+                badge.style.display = 'flex';
+                badge.textContent = pendingTasksCount > 99 ? '99+' : pendingTasksCount;
+            }
         } else {
             btnLembrete.classList.remove('has-tasks');
-            badge.style.display = 'none';
+            if (badge) badge.style.display = 'none';
         }
     }
 
     function fecharPainel() {
-        sincronizarEstadoInterno();
-        atualizarInterfaceEContadores(); // Atualiza contador e UI imediatamente após salvar
+        sincronizarEstadoInterno(); 
+        atualizarInterface(); // Atualiza a bolinha vermelha ao fechar o painel
         
         document.getElementById('balanca-modal-backdrop').style.display = 'none';
         document.getElementById('balanca-painel').style.display = 'none';
@@ -129,7 +139,7 @@ window.BalancaManager = (function() {
         reader.onload = function(e) {
             htmlState = e.target.result;
             renderizarIframe(htmlState);
-            atualizarInterfaceEContadores();
+            atualizarInterface(); // Atualiza UI ao carregar
             
             if (typeof window.exibirToast === 'function') {
                 window.exibirToast('Painel HTML importado e ancorado com sucesso!', 'sucesso');
@@ -142,7 +152,7 @@ window.BalancaManager = (function() {
 
     function renderizarIframe(conteudoHTML) {
         const iframe = document.getElementById('balanca-iframe');
-        iframe.srcdoc = conteudoHTML;
+        if (iframe) iframe.srcdoc = conteudoHTML;
     }
 
     function sincronizarEstadoInterno() {
@@ -152,12 +162,15 @@ window.BalancaManager = (function() {
         try {
             const doc = iframe.contentDocument || iframe.contentWindow.document;
             
-            doc.querySelectorAll('textarea').forEach(el => { el.textContent = el.value; });
-            doc.querySelectorAll('input[type="text"], input[type="number"], input[type="hidden"]').forEach(el => { el.setAttribute('value', el.value); });
+            doc.querySelectorAll('textarea').forEach(el => el.textContent = el.value);
+            doc.querySelectorAll('input[type="text"], input[type="number"], input[type="hidden"]').forEach(el => el.setAttribute('value', el.value));
+            
+            // Tratamento Crítico de Checkboxes (Onde ficam as tarefas)
             doc.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach(el => {
                 if (el.checked) el.setAttribute('checked', 'checked');
                 else el.removeAttribute('checked');
             });
+
             doc.querySelectorAll('select').forEach(select => {
                 Array.from(select.options).forEach(opt => {
                     if (opt.selected) opt.setAttribute('selected', 'selected');
@@ -168,7 +181,7 @@ window.BalancaManager = (function() {
             htmlState = doc.documentElement.outerHTML;
 
         } catch (e) {
-            console.error("[Juris Notes ED] Sincronização do painel falhou. Possível bloqueio de Sandbox/CORS.", e);
+            console.error("[Juris Notes ED] Sincronização do painel falhou.", e);
         }
     }
 
@@ -181,7 +194,8 @@ window.BalancaManager = (function() {
         if (htmlState) {
             renderizarIframe(htmlState);
         }
-        atualizarInterfaceEContadores(); // Garante o badge visível logo após recuperar o backup
+        // Timeout breve para dar tempo do Iframe renderizar antes de contar as tarefas no restore
+        setTimeout(atualizarInterface, 100); 
     }
 
     function resetarEstado() {
@@ -189,7 +203,7 @@ window.BalancaManager = (function() {
         pendingTasksCount = 0;
         const iframe = document.getElementById('balanca-iframe');
         if (iframe) iframe.srcdoc = '';
-        atualizarInterfaceEContadores();
+        atualizarInterface();
     }
 
     return { 
@@ -199,6 +213,6 @@ window.BalancaManager = (function() {
         getHtmlState, 
         restoreHtmlState,
         resetarEstado,
-        getPendingTasks: () => pendingTasksCount
+        getPendingTasks: avaliarTarefasPendentes // Exporta a função "AO VIVO" para o Guardrail do ED
     };
 })();
