@@ -649,6 +649,37 @@ body[data-active-tab="leitura"] #idea-markers-list {
     100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(213, 0, 181, 0); }
 }
 
+/* Badge de Lembretes Pendentes */
+.task-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background-color: #d32f2f;
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 800;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--trt-blue);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    z-index: 2;
+    pointer-events: none;
+}
+
+/* Estado Ativo: Contém Tarefas (Sinal de Alerta Amarelo Semântico) */
+#btn-lembretes-tarefa.has-tasks:not(:disabled) {
+    background-color: #fbc02d !important;
+    border-color: #f57f17 !important;
+    color: white !important;
+}
+#btn-lembretes-tarefa.has-tasks:not(:disabled) svg {
+    stroke: white;
+}
+
 /* Paleta de Cor: Agravo de Instrumento */
 .badge-ai {
     background-color: #A3E635; /* Verde-Limão */
