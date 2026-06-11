@@ -1,7 +1,7 @@
 # Juris Notes — Assistente de Mapeamento Estruturado para Elaboração de Acórdãos
 
 ## Evolução do Ecossistema (Nota de Implantação)
-O Juris Notes foi concebido inicialmente focado no painel de Recursos Ordinários (RO), visando estruturar a análise de mérito e provas. Atualmente, a ferramenta encontra-se em fase de expansão e implantação de novos silos funcionais isolados, incorporando os ecossistemas dedicados aos Embargos de Declaração (ED) e ao Agravo de Instrumento (AI), garantindo que cada incidente processual possua seu próprio viés cognitivo e roteiro de análise focado em fluxos específicos da jurisdição trabalhista.
+O Juris Notes foi concebido inicialmente focado no painel de Recursos Ordinários (RO), visando estruturar a análise de mérito e provas[cite: 1]. Atualmente, a ferramenta encontra-se em fase de expansão e implantação de novos silos funcionais isolados, incorporando os ecossistemas dedicados aos Embargos de Declaração (ED) e ao Agravo de Instrumento (AI), garantindo que cada incidente processual possua seu próprio viés cognitivo e roteiro de análise focado em fluxos específicos da jurisdição trabalhista[cite: 1, 2].
 
 ## 1. Contexto do Domínio e o Desafio Cognitivo
 Esta aplicação foi desenvolvida para revolucionar o trabalho de assistentes judiciais de gabinete em tribunais de segunda instância[cite: 1]. O Juris Notes atua como a ponte ideal entre a leitura humana do Inteiro Teor e a redação da minuta com auxílio de Inteligência Artificial[cite: 1].
@@ -47,8 +47,6 @@ Para acomodar isso de forma segura, o Juris Notes adotou uma Arquitetura em Hub 
 
 ## 4. Metodologia Adaptada: O Incidente de Embargos de Declaração (ED)
 Quando o sistema entra no "Modo ED", as 4 cores são mantidas, mas a cognição por trás delas sofre uma mutação para atuar como uma Lente de Auditoria Estrita[cite: 1]. Em ED, não se discute a justiça da decisão, mas sim a sua higidez estrutural[cite: 1].
-
-(Nota: A atribuição de cores neste módulo se dará por um "Modal de Classificação" em desenvolvimento, onde o usuário define os critérios da peça extraída e o sistema aplica a cor lógica)[cite: 1].
 
 ### 🟦 FASE 1: A Lente de Auditoria (O Escopo do Vício) — Cor: Azul
 * Propósito: Delimitar estritamente qual é a falha estrutural alegada (Omissão, Contradição ou Erro Material)[cite: 1].
