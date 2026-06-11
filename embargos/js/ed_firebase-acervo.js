@@ -46,6 +46,13 @@ window.AcervoManager = (function() {
         throw erroTratado;
     }
 
+    // HELPER NOVO: Lê a identidade do HTML para saber onde estamos rodando.
+    // Retorna 'ro' como proteção caso a meta tag seja esquecida.
+    function _getModuloAtual() {
+        const metaTag = document.querySelector('meta[name="juris-module"]');
+        return metaTag ? metaTag.content : 'ro';
+    }
+
     async function salvarNovoModelo(nome, noOriginal) {
         const uid = getUserId();
         if (!uid) throw new Error("Usuário não autenticado. Faça login.");
@@ -54,9 +61,18 @@ window.AcervoManager = (function() {
         const docRef = doc(db, "usuarios", uid, "acervo", modeloId);
         
         const noLimpo = { intencao: noOriginal.intencao || 'premissa', texto: noOriginal.texto || '', timestamp: Date.now() };
+        
+        // Identifica onde o usuário está trabalhando no momento
+        const moduloContexto = _getModuloAtual();
 
         try {
-            await setDoc(docRef, { nome: nome, criadoEm: Date.now(), nos: [noLimpo] });
+            // ATUALIZAÇÃO: Grava o campo 'modulo' diretamente no Firebase
+            await setDoc(docRef, { 
+                nome: nome, 
+                criadoEm: Date.now(), 
+                nos: [noLimpo],
+                modulo: moduloContexto 
+            });
             modelosEmCache = []; 
             return modeloId;
         } catch (e) {
@@ -88,12 +104,24 @@ window.AcervoManager = (function() {
         const querySnapshot = await getDocs(q);
         
         const modelos = [];
+        const moduloContexto = _getModuloAtual(); // Qual painel está aberto?
+
         querySnapshot.forEach((docSnap) => {
             // TRAVA DE SEGURANÇA: Ignora o nosso arquivo de tags na listagem de modelos
             if (docSnap.id === "--CONFIG-TAGS--") return;
             
-            // Usa docSnap.id como chave primária real (Correção de Bug do Relatório)
-            modelos.push({ id: docSnap.id, ...docSnap.data() });
+            const dadosModelo = docSnap.data();
+            
+            // TRATAMENTO DE RETROCOMPATIBILIDADE: 
+            // Modelos antigos que não têm a propriedade 'modulo' assumem o valor 'ro'.
+            // Evita que o usuário perca dados legado.
+            const moduloDoModelo = dadosModelo.modulo || 'ro'; 
+
+            // FILTRAGEM CLIENT-SIDE:
+            // Compara o carimbo do modelo com a porta da sala. Se bater, mostra.
+            if (moduloDoModelo === moduloContexto) {
+                modelos.push({ id: docSnap.id, ...dadosModelo });
+            }
         });
         
         modelosEmCache = modelos;
