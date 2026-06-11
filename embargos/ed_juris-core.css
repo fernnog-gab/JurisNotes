@@ -670,10 +670,10 @@ body[data-active-tab="leitura"] #idea-markers-list {
     pointer-events: none;
 }
 
-/* Estado Ativo: Contém Tarefas (Sinal de Alerta Amarelo Semântico) */
+/* Estado Ativo: Contém Tarefas (Fúcsia - Identidade ED) */
 #btn-lembretes-tarefa.has-tasks:not(:disabled) {
-    background-color: #fbc02d !important;
-    border-color: #f57f17 !important;
+    background-color: #D500B5 !important;
+    border-color: #b00096 !important;
     color: white !important;
 }
 #btn-lembretes-tarefa.has-tasks:not(:disabled) svg {
