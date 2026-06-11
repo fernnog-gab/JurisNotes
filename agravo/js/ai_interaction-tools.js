@@ -43,35 +43,16 @@ window.toggleModoFoco = function(ativar) {
 
 // --- CONFIGURAÇÃO CENTRAL DE DOCUMENTOS ---
 const DOC_CONFIG = [
-    // --- FASE 1: O Escopo ---
-    { label: 'Embargos de Declaração',    polo: 'DUAL',         tipo: 'dual',   fase: 1 },
-    { label: 'Contraminuta aos EDs',      polo: 'DUAL',         tipo: 'dual',   fase: 1 },
-    // Adições para Execução
-    { label: 'Embargos à Execução',       polo: 'Parte Executada', tipo: 'auto', fase: 1, isExecucao: true },
-    { label: 'Impugnação aos Cálculos',   polo: 'Parte Exequente', tipo: 'auto', fase: 1, isExecucao: true },
-    
-    // --- FASE 2: Provocação Original ---
-    { label: 'Recurso Ordinário',         polo: 'DUAL',         tipo: 'dual',   fase: 2 },
-    { label: 'Recurso Adesivo',           polo: 'DUAL',         tipo: 'dual',   fase: 2 },
-    { label: 'Contrarrazões ao RO',       polo: 'DUAL',         tipo: 'dual',   fase: 2 },
-    { label: 'Petição Inicial',           polo: 'Parte Autora', tipo: 'auto',   fase: 2 },
-    { label: 'Contestação',               polo: 'Parte Ré',     tipo: 'auto',   fase: 2 },
-    { label: 'Impugnação à Contestação',  polo: 'Parte Autora', tipo: 'auto',   fase: 2 },
-    // Adições para Execução
-    { label: 'Cálculos de Liquidação',    polo: 'DUAL',         tipo: 'dual',   fase: 2, isExecucao: true },
-    // Trava Arquitetural: Áudio mantido, mas forçado metodologicamente para Fase 2 (Provocação)
-    { label: 'Audiência de Instrução',    polo: 'DUAL',         tipo: 'dual',   fase: 2 },
-
-    // --- FASE 3: A Decisão ---
-    { label: 'Acórdão Embargado',         polo: 'Juízo',        tipo: 'auto',   fase: 3 },
-    { label: 'Sentença Embargada',        polo: 'Juízo',        tipo: 'auto',   fase: 3 },
-    // Adições para Execução
-    { label: 'Sentença de Liquidação',    polo: 'Juízo',        tipo: 'auto',   fase: 3, isExecucao: true },
-    
-    // --- FASE 4: Validação / Provas (Restrito em ED para Erros Materiais) ---
-    { label: 'Guia de Recolhimento / Comprovante', polo: 'DUAL', tipo: 'dual', fase: 4 },
-    { label: 'Petição Original (Erro Material)',   polo: 'DUAL', tipo: 'dual', fase: 4 },
-    { label: 'Súmula / Jurisprudência Vinculante', polo: 'Tribunal', tipo: 'auto', fase: 4 }
+    { label: 'Agravo de Instrumento',             polo: 'Agravante',    tipo: 'auto', fase: 1 },
+    { label: 'Contraminuta ao Agravo',            polo: 'Agravado',     tipo: 'auto', fase: 1 },
+    { label: 'Recurso Ordinário (Trancado)',      polo: 'Agravante',    tipo: 'auto', fase: 2 },
+    { label: 'Agravo de Petição (Trancado)',      polo: 'Agravante',    tipo: 'auto', fase: 2 },
+    { label: 'Despacho Denegatório (Decisão)',    polo: 'Juízo',        tipo: 'auto', fase: 3 },
+    { label: 'Despacho de Admissibilidade',       polo: 'Juízo',        tipo: 'auto', fase: 3 },
+    { label: 'Guia de Recolhimento (Custas/GFIP)',polo: 'Agravante',    tipo: 'auto', fase: 4 },
+    { label: 'Comprovante Bancário',              polo: 'Agravante',    tipo: 'auto', fase: 4 },
+    { label: 'Certidão de Intimação/Prazo',       polo: 'Tribunal',     tipo: 'auto', fase: 4 },
+    { label: 'Procuração / Substabelecimento',    polo: 'DUAL',         tipo: 'dual', fase: 4 }
 ];
 
 let _docSelecionado = null;
@@ -226,19 +207,12 @@ function executarSalvamento(docLabel, polo, topicoId, targetIndex, context) {
     const conf = DOC_CONFIG.find(d => d.label === docLabel);
     const faseNova = conf ? conf.fase : 4;
 
-    // 2. Middleware (Guardrail Client-Side)
+    // 2. Middleware (Guardrail Client-Side para AI)
     if (faseNova === 4 && targetIndex === null) {
-        const topicoAlvo = topicos.find(t => t.id === topicoId);
-        if (topicoAlvo) {
-            // Conta quantas provas fáticas raiz já existem
-            const qtdFase4 = topicoAlvo.anotacoes.filter(a => {
-                const aConf = DOC_CONFIG.find(d => d.label === a.documento);
-                return aConf && aConf.fase === 4;
-            }).length;
-            
-            if (qtdFase4 >= 1) { // Dispara a partir do segundo item
-                exibirToast("⚠️ Guardrail ED: Extrações extensas configuram risco de rejulgamento fático. Limite-se a falhas estruturais.", "aviso");
-            }
+        // Alerta se o usuário inseriu textos/peças na Fase 4 sem associá-los adequadamente,
+        // ou se o texto selecionado for muito longo (indício de extração de mérito e não de data/valor)
+        if (pendingTipo === 'texto' && pendingConteudo && pendingConteudo.length > 500) {
+             exibirToast("⚠️ AI Guardrail: Cuidado. A fase de validação (Laranja) do AI serve para dados curtos (datas, valores). Evite extrair mérito aqui.", "aviso");
         }
     }
 

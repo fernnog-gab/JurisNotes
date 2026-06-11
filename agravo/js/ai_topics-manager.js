@@ -5,19 +5,19 @@
 window.TopicsManager = (function () {
     'use strict';
 
-    // NOVA CAMADA DE CONFIGURAÇÃO: Dicionário Centralizado de Interface (ED)
-    const ED_UI_LABELS = {
+    // NOVA CAMADA DE CONFIGURAÇÃO: Dicionário Centralizado de Interface (AI)
+    const AI_UI_LABELS = {
         alegacao: {
-            titulo: "Vício Alegado (Escopo)",
-            placeholder: "Clique para delimitar qual a omissão, contradição ou erro material apontado..."
+            titulo: "Fundamentos do Agravo (Fase 1)",
+            placeholder: "Clique para descrever por que a parte acha que o recurso deveria subir..."
         },
         origem: {
-            titulo: "Decisão Embargada (Alvo)",
-            placeholder: "Clique para redigir ou colar o trecho da decisão sob ataque..."
+            titulo: "Despacho Denegatório (Fase 3)",
+            placeholder: "Clique para colar o trecho do juiz que trancou o recurso..."
         },
         veredito: {
-            titulo: "Veredito / Conclusão",
-            placeholder: "Clique para definir se há o vício e o efeito modificativo (se houver)..."
+            titulo: "Veredito de Admissibilidade",
+            placeholder: "Clique para definir: Dá provimento ou nega provimento ao Agravo?"
         }
     };
 
@@ -594,8 +594,8 @@ window.TopicsManager = (function () {
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                     </div>
                     <div class="preamble-content">
-                        <span class="preamble-title">${ED_UI_LABELS.alegacao.titulo}</span>
-                        ${topicoAtivo.alegacoes ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.alegacoes)) : `<span class="preamble-empty">${ED_UI_LABELS.alegacao.placeholder}</span>`}
+                        <span class="preamble-title">${AI_UI_LABELS.alegacao.titulo}</span>
+                        ${topicoAtivo.alegacoes ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.alegacoes)) : `<span class="preamble-empty">${AI_UI_LABELS.alegacao.placeholder}</span>`}
                     </div>
                 </div>
                 <div class="preamble-card preamble-origem" onclick="abrirEdicaoPreambulo('${activeTabId}', 'fundamentos')">
@@ -603,8 +603,8 @@ window.TopicsManager = (function () {
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 21V7l6-4 6 4v14"></path></svg>
                     </div>
                     <div class="preamble-content">
-                        <span class="preamble-title">${ED_UI_LABELS.origem.titulo}</span>
-                        ${topicoAtivo.fundamentos ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.fundamentos)) : `<span class="preamble-empty">${ED_UI_LABELS.origem.placeholder}</span>`}
+                        <span class="preamble-title">${AI_UI_LABELS.origem.titulo}</span>
+                        ${topicoAtivo.fundamentos ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.fundamentos)) : `<span class="preamble-empty">${AI_UI_LABELS.origem.placeholder}</span>`}
                     </div>
                 </div>
                 <div class="preamble-card preamble-veredito" onclick="abrirEdicaoPreambulo('${activeTabId}', 'veredito')">
@@ -612,8 +612,8 @@ window.TopicsManager = (function () {
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
                     </div>
                     <div class="preamble-content">
-                        <span class="preamble-title">${ED_UI_LABELS.veredito.titulo}</span>
-                        ${topicoAtivo.veredito ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.veredito)) : `<span class="preamble-empty">${ED_UI_LABELS.veredito.placeholder}</span>`}
+                        <span class="preamble-title">${AI_UI_LABELS.veredito.titulo}</span>
+                        ${topicoAtivo.veredito ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.veredito)) : `<span class="preamble-empty">${AI_UI_LABELS.veredito.placeholder}</span>`}
                     </div>
                 </div>
             </div>`;
@@ -664,20 +664,21 @@ window.TopicsManager = (function () {
                         }
 
                         // Lê diretamente do estado imutável (SSOT)
-                        const tipoVicio = topicoAtivo.vicio || 'omissao'; 
+                        const matrizCalculo = topicoAtivo.matrizCalculo || 'omissao'; // fallback legacy
                         let isMature = false;
 
-                        if (tipoVicio === 'omissao') {
-                            // Azul, Verde, Roxo
+                        if (matrizCalculo === 'admissibilidade') {
+                            // Fórmula AI: Precisa da Alegação(1), do Despacho Trancador(3) e da Prova(4)
+                            isMature = fasesPresentes.has(1) && fasesPresentes.has(3) && fasesPresentes.has(4);
+                        } else if (matrizCalculo === 'omissao') { // Mantém fallback para retrocompatibilidade
                             isMature = fasesPresentes.has(1) && fasesPresentes.has(2) && fasesPresentes.has(3);
-                        } else if (tipoVicio === 'contradicao') {
-                            // Exige Roxo(3) vs Roxo(3). Verifica se o card mestre e correlacionados somam 2 peças da Fase 3
+                        } else if (matrizCalculo === 'contradicao') {
                             let contadorRoxo = (typeof identificarFaseMetodologica === 'function' && identificarFaseMetodologica(an.documento) === 3) ? 1 : 0;
                             if (an.itensCorrelacionados) {
                                 contadorRoxo += an.itensCorrelacionados.filter(ic => typeof identificarFaseMetodologica === 'function' && identificarFaseMetodologica(ic.documento) === 3).length;
                             }
                             isMature = fasesPresentes.has(1) && fasesPresentes.has(3) && (contadorRoxo >= 2);
-                        } else if (tipoVicio === 'erro') {
+                        } else if (matrizCalculo === 'erro') {
                             isMature = fasesPresentes.has(1) && fasesPresentes.has(3) && fasesPresentes.has(4);
                         }
 

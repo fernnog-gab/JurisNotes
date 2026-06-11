@@ -2,6 +2,7 @@
    app-core.js
    ORQUESTRADOR CENTRAL E INFRAESTRUTURA DA APLICAÇÃO
    ================================================ */
+window.JURIS_MODULE = 'AI';
 
 /* ================================================
    MÓDULO DA SPLASH SCREEN (GERENCIADOR DE ESTADO E EVENT LOOP)
@@ -583,32 +584,32 @@ async function novoProcesso(event) {
    GESTÃO DE TÓPICOS E ANOTAÇÕES
    ================================================ */
 function criarTopicoPrompt() {
-    const vicioInput = prompt('Selecione o tipo de Vício:\n1 - Omissão\n2 - Contradição\n3 - Erro Material / Obscuridade');
-    if (!vicioInput) return;
+    const obiceInput = prompt('Agravo de Instrumento - Selecione o Óbice/Pressuposto:\n1 - Tempestividade\n2 - Preparo (Custas/GFIP)\n3 - Representação\n4 - Adequação');
+    if (!obiceInput) return;
     
-    const mapaVicios = { '1': 'omissao', '2': 'contradicao', '3': 'erro' };
-    const vicioTipado = mapaVicios[vicioInput.trim()];
+    const mapaObices = { '1': 'tempestividade', '2': 'preparo', '3': 'representacao', '4': 'adequacao' };
+    const obiceTipado = mapaObices[obiceInput.trim()];
     
-    if (!vicioTipado) {
-        exibirToast('Opção inválida. Digite 1, 2 ou 3.', 'erro');
+    if (!obiceTipado) {
+        exibirToast('Opção inválida. Digite 1, 2, 3 ou 4.', 'erro');
         return;
     }
 
-    const nomeEspecifico = prompt('Descreva o tema (Ex: Horas Extras, Multa):');
+    const nomeEspecifico = prompt('Descreva o tema (Ex: Intempestividade do RO):');
     if (!nomeEspecifico || !nomeEspecifico.trim()) return;
 
-    const nomeCompleto = `${vicioTipado.toUpperCase()} — ${nomeEspecifico.trim()}`;
+    const nomeCompleto = `${obiceTipado.toUpperCase()} — ${nomeEspecifico.trim()}`;
     
     const duplicado = topicos.some(t => t.nome.toLowerCase() === nomeCompleto.toLowerCase());
     if (duplicado) return exibirToast(`Já existe análise para "${nomeCompleto}".`, 'aviso');
 
     const cor = TopicsManager.obterCor(topicos.length);
     
-    // SSOT: O vício agora nasce com o tópico.
     topicos.push({ 
         id: 'topico-' + Date.now(), 
         nome: nomeCompleto, 
-        vicio: vicioTipado, // Dado estruturado vital para o ed_topics-manager.js
+        matrizCalculo: 'admissibilidade', // NOVO: Flag para o Dashboard de Maturidade
+        tipoObice: obiceTipado,           // NOVO: Dado estruturado do AI
         cor, 
         anotacoes: [] 
     });
@@ -616,7 +617,7 @@ function criarTopicoPrompt() {
     renderizarTopicos();
     salvarBackupAutomatico();
     trocarAba('historico');
-    exibirToast(`Análise de ${vicioTipado} iniciada.`, 'sucesso');
+    exibirToast(`Auditoria de ${obiceTipado} iniciada.`, 'sucesso');
 }
 
 function renderizarTopicos() {
@@ -724,10 +725,10 @@ async function salvarAnotacao(tipo, conteudo, documento, polo, topicoId, comenta
         novaExtracao.subAnotacoes = [];
         novaExtracao.itensCorrelacionados = [];
         
-        // Ajuste de Terminologia no Aviso de Pulo Metodológico
+        // Ajuste de Terminologia no Aviso de Pulo Metodológico (Contexto AI)
         const temFase2 = topicoAlvo.anotacoes.some(a => identificarFaseMetodologica(a.documento) === 2);
         if (faseNova === 3 && !temFase2) {
-            exibirToast("Atenção: Cadê a peça de provocação original (RO/Contestação) para validar o ED?", "aviso");
+            exibirToast("Atenção: Você não extraiu o Recurso Trancado. A IA precisará dele para contexto.", "aviso");
         } else {
             exibirToast(`Anotação salva em "${topicoAlvo.nome}".`);
         }

@@ -97,8 +97,10 @@ window.ExportManager = (function () {
     /**
      * Motor Privado de Geração de Payload (Roteiro do Diretor em XML/MD)
      */
+    // Motor Privado de Geração de Payload (Roteiro do Diretor em XML/MD)
     function _gerarMarkdown(topico) {
-        const config = ESQUEMAS_CONTEXTO['ED'];
+        const moduleContext = window.JURIS_MODULE || 'ED';
+        const config = ESQUEMAS_CONTEXTO[moduleContext];
         const dataGeracao = new Date().toLocaleString('pt-BR');
         const safeFormatTime = (sec) => window.AudioManager?.formatTime ? window.AudioManager.formatTime(sec) : `${Math.floor(sec/60)}' ${Math.floor(sec%60)}''`;
 
@@ -112,7 +114,7 @@ window.ExportManager = (function () {
 
         // 1. COMPILAÇÃO DO PREÂMBULO FIXO
         md += `<roteiro_diretor_llm>\n`;
-        md += `  <incidente_processual>Embargos de Declaração</incidente_processual>\n`;
+        md += `  <incidente_processual>${moduleContext === 'AI' ? 'Agravo de Instrumento' : 'Embargos de Declaração'}</incidente_processual>\n`;
         md += `  <diretriz_cognitiva_vinculante>${config.diretrizIA}</diretriz_cognitiva_vinculante>\n`;
         md += `</roteiro_diretor_llm>\n\n`;
 
@@ -337,7 +339,7 @@ window.ExportManager = (function () {
 
             try {
                 // 1. Gera e baixa o Markdown
-                const config = ESQUEMAS_CONTEXTO['ED'];
+                const config = ESQUEMAS_CONTEXTO[window.JURIS_MODULE || 'ED'];
                 const nomeSanitizado = (topicoAtivo.nome || 'Exportacao_ED').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
                 const nomeArquivoFinal = `${config.prefixoArquivo}${nomeSanitizado}.md`;
                 
