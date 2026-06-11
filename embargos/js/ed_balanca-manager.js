@@ -6,6 +6,13 @@ window.BalancaManager = (function() {
     'use strict';
     
     let htmlState = null;
+    let pendingTasksCount = 0;
+
+    // CONFIGURAÇÃO: Altere este seletor conforme o HTML real do seu template
+    const BALANCA_CONFIG = {
+        seletorTarefaAberta: 'input[type="checkbox"].tarefa-pendente:not(:checked)',
+        seletorAlternativo: '.contador-de-tarefas-pendentes'
+    };
 
     // Active Element Guard: Atalho Alt + B (Balança) protegido
     document.addEventListener('keydown', function(e) {
@@ -45,14 +52,70 @@ window.BalancaManager = (function() {
         }
     }
 
+    /**
+     * Extrai tarefas usando o DOMParser estático. 
+     * Evita problemas de Sandbox/CORS do Iframe e opera diretamente na string salva.
+     */
+    function extrairContadorDeTarefas(htmlString) {
+        if (!htmlString) return 0;
+        
+        try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlString, 'text/html');
+            
+            const fallbackNode = doc.querySelector(BALANCA_CONFIG.seletorAlternativo);
+            if (fallbackNode) {
+                const num = parseInt(fallbackNode.textContent.trim(), 10);
+                if (!isNaN(num)) return num;
+            }
+
+            const tarefas = doc.querySelectorAll(BALANCA_CONFIG.seletorTarefaAberta);
+            return tarefas.length;
+        } catch (e) {
+            console.error("[Juris Notes ED] Erro ao parsear tarefas do HTML:", e);
+            return 0;
+        }
+    }
+
+    /**
+     * Concentra toda a atualização de Interface (Single Source of Truth)
+     */
+    function atualizarInterfaceEContadores() {
+        const btnBalanca = document.getElementById('btn-balanca-justica');
+        const btnLembrete = document.getElementById('btn-lembretes-tarefa');
+        const badge = document.getElementById('badge-tarefas');
+        
+        if (!btnBalanca || !btnLembrete) return;
+
+        // Atualiza Estado da Balança (HTML Carregado)
+        if (htmlState) {
+            btnBalanca.classList.add('is-loaded');
+            btnLembrete.disabled = false;
+        } else {
+            btnBalanca.classList.remove('is-loaded');
+            btnLembrete.disabled = true;
+        }
+
+        // Computa e Atualiza Tarefas
+        pendingTasksCount = extrairContadorDeTarefas(htmlState);
+
+        if (pendingTasksCount > 0) {
+            btnLembrete.classList.add('has-tasks');
+            badge.style.display = 'flex';
+            badge.textContent = pendingTasksCount > 99 ? '99+' : pendingTasksCount;
+        } else {
+            btnLembrete.classList.remove('has-tasks');
+            badge.style.display = 'none';
+        }
+    }
+
     function fecharPainel() {
-        // Captura todas as alterações antes de ocultar o DOM
         sincronizarEstadoInterno();
+        atualizarInterfaceEContadores(); // Atualiza contador e UI imediatamente após salvar
         
         document.getElementById('balanca-modal-backdrop').style.display = 'none';
         document.getElementById('balanca-painel').style.display = 'none';
         
-        // Aciona o salvamento automático para persistir no .json
         if (typeof window.salvarBackupAutomatico === 'function') {
             window.salvarBackupAutomatico();
         }
@@ -66,7 +129,7 @@ window.BalancaManager = (function() {
         reader.onload = function(e) {
             htmlState = e.target.result;
             renderizarIframe(htmlState);
-            atualizarUI();
+            atualizarInterfaceEContadores();
             
             if (typeof window.exibirToast === 'function') {
                 window.exibirToast('Painel HTML importado e ancorado com sucesso!', 'sucesso');
@@ -82,22 +145,6 @@ window.BalancaManager = (function() {
         iframe.srcdoc = conteudoHTML;
     }
 
-    function atualizarUI() {
-        const btn = document.getElementById('btn-balanca-justica');
-        if (!btn) return;
-        
-        if (htmlState) {
-            btn.classList.add('is-loaded');
-        } else {
-            btn.classList.remove('is-loaded');
-        }
-    }
-
-    /**
-     * ALGORITMO DE EXTRAÇÃO SEGURA:
-     * Varre o iframe e consolida visual (value) no HTML nativo (attributes)
-     * Previne vulnerabilidades de XSS substituindo innerHTML por textContent em textareas.
-     */
     function sincronizarEstadoInterno() {
         const iframe = document.getElementById('balanca-iframe');
         if (!iframe || !htmlState) return;
@@ -105,23 +152,12 @@ window.BalancaManager = (function() {
         try {
             const doc = iframe.contentDocument || iframe.contentWindow.document;
             
-            // 1. Textareas (Prevenção XSS via textContent)
-            doc.querySelectorAll('textarea').forEach(el => {
-                el.textContent = el.value; 
-            });
-
-            // 2. Inputs de Texto e Número
-            doc.querySelectorAll('input[type="text"], input[type="number"], input[type="hidden"]').forEach(el => {
-                el.setAttribute('value', el.value);
-            });
-
-            // 3. Inputs Booleanos (Checkbox/Radio)
+            doc.querySelectorAll('textarea').forEach(el => { el.textContent = el.value; });
+            doc.querySelectorAll('input[type="text"], input[type="number"], input[type="hidden"]').forEach(el => { el.setAttribute('value', el.value); });
             doc.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach(el => {
                 if (el.checked) el.setAttribute('checked', 'checked');
                 else el.removeAttribute('checked');
             });
-
-            // 4. Selects (Comboboxes)
             doc.querySelectorAll('select').forEach(select => {
                 Array.from(select.options).forEach(opt => {
                     if (opt.selected) opt.setAttribute('selected', 'selected');
@@ -129,7 +165,6 @@ window.BalancaManager = (function() {
                 });
             });
 
-            // Extrai o snapshot final limpo e renderizável
             htmlState = doc.documentElement.outerHTML;
 
         } catch (e) {
@@ -146,7 +181,15 @@ window.BalancaManager = (function() {
         if (htmlState) {
             renderizarIframe(htmlState);
         }
-        atualizarUI();
+        atualizarInterfaceEContadores(); // Garante o badge visível logo após recuperar o backup
+    }
+
+    function resetarEstado() {
+        htmlState = null;
+        pendingTasksCount = 0;
+        const iframe = document.getElementById('balanca-iframe');
+        if (iframe) iframe.srcdoc = '';
+        atualizarInterfaceEContadores();
     }
 
     return { 
@@ -154,6 +197,8 @@ window.BalancaManager = (function() {
         fecharPainel, 
         processarUpload, 
         getHtmlState, 
-        restoreHtmlState
+        restoreHtmlState,
+        resetarEstado,
+        getPendingTasks: () => pendingTasksCount
     };
 })();
