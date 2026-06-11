@@ -458,6 +458,10 @@ function encerrarSessao() {
     BackupManager.encerrar();
     if (window.ShortcutManager) window.ShortcutManager.reset();
 
+    if (window.BalancaManager) {
+        window.BalancaManager.resetarEstado(); // Limpa iframe, contadores e estilos na aba ED
+    }
+
     const wrapper = document.getElementById('pdf-wrapper');
     wrapper.innerHTML     = '';
     wrapper.style.display = 'none';

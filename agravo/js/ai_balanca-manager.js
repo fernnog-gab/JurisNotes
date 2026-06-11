@@ -6,6 +6,13 @@ window.BalancaManager = (function() {
     'use strict';
     
     let htmlState = null;
+    let pendingTasksCount = 0;
+
+    // CONFIGURAÇÃO: Altere este seletor conforme o HTML real do seu template
+    const BALANCA_CONFIG = {
+        seletorTarefaAberta: 'input[type="checkbox"].tarefa-pendente:not(:checked)',
+        seletorAlternativo: '.contador-de-tarefas-pendentes'
+    };
 
     // Active Element Guard: Atalho Alt + B (Balança) protegido
     document.addEventListener('keydown', function(e) {
