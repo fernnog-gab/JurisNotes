@@ -46,7 +46,6 @@ const DOC_CONFIG = [
     // --- FASE 1: O Escopo ---
     { label: 'Embargos de Declaração',    polo: 'DUAL',         tipo: 'dual',   fase: 1 },
     { label: 'Contraminuta aos EDs',      polo: 'DUAL',         tipo: 'dual',   fase: 1 },
-    // Adições para Execução
     { label: 'Embargos à Execução',       polo: 'Parte Executada', tipo: 'auto', fase: 1, isExecucao: true },
     { label: 'Impugnação aos Cálculos',   polo: 'Parte Exequente', tipo: 'auto', fase: 1, isExecucao: true },
     
@@ -57,21 +56,25 @@ const DOC_CONFIG = [
     { label: 'Petição Inicial',           polo: 'Parte Autora', tipo: 'auto',   fase: 2 },
     { label: 'Contestação',               polo: 'Parte Ré',     tipo: 'auto',   fase: 2 },
     { label: 'Impugnação à Contestação',  polo: 'Parte Autora', tipo: 'auto',   fase: 2 },
-    // Adições para Execução
     { label: 'Cálculos de Liquidação',    polo: 'DUAL',         tipo: 'dual',   fase: 2, isExecucao: true },
-    // Trava Arquitetural: Áudio mantido, mas forçado metodologicamente para Fase 2 (Provocação)
     { label: 'Audiência de Instrução',    polo: 'DUAL',         tipo: 'dual',   fase: 2 },
 
     // --- FASE 3: A Decisão ---
     { label: 'Acórdão Embargado',         polo: 'Juízo',        tipo: 'auto',   fase: 3 },
     { label: 'Sentença Embargada',        polo: 'Juízo',        tipo: 'auto',   fase: 3 },
-    // Adições para Execução
     { label: 'Sentença de Liquidação',    polo: 'Juízo',        tipo: 'auto',   fase: 3, isExecucao: true },
     
-    // --- FASE 4: Validação / Provas (Restrito em ED para Erros Materiais) ---
+    // --- FASE 4: Validação / Provas (Expansão ED) ---
     { label: 'Guia de Recolhimento / Comprovante', polo: 'DUAL', tipo: 'dual', fase: 4 },
     { label: 'Petição Original (Erro Material)',   polo: 'DUAL', tipo: 'dual', fase: 4 },
-    { label: 'Súmula / Jurisprudência Vinculante', polo: 'Tribunal', tipo: 'auto', fase: 4 }
+    { label: 'Súmula / Jurisprudência Vinculante', polo: 'Tribunal', tipo: 'auto', fase: 4 },
+    // Novas tipologias (Arquitetura One-Click com granularidade limpa para IA):
+    { label: 'Manifestação (Parte Autora)',        polo: 'Parte Autora', tipo: 'auto', fase: 4 },
+    { label: 'Manifestação (Parte Ré)',            polo: 'Parte Ré',     tipo: 'auto', fase: 4 },
+    { label: 'Manifestação (Exequente)',           polo: 'Parte Exequente', tipo: 'auto', fase: 4 },
+    { label: 'Manifestação (Executada)',           polo: 'Parte Executada', tipo: 'auto', fase: 4 },
+    { label: 'Atos da Secretaria / Certidões',     polo: 'Auxiliar da Justiça', tipo: 'auto', fase: 4 },
+    { label: 'Decisão / Despacho (Andamento)',     polo: 'Juízo', tipo: 'auto', fase: 4 }
 ];
 
 let _docSelecionado = null;
@@ -662,4 +665,21 @@ document.addEventListener('keydown', function(e) {
         cancelarRecorteWizard();
         exibirToast('Recorte cancelado.', 'info');
     }
+});
+
+/* ================================================
+   GATILHO DE SEGURANÇA: CONTROLE DE FERRAMENTAS
+   Garante que botões de texto e recorte só atuem se houver tópicos e PDF.
+   ================================================ */
+document.addEventListener('DOMContentLoaded', () => {
+    const btnTexto = document.getElementById('btn-ferramenta-texto');
+    const btnRecorte = document.getElementById('btn-ferramenta-recorte');
+
+    // Remove eventuais bloqueios residuais herdados do sistema antigo
+    if(btnTexto) btnTexto.removeAttribute('disabled');
+    if(btnRecorte) btnRecorte.removeAttribute('disabled');
+    
+    // As funções capturarTrechoSelecionado() (no app.js) e iniciarRecorteWizard() 
+    // já possuem travas internas que avisam o usuário caso ele tente usá-las
+    // sem ter criado tópicos antes. Logo, a UI pode ficar habilitada.
 });
