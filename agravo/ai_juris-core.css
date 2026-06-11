@@ -371,7 +371,7 @@ body.theme-anotacoes-jasmine {
 .chip-re { color: #b71c1c; border-color: #ef9a9a; background: #fff5f5; }
 .chip-cancelar { color: #999; border-color: #e0e0e0; background: #fafafa; font-weight: 500; }
 .chip-sentenca { color: #0d47a1; border-color: #90caf9; background: #e3f2fd; }
-.chip-sentenca-ed { color: #6a1b9a; border-color: #ce93d8; background: #f3e5f5; }
+.chip-sentenca-ed { color: #000000; border-color: #8ce015; background: #f4fce3; }
 .chip-perito { color: #e65100; border-color: #ffcc80; background: #fff8e1; }
 
 /* Botões Modais - Fase de Execução */
@@ -440,8 +440,8 @@ body.theme-anotacoes-jasmine {
 .fab-shortcut.is-active-alvo-re { background-color: #d32f2f !important; border-color: #ef9a9a !important; color: white !important; } /* Vermelho Ré 1 */
 .fab-shortcut.is-active-alvo-re2 { background-color: #800020 !important; border-color: #b33939 !important; color: white !important; } /* Bordô/Vinho Ré 2 */
 
-/* BALANÇA (Acórdão Embargado) */
-.fab-shortcut.is-active-acordao { background-color: #D500B5 !important; border-color: #b00096 !important; color: white !important; } /* Fúcsia do Módulo ED */
+/* BALANÇA (Decisão Denegatória - AI) */
+body .fab-shortcut.is-active-acordao { background-color: #A3E635; border-color: #8ce015; color: #000000; }
 
 /* ================================================
    11. BOTÕES FLUTUANTES DE SCROLL E ÍNDICES
@@ -631,22 +631,22 @@ body[data-active-tab="leitura"] #idea-markers-list {
     background: #ffffff;
 }
 
-/* Estado Ativo: Painel Carregado na Balança (ED - Fúcsia) */
-#btn-balanca-justica.is-loaded {
-    background-color: #D500B5 !important;
-    border-color: #b00096 !important;
-    color: white !important;
-    animation: pulse-balanca 0.5s ease-out;
+/* Estado Ativo: Painel Carregado na Balança (AI - Verde Limão) */
+body #btn-balanca-justica.is-loaded {
+    background-color: #A3E635;
+    border-color: #8ce015;
+    color: #000000;
+    animation: pulse-balanca-ai 0.5s ease-out;
 }
 
-#btn-balanca-justica.is-loaded svg {
-    stroke: white;
+body #btn-balanca-justica.is-loaded svg {
+    stroke: #000000;
 }
 
-@keyframes pulse-balanca {
-    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(213, 0, 181, 0.6); }
-    50% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(213, 0, 181, 0); }
-    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(213, 0, 181, 0); }
+@keyframes pulse-balanca-ai {
+    0%   { transform: scale(1); box-shadow: 0 0 0 0 rgba(163, 230, 53, 0.6); }
+    50%  { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(163, 230, 53, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(163, 230, 53, 0); }
 }
 
 /* Badge de Lembretes Pendentes */
@@ -670,14 +670,14 @@ body[data-active-tab="leitura"] #idea-markers-list {
     pointer-events: none;
 }
 
-/* Estado Ativo: Contém Tarefas (Sinal de Alerta Amarelo Semântico) */
-#btn-lembretes-tarefa.has-tasks:not(:disabled) {
-    background-color: #fbc02d !important;
-    border-color: #f57f17 !important;
-    color: white !important;
+/* Estado Ativo: Contém Tarefas (Alerta no Tema AI) */
+body #btn-lembretes-tarefa.has-tasks:not(:disabled) {
+    background-color: #A3E635;
+    border-color: #8ce015;
+    color: #000000;
 }
-#btn-lembretes-tarefa.has-tasks:not(:disabled) svg {
-    stroke: white;
+body #btn-lembretes-tarefa.has-tasks:not(:disabled) svg {
+    stroke: #000000;
 }
 
 /* Paleta de Cor: Agravo de Instrumento */
@@ -694,4 +694,17 @@ body[data-active-tab="leitura"] #idea-markers-list {
 .tag-btn-ai:hover {
     background: rgba(163, 230, 53, 0.15);
     border-color: rgba(163, 230, 53, 0.4);
+}
+
+/* Acervo de Modelos (Incluindo Hover e Focus com stroke branco) */
+body #btn-acervo-modelos {
+    background-color: #A3E635;
+    border-color: #8ce015;
+}
+body #btn-acervo-modelos svg { stroke: #ffffff; }
+
+body #btn-acervo-modelos:hover,
+body #btn-acervo-modelos:focus {
+    background-color: #8ce015;
+    border-color: #7acc12;
 }

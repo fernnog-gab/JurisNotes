@@ -78,7 +78,7 @@ window.BalancaManager = (function() {
                     count = tarefasAbertas.length;
                 }
             } catch (e) {
-                console.warn("[Juris Notes ED] Erro ao analisar tarefas do HTML salvo.", e);
+                console.warn("[Juris Notes AI] Erro ao analisar tarefas do HTML salvo.", e);
             }
         }
 
@@ -181,7 +181,7 @@ window.BalancaManager = (function() {
             htmlState = doc.documentElement.outerHTML;
 
         } catch (e) {
-            console.error("[Juris Notes ED] Sincronização do painel falhou.", e);
+            console.error("[Juris Notes AI] Sincronização do painel falhou.", e);
         }
     }
 
