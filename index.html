@@ -86,7 +86,7 @@
         }
 
         /* ==========================================
-           EFEITO 1 MELHORADO: TÍTULO COM PREMIUM SHINE
+           EFEITO 1 EXCLUSIVO: TÍTULO COM DEGRADÊ DOS MÓDULOS
            ========================================== */
         .hub-header h1 {
             font-family: 'Playfair Display', serif;
@@ -94,16 +94,18 @@
             margin: 0 0 8px 0;
             letter-spacing: 1.5px;
             
-            /* Gradiente de Luz (Cinza prateado -> Branco -> Dourado) */
+            /* Degradê embutindo a Identidade Visual do Sistema */
             background: linear-gradient(
                 110deg, 
-                #cbd5e1 0%, 
-                #ffffff 45%, 
-                #FFD700 50%, 
-                #ffffff 55%, 
-                #cbd5e1 100%
+                #cbd5e1 0%,           /* Cinza Prateado (Padrão) */
+                #ffffff 20%,          /* Branco (Abre a luz) */
+                var(--color-ro-bg) 40%, /* Esquerda: Amarelo (Recurso) */
+                var(--color-ed-bg) 50%, /* Centro: Fúcsia (Embargos) */
+                var(--color-ai-bg) 60%, /* Direita: Verde-Limão (Agravo) */
+                #ffffff 80%,          /* Branco (Fecha a luz) */
+                #cbd5e1 100%          /* Cinza Prateado (Padrão) */
             );
-            background-size: 250% 100%;
+            background-size: 300% 100%;
             background-position: 0% center;
             
             /* Textura e Vazamento da Cor */
@@ -111,13 +113,13 @@
             -webkit-background-clip: text;
             background-clip: text;
             
-            /* Animação suave de passagem */
-            transition: background-position 0.8s ease-out, transform 0.4s ease;
+            /* Transição muito mais lenta e majestosa (2.5 segundos) */
+            transition: background-position 2.5s ease-in-out, transform 0.6s ease;
             cursor: default;
         }
 
         .hub-header h1:hover {
-            /* Move o facho de luz Dourado para o fim do texto */
+            /* Varre o degradê completo pela palavra Juris Notes */
             background-position: 100% center;
             transform: scale(1.02); /* Leve aumento para dar imponência */
         }
