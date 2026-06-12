@@ -86,7 +86,7 @@
         }
 
         /* ==========================================
-           EFEITO 1 EXCLUSIVO: TÍTULO COM DEGRADÊ DOS MÓDULOS
+           EFEITO 1 EXCLUSIVO: TÍTULO COM DEGRADÊ DOS MÓDULOS (CORRIGIDO)
            ========================================== */
         .hub-header h1 {
             font-family: 'Playfair Display', serif;
@@ -94,16 +94,16 @@
             margin: 0 0 8px 0;
             letter-spacing: 1.5px;
             
-            /* Degradê embutindo a Identidade Visual do Sistema */
+            /* Degradê expandido (stops em 30%, 50% e 70%) para dar nitidez às cores */
             background: linear-gradient(
                 110deg, 
-                #cbd5e1 0%,           /* Cinza Prateado (Padrão) */
-                #ffffff 20%,          /* Branco (Abre a luz) */
-                var(--color-ro-bg) 40%, /* Esquerda: Amarelo (Recurso) */
-                var(--color-ed-bg) 50%, /* Centro: Fúcsia (Embargos) */
-                var(--color-ai-bg) 60%, /* Direita: Verde-Limão (Agravo) */
-                #ffffff 80%,          /* Branco (Fecha a luz) */
-                #cbd5e1 100%          /* Cinza Prateado (Padrão) */
+                #cbd5e1 0%, 
+                #ffffff 15%, 
+                var(--color-ro-bg) 30%, /* Amarelo bem definido */
+                var(--color-ed-bg) 50%, /* Fúcsia bem definido */
+                var(--color-ai-bg) 70%, /* Verde-Limão bem definido */
+                #ffffff 85%, 
+                #cbd5e1 100%
             );
             background-size: 300% 100%;
             background-position: 0% center;
@@ -113,15 +113,15 @@
             -webkit-background-clip: text;
             background-clip: text;
             
-            /* Transição muito mais lenta e majestosa (2.5 segundos) */
-            transition: background-position 2.5s ease-in-out, transform 0.6s ease;
+            /* Tempo ajustado para 2 segundos para manter elegância e permitir notar a transição */
+            transition: background-position 2s ease-in-out, transform 0.6s ease;
             cursor: default;
         }
 
         .hub-header h1:hover {
-            /* Varre o degradê completo pela palavra Juris Notes */
+            /* Desloca a faixa ampla de cores por todo o texto */
             background-position: 100% center;
-            transform: scale(1.02); /* Leve aumento para dar imponência */
+            transform: scale(1.02); 
         }
 
         .hub-header p {
