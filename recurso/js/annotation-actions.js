@@ -6,6 +6,7 @@
 let _menuAnotacaoCtx = null;
 let _menuSubAnotacaoCtx = null;
 let _editContext = null;
+let _inputDiretrizCtx = null;
 
 /* --- MENUS CONTEXTUAIS --- */
 function abrirMenuAnotacao(topicoId, index, event) {
@@ -36,18 +37,82 @@ function _resolverSubAlvo(topico, parentIndex, viewSource) {
     return cardMestre.itensCorrelacionados[cIdx];
 }
 
-function adicionarDiretrizEstrutural(tipo, topicoId, teseNome = null) {
-    const texto = prompt("Digite a nova diretriz para a IA:");
-    if (!texto || !texto.trim()) return;
+function adicionarDiretrizEstrutural(tipo, topicoId, teseNome, event) {
+    event.stopPropagation();
 
+    // 1. Prevenção de Perda de Dados (UX)
+    const existing = document.getElementById('sub-input-active');
+    if (existing) {
+        const textareaAtual = document.getElementById('sub-input-text');
+        if (textareaAtual && textareaAtual.value.trim() !== '') {
+            exibirToast('Conclua ou cancele a anotação atual primeiro.', 'aviso');
+            textareaAtual.focus();
+            return;
+        }
+        existing.remove();
+    }
+
+    // 2. Armazenamento Seguro de Contexto em Memória
+    _inputDiretrizCtx = { tipo, topicoId, teseNome };
+
+    // 3. Construção do Painel (Sem dados do usuário no HTML)
+    const painel = document.createElement('div');
+    painel.id = 'sub-input-active'; 
+    painel.className = 'sub-input-panel';
+    
+    painel.innerHTML = `
+        <textarea id="sub-input-text" class="sub-input-textarea" placeholder="Digite a diretriz para a IA..." rows="3"></textarea>
+        <div class="sub-input-actions">
+            <button class="sub-input-btn-icon confirm" title="Confirmar (Ctrl+Enter)" onclick="confirmarDiretrizEstrutural()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </button>
+            <button class="sub-input-btn-icon cancel" title="Cancelar (Esc)" onclick="cancelarDiretrizEstrutural()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>`;
+
+    // 4. Ancoragem Determinística (DOM Traversal via Event)
+    const mountPoint = event.currentTarget.closest('.main-card-wrapper');
+    
+    if (mountPoint) {
+        mountPoint.appendChild(painel);
+        const textarea = document.getElementById('sub-input-text');
+        textarea.focus();
+        
+        textarea.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') cancelarDiretrizEstrutural();
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') confirmarDiretrizEstrutural();
+        });
+    } else {
+        console.error("Falha ao encontrar mountPoint para adicionar a diretriz.");
+    }
+}
+
+function cancelarDiretrizEstrutural() {
+    const painel = document.getElementById('sub-input-active');
+    if (painel) painel.remove();
+    _inputDiretrizCtx = null;
+}
+
+function confirmarDiretrizEstrutural() {
+    if (!_inputDiretrizCtx) return;
+
+    const textarea = document.getElementById('sub-input-text');
+    const texto = textarea ? textarea.value.trim() : '';
+    
+    if (!texto) {
+        return exibirToast('Digite uma diretriz válida.', 'aviso');
+    }
+
+    const { tipo, topicoId, teseNome } = _inputDiretrizCtx;
+    const topico = topicos.find(t => t.id === topicoId);
+    
     const noIdeia = {
         uuid: 'id-' + Math.random().toString(36).substr(2, 9),
-        texto: texto.trim(),
-        intencao: 'premissa', // Default
+        texto: texto,
+        intencao: 'premissa', // Default inicial
         timestamp: Date.now()
     };
-
-    const topico = topicos.find(t => t.id === topicoId);
 
     if (tipo === 'global') {
         if (!topico.diretrizesGlobais) topico.diretrizesGlobais = [];
@@ -58,6 +123,7 @@ function adicionarDiretrizEstrutural(tipo, topicoId, teseNome = null) {
         topico.diretrizesPorTese[teseNome].push(noIdeia);
     }
 
+    cancelarDiretrizEstrutural(); // Limpa DOM e Memória
     renderizarTopicos();
     salvarBackupAutomatico();
     exibirToast('Diretriz adicionada com sucesso.', 'sucesso');

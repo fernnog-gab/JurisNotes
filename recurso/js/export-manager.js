@@ -181,13 +181,17 @@ window.ExportManager = (function () {
         const preliminaresInjetadas = [];
         const baseLegalObrigatoria = [];
         const vereditosLocaisInjetados = []; // NOVO: Captura de vereditos perdidos
+        const diretrizesGlobaisGerais = []; // Buffer para comandos, premissas, textos, etc.
 
         // Mapeamento das Diretrizes Globais normalizadas (v7.0)
         if (topico.diretrizesGlobais) {
             topico.diretrizesGlobais.forEach(dir => {
                 if (dir.intencao === 'fundamentacao') baseLegalObrigatoria.push(`[Diretriz Global]: ${_safeMD(dir.texto)}`);
-                if (dir.intencao === 'preliminar') preliminaresInjetadas.push(`[Diretriz Global]: ${_safeMD(dir.texto)}`);
-                if (dir.intencao === 'veredito') vereditosLocaisInjetados.push(`[Diretriz Global]: ${_safeMD(dir.texto)}`);
+                else if (dir.intencao === 'preliminar') preliminaresInjetadas.push(`[Diretriz Global]: ${_safeMD(dir.texto)}`);
+                else if (dir.intencao === 'veredito') vereditosLocaisInjetados.push(`[Diretriz Global]: ${_safeMD(dir.texto)}`);
+                else if (dir.intencao !== 'nota') { 
+                    diretrizesGlobaisGerais.push(`[${(dir.intencao || 'PREMISSA GLOBAL').toUpperCase()}]: ${_safeMD(dir.texto)}`);
+                }
             });
         }
 
@@ -222,9 +226,6 @@ window.ExportManager = (function () {
             const numIdeia    = index + 1;
             const refCitacao  = _formatarCitacaoOficial(an.pjeId, an.pagina);
             const tituloIdeia = an.tese ? an.tese : 'Tese não nomeada pelo assessor';
-            
-            // MONTAGEM FINAL DA STRING: Regras da IA primeiro (mdTags), Fatos depois (mdMatriz), Dispositivo no fim (mdVeredito).
-        return mdCabecalho + mdTags + mdMatriz + mdVeredito;
 
             // INÍCIO DO ENVELOPAMENTO XML (Com escape seguro de atributos)
             mdMatriz += `<analise_da_prova id="${numIdeia}" tese="${_escapeXmlAttr(tituloIdeia)}">\n`;
@@ -390,8 +391,18 @@ window.ExportManager = (function () {
             mdVeredito += `</decisao_magistrado_pretendida>\n`;
         }
 
-        // MONTAGEM FINAL DA STRING: Regras da IA primeiro (mdTags e mdDiretrizesTeses), Fatos depois (mdMatriz), Dispositivo no fim (mdVeredito).
-        return mdCabecalho + mdTags + mdDiretrizesTeses + mdMatriz + mdVeredito;
+        let mdDiretrizesGlobais = '';
+        if (diretrizesGlobaisGerais.length > 0) {
+            mdDiretrizesGlobais += `<diretrizes_globais_do_topico>\n`;
+            mdDiretrizesGlobais += `*Atenção IA: Regras aplicáveis a TODO o recurso. Obedeça a elas independentemente da tese atual.*\n\n`;
+            diretrizesGlobaisGerais.forEach(dir => {
+                mdDiretrizesGlobais += `- ${dir}\n`;
+            });
+            mdDiretrizesGlobais += `</diretrizes_globais_do_topico>\n\n`;
+        }
+
+        // MONTAGEM FINAL DA STRING: Regras da IA primeiro (mdTags, Globais e mdDiretrizesTeses), Fatos depois (mdMatriz), Dispositivo no fim (mdVeredito).
+        return mdCabecalho + mdTags + mdDiretrizesGlobais + mdDiretrizesTeses + mdMatriz + mdVeredito;
     }
 
     // ─── DOWNLOAD DE ARQUIVO MARKDOWN ─────────────────────────────────────────

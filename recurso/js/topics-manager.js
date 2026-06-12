@@ -105,6 +105,20 @@ window.TopicsManager = (function () {
         return ABC[Math.floor(idx / 26) - 1] + ABC[idx % 26];
     }
 
+    function obterIconeIntencao(intencao) {
+        switch(intencao) {
+            case 'comando': return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>`;
+            case 'texto': return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`;
+            case 'nota': return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
+            case 'fundamentacao': return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>`;
+            case 'refutacao': return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>`;
+            case 'preliminar': return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
+            case 'veredito': return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>`;
+            case 'premissa':
+            default: return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>`;
+        }
+    }
+
     let activeTabId = null;
 
     /**
@@ -688,13 +702,14 @@ window.TopicsManager = (function () {
                     
                     const tesesHtml = diretrizes.map((d, sIdx) => {
                         const intencao = d.intencao || 'premissa';
+                        const iconSVG = obterIconeIntencao(intencao);
                         return `
                         <div class="sub-annotation-item" data-source="${teseViewSource}">
                             <div class="sub-annotation-card borda-fase-4">
                                 <div class="sub-badge has-intent intencao-${intencao}" 
                                      title="Opções desta diretriz"
                                      onclick="abrirMenuSubAnotacao('${activeTabId}', null, '${teseViewSource.replace(/'/g, "\\'")}', ${sIdx}, event)">
-                                     🎯 T.${sIdx + 1}
+                                     ${iconSVG} T.${sIdx + 1}
                                 </div>
                                 <div class="sub-text-content">${renderizarMarkdownSeguro(escaparHTML(d.texto))}</div>
                             </div>
@@ -711,7 +726,7 @@ window.TopicsManager = (function () {
                                 <div class="card-header" style="justify-content: space-between; margin-bottom: 0;">
                                     <div class="hierarquia-titulo">Tese: ${escaparHTML(teseAtual)}</div>
                                     <div class="card-actions-bar" style="margin-top: 0; padding-top: 0; border-top: none;">
-                                        <button title="Adicionar Diretriz à Tese" onclick="adicionarDiretrizEstrutural('tese', '${activeTabId}', '${escaparHTML(teseAtual).replace(/'/g, "\\'")}')">
+                                        <button title="Adicionar Diretriz à Tese" onclick="adicionarDiretrizEstrutural('tese', '${activeTabId}', '${escaparHTML(teseAtual).replace(/'/g, "\\'")}', event)">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                         </button>
                                     </div>
@@ -735,13 +750,14 @@ window.TopicsManager = (function () {
             if (topicoAtivo.diretrizesGlobais && topicoAtivo.diretrizesGlobais.length > 0) {
                 globaisHtml = topicoAtivo.diretrizesGlobais.map((d, sIdx) => {
                     const intencao = d.intencao || 'premissa';
+                    const iconSVG = obterIconeIntencao(intencao);
                     return `
                     <div class="sub-annotation-item" data-source="global">
                         <div class="sub-annotation-card borda-fase-4">
                             <div class="sub-badge has-intent intencao-${intencao}" 
                                  title="Opções desta diretriz"
                                  onclick="abrirMenuSubAnotacao('${activeTabId}', null, 'global', ${sIdx}, event)">
-                                 🌐 G.${sIdx + 1}
+                                 ${iconSVG} G.${sIdx + 1}
                             </div>
                             <div class="sub-text-content">${renderizarMarkdownSeguro(escaparHTML(d.texto))}</div>
                         </div>
@@ -762,7 +778,7 @@ window.TopicsManager = (function () {
                             <div class="card-header" style="justify-content: space-between; margin-bottom: 0;">
                                 <div class="hierarquia-titulo">Diretrizes Globais do Tópico</div>
                                 <div class="card-actions-bar" style="margin-top: 0; padding-top: 0; border-top: none;">
-                                    <button title="Adicionar Diretriz Global" onclick="adicionarDiretrizEstrutural('global', '${activeTabId}')">
+                                    <button title="Adicionar Diretriz Global" onclick="adicionarDiretrizEstrutural('global', '${activeTabId}', null, event)">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                     </button>
                                 </div>
