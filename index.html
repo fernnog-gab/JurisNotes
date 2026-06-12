@@ -87,10 +87,30 @@
 
         .hub-header h1 {
             font-family: 'Playfair Display', serif;
-            color: #ffffff;
             font-size: 2.8rem;
             margin: 0 0 8px 0;
             letter-spacing: 1.5px;
+            /* Início do Efeito Premium Shine */
+            background: linear-gradient(
+                120deg, 
+                #ffffff 0%, 
+                #ffffff 40%, 
+                #FFD700 50%, /* Dourado do Recurso no reflexo */
+                #ffffff 60%, 
+                #ffffff 100%
+            );
+            background-size: 250% auto;
+            color: transparent;
+            -webkit-background-clip: text;
+            background-clip: text;
+            transition: background-position 0.8s ease-out;
+            cursor: default;
+        }
+
+        .hub-header h1:hover {
+            /* Move o feixe de luz ao passar o mouse */
+            background-position: 100% center;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
         }
 
         .hub-header p {
