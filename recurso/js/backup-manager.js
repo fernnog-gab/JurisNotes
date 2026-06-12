@@ -154,11 +154,13 @@ window.BackupManager = (function () {
             });
         });
         
-        // MUDANÇA ARQUITETURAL: Migração de Razões Recursais e Fundamentos para o Topo (v5.0/6.0)
+        // MUDANÇA ARQUITETURAL: Migração de Razões Recursais e Fundamentos para o Topo (v5.0/6.0) e Normalização de Diretrizes (v7.0)
         pacote.dados.forEach(topico => {
             // Inicializa propriedades se não existirem
             if (topico.alegacoes === undefined) topico.alegacoes = '';
             if (topico.fundamentos === undefined) topico.fundamentos = '';
+            if (topico.diretrizesGlobais === undefined) topico.diretrizesGlobais = [];
+            if (topico.diretrizesPorTese === undefined) topico.diretrizesPorTese = {};
 
             let extraiuAlegacoes = [];
             let extraiuFundamentos = [];
@@ -167,6 +169,8 @@ window.BackupManager = (function () {
             const limparNosLegados = (listaNos) => {
                 if (!listaNos) return listaNos;
                 return listaNos.filter(sub => {
+                    if (!sub.uuid) sub.uuid = _gerarUUID(); // Garante UUID (Keyed Morphing)
+
                     if (sub.intencao === 'alegacao') {
                         extraiuAlegacoes.push(sub.texto);
                         return false; // Remove do array original
@@ -175,12 +179,12 @@ window.BackupManager = (function () {
                         extraiuFundamentos.push(sub.texto);
                         return false; // Remove do array original
                     }
-                    // NOVA REGRA: Mover veredito e apagar o nó de origem
-                    if (sub.intencao === 'veredito') {
-                        if (!topico.veredito) topico.veredito = sub.texto; 
-                        return false;
+                    // NORMALIZAÇÃO: Move intenções globais para o Root do Tópico
+                    if (['fundamentacao', 'preliminar', 'veredito'].includes(sub.intencao)) {
+                        topico.diretrizesGlobais.push(sub);
+                        return false; // Remove do array original local
                     }
-                    return true; // Mantém as outras intenções
+                    return true; // Mantém as outras intenções na prova
                 });
             };
 

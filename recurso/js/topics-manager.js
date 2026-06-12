@@ -674,9 +674,56 @@ window.TopicsManager = (function () {
                 });
                 sumarioHtml += '</div>';
             }
-            const cardsHTML = topicoAtivo.anotacoes.map(criarCard).join('');
             
-            conteudoCentralHtml = sumarioHtml + `
+            // Loop customizado com injeção de Painel de Tese
+            let cardsHTML = '';
+            let ultimaTeseRenderizada = null;
+
+            topicoAtivo.anotacoes.forEach((an, index) => {
+                const teseAtual = an.tese || "Tese Não Nomeada";
+                
+                if (teseAtual !== ultimaTeseRenderizada) {
+                    const diretrizes = (topicoAtivo.diretrizesPorTese && topicoAtivo.diretrizesPorTese[teseAtual]) ? topicoAtivo.diretrizesPorTese[teseAtual] : [];
+                    
+                    cardsHTML += `
+                        <div class="thesis-group-header">
+                            <h4 style="color: var(--trt-blue); margin: 0 0 12px 0;">🎯 Grupo Temático: ${escaparHTML(teseAtual)}</h4>
+                            <div class="thesis-directives-container">
+                                ${diretrizes.map(d => `
+                                    <div class="sub-badge has-intent intencao-${d.intencao || 'premissa'}" style="position:static; width:auto; padding:6px 14px; font-size:0.85rem; border-radius: 6px; transform: none; box-shadow: none;">
+                                        ${escaparHTML(d.texto)}
+                                        <button title="Remover" onclick="Store.dispatch({type: 'DELETE_THESIS_DIRECTIVE', payload: {topicoId: '${activeTabId}', teseNome: '${escaparHTML(teseAtual)}', uuid: '${d.uuid}'}})" style="background:transparent; border:none; color:white; margin-left:8px; cursor:pointer; opacity:0.7;">✖</button>
+                                    </div>
+                                `).join('')}
+                                <button class="btn-expand-text" style="display:inline-flex; border:1px dashed #ccc; background:transparent;" onclick="alert('Recurso para adicionar diretriz na tese em desenvolvimento.')">+ Adicionar Diretriz da Tese</button>
+                            </div>
+                        </div>
+                    `;
+                    ultimaTeseRenderizada = teseAtual;
+                }
+                
+                cardsHTML += criarCard(an, index, topicoAtivo.anotacoes);
+            });
+            
+            // Renderização do Painel de Diretrizes Globais
+            let htmlDiretrizesGlobais = '';
+            if (topicoAtivo.diretrizesGlobais && topicoAtivo.diretrizesGlobais.length > 0) {
+                htmlDiretrizesGlobais = `
+                    <div class="global-directives-panel" style="background:#f4f7f6; padding:16px; border-left: 4px solid #607d8b; border-radius:4px; margin-bottom:16px;">
+                        <h4 style="margin: 0 0 12px 0; color: #455a64;">🌐 Diretrizes Globais do Tópico</h4>
+                        <div style="display:flex; flex-direction:column; gap:8px; align-items:flex-start;">
+                            ${topicoAtivo.diretrizesGlobais.map(d => `
+                                <div class="sub-badge has-intent intencao-${d.intencao}" style="position:static; width:auto; padding:6px 14px; font-size:0.85rem; border-radius: 6px; transform: none; box-shadow: none;">
+                                    [${(d.intencao || 'Global').toUpperCase()}] ${escaparHTML(d.texto)}
+                                    <button title="Remover" onclick="Store.dispatch({type: 'DELETE_GLOBAL_DIRECTIVE', payload: {topicoId: '${activeTabId}', uuid: '${d.uuid}'}})" style="background:transparent; border:none; color:white; margin-left:8px; cursor:pointer; opacity:0.7;">✖</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            conteudoCentralHtml = sumarioHtml + htmlDiretrizesGlobais + `
                 <div class="timeline-container" id="timeline-container">
                     <svg id="connections-canvas"></svg>
                     ${cardsHTML}

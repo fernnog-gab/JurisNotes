@@ -35,6 +35,47 @@ window.Store = (function() {
                 newState.activeTabId = action.payload;
                 break;
                 
+            case 'ADD_THESIS_DIRECTIVE': {
+                const { topicoId, teseNome, noIdeia } = action.payload;
+                const topico = newState.topicos.find(t => t.id === topicoId);
+                if (topico) {
+                    if (!topico.diretrizesPorTese) topico.diretrizesPorTese = {};
+                    if (!topico.diretrizesPorTese[teseNome]) topico.diretrizesPorTese[teseNome] = [];
+                    noIdeia.uuid = noIdeia.uuid || 'id-' + crypto.randomUUID();
+                    topico.diretrizesPorTese[teseNome].push(noIdeia);
+                }
+                break;
+            }
+                
+            case 'DELETE_THESIS_DIRECTIVE': {
+                const { topicoId, teseNome, uuid } = action.payload;
+                const topico = newState.topicos.find(t => t.id === topicoId);
+                if (topico && topico.diretrizesPorTese && topico.diretrizesPorTese[teseNome]) {
+                    topico.diretrizesPorTese[teseNome] = topico.diretrizesPorTese[teseNome].filter(n => n.uuid !== uuid);
+                }
+                break;
+            }
+                
+            case 'ADD_GLOBAL_DIRECTIVE': {
+                const { topicoId, noIdeia } = action.payload;
+                const topico = newState.topicos.find(t => t.id === topicoId);
+                if (topico) {
+                    if (!topico.diretrizesGlobais) topico.diretrizesGlobais = [];
+                    noIdeia.uuid = noIdeia.uuid || 'id-' + crypto.randomUUID();
+                    topico.diretrizesGlobais.push(noIdeia);
+                }
+                break;
+            }
+                
+            case 'DELETE_GLOBAL_DIRECTIVE': {
+                const { topicoId, uuid } = action.payload;
+                const topico = newState.topicos.find(t => t.id === topicoId);
+                if (topico && topico.diretrizesGlobais) {
+                    topico.diretrizesGlobais = topico.diretrizesGlobais.filter(n => n.uuid !== uuid);
+                }
+                break;
+            }
+
             case 'DELETE_ITEM':
                 // Transição: Quando a App usar o Store ativamente, a deleção será via UUID.
                 // Exemplo: t.anotacoes = t.anotacoes.filter(a => a.uuid !== action.payload.uuid);

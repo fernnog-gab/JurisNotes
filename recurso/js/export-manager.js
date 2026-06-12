@@ -182,6 +182,15 @@ window.ExportManager = (function () {
         const baseLegalObrigatoria = [];
         const vereditosLocaisInjetados = []; // NOVO: Captura de vereditos perdidos
 
+        // Mapeamento das Diretrizes Globais normalizadas (v7.0)
+        if (topico.diretrizesGlobais) {
+            topico.diretrizesGlobais.forEach(dir => {
+                if (dir.intencao === 'fundamentacao') baseLegalObrigatoria.push(`[Diretriz Global]: ${_safeMD(dir.texto)}`);
+                if (dir.intencao === 'preliminar') preliminaresInjetadas.push(`[Diretriz Global]: ${_safeMD(dir.texto)}`);
+                if (dir.intencao === 'veredito') vereditosLocaisInjetados.push(`[Diretriz Global]: ${_safeMD(dir.texto)}`);
+            });
+        }
+
         // BUFFER 1: Cabeçalho
         // Fallback defensivo para topico.nome nulo/undefined
         let mdCabecalho = `---\n*Pacote de Dados Estruturado via Juris Notes em ${dataGeracao}*\n---\n\n`;
@@ -190,12 +199,27 @@ window.ExportManager = (function () {
         // BUFFER 2: Matriz Dialética (Processamento O(n))
         let mdMatriz = `## MATRIZ DIALÉTICA E MAPEAMENTO PROBATÓRIO\n*Atenção IA: Esta é a sua fonte de premissas fáticas incontroversas (Premissa Menor). Nunca presuma fatos fora destes blocos.*\n\n`;
 
+        let teseProcessada = {}; // Controle de injeção de diretrizes da tese
+
         // Iteração Cronológica mantida intacta (Preservação de Closures)
         topico.anotacoes.forEach((an, index) => {
             const numIdeia    = index + 1;
             const refCitacao  = _formatarCitacaoOficial(an.pjeId, an.pagina);
             const tituloIdeia = an.tese ? an.tese : 'Tese não nomeada pelo assessor';
             
+            // INJEÇÃO DAS DIRETRIZES DA TESE (Uma vez por grupo)
+            if (!teseProcessada[tituloIdeia]) {
+                const dirTese = topico.diretrizesPorTese ? topico.diretrizesPorTese[tituloIdeia] : [];
+                if (dirTese && dirTese.length > 0) {
+                    mdMatriz += `<diretrizes_da_tese nome="${_escapeXmlAttr(tituloIdeia)}">\n`;
+                    dirTese.forEach(dir => {
+                        mdMatriz += `[${(dir.intencao || 'DIRETRIZ_TESE').toUpperCase()}]: ${_safeMD(dir.texto)}\n`;
+                    });
+                    mdMatriz += `</diretrizes_da_tese>\n\n`;
+                }
+                teseProcessada[tituloIdeia] = true;
+            }
+
             // INÍCIO DO ENVELOPAMENTO XML (Com escape seguro de atributos)
             mdMatriz += `<analise_da_prova id="${numIdeia}" tese="${_escapeXmlAttr(tituloIdeia)}">\n`;
 

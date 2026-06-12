@@ -296,3 +296,31 @@
 .btn-copy-degravacao { background: transparent; border: none; cursor: pointer; color: var(--trt-blue-mid); padding: 4px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s ease; margin-left: 6px; vertical-align: middle; }
 .btn-copy-degravacao:hover { background: rgba(26, 58, 92, 0.08); color: var(--trt-blue); transform: scale(1.1); }
 .btn-copy-degravacao:active { transform: scale(0.95); }
+
+/* ================================================
+   8. COMPONENTES DE DIRETRIZES DE TESE (v7.0)
+   ================================================ */
+.thesis-group-header {
+    background: #ffffff;
+    border-left: 5px solid var(--trt-blue-mid);
+    padding: 16px;
+    margin: 32px 0 16px 0;
+    border-radius: 0 8px 8px 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    position: relative;
+    z-index: 3;
+}
+
+.thesis-group-header:first-of-type {
+    margin-top: 8px;
+}
+
+.thesis-directives-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed #e0e0e0;
+}
