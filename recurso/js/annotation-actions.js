@@ -14,14 +14,53 @@ function abrirMenuAnotacao(topicoId, index, event) {
     _posicionarMenu('annotation-context-menu', event);
 }
 
-// HELPER PRIVADO (Resolução de Referência)
+// HELPER PRIVADO (Resolução de Referência Universal)
 function _resolverSubAlvo(topico, parentIndex, viewSource) {
+    // 1. NÍVEL GLOBAL
+    if (viewSource === 'global') {
+        return { subAnotacoes: topico.diretrizesGlobais };
+    }
+    
+    // 2. NÍVEL DE TESE
+    if (typeof viewSource === 'string' && viewSource.startsWith('tese:')) {
+        const nomeTese = viewSource.replace('tese:', '');
+        return { subAnotacoes: topico.diretrizesPorTese[nomeTese] };
+    }
+    
+    // 3. NÍVEL PROVA (Comportamento original preservado)
     const cardMestre = topico.anotacoes[parentIndex];
     if (viewSource === 'main') {
         return cardMestre;
     }
     const cIdx = parseInt(viewSource, 10);
     return cardMestre.itensCorrelacionados[cIdx];
+}
+
+function adicionarDiretrizEstrutural(tipo, topicoId, teseNome = null) {
+    const texto = prompt("Digite a nova diretriz para a IA:");
+    if (!texto || !texto.trim()) return;
+
+    const noIdeia = {
+        uuid: 'id-' + Math.random().toString(36).substr(2, 9),
+        texto: texto.trim(),
+        intencao: 'premissa', // Default
+        timestamp: Date.now()
+    };
+
+    const topico = topicos.find(t => t.id === topicoId);
+
+    if (tipo === 'global') {
+        if (!topico.diretrizesGlobais) topico.diretrizesGlobais = [];
+        topico.diretrizesGlobais.push(noIdeia);
+    } else if (tipo === 'tese') {
+        if (!topico.diretrizesPorTese) topico.diretrizesPorTese = {};
+        if (!topico.diretrizesPorTese[teseNome]) topico.diretrizesPorTese[teseNome] = [];
+        topico.diretrizesPorTese[teseNome].push(noIdeia);
+    }
+
+    renderizarTopicos();
+    salvarBackupAutomatico();
+    exibirToast('Diretriz adicionada com sucesso.', 'sucesso');
 }
 
 function abrirMenuSubAnotacao(topicoId, parentIndex, viewSource, localIndex, event) {

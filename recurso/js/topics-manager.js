@@ -684,48 +684,84 @@ window.TopicsManager = (function () {
                 
                 if (teseAtual !== ultimaTeseRenderizada) {
                     const diretrizes = (topicoAtivo.diretrizesPorTese && topicoAtivo.diretrizesPorTese[teseAtual]) ? topicoAtivo.diretrizesPorTese[teseAtual] : [];
+                    const teseViewSource = `tese:${teseAtual}`;
                     
+                    const tesesHtml = diretrizes.map((d, sIdx) => {
+                        const intencao = d.intencao || 'premissa';
+                        return `
+                        <div class="sub-annotation-item" data-source="${teseViewSource}">
+                            <div class="sub-annotation-card borda-fase-4">
+                                <div class="sub-badge has-intent intencao-${intencao}" 
+                                     title="Opções desta diretriz"
+                                     onclick="abrirMenuSubAnotacao('${activeTabId}', null, '${teseViewSource.replace(/'/g, "\\'")}', ${sIdx}, event)">
+                                     🎯 T.${sIdx + 1}
+                                </div>
+                                <div class="sub-text-content">${renderizarMarkdownSeguro(escaparHTML(d.texto))}</div>
+                            </div>
+                        </div>`;
+                    }).join('');
+
                     cardsHTML += `
-                        <div class="thesis-group-header">
-                            <h4 style="color: var(--trt-blue); margin: 0 0 12px 0;">🎯 Grupo Temático: ${escaparHTML(teseAtual)}</h4>
-                            <div class="thesis-directives-container">
-                                ${diretrizes.map(d => `
-                                    <div class="sub-badge has-intent intencao-${d.intencao || 'premissa'}" style="position:static; width:auto; padding:6px 14px; font-size:0.85rem; border-radius: 6px; transform: none; box-shadow: none;">
-                                        ${escaparHTML(d.texto)}
-                                        <button title="Remover" onclick="Store.dispatch({type: 'DELETE_THESIS_DIRECTIVE', payload: {topicoId: '${activeTabId}', teseNome: '${escaparHTML(teseAtual)}', uuid: '${d.uuid}'}})" style="background:transparent; border:none; color:white; margin-left:8px; cursor:pointer; opacity:0.7;">✖</button>
-                                    </div>
-                                `).join('')}
-                                <button class="btn-expand-text" style="display:inline-flex; border:1px dashed #ccc; background:transparent;" onclick="alert('Recurso para adicionar diretriz na tese em desenvolvimento.')">+ Adicionar Diretriz da Tese</button>
+                    <div class="timeline-item-master align-left nivel-hierarquico nivel-tese">
+                        <div class="main-card-wrapper">
+                            <div class="annotation-number-area">
+                                <div class="timeline-icon-box" title="Tese"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle></svg></div>
+                            </div>
+                            <div class="annotation-card">
+                                <div class="hierarquia-titulo" style="margin-bottom:8px;">Tese: ${escaparHTML(teseAtual)}</div>
+                                <div class="card-actions-bar">
+                                    <button title="Adicionar Diretriz à Tese" onclick="adicionarDiretrizEstrutural('tese', '${activeTabId}', '${escaparHTML(teseAtual).replace(/'/g, "\\'")}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                                </div>
                             </div>
                         </div>
-                    `;
+                        <div class="sub-annotations-wrapper">${tesesHtml}</div>
+                    </div>`;
+                    
                     ultimaTeseRenderizada = teseAtual;
                 }
                 
                 cardsHTML += criarCard(an, index, topicoAtivo.anotacoes);
             });
             
-            // Renderização do Painel de Diretrizes Globais
+            // Renderização do Painel de Diretrizes Globais (NOVO DESIGN HIERÁRQUICO)
             let htmlDiretrizesGlobais = '';
             if (topicoAtivo.diretrizesGlobais && topicoAtivo.diretrizesGlobais.length > 0) {
+                const globaisHtml = topicoAtivo.diretrizesGlobais.map((d, sIdx) => {
+                    const intencao = d.intencao || 'premissa';
+                    return `
+                    <div class="sub-annotation-item" data-source="global">
+                        <div class="sub-annotation-card borda-fase-4">
+                            <div class="sub-badge has-intent intencao-${intencao}" 
+                                 title="Opções desta diretriz"
+                                 onclick="abrirMenuSubAnotacao('${activeTabId}', null, 'global', ${sIdx}, event)">
+                                 🌐 G.${sIdx + 1}
+                            </div>
+                            <div class="sub-text-content">${renderizarMarkdownSeguro(escaparHTML(d.texto))}</div>
+                        </div>
+                    </div>`;
+                }).join('');
+
                 htmlDiretrizesGlobais = `
-                    <div class="global-directives-panel" style="background:#f4f7f6; padding:16px; border-left: 4px solid #607d8b; border-radius:4px; margin-bottom:16px;">
-                        <h4 style="margin: 0 0 12px 0; color: #455a64;">🌐 Diretrizes Globais do Tópico</h4>
-                        <div style="display:flex; flex-direction:column; gap:8px; align-items:flex-start;">
-                            ${topicoAtivo.diretrizesGlobais.map(d => `
-                                <div class="sub-badge has-intent intencao-${d.intencao}" style="position:static; width:auto; padding:6px 14px; font-size:0.85rem; border-radius: 6px; transform: none; box-shadow: none;">
-                                    [${(d.intencao || 'Global').toUpperCase()}] ${escaparHTML(d.texto)}
-                                    <button title="Remover" onclick="Store.dispatch({type: 'DELETE_GLOBAL_DIRECTIVE', payload: {topicoId: '${activeTabId}', uuid: '${d.uuid}'}})" style="background:transparent; border:none; color:white; margin-left:8px; cursor:pointer; opacity:0.7;">✖</button>
-                                </div>
-                            `).join('')}
+                <div class="timeline-item-master align-left nivel-hierarquico nivel-global">
+                    <div class="main-card-wrapper">
+                        <div class="annotation-number-area">
+                            <div class="timeline-icon-box" title="Diretrizes Globais"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line></svg></div>
+                        </div>
+                        <div class="annotation-card">
+                            <div class="hierarquia-titulo" style="margin-bottom:8px;">Diretrizes Globais do Tópico</div>
+                            <div class="card-actions-bar">
+                                <button title="Adicionar Diretriz" onclick="adicionarDiretrizEstrutural('global', '${activeTabId}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                            </div>
                         </div>
                     </div>
-                `;
+                    <div class="sub-annotations-wrapper">${globaisHtml}</div>
+                </div>`;
             }
 
-            conteudoCentralHtml = sumarioHtml + htmlDiretrizesGlobais + `
+            conteudoCentralHtml = sumarioHtml + `
                 <div class="timeline-container" id="timeline-container">
                     <svg id="connections-canvas"></svg>
+                    ${htmlDiretrizesGlobais}
                     ${cardsHTML}
                 </div>`;
         }
@@ -834,8 +870,8 @@ window.TopicsManager = (function () {
         const containerRect = container.getBoundingClientRect();
         let svgContent = '';
 
-        // 1. LINHA VERMELHA: Conecta apenas de Grupo a Grupo (Master items)
-        const masterItemsForSpine = Array.from(container.querySelectorAll('.timeline-item-master'));
+        // 1. LINHA VERMELHA: Conecta apenas de Grupo a Grupo (Master items fáticos)
+        const masterItemsForSpine = Array.from(container.querySelectorAll('.timeline-item-master:not(.nivel-hierarquico)'));
 
         for (let i = 0; i < masterItemsForSpine.length - 1; i++) {
             const currentGroup = masterItemsForSpine[i];

@@ -196,10 +196,26 @@ window.ExportManager = (function () {
         let mdCabecalho = `---\n*Pacote de Dados Estruturado via Juris Notes em ${dataGeracao}*\n---\n\n`;
         mdCabecalho += `# TÓPICO RECURSAL: **${(topico.nome || 'Tópico Sem Nome').toUpperCase()}**\n\n`;
 
+        // BUFFER 1.5: Diretrizes de Tese (Mapeadas globalmente antes da Matriz)
+        let mdDiretrizesTeses = `<direcionamentos_por_tese>\n`;
+        mdDiretrizesTeses += `*Atenção IA: Regras estritas aplicáveis EXCLUSIVAMENTE ao momento em que redigir a tese correspondente.*\n\n`;
+
+        if (topico.diretrizesPorTese) {
+            for (const [nomeTese, diretrizes] of Object.entries(topico.diretrizesPorTese)) {
+                if (diretrizes && diretrizes.length > 0) {
+                    mdDiretrizesTeses += `[Tese: ${_escapeXmlAttr(nomeTese)}]\n`;
+                    diretrizes.forEach(dir => {
+                        mdDiretrizesTeses += `- [${(dir.intencao || 'DIRETRIZ').toUpperCase()}]: ${_safeMD(dir.texto)}\n`;
+                    });
+                    mdDiretrizesTeses += `\n`;
+                }
+            }
+        }
+        mdDiretrizesTeses += `</direcionamentos_por_tese>\n\n`;
+
         // BUFFER 2: Matriz Dialética (Processamento O(n))
         let mdMatriz = `## MATRIZ DIALÉTICA E MAPEAMENTO PROBATÓRIO\n*Atenção IA: Esta é a sua fonte de premissas fáticas incontroversas (Premissa Menor). Nunca presuma fatos fora destes blocos.*\n\n`;
-
-        let teseProcessada = {}; // Controle de injeção de diretrizes da tese
+        // Controle de injeção legada removido da matriz
 
         // Iteração Cronológica mantida intacta (Preservação de Closures)
         topico.anotacoes.forEach((an, index) => {
@@ -207,18 +223,8 @@ window.ExportManager = (function () {
             const refCitacao  = _formatarCitacaoOficial(an.pjeId, an.pagina);
             const tituloIdeia = an.tese ? an.tese : 'Tese não nomeada pelo assessor';
             
-            // INJEÇÃO DAS DIRETRIZES DA TESE (Uma vez por grupo)
-            if (!teseProcessada[tituloIdeia]) {
-                const dirTese = topico.diretrizesPorTese ? topico.diretrizesPorTese[tituloIdeia] : [];
-                if (dirTese && dirTese.length > 0) {
-                    mdMatriz += `<diretrizes_da_tese nome="${_escapeXmlAttr(tituloIdeia)}">\n`;
-                    dirTese.forEach(dir => {
-                        mdMatriz += `[${(dir.intencao || 'DIRETRIZ_TESE').toUpperCase()}]: ${_safeMD(dir.texto)}\n`;
-                    });
-                    mdMatriz += `</diretrizes_da_tese>\n\n`;
-                }
-                teseProcessada[tituloIdeia] = true;
-            }
+            // MONTAGEM FINAL DA STRING: Regras da IA primeiro (mdTags), Fatos depois (mdMatriz), Dispositivo no fim (mdVeredito).
+        return mdCabecalho + mdTags + mdMatriz + mdVeredito;
 
             // INÍCIO DO ENVELOPAMENTO XML (Com escape seguro de atributos)
             mdMatriz += `<analise_da_prova id="${numIdeia}" tese="${_escapeXmlAttr(tituloIdeia)}">\n`;
@@ -384,8 +390,8 @@ window.ExportManager = (function () {
             mdVeredito += `</decisao_magistrado_pretendida>\n`;
         }
 
-        // MONTAGEM FINAL DA STRING: Regras da IA primeiro (mdTags), Fatos depois (mdMatriz), Dispositivo no fim (mdVeredito).
-        return mdCabecalho + mdTags + mdMatriz + mdVeredito;
+        // MONTAGEM FINAL DA STRING: Regras da IA primeiro (mdTags e mdDiretrizesTeses), Fatos depois (mdMatriz), Dispositivo no fim (mdVeredito).
+        return mdCabecalho + mdTags + mdDiretrizesTeses + mdMatriz + mdVeredito;
     }
 
     // ─── DOWNLOAD DE ARQUIVO MARKDOWN ─────────────────────────────────────────

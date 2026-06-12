@@ -298,29 +298,30 @@
 .btn-copy-degravacao:active { transform: scale(0.95); }
 
 /* ================================================
-   8. COMPONENTES DE DIRETRIZES DE TESE (v7.0)
+   8. HIERARQUIA DE DIRETRIZES (GLOBAIS E DE TESE)
    ================================================ */
-.thesis-group-header {
-    background: #ffffff;
-    border-left: 5px solid var(--trt-blue-mid);
-    padding: 16px;
-    margin: 32px 0 16px 0;
-    border-radius: 0 8px 8px 0;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    position: relative;
-    z-index: 3;
+.timeline-item-master.nivel-hierarquico {
+    margin-bottom: 24px;
 }
 
-.thesis-group-header:first-of-type {
-    margin-top: 8px;
-}
-
-.thesis-directives-container {
+.timeline-icon-box {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px dashed #e0e0e0;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 2;
 }
+
+.timeline-icon-box svg { width: 18px; height: 18px; }
+
+.nivel-global .timeline-icon-box { background-color: #1a3a5c; }
+.nivel-global .annotation-card { border-left: 4px solid #1a3a5c; background-color: #f8fafc; }
+.nivel-global .hierarquia-titulo { color: #1a3a5c; font-weight: bold; font-size: 0.95rem; }
+
+.nivel-tese .timeline-icon-box { background-color: #6a1b9a; }
+.nivel-tese .annotation-card { border-left: 4px solid #6a1b9a; background-color: #fdfbfd; }
+.nivel-tese .hierarquia-titulo { color: #6a1b9a; font-weight: bold; font-size: 0.95rem; }
