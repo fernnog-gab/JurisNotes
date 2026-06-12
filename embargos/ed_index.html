@@ -392,9 +392,9 @@
     
     <!-- MODAL DE EDIÇÃO DE TEXTO -->
     <div id="text-edit-modal" class="text-edit-modal" style="display:none;">
-        <div class="edit-header">✏️ Editar Texto</div>
+        <div class="edit-header" id="edit-modal-title">✏️ Editar Texto</div>
         
-        <div class="edit-toolbar">
+        <div class="edit-toolbar" id="edit-toolbar">
             <button type="button" class="edit-tool-btn" onclick="aplicarNegritoTextarea()" title="Negrito (Ctrl+B)">
                 <b>B</b> Negrito
             </button>
@@ -406,7 +406,9 @@
             </button>
         </div>
         
-        <textarea id="edit-text-input" class="edit-textarea" placeholder="Selecione um trecho e aplique o negrito..."></textarea>
+        <textarea id="edit-text-input" class="edit-textarea" placeholder="Selecione um trecho e aplique formatação..."></textarea>
+        
+        <textarea id="edit-comentario-input" class="edit-textarea" placeholder="Observação / Contexto do Assessor..." style="display:none; margin-top: 8px; min-height: 60px; background: #fafafa; border-top: 2px dashed #eee;"></textarea>
         
         <div class="edit-actions">
             <button class="chip-btn chip-cancelar" onclick="fecharModalEdicao()">✕ Cancelar</button>

@@ -185,7 +185,18 @@ window.TopicsManager = (function () {
             // PRESERVAÇÃO CRÍTICA: Lógica de Comentários e Degravações
             let comentarios = [];
             if (anotacao.comentario) comentarios.push(`<strong>Contexto:</strong> ${escaparHTML(anotacao.comentario)}`);
-            if (dadosAudio.transcricao) comentarios.push(`<strong>Degravação:</strong> <em>"${escaparHTML(dadosAudio.transcricao)}"</em>`);
+            if (dadosAudio.transcricao) {
+                comentarios.push(`
+                    <div style="display:flex; align-items:flex-start; gap:4px;">
+                        <div><strong>Degravação:</strong> <em>"${escaparHTML(dadosAudio.transcricao)}"</em></div>
+                        <button class="btn-copy-degravacao" title="Copiar Degravação" onclick="window.copiarDegravacao('${anotacao.topicoIdOrigem || activeTabId}', '${anotacao.uuid || ''}')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                        </button>
+                    </div>
+                `);
+            }
             
             if (comentarios.length > 0) {
                 htmlComentario = `<div class="card-comentario" style="display:flex; flex-direction:column; gap:6px;">${comentarios.join('<br>')}</div>`;
@@ -281,7 +292,7 @@ window.TopicsManager = (function () {
             // Direciona para a função de edição adequada
             const acaoEditar = isCorrelacionado ? 'editarItemCorrelacionado()' : 'editarAnotacao()';
             
-            const btnEditar = tipoDoItem === 'texto' ? `<button title="Editar Texto" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}${ctxCidx}}; ${acaoEditar}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>` : '';
+            const btnEditar = (tipoDoItem === 'texto' || tipoDoItem === 'audio') ? `<button title="Editar" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}${ctxCidx}}; ${acaoEditar}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>` : '';
             
             const paramMove = isCorrelacionado ? `'${activeTabId}', ${index}, ${cIdx}` : `'${activeTabId}', ${index}, null`;
             

@@ -308,3 +308,27 @@ body[data-context="ed"] .topics-content-area {
 /* Tipografias customizadas para renderização do Markdown tratado */
 .txt-largo-1 { font-size: 1.1rem; font-weight: 600; color: #1a1a1a; }
 .txt-largo-2 { font-size: 1.25rem; font-weight: 700; color: #1a3a5c; }
+
+/* Botão de Cópia da Degravação de Áudio */
+.btn-copy-degravacao {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--trt-blue-mid);
+    padding: 4px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+.btn-copy-degravacao:hover {
+    background: rgba(26, 58, 92, 0.08);
+    color: var(--trt-blue);
+    transform: scale(1.1);
+}
+.btn-copy-degravacao:active {
+    transform: scale(0.95);
+}
