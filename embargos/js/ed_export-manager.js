@@ -100,16 +100,42 @@ window.ExportManager = (function () {
         let md = `---\n*Pacote de Auditoria Estrutural ED gerado em ${dataGeracao}*\n---\n\n`;
         md += `# ${config.tituloTopico}: **${(topico.nome || 'Não Nomeado').toUpperCase()}**\n\n`;
 
-        // 1. COMPILAÇÃO DO PREÂMBULO FIXO
+        // 1. COMPILAÇÃO DO ROTEIRO ESTRUTURAL
         md += `<roteiro_diretor_llm>\n`;
         md += `  <incidente_processual>Embargos de Declaração</incidente_processual>\n`;
         md += `  <diretriz_cognitiva_vinculante>${config.diretrizIA}</diretriz_cognitiva_vinculante>\n`;
         md += `</roteiro_diretor_llm>\n\n`;
 
-        md += `## SEÇÃO I — ESCOPO DO VÍCIO APONTADO\n\n`;
-        md += `<${config.tagAlegacao}>\n${_safeMD(topico.alegacoes || 'Nenhum vício descrito.')}\n</${config.tagAlegacao}>\n\n`;
-        md += `<${config.tagFundamento}>\n${_safeMD(topico.fundamentos || 'Nenhum trecho da decisão embargada colado.')}\n</${config.tagFundamento}>\n\n`;
-        
+        md += `## SEÇÃO I — ESCOPO DA AUDITORIA\n\n`;
+        md += `<escopo_auditoria>\n`;
+        md += `  <alegacao_vicio>\n${_safeMD(topico.alegacoes || 'Nenhum vício apontado.')}\n  </alegacao_vicio>\n`;
+        md += `  <decisao_embargada>\n${_safeMD(topico.fundamentos || 'Nenhum trecho da decisão embargada colado.')}\n  </decisao_embargada>\n`;
+        if (topico.veredito && topico.veredito.trim() !== '') {
+            md += `  <veredito_assessor>\n${_safeMD(topico.veredito)}\n  </veredito_assessor>\n`;
+        }
+        md += `</escopo_auditoria>\n\n`;
+
+        // 2. INJEÇÃO DAS DIRETRIZES DA IA
+        if (topico.diretrizesGlobais && topico.diretrizesGlobais.length > 0) {
+            md += `<premissas_globais_da_auditoria>\n`;
+            topico.diretrizesGlobais.forEach(dir => {
+                md += `  - [REGRA GERAL]: ${_safeMD(dir.texto)}\n`;
+            });
+            md += `</premissas_globais_da_auditoria>\n\n`;
+        }
+
+        if (topico.diretrizesPorVicio && Object.keys(topico.diretrizesPorVicio).length > 0) {
+            md += `<direcionamentos_por_vicio>\n`;
+            Object.keys(topico.diretrizesPorVicio).forEach(nomeVicio => {
+                md += `  <vicio_apontado nome="${_escapeXmlAttr(nomeVicio)}">\n`;
+                topico.diretrizesPorVicio[nomeVicio].forEach(dir => {
+                     md += `    - [INSTRUÇÃO DE ANÁLISE]: ${_safeMD(dir.texto)}\n`;
+                });
+                md += `  </vicio_apontado>\n`;
+            });
+            md += `</direcionamentos_por_vicio>\n\n`;
+        }
+
         md += `## SEÇÃO II — ${config.rotuloSeccao}\n`;
         md += `*Atenção IA: Aqui estão as provas documentais do vício formal. Não analise mérito.*\n\n`;
 

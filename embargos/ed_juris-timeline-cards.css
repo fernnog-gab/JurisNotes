@@ -139,14 +139,29 @@
 .sub-badge.intencao-preliminar { background-color: #5d4037; border: 2px solid #d7ccc8; color: #fff; }
 .sub-annotation-item.is-nota-interna { opacity: 0.65; }
 
-.sub-text-content { display: -webkit-box; -webkit-line-clamp: 10; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.6; max-height: 16em; }
-.sub-text-content.expanded { -webkit-line-clamp: unset; display: block; overflow-y: auto; max-height: 350px; padding-right: 6px; margin-right: -6px; }
+.sub-text-content {
+    line-height: 1.6em;
+    max-height: calc(1.6em * 10);
+    overflow: hidden;
+    transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    display: block;
+}
+.sub-text-content.expanded { max-height: 800px; overflow-y: auto; padding-right: 6px; margin-right: -6px; }
 .sub-text-content.expanded::-webkit-scrollbar { width: 6px; }
 .sub-text-content.expanded::-webkit-scrollbar-track { background: transparent; }
 .sub-text-content.expanded::-webkit-scrollbar-thumb { background: #d0cabc; border-radius: 4px; }
 
-.btn-expand-text { background: none; border: none; color: var(--trt-blue-mid); font-size: 0.75rem; font-weight: 700; cursor: pointer; margin-top: 10px; display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 4px; transition: background 0.2s; }
-.btn-expand-text:hover { background: rgba(37, 82, 127, 0.08); }
+.btn-expand-text { background: none; border: none; color: var(--ed-neon-stroke, #a3008a); font-size: 0.75rem; font-weight: 700; cursor: pointer; margin-top: 8px; display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 4px; transition: background 0.2s; }
+.btn-expand-text:hover { background: rgba(213, 0, 181, 0.08); }
+
+/* --- DIRETRIZES DA IA (ESTRUTURA VISUAL) --- */
+.timeline-item-master.nivel-hierarquico { margin-bottom: 24px; }
+.timeline-icon-box {
+    width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--shadow-sm); flex-shrink: 0;
+}
+.nivel-global { background-color: var(--trt-blue); border-left: 5px solid var(--trt-blue-mid); color: #ffffff; }
+.nivel-vicio { background-color: var(--ed-neon-bg, #d500b5); border-left: 5px solid var(--ed-neon-stroke, #a3008a); color: #ffffff; }
 
 .sub-input-panel { width: 90%; margin: 12px auto 0 auto; background: #fafafa; border: 1px dashed #555; border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
 .sub-input-actions { display: flex; gap: 8px; justify-content: flex-end; }

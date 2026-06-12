@@ -607,13 +607,13 @@
     <!-- ========================================== -->
     
     <!-- Modal Editar Tese -->
-    <div id="modal-editar-tese" class="crop-wizard-popup" style="display:none; z-index: 4005;">
-        <div class="wizard-header">💡 Nomear Tese (Ideia <span id="tese-ideia-num"></span>)</div>
-        <p class="popup-label">Descreva brevemente a tese jurídica deste grupo de provas:</p>
-        <textarea id="input-texto-tese" class="popup-textarea" style="display:block;" rows="3" placeholder="Ex: Nulidade por cerceamento de defesa..."></textarea>
+    <div id="modal-editar-tese" class="crop-wizard-popup" style="display:none; z-index: 4005;" role="dialog" aria-modal="true" aria-labelledby="modal-editar-tese-title">
+        <div class="wizard-header" id="modal-editar-tese-title">💡 Nomear Vício Alegado (Grupo <span id="tese-ideia-num"></span>)</div>
+        <p class="popup-label">Descreva brevemente a omissão, contradição ou erro material deste grupo:</p>
+        <textarea id="input-texto-tese" class="popup-textarea" style="display:block;" rows="3" placeholder="Ex: Omissão quanto ao pedido de reflexos..."></textarea>
         <div class="wizard-actions">
             <button class="chip-btn chip-cancelar" onclick="fecharModalTese()">✕ Cancelar</button>
-            <button class="chip-btn chip-autora" onclick="salvarTese()">✔ Salvar Tese</button>
+            <button class="chip-btn chip-autora" style="background: var(--ed-neon-bg, #d500b5); color: white; border: none;" onclick="salvarTese()">✔ Salvar Vício</button>
         </div>
     </div>
 

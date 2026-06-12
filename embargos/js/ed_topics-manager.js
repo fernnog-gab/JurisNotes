@@ -476,6 +476,64 @@ window.TopicsManager = (function () {
     }
 
     /**
+     * Renderiza o bloco de diretrizes visuais para a IA (Global ou Por Vício)
+     */
+    function renderizarNivelHierarquico(tipo, titulo, subanotacoes, topicoId) {
+        if (!subanotacoes || subanotacoes.length === 0) return '';
+        
+        const isGlobal = tipo === 'global';
+        const corClass = isGlobal ? 'nivel-global' : 'nivel-vicio';
+        const iconSvg = isGlobal 
+            ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line></svg>`
+            : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle></svg>`;
+        
+        const subCardsHTML = subanotacoes.map((sub, idx) => {
+           return `
+             <div class="sub-annotation-item" data-source="${isGlobal ? 'global' : `vicio:${titulo}`}">
+                <div class="sub-annotation-card" style="border-left-color: var(--ed-neon-stroke);">
+                    <div class="sub-text-content">${renderizarMarkdownSeguro(escaparHTML(sub.texto))}</div>
+                    <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">Ler texto completo ▾</button>
+                </div>
+             </div>`;
+        }).join('');
+
+        return `
+            <div class="timeline-item-master nivel-hierarquico align-left">
+                <div class="main-card-wrapper" style="width: auto; min-width: 250px;">
+                    <div class="annotation-card ${corClass}">
+                        <div class="card-header" style="align-items: center; justify-content: flex-start; gap: 8px;">
+                            <div class="timeline-icon-box">${iconSvg}</div>
+                            <strong>${isGlobal ? 'Premissas de Auditoria (Global)' : `Vício: ${escaparHTML(titulo)}`}</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="sub-annotations-wrapper">${subCardsHTML}</div>
+            </div>`;
+    }
+
+    /**
+     * Split Read/Write para evitar Layout Thrashing
+     */
+    function aplicarTruncamentoDinamicoSeguro() {
+        requestAnimationFrame(() => {
+            const textNodes = Array.from(document.querySelectorAll('.sub-text-content'));
+            const measurements = textNodes.map(node => ({
+                el: node,
+                btn: node.parentElement.querySelector('.btn-expand-text'),
+                isOverflowing: node.scrollHeight > node.clientHeight
+            }));
+
+            requestAnimationFrame(() => {
+                measurements.forEach(m => {
+                    if (m.isOverflowing && m.btn) {
+                        m.btn.style.display = 'inline-flex';
+                    }
+                });
+            });
+        });
+    }
+
+    /**
      * Atualiza o índice de marcadores flutuantes com base no tópico ativo.
      * Função idempotente: zera o DOM e reconstrói de forma leve.
      */
@@ -599,7 +657,7 @@ window.TopicsManager = (function () {
 
         // NOVO: Painel Preâmbulo Estático gerado incondicionalmente
         const preambleHtml = `
-            <div class="topic-preamble-panel">
+            <div class="topic-preamble-panel" style="position: sticky; top: 0; z-index: 10;">
                 <div class="preamble-card preamble-alegacao" onclick="abrirEdicaoPreambulo('${activeTabId}', 'alegacoes')">
                     <div class="preamble-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
@@ -730,12 +788,7 @@ window.TopicsManager = (function () {
         }
             
         requestAnimationFrame(() => {
-            document.querySelectorAll('.sub-text-content').forEach(el => {
-                const btn = el.parentElement.querySelector('.btn-expand-text');
-                if (btn && el.scrollHeight > el.clientHeight) {
-                    btn.style.display = 'inline-flex';
-                }
-            });
+            aplicarTruncamentoDinamicoSeguro();
             
             document.querySelectorAll('.image-resize-wrapper').forEach(wrapper => {
                 wrapper.addEventListener('mouseup', () => desenharConexoes());
