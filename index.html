@@ -85,32 +85,41 @@
             filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
         }
 
+        /* ==========================================
+           EFEITO 1 MELHORADO: TÍTULO COM PREMIUM SHINE
+           ========================================== */
         .hub-header h1 {
             font-family: 'Playfair Display', serif;
             font-size: 2.8rem;
             margin: 0 0 8px 0;
             letter-spacing: 1.5px;
-            /* Início do Efeito Premium Shine */
+            
+            /* Gradiente de Luz (Cinza prateado -> Branco -> Dourado) */
             background: linear-gradient(
-                120deg, 
-                #ffffff 0%, 
-                #ffffff 40%, 
-                #FFD700 50%, /* Dourado do Recurso no reflexo */
-                #ffffff 60%, 
-                #ffffff 100%
+                110deg, 
+                #cbd5e1 0%, 
+                #ffffff 45%, 
+                #FFD700 50%, 
+                #ffffff 55%, 
+                #cbd5e1 100%
             );
-            background-size: 250% auto;
+            background-size: 250% 100%;
+            background-position: 0% center;
+            
+            /* Textura e Vazamento da Cor */
             color: transparent;
             -webkit-background-clip: text;
             background-clip: text;
-            transition: background-position 0.8s ease-out;
+            
+            /* Animação suave de passagem */
+            transition: background-position 0.8s ease-out, transform 0.4s ease;
             cursor: default;
         }
 
         .hub-header h1:hover {
-            /* Move o feixe de luz ao passar o mouse */
+            /* Move o facho de luz Dourado para o fim do texto */
             background-position: 100% center;
-            text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+            transform: scale(1.02); /* Leve aumento para dar imponência */
         }
 
         .hub-header p {
@@ -130,7 +139,9 @@
             padding: 10px;
         }
 
-        /* Base dos Cards (Glassmorphism) */
+        /* ==========================================
+           EFEITO DE MÓDULOS: CINEMA MODE (Foco)
+           ========================================== */
         .module-card {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -140,7 +151,8 @@
             padding: 40px 24px 32px 24px;
             cursor: pointer;
             text-decoration: none;
-            transition: all 0.3s ease;
+            /* Curva de transição mais cinematográfica */
+            transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
             box-shadow: 0 8px 32px rgba(0,0,0,0.3);
             display: flex;
             flex-direction: column;
@@ -148,13 +160,22 @@
             position: relative;
         }
 
+        /* O Hover no Card Selecionado (Ele sobe e brilha) */
         .module-card:hover {
-            transform: translateY(-6px);
-            background: rgba(255, 255, 255, 0.08);
-            box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+            transform: translateY(-10px) scale(1.02);
+            background: rgba(255, 255, 255, 0.09);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 15px 45px rgba(0,0,0,0.5);
         }
 
-        /* Ícones */
+        /* A MÁGICA: Escurece e desfoca os cards que NÃO estão com o mouse */
+        .cards-grid:has(.module-card:hover) .module-card:not(:hover) {
+            opacity: 0.4;
+            filter: blur(3px) grayscale(40%);
+            transform: scale(0.98);
+        }
+
+        /* Ícones - Pequeno pulo interno para acompanhar o movimento */
         .module-icon {
             width: 72px;
             height: 72px;
@@ -163,9 +184,11 @@
             align-items: center;
             justify-content: center;
             margin-bottom: 24px;
-            transition: transform 0.3s ease;
+            transition: transform 0.4s ease;
         }
-        .module-card:hover .module-icon { transform: scale(1.08); }
+        .module-card:hover .module-icon { 
+            transform: scale(1.1); 
+        }
         .module-icon svg { width: 36px; height: 36px; }
 
         .card-ro .module-icon { color: var(--color-ro-bg); background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.2); }
