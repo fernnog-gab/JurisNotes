@@ -708,9 +708,13 @@ window.TopicsManager = (function () {
                                 <div class="timeline-icon-box" title="Tese"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle></svg></div>
                             </div>
                             <div class="annotation-card">
-                                <div class="hierarquia-titulo" style="margin-bottom:8px;">Tese: ${escaparHTML(teseAtual)}</div>
-                                <div class="card-actions-bar">
-                                    <button title="Adicionar Diretriz à Tese" onclick="adicionarDiretrizEstrutural('tese', '${activeTabId}', '${escaparHTML(teseAtual).replace(/'/g, "\\'")}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                                <div class="card-header" style="justify-content: space-between; margin-bottom: 0;">
+                                    <div class="hierarquia-titulo">Tese: ${escaparHTML(teseAtual)}</div>
+                                    <div class="card-actions-bar" style="margin-top: 0; padding-top: 0; border-top: none;">
+                                        <button title="Adicionar Diretriz à Tese" onclick="adicionarDiretrizEstrutural('tese', '${activeTabId}', '${escaparHTML(teseAtual).replace(/'/g, "\\'")}')">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -755,14 +759,15 @@ window.TopicsManager = (function () {
                         </div>
                     </div>
                     <div class="annotation-card">
-                        <div class="hierarquia-titulo">Diretrizes Globais do Tópico</div>
-                        <p class="card-texto" style="font-size: 0.85rem; color: #666;">Instruções de mais alto nível aplicáveis a todo este tópico recursal.</p>
-                        <div class="card-actions-bar">
-                            <button title="Adicionar Diretriz Global" onclick="adicionarDiretrizEstrutural('global', '${activeTabId}')" style="display:flex; align-items:center; gap:6px; background:none; border:1px solid #ccc; padding:4px 8px; border-radius:4px; cursor:pointer;">
-                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Adicionar Diretriz Global
-                            </button>
+                            <div class="card-header" style="justify-content: space-between; margin-bottom: 0;">
+                                <div class="hierarquia-titulo">Diretrizes Globais do Tópico</div>
+                                <div class="card-actions-bar" style="margin-top: 0; padding-top: 0; border-top: none;">
+                                    <button title="Adicionar Diretriz Global" onclick="adicionarDiretrizEstrutural('global', '${activeTabId}')">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
                 </div>
                 <div class="sub-annotations-wrapper" style="position: relative; min-height: auto;">
                     ${globaisHtml}
