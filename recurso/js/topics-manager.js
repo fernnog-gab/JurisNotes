@@ -712,6 +712,9 @@ window.TopicsManager = (function () {
                                      ${iconSVG} T.${sIdx + 1}
                                 </div>
                                 <div class="sub-text-content">${renderizarMarkdownSeguro(escaparHTML(d.texto))}</div>
+                                <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">
+                                    Ler texto completo ▾
+                                </button>
                             </div>
                         </div>`;
                     }).join('');
@@ -760,6 +763,9 @@ window.TopicsManager = (function () {
                                  ${iconSVG} G.${sIdx + 1}
                             </div>
                             <div class="sub-text-content">${renderizarMarkdownSeguro(escaparHTML(d.texto))}</div>
+                            <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">
+                                Ler texto completo ▾
+                            </button>
                         </div>
                     </div>`;
                 }).join('');
@@ -813,12 +819,13 @@ window.TopicsManager = (function () {
         }
             
         requestAnimationFrame(() => {
-            document.querySelectorAll('.sub-text-content').forEach(el => {
-                const btn = el.parentElement.querySelector('.btn-expand-text');
-                if (btn && el.scrollHeight > el.clientHeight) {
-                    btn.style.display = 'inline-flex';
-                }
-            });
+                document.querySelectorAll('.sub-text-content').forEach(el => {
+                    const btn = el.parentElement.querySelector('.btn-expand-text');
+                    if (btn && el.scrollHeight > el.clientHeight) {
+                        btn.style.display = 'inline-flex';
+                        el.classList.add('is-truncated');
+                    }
+                });
             
             document.querySelectorAll('.image-resize-wrapper').forEach(wrapper => {
                 wrapper.addEventListener('mouseup', () => desenharConexoes());
