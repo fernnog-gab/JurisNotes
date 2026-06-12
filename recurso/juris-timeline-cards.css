@@ -216,8 +216,58 @@
 /* ================================================
    6. PAINEL DE PREÂMBULO (RELATÓRIO FIXO)
    ================================================ */
-.topic-preamble-panel { display: flex; flex-direction: column; gap: 8px; padding: 16px 24px 0 24px; margin-bottom: 8px; }
-.preamble-card { background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px; display: flex; gap: 12px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+.topic-preamble-panel { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 8px; 
+    /* Compensação arquitetural de padding do pai (.topics-content-area tem 18px de top padding) */
+    margin-top: -18px; 
+    padding: 18px 24px 12px 24px; 
+    margin-bottom: 12px; 
+    
+    /* Configuração de Ancoragem Ergonômica */
+    position: sticky;
+    top: 0;
+    z-index: 10; /* Proteção contra overlap de cards (z:2) sem afetar modais (z:1000+) */
+    
+    /* Progressive Blurring (Apple-like) */
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 0 6px 0 0;
+}
+
+.preamble-card {
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.preamble-card.is-empty {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+}
+
+.preamble-card.is-empty:hover {
+    border-color: var(--border-color);
+    background: rgba(255,255,255,0.7);
+}
+
+/* Corredor de Leitura para sub-anotações (Media Query Protegida) */
+@media (min-width: 1024px) {
+    .sub-annotation-card {
+        max-width: 440px; /* Impede a leitura em sanfona horizontal */
+        margin-left: 0;   /* Ancoragem absoluta ao lado esquerdo da sua coluna */
+    }
+}
 .preamble-card:hover { border-color: var(--trt-blue-mid); box-shadow: 0 4px 8px rgba(0,0,0,0.05); transform: translateY(-1px); }
 .preamble-alegacao { border-left: 4px solid #f57c00; }
 .preamble-origem { border-left: 4px solid #3949ab; }

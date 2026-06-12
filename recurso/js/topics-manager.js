@@ -600,7 +600,7 @@ window.TopicsManager = (function () {
         // NOVO: Painel Preâmbulo Estático gerado incondicionalmente
         const preambleHtml = `
             <div class="topic-preamble-panel">
-                <div class="preamble-card preamble-alegacao" onclick="abrirEdicaoPreambulo('${activeTabId}', 'alegacoes')">
+                <div class="preamble-card preamble-alegacao ${!topicoAtivo.alegacoes ? 'is-empty' : ''}" onclick="abrirEdicaoPreambulo('${activeTabId}', 'alegacoes')">
                     <div class="preamble-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                     </div>
@@ -609,7 +609,7 @@ window.TopicsManager = (function () {
                         ${topicoAtivo.alegacoes ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.alegacoes)) : '<span class="preamble-empty">Clique para redigir as alegações recursais...</span>'}
                     </div>
                 </div>
-                <div class="preamble-card preamble-origem" onclick="abrirEdicaoPreambulo('${activeTabId}', 'fundamentos')">
+                <div class="preamble-card preamble-origem ${!topicoAtivo.fundamentos ? 'is-empty' : ''}" onclick="abrirEdicaoPreambulo('${activeTabId}', 'fundamentos')">
                     <div class="preamble-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 21V7l6-4 6 4v14"></path></svg>
                     </div>
@@ -618,7 +618,7 @@ window.TopicsManager = (function () {
                         ${topicoAtivo.fundamentos ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.fundamentos)) : '<span class="preamble-empty">Clique para redigir os fundamentos da sentença...</span>'}
                     </div>
                 </div>
-                <div class="preamble-card preamble-veredito" onclick="abrirEdicaoPreambulo('${activeTabId}', 'veredito')">
+                <div class="preamble-card preamble-veredito ${!topicoAtivo.veredito ? 'is-empty' : ''}" onclick="abrirEdicaoPreambulo('${activeTabId}', 'veredito')">
                     <div class="preamble-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
                     </div>
@@ -943,7 +943,7 @@ window.TopicsManager = (function () {
             
             const ctrlY = (startY + endY) / 2;
 
-            svgContent += `<path d="M ${startX},${startY} C ${startX},${ctrlY} ${endX},${ctrlY} ${endX},${endY}" stroke="#d32f2f" stroke-width="2.5" fill="none" stroke-linecap="round" />`;
+            svgContent += `<path d="M ${startX},${startY} C ${startX},${ctrlY} ${endX},${ctrlY} ${endX},${endY}" stroke="rgba(26, 58, 92, 0.25)" stroke-width="2" fill="none" stroke-linecap="round" />`;
         }
 
         const masterItems = container.querySelectorAll('.timeline-item-master');
