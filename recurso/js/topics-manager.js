@@ -723,10 +723,13 @@ window.TopicsManager = (function () {
                 cardsHTML += criarCard(an, index, topicoAtivo.anotacoes);
             });
             
-            // Renderização do Painel de Diretrizes Globais (NOVO DESIGN HIERÁRQUICO)
+            // --- RENDERIZAÇÃO: DIRETRIZES GLOBAIS (INCONDICIONAL) ---
             let htmlDiretrizesGlobais = '';
+            let globaisHtml = ''; // Guarda os nós de ideia, se existirem
+
+            // Se existirem diretrizes, monta os nós de ideia
             if (topicoAtivo.diretrizesGlobais && topicoAtivo.diretrizesGlobais.length > 0) {
-                const globaisHtml = topicoAtivo.diretrizesGlobais.map((d, sIdx) => {
+                globaisHtml = topicoAtivo.diretrizesGlobais.map((d, sIdx) => {
                     const intencao = d.intencao || 'premissa';
                     return `
                     <div class="sub-annotation-item" data-source="global">
@@ -740,23 +743,31 @@ window.TopicsManager = (function () {
                         </div>
                     </div>`;
                 }).join('');
+            }
 
-                htmlDiretrizesGlobais = `
-                <div class="timeline-item-master align-left nivel-hierarquico nivel-global">
-                    <div class="main-card-wrapper">
-                        <div class="annotation-number-area">
-                            <div class="timeline-icon-box" title="Diretrizes Globais"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line></svg></div>
-                        </div>
-                        <div class="annotation-card">
-                            <div class="hierarquia-titulo" style="margin-bottom:8px;">Diretrizes Globais do Tópico</div>
-                            <div class="card-actions-bar">
-                                <button title="Adicionar Diretriz" onclick="adicionarDiretrizEstrutural('global', '${activeTabId}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
-                            </div>
+            // O CARD MESTRE É RENDERIZADO SEMPRE (Mesmo sem nós de ideia)
+            htmlDiretrizesGlobais = `
+            <div class="timeline-item-master align-left nivel-hierarquico nivel-global">
+                <div class="main-card-wrapper">
+                    <div class="annotation-number-area">
+                        <div class="timeline-icon-box" title="Diretrizes Globais do Tópico">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
                         </div>
                     </div>
-                    <div class="sub-annotations-wrapper">${globaisHtml}</div>
-                </div>`;
-            }
+                    <div class="annotation-card">
+                        <div class="hierarquia-titulo">Diretrizes Globais do Tópico</div>
+                        <p class="card-texto" style="font-size: 0.85rem; color: #666;">Instruções de mais alto nível aplicáveis a todo este tópico recursal.</p>
+                        <div class="card-actions-bar">
+                            <button title="Adicionar Diretriz Global" onclick="adicionarDiretrizEstrutural('global', '${activeTabId}')" style="display:flex; align-items:center; gap:6px; background:none; border:1px solid #ccc; padding:4px 8px; border-radius:4px; cursor:pointer;">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Adicionar Diretriz Global
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="sub-annotations-wrapper" style="position: relative; min-height: auto;">
+                    ${globaisHtml}
+                </div>
+            </div>`;
 
             conteudoCentralHtml = sumarioHtml + `
                 <div class="timeline-container" id="timeline-container">
