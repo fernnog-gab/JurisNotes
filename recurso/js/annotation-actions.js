@@ -98,8 +98,13 @@ function _posicionarMenu(menuId, event) {
 function editarAnotacao() {
     if (!_menuAnotacaoCtx) return;
     const anotacao = topicos.find(t => t.id === _menuAnotacaoCtx.topicoId).anotacoes[_menuAnotacaoCtx.index];
-    if (anotacao.tipo !== 'texto') return exibirToast('Apenas anotações de texto podem ser editadas.', 'aviso');
-    abrirModalEdicao({ tipo: 'main', topicoId: _menuAnotacaoCtx.topicoId, parentIndex: _menuAnotacaoCtx.index }, anotacao.conteudo);
+    if (anotacao.tipo !== 'texto' && anotacao.tipo !== 'audio') return exibirToast('Apenas anotações de texto e áudio podem ser editadas.', 'aviso');
+
+    let textoContexto = anotacao.conteudo;
+    if (anotacao.tipo === 'audio') {
+        try { const d = JSON.parse(anotacao.conteudo); textoContexto = d.transcricao || ''; } catch(e){}
+    }
+    abrirModalEdicao({ tipo: 'main', topicoId: _menuAnotacaoCtx.topicoId, parentIndex: _menuAnotacaoCtx.index, tipoAnotacao: anotacao.tipo }, textoContexto, anotacao.comentario);
     document.getElementById('annotation-context-menu').style.display = 'none';
 }
 
@@ -121,24 +126,43 @@ function editarSubAnotacao() {
 
 function editarItemCorrelacionado() {
     if (!_menuAnotacaoCtx || _menuAnotacaoCtx.cIdx === undefined) return;
-    
     const topico = topicos.find(t => t.id === _menuAnotacaoCtx.topicoId);
     const item = topico.anotacoes[_menuAnotacaoCtx.index].itensCorrelacionados[_menuAnotacaoCtx.cIdx];
-    
-    if (item.tipo !== 'texto') return exibirToast('Apenas anotações de texto podem ser editadas.', 'aviso');
-    
-    abrirModalEdicao({ 
-        tipo: 'correlated', 
-        topicoId: _menuAnotacaoCtx.topicoId, 
-        parentIndex: _menuAnotacaoCtx.index, 
-        cIdx: _menuAnotacaoCtx.cIdx 
-    }, item.conteudo);
+
+    if (item.tipo !== 'texto' && item.tipo !== 'audio') return exibirToast('Apenas anotações de texto e áudio podem ser editadas.', 'aviso');
+
+    let textoContexto = item.conteudo;
+    if (item.tipo === 'audio') {
+        try { const d = JSON.parse(item.conteudo); textoContexto = d.transcricao || ''; } catch(e){}
+    }
+    abrirModalEdicao({ tipo: 'correlated', topicoId: _menuAnotacaoCtx.topicoId, parentIndex: _menuAnotacaoCtx.index, cIdx: _menuAnotacaoCtx.cIdx, tipoAnotacao: item.tipo }, textoContexto, item.comentario);
 }
 
-function abrirModalEdicao(contexto, textoAtual) {
+function abrirModalEdicao(contexto, textoAtual, comentarioAtual = '') {
     _editContext = contexto;
     const textarea = document.getElementById('edit-text-input');
+    const commentArea = document.getElementById('edit-comentario-input');
+    const toolbar = document.getElementById('edit-toolbar');
+    const title = document.getElementById('edit-modal-title');
+
     textarea.value = textoAtual;
+
+    if (_editContext.tipoAnotacao === 'audio') {
+        textarea.placeholder = "Degravação literal do áudio...";
+        commentArea.value = comentarioAtual || '';
+        commentArea.style.display = 'block';
+        if(toolbar) toolbar.style.display = 'none';
+        title.innerHTML = '🎙️ Editar Áudio e Observação';
+    } else {
+        textarea.placeholder = "Selecione um trecho e aplique formatação...";
+        if(commentArea) {
+            commentArea.value = '';
+            commentArea.style.display = 'none';
+        }
+        if(toolbar) toolbar.style.display = 'flex';
+        title.innerHTML = '✏️ Editar Texto';
+    }
+
     document.getElementById('text-edit-backdrop').style.display = 'block';
     document.getElementById('text-edit-modal').style.display = 'flex';
     setTimeout(() => textarea.focus(), 50);
@@ -174,27 +198,56 @@ document.getElementById('edit-text-input').addEventListener('keydown', function(
 });
 
 function salvarEdicaoTexto() {
-    const novoTexto = document.getElementById('edit-text-input').value.trim();
+    if (!_editContext) return;
+
     const topico = topicos.find(t => t.id === _editContext.topicoId);
-    
+    if (!topico) return;
+
+    const novoTexto = document.getElementById('edit-text-input').value.trim();
+
+    // LÓGICA DO PREÂMBULO
     if (_editContext.tipo === 'preambulo') {
         topico[_editContext.campo] = novoTexto;
-    } else {
-        if (!novoTexto) return exibirToast('O texto não pode ficar vazio.', 'aviso');
+        renderizarTopicos(); 
+        salvarBackupAutomatico();
+        exibirToast('Preâmbulo salvo.', 'sucesso');
+        return fecharModalEdicao();
+    }
 
-        if (_editContext.tipo === 'main') {
-            topico.anotacoes[_editContext.parentIndex].conteudo = novoTexto;
-        } else if (_editContext.tipo === 'sub') {
-            const alvo = _resolverSubAlvo(topico, _editContext.parentIndex, _editContext.viewSource);
-            alvo.subAnotacoes[_editContext.localIndex].texto = novoTexto;
-        } else if (_editContext.tipo === 'correlated') {
-            topico.anotacoes[_editContext.parentIndex].itensCorrelacionados[_editContext.cIdx].conteudo = novoTexto;
-        }
+    // LÓGICA DE CARDS DE TEXTO
+    if (_editContext.tipoAnotacao === 'texto' && !novoTexto) {
+        return exibirToast('O texto da prova não pode ficar vazio.', 'aviso');
+    }
+
+    let alvo;
+    if (_editContext.tipo === 'main') {
+        alvo = topico.anotacoes[_editContext.parentIndex];
+    } else if (_editContext.tipo === 'sub') {
+        alvo = _resolverSubAlvo(topico, _editContext.parentIndex, _editContext.viewSource).subAnotacoes[_editContext.localIndex];
+    } else if (_editContext.tipo === 'correlated') {
+        alvo = topico.anotacoes[_editContext.parentIndex].itensCorrelacionados[_editContext.cIdx];
+    }
+
+    if (!alvo) return;
+
+    // GRAVAÇÃO DE ESTADO
+    if (_editContext.tipo === 'sub') {
+        alvo.texto = novoTexto;
+    } else if (_editContext.tipoAnotacao === 'audio') {
+        const novoComentario = document.getElementById('edit-comentario-input').value.trim();
+        try {
+            const d = JSON.parse(alvo.conteudo);
+            d.transcricao = novoTexto;
+            alvo.conteudo = JSON.stringify(d);
+        } catch(e) { console.error('Erro de parse', e); }
+        alvo.comentario = novoComentario;
+    } else {
+        alvo.conteudo = novoTexto;
     }
     
     renderizarTopicos(); 
     salvarBackupAutomatico();
-    exibirToast('Anotação salva com sucesso!', 'sucesso');
+    exibirToast('Anotação atualizada!', 'sucesso');
     fecharModalEdicao();
 }
 
@@ -917,5 +970,34 @@ function fecharTooltipRapido() {
         setTimeout(() => { tooltip.style.display = 'none'; }, 200);
     }
 }
+
+// NOVO: Função Global e Segura de Cópia da Degravação
+window.copiarDegravacao = function(topicoId, uuidCard) {
+    const topico = topicos.find(t => t.id === topicoId);
+    if (!topico) return;
+    
+    let alvo = topico.anotacoes.find(a => a.uuid === uuidCard);
+    if (!alvo) {
+        topico.anotacoes.forEach(a => {
+            if (a.itensCorrelacionados) {
+                const enc = a.itensCorrelacionados.find(ic => ic.uuid === uuidCard);
+                if (enc) alvo = enc;
+            }
+        });
+    }
+
+    if (alvo && alvo.tipo === 'audio') {
+        try {
+            const d = JSON.parse(alvo.conteudo);
+            if (d.transcricao) {
+                navigator.clipboard.writeText(d.transcricao).then(() => {
+                    exibirToast('Degravação copiada para a área de transferência!', 'sucesso');
+                });
+            } else {
+                exibirToast('Este áudio não possui degravação.', 'aviso');
+            }
+        } catch(e) { exibirToast('Erro ao ler dados do áudio.', 'erro'); }
+    }
+};
 
 // window.SubDnDManager removido na refatoração de limpeza

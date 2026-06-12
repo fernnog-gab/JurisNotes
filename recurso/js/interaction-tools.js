@@ -46,8 +46,6 @@ const DOC_CONFIG = [
     // --- FASE 1: Postulação e Recursos ---
     { label: 'Recurso Ordinário', polo: 'DUAL', tipo: 'dual', fase: 1 },
     { label: 'Contrarrazões', polo: 'DUAL', tipo: 'dual', fase: 1 },
-    { label: 'Agravo de Petição', polo: 'DUAL', tipo: 'dual', fase: 1, isExecucao: true },
-    { label: 'Contraminuta', polo: 'DUAL', tipo: 'dual', fase: 1, isExecucao: true },
 
     // --- FASE 2: Gênese do Conflito ---
     { label: 'Petição Inicial', polo: 'Parte Autora', tipo: 'auto', fase: 2 },
