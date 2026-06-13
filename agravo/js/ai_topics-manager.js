@@ -715,12 +715,18 @@ window.TopicsManager = (function () {
                     const teseViewSource = `obice:${teseAtual}`;
                     const idObiceSeguro = teseAtual.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '_');
                     
+                    // --- ARQUITETURA DINÂMICA DE CORES (Igual RO/ED) ---
+                    const rgbaTeseFundo = hexToRgba(_activeTopicoCor, 0.15);
+                    const rgbaTeseBorda = hexToRgba(_activeTopicoCor, 0.4);
+                    const corTituloTese = escurecerCor(_activeTopicoCor, 0.6);
+                    
                     const tesesHtml = diretrizes.map((d, sIdx) => {
                         const intencao = d.intencao || 'premissa';
                         const iconSVG = obterIconeIntencao(intencao);
                         return `
                         <div class="sub-annotation-item" data-source="${teseViewSource}">
-                            <div class="sub-annotation-card borda-fase-ai-diretriz">
+                            <!-- NÓ DINÂMICO COM A COR DA ABA -->
+                            <div class="sub-annotation-card" style="border-left: 5px solid ${_activeTopicoCor}; border-color: ${rgbaTeseBorda};">
                                 <div class="sub-badge has-intent intencao-${intencao}" 
                                      title="Opções desta diretriz"
                                      onclick="abrirMenuSubAnotacao('${activeTabId}', '${teseViewSource.replace(/'/g, "\\'")}', '${teseViewSource.replace(/'/g, "\\'")}', ${sIdx}, event)">
@@ -738,13 +744,15 @@ window.TopicsManager = (function () {
                     <div class="timeline-item-master align-left nivel-hierarquico nivel-tese" id="timeline-wrapper-obice-${idObiceSeguro}">
                         <div class="main-card-wrapper" data-cidx="main">
                             <div class="annotation-number-area">
-                                <div class="timeline-icon-box" style="background: #A3E635; color: white; border: none; box-shadow: 0 2px 4px rgba(163, 230, 53, 0.4);" title="Óbice de Admissibilidade">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                                <!-- ÍCONE DINÂMICO -->
+                                <div class="timeline-icon-box" style="background-color: ${_activeTopicoCor}; color: ${corTextoTese};" title="Óbice de Admissibilidade">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle></svg>
                                 </div>
                             </div>
-                            <div class="annotation-card" style="padding: 12px 18px; border-left: 4px solid #A3E635;">
+                            <!-- CARD DINÂMICO COM TRUQUE DE FUNDO SÓLIDO -->
+                            <div class="annotation-card" style="border-left: 4px solid ${_activeTopicoCor}; background-color: #ffffff; background-image: linear-gradient(${rgbaTeseFundo}, ${rgbaTeseFundo});">
                                 <div class="card-header" style="justify-content: space-between; margin-bottom: 0;">
-                                    <div class="hierarquia-titulo" style="font-weight: 700; color: #25527f;">Óbice: ${escaparHTML(teseAtual)}</div>
+                                    <div class="hierarquia-titulo" style="color: ${corTituloTese};">Óbice: ${escaparHTML(teseAtual)}</div>
                                     <div class="card-actions-bar" style="margin-top: 0; padding-top: 0; border-top: none;">
                                         <button title="Adicionar Diretriz ao Óbice" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:'${teseViewSource.replace(/'/g, "\\'")}'}; acionarNovoNoIdeia()">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -772,7 +780,8 @@ window.TopicsManager = (function () {
                     const iconSVG = obterIconeIntencao(intencao);
                     return `
                     <div class="sub-annotation-item" data-source="global">
-                        <div class="sub-annotation-card borda-fase-ai-diretriz">
+                        <!-- APLICA A CLASSE DE BORDA ESCURA DA DIRETRIZ GLOBAL -->
+                        <div class="sub-annotation-card borda-global">
                             <div class="sub-badge has-intent intencao-${intencao}" 
                                  title="Opções desta diretriz"
                                  onclick="abrirMenuSubAnotacao('${activeTabId}', 'global', 'global', ${sIdx}, event)">
@@ -791,13 +800,15 @@ window.TopicsManager = (function () {
             <div class="timeline-item-master align-left nivel-hierarquico nivel-global" id="timeline-wrapper-global">
                 <div class="main-card-wrapper" data-cidx="main">
                     <div class="annotation-number-area">
-                        <div class="timeline-icon-box" style="background: var(--trt-blue); color: white; border: none; box-shadow: 0 2px 4px rgba(26, 58, 92, 0.4);" title="Diretrizes Globais">
+                        <!-- ÍCONE GLOBAL -->
+                        <div class="timeline-icon-box" title="Diretrizes Globais de Admissibilidade">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
                         </div>
                     </div>
-                    <div class="annotation-card" style="padding: 12px 18px; border-left: 4px solid var(--trt-blue-mid);">
+                    <!-- CARD GLOBAL ESCURO -->
+                    <div class="annotation-card">
                             <div class="card-header" style="justify-content: space-between; margin-bottom: 0;">
-                                <div class="hierarquia-titulo" style="font-weight: 700; color: var(--trt-blue);">Diretrizes Globais de Admissibilidade</div>
+                                <div class="hierarquia-titulo">Diretrizes Globais de Admissibilidade</div>
                                 <div class="card-actions-bar" style="margin-top: 0; padding-top: 0; border-top: none;">
                                     <button title="Adicionar Diretriz Global" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:'global'}; acionarNovoNoIdeia()">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
