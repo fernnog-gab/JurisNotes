@@ -738,8 +738,7 @@ window.TopicsManager = (function () {
                                 </div>
                             </div>
                             <!-- CARD COM FUNDO SUAVE DA COR DA ABA -->
-                            // 2. Aplicamos o "Truque" do fundo branco + gradiente de cor por cima
-<div class="annotation-card" style="border-left: 4px solid ${_activeTopicoCor}; background-color: #ffffff; background-image: linear-gradient(${rgbaTeseFundo}, ${rgbaTeseFundo});">
+                            <div class="annotation-card" style="border-left: 4px solid ${_activeTopicoCor}; background-color: #ffffff; background-image: linear-gradient(${rgbaTeseFundo}, ${rgbaTeseFundo});">
                                 <div class="card-header" style="justify-content: space-between; margin-bottom: 0;">
                                     <div class="hierarquia-titulo" style="color: ${corTituloTese}; font-weight: bold;">Tese: ${escaparHTML(teseAtual)}</div>
                                     <div class="card-actions-bar" style="margin-top: 0; padding-top: 0; border-top: none;">
