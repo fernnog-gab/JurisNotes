@@ -177,13 +177,11 @@ window.ExportManager = (function () {
         const dataGeracao = new Date().toLocaleString('pt-BR');
         const safeFormatTime = (sec) => window.AudioManager?.formatTime ? window.AudioManager.formatTime(sec) : `${Math.floor(sec/60)}' ${Math.floor(sec%60)}''`;
 
-        // Preservação Correta: Preliminares e Leis têm escopo GLOBAL. Comandos têm escopo LOCAL (removido do array).
         const preliminaresInjetadas = [];
         const baseLegalObrigatoria = [];
-        const vereditosLocaisInjetados = []; // NOVO: Captura de vereditos perdidos
-        const diretrizesGlobaisGerais = []; // Buffer para comandos, premissas, textos, etc.
+        const vereditosLocaisInjetados = []; 
+        const diretrizesGlobaisGerais = []; 
 
-        // Mapeamento das Diretrizes Globais normalizadas (v7.0)
         if (topico.diretrizesGlobais) {
             topico.diretrizesGlobais.forEach(dir => {
                 if (dir.intencao === 'fundamentacao') baseLegalObrigatoria.push(`[Diretriz Global]: ${_safeMD(dir.texto)}`);
@@ -195,39 +193,37 @@ window.ExportManager = (function () {
             });
         }
 
-        // BUFFER 1: Cabeçalho
-        // Fallback defensivo para topico.nome nulo/undefined
         let mdCabecalho = `---\n*Pacote de Dados Estruturado via Juris Notes em ${dataGeracao}*\n---\n\n`;
         mdCabecalho += `# TÓPICO RECURSAL: **${(topico.nome || 'Tópico Sem Nome').toUpperCase()}**\n\n`;
 
-        // BUFFER 1.5: Diretrizes de Tese (Mapeadas globalmente antes da Matriz)
-        let mdDiretrizesTeses = `<direcionamentos_por_tese>\n`;
-        mdDiretrizesTeses += `*Atenção IA: Regras estritas aplicáveis EXCLUSIVAMENTE ao momento em que redigir a tese correspondente.*\n\n`;
-
+        // CORREÇÃO: BUG #1, BUG #4 e FALHA DE DESIGN (Teses condicionais e alinhamento XML)
+        let mdDiretrizesTeses = '';
+        let bufferTeses = '';
+        
         if (topico.diretrizesPorTese) {
             for (const [nomeTese, diretrizes] of Object.entries(topico.diretrizesPorTese)) {
                 if (diretrizes && diretrizes.length > 0) {
-                    mdDiretrizesTeses += `[Tese: ${_escapeXmlAttr(nomeTese)}]\n`;
+                    bufferTeses += `<tese_alvo nome="${_escapeXmlAttr(nomeTese)}">\n`;
                     diretrizes.forEach(dir => {
-                        mdDiretrizesTeses += `- [${(dir.intencao || 'DIRETRIZ').toUpperCase()}]: ${_safeMD(dir.texto)}\n`;
+                        // Passando '\n  ' explicitly to avoid injecting Blockquote '>' syntax
+                        bufferTeses += `- [${(dir.intencao || 'DIRETRIZ').toUpperCase()}]: ${_safeMD(dir.texto, '\n  ')}\n`;
                     });
-                    mdDiretrizesTeses += `\n`;
+                    bufferTeses += `</tese_alvo>\n\n`;
                 }
             }
         }
-        mdDiretrizesTeses += `</direcionamentos_por_tese>\n\n`;
+        
+        if (bufferTeses.trim() !== '') {
+            mdDiretrizesTeses = `<direcionamentos_por_tese>\n*Atenção IA: Regras estritas aplicáveis EXCLUSIVAMENTE ao momento em que redigir a tese correspondente.*\n\n${bufferTeses}</direcionamentos_por_tese>\n\n`;
+        }
 
-        // BUFFER 2: Matriz Dialética (Processamento O(n))
         let mdMatriz = `## MATRIZ DIALÉTICA E MAPEAMENTO PROBATÓRIO\n*Atenção IA: Esta é a sua fonte de premissas fáticas incontroversas (Premissa Menor). Nunca presuma fatos fora destes blocos.*\n\n`;
-        // Controle de injeção legada removido da matriz
 
-        // Iteração Cronológica mantida intacta (Preservação de Closures)
         topico.anotacoes.forEach((an, index) => {
             const numIdeia    = index + 1;
             const refCitacao  = _formatarCitacaoOficial(an.pjeId, an.pagina);
             const tituloIdeia = an.tese ? an.tese : 'Tese não nomeada pelo assessor';
 
-            // INÍCIO DO ENVELOPAMENTO XML (Com escape seguro de atributos)
             mdMatriz += `<analise_da_prova id="${numIdeia}" tese="${_escapeXmlAttr(tituloIdeia)}">\n`;
 
             const faseContexto  = an.fase      || an.documento || 'Não especificado';
@@ -248,7 +244,6 @@ window.ExportManager = (function () {
                     const ad = JSON.parse(an.conteudo);
                     const oradorFinal = ad.role || ad.oradorStr || 'Orador não idt.';
                     mdMatriz += `- ${docLabel} 🎙️ **[OITIVA DE AUDIÊNCIA]** (${oradorFinal} — ${safeFormatTime(ad.inicio)} a ${safeFormatTime(ad.fim)}).\n`;
-                    
                     if (an.comentario) mdMatriz += `  > 🧠 *Observação:* ${_safeMD(an.comentario, '\n  > ')}\n`;
                     if (ad.transcricao) mdMatriz += `  > 📜 *Degravação Literal:* "${_safeMD(ad.transcricao, '\n  > ')}"\n`;
                 } catch (e) {
@@ -282,73 +277,69 @@ window.ExportManager = (function () {
 
             mdMatriz += `</fato_bruto_inconteste>\n\n`;
 
-            // ROTEADOR DE INTENÇÕES (Corrigido)
-            const imprimirNos = (listaNos, refContexto) => {
+            // CORREÇÃO: BUG #2 e BUG #3. Consolidação de nós locais em buffer.
+            let localNodesBuffer = '';
+
+            const processarNos = (listaNos, refContexto) => {
                 if (!listaNos || listaNos.length === 0) return;
                 
-                mdMatriz += `<diretrizes_vinculantes_do_assessor>\n`;
                 listaNos.forEach((sub) => {
-                    const intencao = sub.intencao || 'fallback'; // NOVO: Fallback mapeado explicitamente
+                    const intencao = sub.intencao || 'fallback';
                     const textoSanitizado = _safeMD(sub.texto, '\n  ');
 
-                    // ESCOPO LOCAL: Fica na tag da prova
+                    // Escopo Local: vai para o buffer da prova
                     if (intencao === 'premissa') {
-                        mdMatriz += `[PREMISSA LÓGICA INQUESTIONÁVEL${refContexto}]: ${textoSanitizado}\n`;
+                        localNodesBuffer += `[PREMISSA LÓGICA INQUESTIONÁVEL${refContexto}]: ${textoSanitizado}\n`;
                     } else if (intencao === 'refutacao') {
-                        mdMatriz += `[AFASTAMENTO DE TESE OBRIGATÓRIO${refContexto}]: ${textoSanitizado}\n`;
+                        localNodesBuffer += `[AFASTAMENTO DE TESE OBRIGATÓRIO${refContexto}]: ${textoSanitizado}\n`;
                     } else if (intencao === 'comando') {
-                        mdMatriz += `[COMANDO DE EXECUÇÃO ESTRITA${refContexto}]: ${textoSanitizado}\n`;
+                        localNodesBuffer += `[COMANDO DE EXECUÇÃO ESTRITA${refContexto}]: ${textoSanitizado}\n`;
                     } else if (intencao === 'texto') {
-                        mdMatriz += `[COPIAR E COLAR EXATAMENTE ESTE TEXTO${refContexto}]: "${textoSanitizado}"\n`;
+                        localNodesBuffer += `[COPIAR E COLAR EXATAMENTE ESTE TEXTO${refContexto}]: "${textoSanitizado}"\n`;
                     } else if (intencao === 'fallback') {
-                        // NOVO: Evita envenenar o prompt chamando anotações livres de 'Premissas Inquestionáveis'
-                        mdMatriz += `[CONTEXTO FÁTICO COMPLEMENTAR${refContexto}]: ${textoSanitizado}\n`;
+                        localNodesBuffer += `[CONTEXTO FÁTICO COMPLEMENTAR${refContexto}]: ${textoSanitizado}\n`;
                     } 
-                    // ESCOPO GLOBAL: Empurrado para os buffers correspondentes
+                    // Escopo Global: Bubble-up
                     else if (intencao === 'fundamentacao') {
                         baseLegalObrigatoria.push(`[Referência da Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
                     } else if (intencao === 'preliminar') {
                         preliminaresInjetadas.push(`[Referência da Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
                     } else if (intencao === 'veredito') {
-                        // CORREÇÃO CRÍTICA: Captura os vereditos que antes eram perdidos
                         vereditosLocaisInjetados.push(`[Baseado na Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
                     }
                 });
-                mdMatriz += `</diretrizes_vinculantes_do_assessor>\n`;
             };
 
-            imprimirNos(an.subAnotacoes, '');
+            processarNos(an.subAnotacoes, '');
 
             if (an.itensCorrelacionados && an.itensCorrelacionados.length > 0) {
                 an.itensCorrelacionados.forEach((corr) => {
                     if (corr.subAnotacoes && corr.subAnotacoes.length > 0) {
                         let docNome = corr.documento || corr.tipo;
-                        if (corr.tipo === 'audio') docNome = 'Oitiva/Áudio';
-                        const focoContexto = ` [Foco na Prova Secundária: ${docNome} ${corr.pagina ? 'fl.' + corr.pagina : ''}]`;
-                        imprimirNos(corr.subAnotacoes, focoContexto);
+                        const focoContexto = ` [Foco na Prova: ${docNome} ${corr.pagina ? 'fl.' + corr.pagina : ''}]`;
+                        processarNos(corr.subAnotacoes, focoContexto);
                     }
                 });
+            }
+
+            // Emissão segura da Tag Local
+            if (localNodesBuffer.trim() !== '') {
+                mdMatriz += `<diretrizes_vinculantes_do_assessor>\n${localNodesBuffer}</diretrizes_vinculantes_do_assessor>\n`;
             }
 
             mdMatriz += `</analise_da_prova>\n\n`; 
         });
 
-        // BUFFER 3: Montagem das Tags XML Estruturais (Condicionais sem fallbacks vazios)
         let mdTags = '';
-
-        // --- INJEÇÃO DA DIRETRIZ COGNITIVA (Top-Down Context) ---
         const contexto = _inferirContextoProcessual(topico.anotacoes);
 
+        // CORREÇÃO: LACUNA ARQUITETURAL (Adição de Fallback de Fase de Conhecimento)
         if (contexto.isExecucao) {
-            mdTags += `<diretriz_cognitiva_ia>\n`;
-            mdTags += `*ALERTA DE SISTEMA:* O conjunto probatório deste tópico refere-se à **FASE DE EXECUÇÃO** (ex: Agravo de Petição). Seu raciocínio jurídico DEVE ser restrito aos limites da coisa julgada, cálculos de liquidação e preclusão. É terminantemente proibido reavaliar mérito da fase de conhecimento ou presumir fatos fora do estrito limite da execução.\n`;
-            // NOVA DIRETRIZ SOBRE OS ATORES DA EXECUÇÃO INSERIDA AQUI:
-            mdTags += `*PESO PROBATÓRIO:* Documentos classificados nos polos "Juízo / Tribunal" ou "Auxiliar da Justiça" representam atos oficiais do Estado. Eles possuem presunção de veracidade e devem prevalecer como premissas fáticas incontroversas frente às alegações das partes (Exequente/Executada).\n`;
-            mdTags += `</diretriz_cognitiva_ia>\n\n`;
+            mdTags += `<diretriz_cognitiva_ia>\n*ALERTA:* O conjunto probatório deste tópico refere-se à **FASE DE EXECUÇÃO** (ex: Agravo de Petição). Seu raciocínio jurídico DEVE ser restrito aos limites da coisa julgada, cálculos de liquidação e preclusão. Atos de "Juízo / Tribunal" ou "Auxiliar da Justiça" representam atos oficiais e possuem presunção de veracidade.\n</diretriz_cognitiva_ia>\n\n`;
         } else if (contexto.isAI) {
-            mdTags += `<diretriz_cognitiva_ia>\n`;
-            mdTags += `*ALERTA DE SISTEMA:* O foco deste tópico é um **Agravo de Instrumento**. Sua redação deve focar primariamente em destrancar ou manter o trancamento do recurso principal, avaliando estritamente pressupostos de admissibilidade (tempestividade, preparo, deserção, transcendência).\n`;
-            mdTags += `</diretriz_cognitiva_ia>\n\n`;
+            mdTags += `<diretriz_cognitiva_ia>\n*ALERTA:* O foco deste tópico é um **Agravo de Instrumento**. Sua redação deve focar primariamente em destrancar ou manter o trancamento do recurso principal, avaliando estritamente pressupostos de admissibilidade.\n</diretriz_cognitiva_ia>\n\n`;
+        } else {
+            mdTags += `<diretriz_cognitiva_ia>\n*ALERTA DE SISTEMA:* O foco deste tópico é a **Fase de Conhecimento** (ex: Recurso Ordinário). Analise o mérito da controvérsia, contrastando os fatos extraídos, os pedidos formulados e a sentença originária.\n</diretriz_cognitiva_ia>\n\n`;
         }
 
         if (preliminaresInjetadas.length > 0) {
@@ -376,7 +367,6 @@ window.ExportManager = (function () {
             mdTags += `</base_legal_obrigatoria>\n\n`;
         }
 
-        // MONTAGEM DO VEREDITO ATUALIZADA (Recency Effect)
         let mdVeredito = '';
         if ((topico.veredito && topico.veredito.trim() !== '') || vereditosLocaisInjetados.length > 0) {
             mdVeredito += `<decisao_magistrado_pretendida>\n`;
@@ -401,7 +391,6 @@ window.ExportManager = (function () {
             mdDiretrizesGlobais += `</diretrizes_globais_do_topico>\n\n`;
         }
 
-        // MONTAGEM FINAL DA STRING: Regras da IA primeiro (mdTags, Globais e mdDiretrizesTeses), Fatos depois (mdMatriz), Dispositivo no fim (mdVeredito).
         return mdCabecalho + mdTags + mdDiretrizesGlobais + mdDiretrizesTeses + mdMatriz + mdVeredito;
     }
 
