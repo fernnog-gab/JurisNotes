@@ -119,6 +119,35 @@ window.ExportManager = (function () {
         md += `  <diretriz_cognitiva_vinculante>${config.diretrizIA}</diretriz_cognitiva_vinculante>\n`;
         md += `</roteiro_diretor_llm>\n\n`;
 
+        if (topico.diretrizesGlobais && topico.diretrizesGlobais.length > 0) {
+            md += `<diretrizes_admissibilidade_globais>\n`;
+            md += `*Atenção IA: Estas são regras absolutas criadas pelo assessor. Aplique-as a toda a minuta.*\n\n`;
+            
+            // INJEÇÃO DE DIRETRIZES LOCAIS (Motor extraído para suportar escopo global sem vazar provas)
+            const imprimirNosGlobais = (listaNos, refContexto) => {
+                if (!listaNos || listaNos.length === 0) return;
+                md += `<diretrizes_de_auditoria_do_assessor>\n`;
+                listaNos.forEach((sub) => {
+                    const intencao = sub.intencao || 'fallback';
+                    if (intencao === 'nota') return;
+                    const textoSanitizado = _safeMD(sub.texto, '\n  ');
+                    if (intencao === 'premissa') md += `[CONSTATAÇÃO FORMAL INQUESTIONÁVEL${refContexto}]: ${textoSanitizado}\n`;
+                    else if (intencao === 'refutacao') md += `[AFASTAMENTO DO VÍCIO OBRIGATÓRIO - INEXISTÊNCIA DE FALHA${refContexto}]: ${textoSanitizado}\n`;
+                    else if (intencao === 'comando') md += `[COMANDO DE REDAÇÃO ESTRITO${refContexto}]: ${textoSanitizado}\n`;
+                    else if (intencao === 'texto') md += `[COPIAR E COLAR EXATAMENTE ESTE TEXTO${refContexto}]: "${textoSanitizado}"\n`;
+                    else if (intencao === 'fallback') md += `[CONTEXTO FÁTICO COMPLEMENTAR PARA AUDITORIA${refContexto}]: ${textoSanitizado}\n`;
+                    else if (intencao === 'fundamentacao') jurisprudenciaVinculante.push(`[Aplicável ao caso${refContexto}]: ${textoSanitizado}`);
+                    else if (intencao === 'preliminar') barreirasAdmissibilidade.push(`[Global${refContexto}]: ${textoSanitizado}`);
+                    else if (intencao === 'veredito') vereditosLocaisInjetados.push(`[Auditoria Global${refContexto}]: ${textoSanitizado}`);
+                });
+                md += `</diretrizes_de_auditoria_do_assessor>\n`;
+            };
+            
+            imprimirNosGlobais(topico.diretrizesGlobais, ' (Diretriz Suprema)');
+            
+            md += `</diretrizes_admissibilidade_globais>\n\n`;
+        }
+
         md += `## SEÇÃO I — ESCOPO DO VÍCIO APONTADO\n\n`;
         md += `<${config.tagAlegacao}>\n${_safeMD(topico.alegacoes || 'Nenhum vício descrito.')}\n</${config.tagAlegacao}>\n\n`;
         md += `<${config.tagFundamento}>\n${_safeMD(topico.fundamentos || 'Nenhum trecho da decisão embargada colado.')}\n</${config.tagFundamento}>\n\n`;

@@ -308,3 +308,27 @@ body[data-context="ed"] .topics-content-area {
 /* Tipografias customizadas para renderização do Markdown tratado */
 .txt-largo-1 { font-size: 1.1rem; font-weight: 600; color: #1a1a1a; }
 .txt-largo-2 { font-size: 1.25rem; font-weight: 700; color: #1a3a5c; }
+
+/* Isolamento do Fluxo SVG */
+.timeline-item-master.nivel-hierarquico {
+    margin-bottom: 24px;
+    position: relative;
+    z-index: 10; /* Garante que fique SOBRE qualquer linha SVG perdida */
+}
+
+/* Identidade Visual - Agravo de Instrumento */
+.timeline-icon-box {
+    width: 42px; height: 42px; 
+    border-radius: 8px; /* Quebra o padrão circular de provas */
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--shadow-sm); flex-shrink: 0;
+}
+
+.nivel-global { background-color: var(--trt-blue); color: #ffffff; border: 2px solid var(--trt-blue-mid); }
+.annotation-card.nivel-global { background-color: var(--trt-blue); border: none; }
+
+/* Borda personalizada para sub-anotações hierárquicas (Verde Limão AI) */
+.sub-annotation-card.borda-fase-ai-diretriz { 
+    border-color: rgba(163, 230, 53, 0.4); 
+    border-left: 5px solid #8ce015; 
+}

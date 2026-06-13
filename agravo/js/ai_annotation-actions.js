@@ -16,6 +16,12 @@ function abrirMenuAnotacao(topicoId, index, event) {
 
 // HELPER PRIVADO (Resolução de Referência)
 function _resolverSubAlvo(topico, parentIndex, viewSource) {
+    if (viewSource === 'global' || parentIndex === 'global') {
+        if (!topico.diretrizesGlobais) topico.diretrizesGlobais = [];
+        return { subAnotacoes: topico.diretrizesGlobais }; 
+    }
+    
+    // Tratamento Padrão de Provas
     const cardMestre = topico.anotacoes[parentIndex];
     if (viewSource === 'main') {
         return cardMestre;
@@ -550,8 +556,17 @@ function adicionarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
         
     // Ancoragem dinâmica: anexa o input logo abaixo do card que gerou a ação
     const topicoTarget = topicos.find(t => t.id === topicoId);
-    const uuidTarget = topicoTarget && topicoTarget.anotacoes[anotacaoIndex] ? topicoTarget.anotacoes[anotacaoIndex].uuid : null;
-    const masterWrapper = document.getElementById(uuidTarget ? `timeline-wrapper-${uuidTarget}` : `timeline-wrapper-${anotacaoIndex}`);
+    let masterWrapperId = '';
+
+    // Seletor Inteligente: Numérico vs String (Global)
+    if (anotacaoIndex === 'global') {
+        masterWrapperId = 'timeline-wrapper-global';
+    } else {
+        const uuidTarget = topicoTarget && topicoTarget.anotacoes[anotacaoIndex] ? topicoTarget.anotacoes[anotacaoIndex].uuid : null;
+        masterWrapperId = uuidTarget ? `timeline-wrapper-${uuidTarget}` : `timeline-wrapper-${anotacaoIndex}`;
+    }
+
+    const masterWrapper = document.getElementById(masterWrapperId);
     if (masterWrapper) {
         let mountPoint = masterWrapper.querySelector('.main-card-wrapper');
         if (cIdx != null) {

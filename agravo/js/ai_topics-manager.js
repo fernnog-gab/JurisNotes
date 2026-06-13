@@ -220,6 +220,59 @@ window.TopicsManager = (function () {
 
     // Função estática gerarSVGConector removida (substituída pelo motor dinâmico desenharConexoes)
 
+    // NOVO HELPER: Extraído de criarCard para suportar reaproveitamento
+    function _gerarCartoesSubAnotacao(arrayDeNos, faseDoCardBase, activeTabId, topicoIndex) {
+        if (!arrayDeNos || arrayDeNos.length === 0) return '';
+        
+        const subCardsHTML = arrayDeNos.map((sub, sIdx) => {
+            const intencao = sub.intencao || 'premissa';
+            let iconSVG = '';
+
+            if (intencao === 'comando') {
+                iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>`;
+            } else if (intencao === 'texto') {
+                iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`;
+            } else if (intencao === 'nota') {
+                iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
+            } else if (intencao === 'premissa') {
+                iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>`;
+            } else if (intencao === 'fundamentacao') {
+                iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>`;
+            } else if (intencao === 'alegacao') {
+                iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
+            } else if (intencao === 'fundamento_sentenca') {
+                iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16M4 2h16M6 6v12M10 6v12M14 6v12M18 6v12M2 6h20"></path></svg>`;
+            } else if (intencao === 'refutacao') {
+                iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>`;
+            } else if (intencao === 'preliminar') {
+                iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
+            }
+
+            const label = `${iconSVG} ${sIdx + 1}.${gerarLetra(sIdx)}`;
+            const textoFormatado = renderizarMarkdownSeguro(escaparHTML(sub.texto));
+            const badgeClass = `sub-badge has-intent intencao-${intencao}`;
+            
+            const bordaFaseClass = faseDoCardBase === 0 ? 'borda-fase-ai-diretriz' : `borda-fase-${faseDoCardBase}`;
+
+            return `
+                <div class="sub-annotation-item" data-source="${sub.viewSource}">
+                    <div class="sub-annotation-card ${bordaFaseClass}">
+                        <div class="${badgeClass}"
+                             title="Opções desta diretriz"
+                             onclick="abrirMenuSubAnotacao('${activeTabId}', '${topicoIndex}', '${sub.viewSource}', ${sub.localIndex}, event)">
+                            ${label}
+                        </div>
+                        <div class="sub-text-content">${textoFormatado}</div>
+                        <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">
+                            Ler texto completo ▾
+                        </button>
+                    </div>
+                </div>`;
+        }).join('');
+
+        return `<div class="sub-annotations-wrapper">${subCardsHTML}</div>`;
+    }
+
     /**
      * Fábrica de cards no formato de fluxograma alternado.
      * Retorna: card + bloco de sub-anotações (se houver) + conector SVG.
@@ -315,65 +368,7 @@ window.TopicsManager = (function () {
         }
 
         if (flatSubAnotacoes.length > 0) {
-            const subCardsHTML = flatSubAnotacoes.map((sub, sIdx) => {
-                const intencao = sub.intencao || 'premissa';
-                const isHasIntent = true; 
-                let iconSVG = '';
-
-                if (intencao === 'comando') {
-                    iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>`;
-                } else if (intencao === 'texto') {
-                    iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`;
-                } else if (intencao === 'nota') {
-                    iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
-                } else if (intencao === 'premissa') {
-                    iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>`;
-                } else if (intencao === 'fundamentacao') {
-                    iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>`;
-                } else if (intencao === 'alegacao') {
-                    iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
-                } else if (intencao === 'fundamento_sentenca') {
-                    iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16M4 2h16M6 6v12M10 6v12M14 6v12M18 6v12M2 6h20"></path></svg>`;
-                } else if (intencao === 'refutacao') {
-                    iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>`;
-                } else if (intencao === 'preliminar') {
-                    iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
-                }
-
-                const badgeClass = isHasIntent ? `sub-badge has-intent intencao-${intencao}` : 'sub-badge';
-                // Note que o sIdx (índice global flat) continua sendo usado APENAS para gerar a letra alfabética (A, B, C)
-                const label = isHasIntent ? `${iconSVG} ${numero}.${gerarLetra(sIdx)}` : `${numero}.${gerarLetra(sIdx)}`;
-                
-                const textoFormatado = renderizarMarkdownSeguro(escaparHTML(sub.texto));
-                
-                // Cálculo rigoroso da borda de fase com base na nova estrutura
-                let faseSub = faseDoCard;
-                if (sub.viewSource !== 'main' && anotacao.itensCorrelacionados) {
-                    const cIdx = parseInt(sub.viewSource, 10);
-                    if (!isNaN(cIdx) && anotacao.itensCorrelacionados[cIdx]) {
-                         faseSub = typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(anotacao.itensCorrelacionados[cIdx].documento) : 4;
-                    }
-                }
-                const bordaFaseClass = `borda-fase-${faseSub}`;
-
-                return `
-                    <div class="sub-annotation-item" data-source="${sub.viewSource}">
-                        <div class="sub-annotation-card ${bordaFaseClass}">
-                            <!-- NOVO CONTRATO AQUI: Passamos viewSource E localIndex antes do event -->
-                            <div class="${badgeClass}"
-                                 title="Opções desta ideia secundária"
-                                 onclick="abrirMenuSubAnotacao('${activeTabId}', ${index}, '${sub.viewSource}', ${sub.localIndex}, event)">
-                                ${label}
-                            </div>
-                            <div class="sub-text-content">${textoFormatado}</div>
-                            <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">
-                                Ler texto completo ▾
-                            </button>
-                        </div>
-                    </div>`;
-            }).join('');
-
-            htmlSubAnotacoes = `<div class="sub-annotations-wrapper">${subCardsHTML}</div>`;
+            htmlSubAnotacoes = _gerarCartoesSubAnotacao(flatSubAnotacoes, faseDoCard, activeTabId, index);
         }
 
         // NOVO: Processar itens agrupados
@@ -698,9 +693,37 @@ window.TopicsManager = (function () {
             }
             const cardsHTML = topicoAtivo.anotacoes.map(criarCard).join('');
             
+            let htmlDiretrizes = '';
+
+            if (topicoAtivo.diretrizesGlobais && topicoAtivo.diretrizesGlobais.length > 0) {
+                const flatDiretrizes = topicoAtivo.diretrizesGlobais.map((s, idx) => ({ ...s, viewSource: 'global', localIndex: idx }));
+
+                htmlDiretrizes = `
+                <div class="timeline-item-master nivel-hierarquico align-left" id="timeline-wrapper-global">
+                    <div class="main-card-wrapper" data-cidx="main">
+                        <div class="annotation-number-area">
+                            <div class="timeline-icon-box nivel-global" title="Diretrizes Globais">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                            </div>
+                        </div>
+                        <div class="annotation-card nivel-global">
+                            <div class="card-header">
+                                <span class="polo-tag doc-tag" style="background:#1a3a5c; color:#fff; border:none;">Diretrizes de Admissibilidade</span>
+                            </div>
+                            <p class="card-texto" style="color:#fff;">Regras supremas da IA para este Agravo.</p>
+                            <div class="card-actions-bar">
+                                <button title="Adicionar Regra" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:'global'}; acionarNovoNoIdeia()"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                            </div>
+                        </div>
+                    </div>
+                    ${_gerarCartoesSubAnotacao(flatDiretrizes, 0, activeTabId, 'global')}
+                </div>`;
+            }
+
             conteudoCentralHtml = sumarioHtml + `
                 <div class="timeline-container" id="timeline-container">
                     <svg id="connections-canvas"></svg>
+                    ${htmlDiretrizes}
                     ${cardsHTML}
                 </div>`;
         }
@@ -810,7 +833,7 @@ window.TopicsManager = (function () {
         let svgContent = '';
 
         // 1. LINHA VERMELHA: Conecta apenas de Grupo a Grupo (Master items)
-        const masterItemsForSpine = Array.from(container.querySelectorAll('.timeline-item-master'));
+        const masterItemsForSpine = Array.from(container.querySelectorAll('.timeline-item-master:not(.nivel-hierarquico)'));
 
         for (let i = 0; i < masterItemsForSpine.length - 1; i++) {
             const currentGroup = masterItemsForSpine[i];
@@ -846,7 +869,7 @@ window.TopicsManager = (function () {
             svgContent += `<path d="M ${startX},${startY} C ${startX},${ctrlY} ${endX},${ctrlY} ${endX},${endY}" stroke="#d32f2f" stroke-width="2.5" fill="none" stroke-linecap="round" />`;
         }
 
-        const masterItems = container.querySelectorAll('.timeline-item-master');
+        const masterItems = container.querySelectorAll('.timeline-item-master:not(.nivel-hierarquico)');
         masterItems.forEach(master => {
             const mainCard = master.querySelector('.main-card-wrapper > .annotation-card');
             const subItems = master.querySelectorAll('.sub-annotation-item');
