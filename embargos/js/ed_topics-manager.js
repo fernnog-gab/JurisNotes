@@ -499,11 +499,16 @@ window.TopicsManager = (function () {
 
         return `
             <div class="timeline-item-master nivel-hierarquico align-left">
-                <div class="main-card-wrapper" style="width: auto; min-width: 250px;">
+                <div class="main-card-wrapper" style="width: auto; min-width: 280px; max-width: 60%;">
                     <div class="annotation-card ${corClass}">
-                        <div class="card-header" style="align-items: center; justify-content: flex-start; gap: 8px;">
-                            <div class="timeline-icon-box">${iconSvg}</div>
-                            <strong>${isGlobal ? 'Premissas de Auditoria (Global)' : `Vício: ${escaparHTML(titulo)}`}</strong>
+                        <div class="card-header" style="align-items: center; justify-content: space-between; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div class="timeline-icon-box">${iconSvg}</div>
+                                <strong>${isGlobal ? 'Premissas de Auditoria (Global)' : `Vício: ${escaparHTML(titulo)}`}</strong>
+                            </div>
+                            <button class="ann-action-btn" title="Adicionar Regra" style="background: none; border: none; color: inherit; cursor: pointer; opacity: 0.8;" onclick="adicionarDiretrizEstrutural('${isGlobal ? 'global' : 'vicio'}', '${topicoId}', '${isGlobal ? '' : escaparHTML(titulo)}', event)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -765,10 +770,29 @@ window.TopicsManager = (function () {
                 sumarioHtml += '</div>';
             }
             const cardsHTML = topicoAtivo.anotacoes.map(criarCard).join('');
+
+            // NOVA LÓGICA: Montagem do Bloco de Diretrizes (Hierarquia)
+            let htmlDiretrizes = '';
+
+            // 1. Injeta as Diretrizes Globais
+            if (topicoAtivo.diretrizesGlobais && topicoAtivo.diretrizesGlobais.length > 0) {
+                htmlDiretrizes += renderizarNivelHierarquico('global', null, topicoAtivo.diretrizesGlobais, activeTabId);
+            }
+
+            // 2. Injeta as Diretrizes Vinculadas a Vícios Específicos
+            if (topicoAtivo.diretrizesPorVicio) {
+                Object.keys(topicoAtivo.diretrizesPorVicio).forEach(nomeVicio => {
+                    if (topicoAtivo.diretrizesPorVicio[nomeVicio].length > 0) {
+                        htmlDiretrizes += renderizarNivelHierarquico('vicio', nomeVicio, topicoAtivo.diretrizesPorVicio[nomeVicio], activeTabId);
+                    }
+                });
+            }
             
+            // MONTAGEM FINAL DA TIMELINE
             conteudoCentralHtml = sumarioHtml + `
                 <div class="timeline-container" id="timeline-container">
                     <svg id="connections-canvas"></svg>
+                    ${htmlDiretrizes}
                     ${cardsHTML}
                 </div>`;
         }

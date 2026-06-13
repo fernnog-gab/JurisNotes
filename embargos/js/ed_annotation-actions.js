@@ -999,3 +999,64 @@ function fecharTooltipRapido() {
 }
 
 // window.SubDnDManager removido na refatoração de limpeza
+
+window.adicionarDiretrizEstrutural = function(tipo, topicoId, grupoNome, event) {
+    event.stopPropagation();
+    
+    // Identifica o ID do container temporário para evitar duplicatas
+    const containerId = `sub-input-active-dir-${tipo}-${grupoNome ? grupoNome.replace(/\s+/g, '') : 'global'}`;
+    if (document.getElementById(containerId)) return;
+
+    const painel = document.createElement('div');
+    painel.id = containerId;
+    painel.className = 'sub-input-panel';
+    painel.innerHTML = `
+        <textarea id="dir-input-text" class="sub-input-textarea" placeholder="Digite a regra/diretriz para a IA..." rows="3"></textarea>
+        <div class="sub-input-actions">
+            <button class="sub-input-btn-icon confirm" title="Confirmar" onclick="salvarDiretrizEstrutural('${tipo}', '${topicoId}', '${grupoNome || ''}', '${containerId}')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </button>
+            <button class="sub-input-btn-icon cancel" title="Cancelar" onclick="document.getElementById('${containerId}').remove()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>`;
+
+    // Ancorar o input logo abaixo do card pai que acionou o clique
+    const cardMestre = event.currentTarget.closest('.main-card-wrapper');
+    if (cardMestre) {
+        cardMestre.appendChild(painel);
+        document.getElementById('dir-input-text').focus();
+    }
+};
+
+window.salvarDiretrizEstrutural = function(tipo, topicoId, grupoNome, containerId) {
+    const texto = document.getElementById('dir-input-text').value.trim();
+    if (!texto) {
+        exibirToast('Digite a diretriz antes de salvar.', 'aviso');
+        return;
+    }
+
+    const topico = topicos.find(t => t.id === topicoId);
+    if (!topico) return;
+
+    const novoNo = {
+        uuid: 'dir-' + Math.random().toString(36).substr(2, 9),
+        texto: texto,
+        intencao: 'premissa', // Intenção padrão
+        timestamp: Date.now()
+    };
+
+    if (tipo === 'global') {
+        if (!topico.diretrizesGlobais) topico.diretrizesGlobais = [];
+        topico.diretrizesGlobais.push(novoNo);
+    } else if (tipo === 'vicio') {
+        if (!topico.diretrizesPorVicio) topico.diretrizesPorVicio = {};
+        if (!topico.diretrizesPorVicio[grupoNome]) topico.diretrizesPorVicio[grupoNome] = [];
+        topico.diretrizesPorVicio[grupoNome].push(novoNo);
+    }
+
+    document.getElementById(containerId).remove();
+    renderizarTopicos(); // Atualiza a tela chamando renderizarFichario indiretamente
+    salvarBackupAutomatico();
+    exibirToast('Diretriz salva com sucesso!', 'sucesso');
+};
