@@ -479,8 +479,8 @@ window.TopicsManager = (function () {
      * Renderiza o bloco de diretrizes visuais para a IA (Global ou Por Vício)
      */
     function renderizarNivelHierarquico(tipo, titulo, subanotacoes, topicoId) {
-        if (!subanotacoes || subanotacoes.length === 0) return '';
-        
+        // Garantimos um array vazio caso seja null/undefined
+        const listaSegura = subanotacoes || [];
         const isGlobal = tipo === 'global';
         
         // 1. Ícones rigorosamente iguais aos do RO
@@ -496,7 +496,7 @@ window.TopicsManager = (function () {
         let classSubBorda = isGlobal ? 'borda-global' : '';
         const corTextoTese = obterCorContraste(_activeTopicoCor);
 
-        // Se for o Vício (Tese), aplica a lógica de cor dinâmica e o truque do gradiente sobre branco
+        // Se for o Vício (Tese), aplica a lógica de cor dinâmica
         if (!isGlobal) {
             const rgbaTeseFundo = hexToRgba(_activeTopicoCor, 0.15);
             const rgbaTeseBorda = hexToRgba(_activeTopicoCor, 0.4);
@@ -508,20 +508,26 @@ window.TopicsManager = (function () {
             styleSubBorda = `border-left: 5px solid ${_activeTopicoCor}; border-color: ${rgbaTeseBorda};`;
         }
         
-        const subCardsHTML = subanotacoes.map((sub, idx) => {
-           return `
-             <div class="sub-annotation-item" data-source="${isGlobal ? 'global' : `vicio:${titulo}`}">
-                <div class="sub-annotation-card ${classSubBorda}" style="${styleSubBorda}">
-                    <div class="sub-text-content">${renderizarMarkdownSeguro(escaparHTML(sub.texto))}</div>
-                    <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">Ler texto completo ▾</button>
-                </div>
-             </div>`;
-        }).join('');
+        // 3. UX: Lidando com o Estado Vazio vs Preenchido
+        let subCardsHTML = '';
+        if (listaSegura.length === 0) {
+            subCardsHTML = `<div class="empty-state" style="margin-top: 12px; text-align: left; padding: 0 8px; font-size: 0.85rem; color: #888;">Nenhuma diretriz definida. Clique no botão <strong>"+"</strong> ao lado para adicionar.</div>`;
+        } else {
+            subCardsHTML = listaSegura.map((sub, idx) => {
+               return `
+                 <div class="sub-annotation-item" data-source="${isGlobal ? 'global' : `vicio:${titulo}`}">
+                    <div class="sub-annotation-card ${classSubBorda}" style="${styleSubBorda}">
+                        <div class="sub-text-content">${renderizarMarkdownSeguro(escaparHTML(sub.texto))}</div>
+                        <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">Ler texto completo ▾</button>
+                    </div>
+                 </div>`;
+            }).join('');
+        }
 
-        const hierarquiaTitulo = isGlobal ? 'Premissas de Auditoria (Global)' : `Vício: ${escaparHTML(titulo)}`;
+        const hierarquiaTitulo = isGlobal ? 'Diretrizes Globais (Auditoria)' : `Vício Alegado: ${escaparHTML(titulo)}`;
         const wrapperClass = isGlobal ? 'nivel-global' : 'nivel-vicio';
 
-        // 3. Estrutura HTML idêntica à do RO (Ícone flutuando na 'annotation-number-area')
+        // 4. Retorna a estrutura (Mestre sempre renderiza)
         return `
             <div class="timeline-item-master align-left nivel-hierarquico ${wrapperClass}">
                 <div class="main-card-wrapper" style="width: auto; min-width: 280px; max-width: 60%;">
@@ -534,7 +540,7 @@ window.TopicsManager = (function () {
                         <div class="card-header" style="justify-content: space-between; margin-bottom: 0;">
                             <div class="hierarquia-titulo" style="${styleTitle}">${hierarquiaTitulo}</div>
                             <div class="card-actions-bar" style="margin-top: 0; padding-top: 0; border-top: none;">
-                                <button title="Adicionar Regra" onclick="adicionarDiretrizEstrutural('${isGlobal ? 'global' : 'vicio'}', '${topicoId}', '${isGlobal ? '' : escaparHTML(titulo)}', event)">
+                                <button title="Adicionar Diretriz" onclick="adicionarDiretrizEstrutural('${isGlobal ? 'global' : 'vicio'}', '${topicoId}', '${isGlobal ? '' : escaparHTML(titulo)}', event)">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                 </button>
                             </div>
@@ -803,15 +809,24 @@ window.TopicsManager = (function () {
             // NOVA LÓGICA: Montagem do Bloco de Diretrizes (Hierarquia)
             let htmlDiretrizes = '';
 
-            // 1. Injeta as Diretrizes Globais
-            if (topicoAtivo.diretrizesGlobais && topicoAtivo.diretrizesGlobais.length > 0) {
-                htmlDiretrizes += renderizarNivelHierarquico('global', null, topicoAtivo.diretrizesGlobais, activeTabId);
-            }
+            // 1. Injeta as Diretrizes Globais SEMPRE
+            const diretrizesGlobaisSeguras = topicoAtivo.diretrizesGlobais || [];
+            htmlDiretrizes += renderizarNivelHierarquico('global', null, diretrizesGlobaisSeguras, activeTabId);
 
-            // 2. Injeta as Diretrizes Vinculadas a Vícios Específicos
+            // 2. Injeta a Diretriz do Vício Atual SEMPRE
+            // Pegamos o vício definido no tópico (padrão: omissão)
+            const vicioAtual = topicoAtivo.vicio || 'Omissão';
+            const diretrizesDoVicio = (topicoAtivo.diretrizesPorVicio && topicoAtivo.diretrizesPorVicio[vicioAtual]) 
+                                      ? topicoAtivo.diretrizesPorVicio[vicioAtual] 
+                                      : [];
+            
+            htmlDiretrizes += renderizarNivelHierarquico('vicio', vicioAtual, diretrizesDoVicio, activeTabId);
+
+            // Opcional: Se o usuário trocou de Vício (ex: de omissão para contradição) 
+            // e ficaram anotações salvas no antigo, renderiza elas também.
             if (topicoAtivo.diretrizesPorVicio) {
                 Object.keys(topicoAtivo.diretrizesPorVicio).forEach(nomeVicio => {
-                    if (topicoAtivo.diretrizesPorVicio[nomeVicio].length > 0) {
+                    if (nomeVicio !== vicioAtual && topicoAtivo.diretrizesPorVicio[nomeVicio].length > 0) {
                         htmlDiretrizes += renderizarNivelHierarquico('vicio', nomeVicio, topicoAtivo.diretrizesPorVicio[nomeVicio], activeTabId);
                     }
                 });
