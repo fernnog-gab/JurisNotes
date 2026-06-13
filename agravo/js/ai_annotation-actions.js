@@ -15,26 +15,33 @@ function abrirMenuAnotacao(topicoId, index, event) {
 }
 
 // HELPER PRIVADO (Resolução de Referência)
-// 1. Atualizar roteador para aceitar strings em vez de apenas números
+// Atualizado para resolver corretamente strings de Óbices ignorando defaults ('main')
 function _resolverSubAlvo(topico, parentIndex, viewSource) {
-    // Tratamento para Global
+    // 1. Tratamento para Global
     if (viewSource === 'global' || parentIndex === 'global') {
         if (!topico.diretrizesGlobais) topico.diretrizesGlobais = [];
         return { subAnotacoes: topico.diretrizesGlobais }; 
     }
     
-    // Tratamento para Óbices
-    const fonte = viewSource || parentIndex;
-    if (String(fonte).startsWith('obice:')) {
-        const nomeObice = String(fonte).split('obice:')[1];
+    // 2. Tratamento para Óbices (CORRIGIDO AQUI)
+    // Verifica se a intenção de Óbice está no parentIndex OU no viewSource
+    const isObice = String(parentIndex).startsWith('obice:') || String(viewSource).startsWith('obice:');
+    
+    if (isObice) {
+        // Pega a string que efetivamente contém o nome do óbice
+        const fonteReal = String(parentIndex).startsWith('obice:') ? parentIndex : viewSource;
+        const nomeObice = String(fonteReal).split('obice:')[1];
+        
         if (!topico.diretrizesPorObice) topico.diretrizesPorObice = {};
         if (!topico.diretrizesPorObice[nomeObice]) topico.diretrizesPorObice[nomeObice] = [];
+        
         return { subAnotacoes: topico.diretrizesPorObice[nomeObice] };
     }
 
-    // Comportamento Original (Provas Fáticas)
+    // 3. Comportamento Original (Provas Fáticas normais numeradas)
     const cardMestre = topico.anotacoes[parentIndex];
     if (viewSource === 'main') return cardMestre;
+    
     const cIdx = parseInt(viewSource, 10);
     return cardMestre.itensCorrelacionados[cIdx];
 }
