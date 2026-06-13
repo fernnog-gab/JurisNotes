@@ -613,6 +613,82 @@ window.TopicsManager = (function () {
                 </div>
             </div>`;
 
+        // =========================================================
+        // RENDERIZAÇÃO DE DIRETRIZES (SEMPRE VISÍVEIS)
+        // =========================================================
+        let htmlDiretrizes = '';
+
+        // 1. Bloco Global (Renderizado Incondicionalmente)
+        if (!topicoAtivo.diretrizesGlobais) topicoAtivo.diretrizesGlobais = [];
+        const flatDiretrizesGlobais = topicoAtivo.diretrizesGlobais.map((s, idx) => ({ ...s, viewSource: 'global', localIndex: idx }));
+
+        htmlDiretrizes += `
+        <div class="timeline-item-master nivel-hierarquico align-left" id="timeline-wrapper-global">
+            <div class="main-card-wrapper" data-cidx="main">
+                <div class="annotation-number-area">
+                    <div class="timeline-icon-box nivel-global" title="Diretrizes Globais">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    </div>
+                </div>
+                <div class="annotation-card nivel-global">
+                    <div class="card-header">
+                        <span class="polo-tag doc-tag" style="background:#1a3a5c; color:#fff; border:none;">Diretrizes de Admissibilidade</span>
+                    </div>
+                    <p class="card-texto" style="color:#fff; margin-bottom: 12px; font-style: normal;">Regras supremas da IA para este Agravo.</p>
+                    <div class="card-actions-bar" style="border-top: 1px dashed rgba(255,255,255,0.3); padding-top: 8px;">
+                        <button title="Adicionar Regra Global" style="color: #fff; display: flex; gap: 4px; font-weight: bold; background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 6px;" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:'global'}; acionarNovoNoIdeia()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Adicionar
+                        </button>
+                    </div>
+                </div>
+            </div>
+            ${_gerarCartoesSubAnotacao(flatDiretrizesGlobais, 0, activeTabId, 'global')}
+        </div>`;
+
+        // 2. Blocos por Óbice (Baseado nas teses que o usuário já criou nas provas)
+        // Coleta todos os óbices (teses) únicos que existem nos cards fáticos
+        const obicesUnicos = new Set();
+        if (topicoAtivo.anotacoes) {
+            topicoAtivo.anotacoes.forEach(an => {
+                if (an.tese && an.tese.trim() !== '') obicesUnicos.add(an.tese.trim());
+            });
+        }
+
+        // Para cada óbice encontrado, renderiza um painel Verde Limão
+        obicesUnicos.forEach(obiceNome => {
+            // Cria um ID seguro para o HTML (remove espaços e caracteres especiais)
+            const idObiceSeguro = obiceNome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '_');
+            const viewSourceObice = `obice:${obiceNome}`;
+            
+            if (!topicoAtivo.diretrizesPorObice) topicoAtivo.diretrizesPorObice = {};
+            const regrasObice = topicoAtivo.diretrizesPorObice[obiceNome] || [];
+            const flatRegrasObice = regrasObice.map((s, idx) => ({ ...s, viewSource: viewSourceObice, localIndex: idx }));
+
+            htmlDiretrizes += `
+            <div class="timeline-item-master nivel-hierarquico align-left" id="timeline-wrapper-obice-${idObiceSeguro}">
+                <div class="main-card-wrapper" data-cidx="main">
+                    <div class="annotation-number-area">
+                        <div class="timeline-icon-box nivel-obice" title="Diretrizes para este Óbice" style="background-color: #A3E635; border: 2px solid #8ce015;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle></svg>
+                        </div>
+                    </div>
+                    <div class="annotation-card nivel-obice" style="background-color: #f7fee7; border-left: 4px solid #A3E635;">
+                        <div class="card-header">
+                            <span class="polo-tag doc-tag" style="background:#A3E635; color:#000; border: 1px solid #8ce015; font-size: 0.8rem;">Óbice: ${escaparHTML(obiceNome)}</span>
+                        </div>
+                        <p class="card-texto" style="color:#333; margin-bottom: 12px; font-style: normal;">Instruções de IA específicas para julgar este pressuposto.</p>
+                        <div class="card-actions-bar" style="border-top: 1px dashed #A3E635; padding-top: 8px;">
+                            <button title="Adicionar Regra a este Óbice" style="color: #000; display: flex; gap: 4px; font-weight: bold; background: rgba(163, 230, 53, 0.3); padding: 6px 12px; border-radius: 6px;" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:'${viewSourceObice}'}; acionarNovoNoIdeia()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Adicionar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                ${_gerarCartoesSubAnotacao(flatRegrasObice, 0, activeTabId, viewSourceObice)}
+            </div>`;
+        });
+        // =========================================================
+
         let conteudoCentralHtml = '';
 
         if (topicoAtivo.anotacoes.length === 0) {
@@ -728,7 +804,7 @@ window.TopicsManager = (function () {
                 </div>`;
         }
 
-        const novoHtml = preambleHtml + conteudoCentralHtml;
+        const novoHtml = preambleHtml + htmlDiretrizes + conteudoCentralHtml;
             
         // KEYED MORPHING
         if (typeof morphdom !== 'undefined') {

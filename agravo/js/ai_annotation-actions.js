@@ -15,17 +15,26 @@ function abrirMenuAnotacao(topicoId, index, event) {
 }
 
 // HELPER PRIVADO (Resolução de Referência)
+// 1. Atualizar roteador para aceitar strings em vez de apenas números
 function _resolverSubAlvo(topico, parentIndex, viewSource) {
+    // Tratamento para Global
     if (viewSource === 'global' || parentIndex === 'global') {
         if (!topico.diretrizesGlobais) topico.diretrizesGlobais = [];
         return { subAnotacoes: topico.diretrizesGlobais }; 
     }
     
-    // Tratamento Padrão de Provas
-    const cardMestre = topico.anotacoes[parentIndex];
-    if (viewSource === 'main') {
-        return cardMestre;
+    // Tratamento para Óbices
+    const fonte = viewSource || parentIndex;
+    if (String(fonte).startsWith('obice:')) {
+        const nomeObice = String(fonte).split('obice:')[1];
+        if (!topico.diretrizesPorObice) topico.diretrizesPorObice = {};
+        if (!topico.diretrizesPorObice[nomeObice]) topico.diretrizesPorObice[nomeObice] = [];
+        return { subAnotacoes: topico.diretrizesPorObice[nomeObice] };
     }
+
+    // Comportamento Original (Provas Fáticas)
+    const cardMestre = topico.anotacoes[parentIndex];
+    if (viewSource === 'main') return cardMestre;
     const cIdx = parseInt(viewSource, 10);
     return cardMestre.itensCorrelacionados[cIdx];
 }
@@ -538,29 +547,33 @@ function adicionarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
     painel.id = 'sub-input-active'; 
     painel.className = 'sub-input-panel';
     painel.dataset.forTopico = topicoId; 
-    painel.dataset.forIndex = anotacaoIndex;
+    painel.dataset.forIndex = String(anotacaoIndex); // Força string
     
-    // Tratamento de tipo seguro para injetar como string no HTML
     const argCidx = cIdx != null ? cIdx : 'null';
     
     painel.innerHTML = `
         <textarea id="sub-input-text" class="sub-input-textarea" placeholder="Digite a ideia secundária..." rows="3"></textarea>
         <div class="sub-input-actions">
-            <button class="sub-input-btn-icon confirm" title="Confirmar (Ctrl+Enter)" onclick="confirmarSubAnotacao('${topicoId}', ${anotacaoIndex}, ${argCidx})">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <button class="sub-input-btn-icon confirm" title="Confirmar (Ctrl+Enter)" onclick="confirmarSubAnotacao('${topicoId}', '${anotacaoIndex}', ${argCidx})">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
             </button>
-            <button class="sub-input-btn-icon cancel" title="Cancelar (Esc)" onclick="document.getElementById('sub-input-active').remove()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            <button class="sub-input-btn-icon cancel" title="Cancelar" onclick="document.getElementById('sub-input-active').remove()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
         </div>`;
         
-    // Ancoragem dinâmica: anexa o input logo abaixo do card que gerou a ação
     const topicoTarget = topicos.find(t => t.id === topicoId);
     let masterWrapperId = '';
 
-    // Seletor Inteligente: Numérico vs String (Global)
+    // ==========================================
+    // NOVA LÓGICA DE ANCORAGEM
+    // ==========================================
     if (anotacaoIndex === 'global') {
         masterWrapperId = 'timeline-wrapper-global';
+    } else if (String(anotacaoIndex).startsWith('obice:')) {
+        const nomeObice = String(anotacaoIndex).split('obice:')[1];
+        const idObiceSeguro = nomeObice.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '_');
+        masterWrapperId = `timeline-wrapper-obice-${idObiceSeguro}`;
     } else {
         const uuidTarget = topicoTarget && topicoTarget.anotacoes[anotacaoIndex] ? topicoTarget.anotacoes[anotacaoIndex].uuid : null;
         masterWrapperId = uuidTarget ? `timeline-wrapper-${uuidTarget}` : `timeline-wrapper-${anotacaoIndex}`;
@@ -569,7 +582,7 @@ function adicionarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
     const masterWrapper = document.getElementById(masterWrapperId);
     if (masterWrapper) {
         let mountPoint = masterWrapper.querySelector('.main-card-wrapper');
-        if (cIdx != null) {
+        if (cIdx != null && String(anotacaoIndex) !== 'global' && !String(anotacaoIndex).startsWith('obice:')) {
             const correlatedItem = mountPoint.querySelector(`.correlated-item-wrapper[data-cidx="${cIdx}"]`);
             if (correlatedItem) mountPoint = correlatedItem;
         }
