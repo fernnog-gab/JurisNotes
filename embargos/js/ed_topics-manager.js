@@ -482,33 +482,62 @@ window.TopicsManager = (function () {
         if (!subanotacoes || subanotacoes.length === 0) return '';
         
         const isGlobal = tipo === 'global';
-        const corClass = isGlobal ? 'nivel-global' : 'nivel-vicio';
+        
+        // 1. Ícones rigorosamente iguais aos do RO
         const iconSvg = isGlobal 
-            ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line></svg>`
-            : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle></svg>`;
+            ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`
+            : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle></svg>`;
+        
+        // 2. Lógica de Estilização Dinâmica
+        let styleIconBox = '';
+        let styleCard = '';
+        let styleTitle = '';
+        let styleSubBorda = '';
+        let classSubBorda = isGlobal ? 'borda-global' : '';
+        const corTextoTese = obterCorContraste(_activeTopicoCor);
+
+        // Se for o Vício (Tese), aplica a lógica de cor dinâmica e o truque do gradiente sobre branco
+        if (!isGlobal) {
+            const rgbaTeseFundo = hexToRgba(_activeTopicoCor, 0.15);
+            const rgbaTeseBorda = hexToRgba(_activeTopicoCor, 0.4);
+            const corTituloTese = escurecerCor(_activeTopicoCor, 0.6);
+
+            styleIconBox = `background-color: ${_activeTopicoCor}; color: ${corTextoTese};`;
+            styleCard = `border-left: 4px solid ${_activeTopicoCor}; background-color: #ffffff; background-image: linear-gradient(${rgbaTeseFundo}, ${rgbaTeseFundo});`;
+            styleTitle = `color: ${corTituloTese};`;
+            styleSubBorda = `border-left: 5px solid ${_activeTopicoCor}; border-color: ${rgbaTeseBorda};`;
+        }
         
         const subCardsHTML = subanotacoes.map((sub, idx) => {
            return `
              <div class="sub-annotation-item" data-source="${isGlobal ? 'global' : `vicio:${titulo}`}">
-                <div class="sub-annotation-card" style="border-left-color: var(--ed-neon-stroke);">
+                <div class="sub-annotation-card ${classSubBorda}" style="${styleSubBorda}">
                     <div class="sub-text-content">${renderizarMarkdownSeguro(escaparHTML(sub.texto))}</div>
                     <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">Ler texto completo ▾</button>
                 </div>
              </div>`;
         }).join('');
 
+        const hierarquiaTitulo = isGlobal ? 'Premissas de Auditoria (Global)' : `Vício: ${escaparHTML(titulo)}`;
+        const wrapperClass = isGlobal ? 'nivel-global' : 'nivel-vicio';
+
+        // 3. Estrutura HTML idêntica à do RO (Ícone flutuando na 'annotation-number-area')
         return `
-            <div class="timeline-item-master nivel-hierarquico align-left">
+            <div class="timeline-item-master align-left nivel-hierarquico ${wrapperClass}">
                 <div class="main-card-wrapper" style="width: auto; min-width: 280px; max-width: 60%;">
-                    <div class="annotation-card ${corClass}">
-                        <div class="card-header" style="align-items: center; justify-content: space-between; gap: 8px;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <div class="timeline-icon-box">${iconSvg}</div>
-                                <strong>${isGlobal ? 'Premissas de Auditoria (Global)' : `Vício: ${escaparHTML(titulo)}`}</strong>
+                    <div class="annotation-number-area">
+                        <div class="timeline-icon-box" title="${hierarquiaTitulo}" style="${styleIconBox}">
+                            ${iconSvg}
+                        </div>
+                    </div>
+                    <div class="annotation-card" style="${styleCard}">
+                        <div class="card-header" style="justify-content: space-between; margin-bottom: 0;">
+                            <div class="hierarquia-titulo" style="${styleTitle}">${hierarquiaTitulo}</div>
+                            <div class="card-actions-bar" style="margin-top: 0; padding-top: 0; border-top: none;">
+                                <button title="Adicionar Regra" onclick="adicionarDiretrizEstrutural('${isGlobal ? 'global' : 'vicio'}', '${topicoId}', '${isGlobal ? '' : escaparHTML(titulo)}', event)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                </button>
                             </div>
-                            <button class="ann-action-btn" title="Adicionar Regra" style="background: none; border: none; color: inherit; cursor: pointer; opacity: 0.8;" onclick="adicionarDiretrizEstrutural('${isGlobal ? 'global' : 'vicio'}', '${topicoId}', '${isGlobal ? '' : escaparHTML(titulo)}', event)">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                            </button>
                         </div>
                     </div>
                 </div>
