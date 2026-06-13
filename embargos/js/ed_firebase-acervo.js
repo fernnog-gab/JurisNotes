@@ -61,17 +61,15 @@ window.AcervoManager = (function() {
         const docRef = doc(db, "usuarios", uid, "acervo", modeloId);
         
         const noLimpo = { intencao: noOriginal.intencao || 'premissa', texto: noOriginal.texto || '', timestamp: Date.now() };
-        
-        // Identifica onde o usuário está trabalhando no momento
         const moduloContexto = _getModuloAtual();
 
         try {
-            // ATUALIZAÇÃO: Grava o campo 'modulo' diretamente no Firebase
             await setDoc(docRef, { 
                 nome: nome, 
                 criadoEm: Date.now(), 
                 nos: [noLimpo],
-                modulo: moduloContexto 
+                modulo: moduloContexto,
+                escopo: noOriginal.escopoOriginal || 'card' 
             });
             modelosEmCache = []; 
             return modeloId;
@@ -244,6 +242,14 @@ window.AcervoManager = (function() {
         modelosEmCache = [];
     }
 
+    async function atualizarEscopoDoModelo(modeloId, novoEscopo) {
+        const uid = getUserId();
+        if (!uid) throw new Error("Usuário não autenticado.");
+        const docRef = doc(db, "usuarios", uid, "acervo", modeloId);
+        await updateDoc(docRef, { escopo: novoEscopo, atualizadoEm: Date.now() });
+        modelosEmCache = [];
+    }
+
     return { 
         salvarNovoModelo, 
         adicionarNoAModelo, 
@@ -255,6 +261,7 @@ window.AcervoManager = (function() {
         salvarConfigTags,
         carregarConfigTags,
         atualizarTagEmTodosModelos,
-        atualizarTagsDoModelo
+        atualizarTagsDoModelo,
+        atualizarEscopoDoModelo
     };
 })();
