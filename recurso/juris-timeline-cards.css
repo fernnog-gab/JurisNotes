@@ -380,22 +380,23 @@
 .timeline-icon-box svg { width: 18px; height: 18px; }
 
 /* === NOVO DESIGN: DIRETRIZES GLOBAIS === */
-.nivel-global .timeline-icon-box { background-color: #0f253d; /* Ícone super escuro para destacar */ }
+.nivel-global .timeline-icon-box { background-color: #0f253d; /* Ícone super escuro mantido */ }
+
 .nivel-global .annotation-card { 
-    border-left: 4px solid #0f253d; 
-    background-color: #1a3a5c; /* Fundo do card em azul escuro */ 
-    color: #ffffff; /* Texto branco */
+    border-left: 4px solid #0f253d; /* Borda acompanha o ícone */
+    background-color: #274b72; /* <--- AQUI: Clareamos o fundo do card! */ 
+    color: #ffffff; 
 }
+
 .nivel-global .hierarquia-titulo { color: #ffffff; font-weight: bold; font-size: 0.95rem; }
 
-/* Ajuste sutil para os botões de ação (Lixeira/Mais) não ficarem pretos no fundo azul */
 .nivel-global .card-actions-bar button { color: #aab8c5; }
-.nivel-global .card-actions-bar button:hover { background: rgba(255, 255, 255, 0.1); color: #ffffff; }
+.nivel-global .card-actions-bar button:hover { background: rgba(255, 255, 255, 0.15); color: #ffffff; }
 
-/* CLASSE NOVA PARA OS NÓS DA DIRETRIZ GLOBAL */
+/* Nós (sub-anotações) da Diretriz Global */
 .sub-annotation-card.borda-global {
-    border-color: rgba(15, 37, 61, 0.3);
-    border-left: 5px solid #0f253d; /* Mesmo tom super escuro do ícone */
+    border-color: rgba(39, 75, 114, 0.4); /* Fica em harmonia com o card */
+    border-left: 5px solid #0f253d; /* O traço esquerdo amarra com o ícone pai */
 }
 
 .nivel-tese .timeline-icon-box { background-color: #6a1b9a; }
