@@ -121,6 +121,20 @@ window.TopicsManager = (function () {
         return ABC[Math.floor(idx / 26) - 1] + ABC[idx % 26];
     }
 
+    function obterIconeIntencao(intencao) {
+        switch(intencao) {
+            case 'comando': return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>`;
+            case 'texto': return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`;
+            case 'nota': return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
+            case 'fundamentacao': return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>`;
+            case 'refutacao': return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>`;
+            case 'preliminar': return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
+            case 'veredito': return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>`;
+            case 'premissa':
+            default: return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>`;
+        }
+    }
+
     let activeTabId = null;
 
     /**
@@ -479,71 +493,48 @@ window.TopicsManager = (function () {
      * Renderiza o bloco de diretrizes visuais para a IA (Global ou Por Vício)
      */
     function renderizarNivelHierarquico(tipo, titulo, subanotacoes, topicoId) {
-        // Garantimos um array vazio caso seja null/undefined
-        const listaSegura = subanotacoes || [];
+        if (!subanotacoes || subanotacoes.length === 0) return '';
+        
         const isGlobal = tipo === 'global';
-        
-        // 1. Ícones rigorosamente iguais aos do RO
+        const corClass = isGlobal ? 'nivel-global' : 'nivel-vicio';
         const iconSvg = isGlobal 
-            ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`
-            : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle></svg>`;
+            ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line></svg>`
+            : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle></svg>`;
         
-        // 2. Lógica de Estilização Dinâmica
-        let styleIconBox = '';
-        let styleCard = '';
-        let styleTitle = '';
-        let styleSubBorda = '';
-        let classSubBorda = isGlobal ? 'borda-global' : '';
-        const corTextoTese = obterCorContraste(_activeTopicoCor);
+        const subCardsHTML = subanotacoes.map((sub, idx) => {
+            const intencao = sub.intencao || 'premissa';
+            const subIconSVG = obterIconeIntencao(intencao);
+            const prefixo = isGlobal ? 'G' : 'V';
+            const viewSource = isGlobal ? 'global' : `vicio:${titulo}`;
 
-        // Se for o Vício (Tese), aplica a lógica de cor dinâmica
-        if (!isGlobal) {
-            const rgbaTeseFundo = hexToRgba(_activeTopicoCor, 0.15);
-            const rgbaTeseBorda = hexToRgba(_activeTopicoCor, 0.4);
-            const corTituloTese = escurecerCor(_activeTopicoCor, 0.6);
-
-            styleIconBox = `background-color: ${_activeTopicoCor}; color: ${corTextoTese};`;
-            styleCard = `border-left: 4px solid ${_activeTopicoCor}; background-color: #ffffff; background-image: linear-gradient(${rgbaTeseFundo}, ${rgbaTeseFundo});`;
-            styleTitle = `color: ${corTituloTese};`;
-            styleSubBorda = `border-left: 5px solid ${_activeTopicoCor}; border-color: ${rgbaTeseBorda};`;
-        }
-        
-        // 3. UX: Lidando com o Estado Vazio vs Preenchido
-        let subCardsHTML = '';
-        if (listaSegura.length === 0) {
-            subCardsHTML = `<div class="empty-state" style="margin-top: 12px; text-align: left; padding: 0 8px; font-size: 0.85rem; color: #888;">Nenhuma diretriz definida. Clique no botão <strong>"+"</strong> ao lado para adicionar.</div>`;
-        } else {
-            subCardsHTML = listaSegura.map((sub, idx) => {
-               return `
-                 <div class="sub-annotation-item" data-source="${isGlobal ? 'global' : `vicio:${titulo}`}">
-                    <div class="sub-annotation-card ${classSubBorda}" style="${styleSubBorda}">
-                        <div class="sub-text-content">${renderizarMarkdownSeguro(escaparHTML(sub.texto))}</div>
-                        <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">Ler texto completo ▾</button>
+            return `
+             <div class="sub-annotation-item" data-source="${viewSource}">
+                <div class="sub-annotation-card" style="border-left-color: var(--ed-neon-stroke);">
+                    <!-- BADGE RESTAURADA: Aqui está o botão circular de menu do canto superior direito -->
+                    <div class="sub-badge has-intent intencao-${intencao}" 
+                         title="Opções desta diretriz"
+                         onclick="abrirMenuSubAnotacao('${topicoId}', null, '${viewSource.replace(/'/g, "\\'")}', ${idx}, event)">
+                         ${subIconSVG} ${prefixo}.${idx + 1}
                     </div>
-                 </div>`;
-            }).join('');
-        }
+                    <div class="sub-text-content">${renderizarMarkdownSeguro(escaparHTML(sub.texto))}</div>
+                    <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">Ler texto completo ▾</button>
+                </div>
+             </div>`;
+        }).join('');
 
-        const hierarquiaTitulo = isGlobal ? 'Diretrizes Globais (Auditoria)' : `Vício Alegado: ${escaparHTML(titulo)}`;
-        const wrapperClass = isGlobal ? 'nivel-global' : 'nivel-vicio';
-
-        // 4. Retorna a estrutura (Mestre sempre renderiza)
+        // O 'main-card-wrapper' não recebe mais max-width inline. Deixamos o CSS nativo controlar.
         return `
-            <div class="timeline-item-master align-left nivel-hierarquico ${wrapperClass}">
-                <div class="main-card-wrapper" style="width: auto; min-width: 280px; max-width: 60%;">
-                    <div class="annotation-number-area">
-                        <div class="timeline-icon-box" title="${hierarquiaTitulo}" style="${styleIconBox}">
-                            ${iconSvg}
-                        </div>
-                    </div>
-                    <div class="annotation-card" style="${styleCard}">
-                        <div class="card-header" style="justify-content: space-between; margin-bottom: 0;">
-                            <div class="hierarquia-titulo" style="${styleTitle}">${hierarquiaTitulo}</div>
-                            <div class="card-actions-bar" style="margin-top: 0; padding-top: 0; border-top: none;">
-                                <button title="Adicionar Diretriz" onclick="adicionarDiretrizEstrutural('${isGlobal ? 'global' : 'vicio'}', '${topicoId}', '${isGlobal ? '' : escaparHTML(titulo)}', event)">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                </button>
+            <div class="timeline-item-master nivel-hierarquico align-left">
+                <div class="main-card-wrapper">
+                    <div class="annotation-card ${corClass}">
+                        <div class="card-header" style="align-items: center; justify-content: space-between; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div class="timeline-icon-box">${iconSvg}</div>
+                                <strong>${isGlobal ? 'Premissas de Auditoria (Global)' : `Vício: ${escaparHTML(titulo)}`}</strong>
                             </div>
+                            <button class="ann-action-btn" title="Adicionar Regra" style="background: none; border: none; color: inherit; cursor: pointer; opacity: 0.8;" onclick="adicionarDiretrizEstrutural('${isGlobal ? 'global' : 'vicio'}', '${topicoId}', '${isGlobal ? '' : escaparHTML(titulo)}', event)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -809,24 +800,15 @@ window.TopicsManager = (function () {
             // NOVA LÓGICA: Montagem do Bloco de Diretrizes (Hierarquia)
             let htmlDiretrizes = '';
 
-            // 1. Injeta as Diretrizes Globais SEMPRE
-            const diretrizesGlobaisSeguras = topicoAtivo.diretrizesGlobais || [];
-            htmlDiretrizes += renderizarNivelHierarquico('global', null, diretrizesGlobaisSeguras, activeTabId);
+            // 1. Injeta as Diretrizes Globais
+            if (topicoAtivo.diretrizesGlobais && topicoAtivo.diretrizesGlobais.length > 0) {
+                htmlDiretrizes += renderizarNivelHierarquico('global', null, topicoAtivo.diretrizesGlobais, activeTabId);
+            }
 
-            // 2. Injeta a Diretriz do Vício Atual SEMPRE
-            // Pegamos o vício definido no tópico (padrão: omissão)
-            const vicioAtual = topicoAtivo.vicio || 'Omissão';
-            const diretrizesDoVicio = (topicoAtivo.diretrizesPorVicio && topicoAtivo.diretrizesPorVicio[vicioAtual]) 
-                                      ? topicoAtivo.diretrizesPorVicio[vicioAtual] 
-                                      : [];
-            
-            htmlDiretrizes += renderizarNivelHierarquico('vicio', vicioAtual, diretrizesDoVicio, activeTabId);
-
-            // Opcional: Se o usuário trocou de Vício (ex: de omissão para contradição) 
-            // e ficaram anotações salvas no antigo, renderiza elas também.
+            // 2. Injeta as Diretrizes Vinculadas a Vícios Específicos
             if (topicoAtivo.diretrizesPorVicio) {
                 Object.keys(topicoAtivo.diretrizesPorVicio).forEach(nomeVicio => {
-                    if (nomeVicio !== vicioAtual && topicoAtivo.diretrizesPorVicio[nomeVicio].length > 0) {
+                    if (topicoAtivo.diretrizesPorVicio[nomeVicio].length > 0) {
                         htmlDiretrizes += renderizarNivelHierarquico('vicio', nomeVicio, topicoAtivo.diretrizesPorVicio[nomeVicio], activeTabId);
                     }
                 });
