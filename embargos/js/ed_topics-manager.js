@@ -493,24 +493,48 @@ window.TopicsManager = (function () {
      * Renderiza o bloco de diretrizes visuais para a IA (Global ou Por Vício)
      */
     function renderizarNivelHierarquico(tipo, titulo, subanotacoes, topicoId) {
-        if (!subanotacoes || subanotacoes.length === 0) return '';
-        
+        const listaSegura = subanotacoes || [];
         const isGlobal = tipo === 'global';
-        const corClass = isGlobal ? 'nivel-global' : 'nivel-vicio';
-        const iconSvg = isGlobal 
-            ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line></svg>`
-            : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle></svg>`;
         
-        const subCardsHTML = subanotacoes.map((sub, idx) => {
+        const iconSvg = isGlobal 
+            ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`
+            : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle></svg>`;
+        
+        let styleIconBox = '';
+        let styleCard = '';
+        let styleTitle = '';
+        let styleSubBorda = '';
+        let classSubBorda = isGlobal ? 'borda-global' : '';
+        
+        // CORREÇÃO DA COR BRANCA FANTASMA
+        let corBase = _activeTopicoCor;
+        if (corBase.toLowerCase() === '#ffffff' && !isGlobal) {
+            corBase = '#1a3a5c'; // Azul Sóbrio Padrão do ED para garantir leitura
+        }
+        
+        const corTextoTese = obterCorContraste(corBase);
+
+        if (!isGlobal) {
+            const rgbaTeseFundo = hexToRgba(corBase, 0.08); // Fundo super suave
+            const rgbaTeseBorda = hexToRgba(corBase, 0.4);
+            const corTituloTese = escurecerCor(corBase, 0.6);
+
+            styleIconBox = `background-color: ${corBase}; color: ${corTextoTese};`;
+            styleCard = `border-left: 4px solid ${corBase}; background-color: #ffffff; background-image: linear-gradient(${rgbaTeseFundo}, ${rgbaTeseFundo});`;
+            styleTitle = `color: ${corTituloTese};`;
+            styleSubBorda = `border-left: 5px solid ${corBase}; border-color: ${rgbaTeseBorda};`;
+        }
+        
+        // RENDERIZAÇÃO DOS NÓS SEM FRASE DE EMPTY STATE E COM MENU ATIVO
+        const subCardsHTML = listaSegura.map((sub, idx) => {
             const intencao = sub.intencao || 'premissa';
             const subIconSVG = obterIconeIntencao(intencao);
             const prefixo = isGlobal ? 'G' : 'V';
             const viewSource = isGlobal ? 'global' : `vicio:${titulo}`;
-
+            
             return `
              <div class="sub-annotation-item" data-source="${viewSource}">
-                <div class="sub-annotation-card" style="border-left-color: var(--ed-neon-stroke);">
-                    <!-- BADGE RESTAURADA: Aqui está o botão circular de menu do canto superior direito -->
+                <div class="sub-annotation-card ${classSubBorda}" style="${styleSubBorda}">
                     <div class="sub-badge has-intent intencao-${intencao}" 
                          title="Opções desta diretriz"
                          onclick="abrirMenuSubAnotacao('${topicoId}', null, '${viewSource.replace(/'/g, "\\'")}', ${idx}, event)">
@@ -522,19 +546,25 @@ window.TopicsManager = (function () {
              </div>`;
         }).join('');
 
-        // O 'main-card-wrapper' não recebe mais max-width inline. Deixamos o CSS nativo controlar.
+        const hierarquiaTitulo = isGlobal ? 'Diretrizes Globais (Auditoria)' : `Vício Alegado: ${escaparHTML(titulo)}`;
+        const wrapperClass = isGlobal ? 'nivel-global' : 'nivel-vicio';
+
         return `
-            <div class="timeline-item-master nivel-hierarquico align-left">
+            <div class="timeline-item-master align-left nivel-hierarquico ${wrapperClass}">
                 <div class="main-card-wrapper">
-                    <div class="annotation-card ${corClass}">
-                        <div class="card-header" style="align-items: center; justify-content: space-between; gap: 8px;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <div class="timeline-icon-box">${iconSvg}</div>
-                                <strong>${isGlobal ? 'Premissas de Auditoria (Global)' : `Vício: ${escaparHTML(titulo)}`}</strong>
+                    <div class="annotation-number-area">
+                        <div class="timeline-icon-box" title="${hierarquiaTitulo}" style="${styleIconBox}">
+                            ${iconSvg}
+                        </div>
+                    </div>
+                    <div class="annotation-card" style="${styleCard}">
+                        <div class="card-header" style="justify-content: space-between; margin-bottom: 0;">
+                            <div class="hierarquia-titulo" style="${styleTitle}">${hierarquiaTitulo}</div>
+                            <div class="card-actions-bar" style="margin-top: 0; padding-top: 0; border-top: none;">
+                                <button title="Adicionar Diretriz" onclick="adicionarDiretrizEstrutural('${isGlobal ? 'global' : 'vicio'}', '${topicoId}', '${isGlobal ? '' : escaparHTML(titulo)}', event)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                </button>
                             </div>
-                            <button class="ann-action-btn" title="Adicionar Regra" style="background: none; border: none; color: inherit; cursor: pointer; opacity: 0.8;" onclick="adicionarDiretrizEstrutural('${isGlobal ? 'global' : 'vicio'}', '${topicoId}', '${isGlobal ? '' : escaparHTML(titulo)}', event)">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -797,23 +827,21 @@ window.TopicsManager = (function () {
             }
             const cardsHTML = topicoAtivo.anotacoes.map(criarCard).join('');
 
-            // NOVA LÓGICA: Montagem do Bloco de Diretrizes (Hierarquia)
+            // NOVA LÓGICA: Montagem do Bloco de Diretrizes (Hierarquia) INCONDICIONAL
             let htmlDiretrizes = '';
 
-            // 1. Injeta as Diretrizes Globais
-            if (topicoAtivo.diretrizesGlobais && topicoAtivo.diretrizesGlobais.length > 0) {
-                htmlDiretrizes += renderizarNivelHierarquico('global', null, topicoAtivo.diretrizesGlobais, activeTabId);
-            }
+            // 1. Diretriz Global (Aparece sempre, mesmo em arquivos novos)
+            const diretrizesGlobaisSeguras = topicoAtivo.diretrizesGlobais || [];
+            htmlDiretrizes += renderizarNivelHierarquico('global', null, diretrizesGlobaisSeguras, activeTabId);
 
-            // 2. Injeta as Diretrizes Vinculadas a Vícios Específicos
-            if (topicoAtivo.diretrizesPorVicio) {
-                Object.keys(topicoAtivo.diretrizesPorVicio).forEach(nomeVicio => {
-                    if (topicoAtivo.diretrizesPorVicio[nomeVicio].length > 0) {
-                        htmlDiretrizes += renderizarNivelHierarquico('vicio', nomeVicio, topicoAtivo.diretrizesPorVicio[nomeVicio], activeTabId);
-                    }
-                });
-            }
+            // 2. Diretriz do Vício Atual (Aparece sempre, com proteção contra cor fantasma)
+            const vicioAtual = topicoAtivo.vicio || 'Omissão';
+            const diretrizesDoVicio = (topicoAtivo.diretrizesPorVicio && topicoAtivo.diretrizesPorVicio[vicioAtual]) 
+                                      ? topicoAtivo.diretrizesPorVicio[vicioAtual] 
+                                      : [];
             
+            htmlDiretrizes += renderizarNivelHierarquico('vicio', vicioAtual, diretrizesDoVicio, activeTabId);
+
             // MONTAGEM FINAL DA TIMELINE
             conteudoCentralHtml = sumarioHtml + `
                 <div class="timeline-container" id="timeline-container">
