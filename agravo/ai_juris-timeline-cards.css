@@ -311,23 +311,27 @@ body[data-context="ed"] .topics-content-area {
 
 /* Isolamento do Fluxo SVG */
 .timeline-item-master.nivel-hierarquico {
-    margin-bottom: 24px;
+    margin-bottom: 24px; /* Mais perto do card de prova, parecendo um cabeçalho */
     position: relative;
-    z-index: 10; /* Garante que fique SOBRE qualquer linha SVG perdida */
+    z-index: 10;
 }
 
-/* Identidade Visual - Agravo de Instrumento */
+/* Ícone quadrado (Pílula) ao invés do círculo de prova */
 .timeline-icon-box {
-    width: 42px; height: 42px; 
-    border-radius: 8px; /* Quebra o padrão circular de provas */
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: var(--shadow-sm); flex-shrink: 0;
+    width: 36px; 
+    height: 36px; 
+    border-radius: 8px;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    box-shadow: var(--shadow-sm); 
+    flex-shrink: 0;
+    background: #ffffff;
 }
 
-.nivel-global { background-color: var(--trt-blue); color: #ffffff; border: 2px solid var(--trt-blue-mid); }
-.annotation-card.nivel-global { background-color: var(--trt-blue); border: none; }
+.timeline-icon-box svg { width: 18px; height: 18px; }
 
-/* Borda personalizada para sub-anotações hierárquicas (Verde Limão AI) */
+/* Borda personalizada para os nós de ideia que pertencem às diretrizes (Verde Limão AI) */
 .sub-annotation-card.borda-fase-ai-diretriz { 
     border-color: rgba(163, 230, 53, 0.4); 
     border-left: 5px solid #8ce015; 

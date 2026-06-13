@@ -549,6 +549,11 @@ function adicionarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
     painel.dataset.forTopico = topicoId; 
     painel.dataset.forIndex = String(anotacaoIndex); // Força string
     
+    // Margem superior ajustada para não colar no título limpo (Conforme plano do Arquiteto)
+    if (String(anotacaoIndex) === 'global' || String(anotacaoIndex).startsWith('obice:')) {
+        painel.style.marginTop = '12px';
+    }
+    
     const argCidx = cIdx != null ? cIdx : 'null';
     
     painel.innerHTML = `
