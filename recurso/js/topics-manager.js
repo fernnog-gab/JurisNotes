@@ -701,8 +701,8 @@ window.TopicsManager = (function () {
                     const teseViewSource = `tese:${teseAtual}`;
                     
                     // --- ARQUITETURA DINÂMICA DE CORES DA TESE ---
-                    // Cria um fundo bem suave (8% de opacidade) com a cor da aba
-                    const rgbaTeseFundo = hexToRgba(_activeTopicoCor, 0.08);
+                    // 1. Aumentamos a intensidade da cor para 15% para ficar mais vivo
+                    const rgbaTeseFundo = hexToRgba(_activeTopicoCor, 0.15); 
                     // Usa a cor da aba para a borda
                     const rgbaTeseBorda = hexToRgba(_activeTopicoCor, 0.4);
                     // Cor escura para o título ler bem
@@ -738,7 +738,8 @@ window.TopicsManager = (function () {
                                 </div>
                             </div>
                             <!-- CARD COM FUNDO SUAVE DA COR DA ABA -->
-                            <div class="annotation-card" style="border-left: 4px solid ${_activeTopicoCor}; background-color: ${rgbaTeseFundo};">
+                            // 2. Aplicamos o "Truque" do fundo branco + gradiente de cor por cima
+<div class="annotation-card" style="border-left: 4px solid ${_activeTopicoCor}; background-color: #ffffff; background-image: linear-gradient(${rgbaTeseFundo}, ${rgbaTeseFundo});">
                                 <div class="card-header" style="justify-content: space-between; margin-bottom: 0;">
                                     <div class="hierarquia-titulo" style="color: ${corTituloTese}; font-weight: bold;">Tese: ${escaparHTML(teseAtual)}</div>
                                     <div class="card-actions-bar" style="margin-top: 0; padding-top: 0; border-top: none;">
