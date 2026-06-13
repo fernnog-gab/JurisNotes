@@ -700,12 +700,21 @@ window.TopicsManager = (function () {
                     const diretrizes = (topicoAtivo.diretrizesPorTese && topicoAtivo.diretrizesPorTese[teseAtual]) ? topicoAtivo.diretrizesPorTese[teseAtual] : [];
                     const teseViewSource = `tese:${teseAtual}`;
                     
+                    // --- ARQUITETURA DINÂMICA DE CORES DA TESE ---
+                    // Cria um fundo bem suave (8% de opacidade) com a cor da aba
+                    const rgbaTeseFundo = hexToRgba(_activeTopicoCor, 0.08);
+                    // Usa a cor da aba para a borda
+                    const rgbaTeseBorda = hexToRgba(_activeTopicoCor, 0.4);
+                    // Cor escura para o título ler bem
+                    const corTituloTese = escurecerCor(_activeTopicoCor, 0.6);
+                    
                     const tesesHtml = diretrizes.map((d, sIdx) => {
                         const intencao = d.intencao || 'premissa';
                         const iconSVG = obterIconeIntencao(intencao);
                         return `
                         <div class="sub-annotation-item" data-source="${teseViewSource}">
-                            <div class="sub-annotation-card borda-fase-4">
+                            <!-- AQUI O NÓ RECEBE A COR DINÂMICA DA ABA -->
+                            <div class="sub-annotation-card" style="border-left: 5px solid ${_activeTopicoCor}; border-color: ${rgbaTeseBorda};">
                                 <div class="sub-badge has-intent intencao-${intencao}" 
                                      title="Opções desta diretriz"
                                      onclick="abrirMenuSubAnotacao('${activeTabId}', null, '${teseViewSource.replace(/'/g, "\\'")}', ${sIdx}, event)">
@@ -720,14 +729,18 @@ window.TopicsManager = (function () {
                     }).join('');
 
                     cardsHTML += `
-                    <div class="timeline-item-master align-left nivel-hierarquico nivel-tese">
+                    <div class="timeline-item-master align-left nivel-hierarquico">
                         <div class="main-card-wrapper">
                             <div class="annotation-number-area">
-                                <div class="timeline-icon-box" title="Tese"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle></svg></div>
+                                <!-- ÍCONE COM A COR DA ABA -->
+                                <div class="timeline-icon-box" title="Tese" style="background-color: ${_activeTopicoCor}; color: ${corTextoTese};">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle></svg>
+                                </div>
                             </div>
-                            <div class="annotation-card">
+                            <!-- CARD COM FUNDO SUAVE DA COR DA ABA -->
+                            <div class="annotation-card" style="border-left: 4px solid ${_activeTopicoCor}; background-color: ${rgbaTeseFundo};">
                                 <div class="card-header" style="justify-content: space-between; margin-bottom: 0;">
-                                    <div class="hierarquia-titulo">Tese: ${escaparHTML(teseAtual)}</div>
+                                    <div class="hierarquia-titulo" style="color: ${corTituloTese}; font-weight: bold;">Tese: ${escaparHTML(teseAtual)}</div>
                                     <div class="card-actions-bar" style="margin-top: 0; padding-top: 0; border-top: none;">
                                         <button title="Adicionar Diretriz à Tese" onclick="adicionarDiretrizEstrutural('tese', '${activeTabId}', '${escaparHTML(teseAtual).replace(/'/g, "\\'")}', event)">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -756,7 +769,7 @@ window.TopicsManager = (function () {
                     const iconSVG = obterIconeIntencao(intencao);
                     return `
                     <div class="sub-annotation-item" data-source="global">
-                        <div class="sub-annotation-card borda-fase-4">
+                        <div class="sub-annotation-card borda-global">
                             <div class="sub-badge has-intent intencao-${intencao}" 
                                  title="Opções desta diretriz"
                                  onclick="abrirMenuSubAnotacao('${activeTabId}', null, 'global', ${sIdx}, event)">

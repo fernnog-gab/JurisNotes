@@ -230,11 +230,11 @@
     top: 0;
     z-index: 10; /* Proteção contra overlap de cards (z:2) sem afetar modais (z:1000+) */
     
-    /* Progressive Blurring (Apple-like) */
-    background: rgba(255, 255, 255, 0.88);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    /* Remoção do Blurring/Fundo para limpeza visual */
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-bottom: none;
     border-radius: 0 6px 0 0;
 }
 
@@ -379,9 +379,24 @@
 
 .timeline-icon-box svg { width: 18px; height: 18px; }
 
-.nivel-global .timeline-icon-box { background-color: #1a3a5c; }
-.nivel-global .annotation-card { border-left: 4px solid #1a3a5c; background-color: #f8fafc; }
-.nivel-global .hierarquia-titulo { color: #1a3a5c; font-weight: bold; font-size: 0.95rem; }
+/* === NOVO DESIGN: DIRETRIZES GLOBAIS === */
+.nivel-global .timeline-icon-box { background-color: #0f253d; /* Ícone super escuro para destacar */ }
+.nivel-global .annotation-card { 
+    border-left: 4px solid #0f253d; 
+    background-color: #1a3a5c; /* Fundo do card em azul escuro */ 
+    color: #ffffff; /* Texto branco */
+}
+.nivel-global .hierarquia-titulo { color: #ffffff; font-weight: bold; font-size: 0.95rem; }
+
+/* Ajuste sutil para os botões de ação (Lixeira/Mais) não ficarem pretos no fundo azul */
+.nivel-global .card-actions-bar button { color: #aab8c5; }
+.nivel-global .card-actions-bar button:hover { background: rgba(255, 255, 255, 0.1); color: #ffffff; }
+
+/* CLASSE NOVA PARA OS NÓS DA DIRETRIZ GLOBAL */
+.sub-annotation-card.borda-global {
+    border-color: rgba(15, 37, 61, 0.3);
+    border-left: 5px solid #0f253d; /* Mesmo tom super escuro do ícone */
+}
 
 .nivel-tese .timeline-icon-box { background-color: #6a1b9a; }
 .nivel-tese .annotation-card { border-left: 4px solid #6a1b9a; background-color: #fdfbfd; }
