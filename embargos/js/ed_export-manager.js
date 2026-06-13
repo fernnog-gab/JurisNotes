@@ -86,16 +86,18 @@ window.ExportManager = (function () {
 
     /**
      * Motor Privado de Geração de Payload (Roteiro do Diretor em XML/MD)
+     * OTIMIZADO COM BUFFERS CONDICIONAIS E MAPEAMENTO LÉXICO
      */
     function _gerarMarkdown(topico) {
         const config = ESQUEMAS_CONTEXTO['ED'];
         const dataGeracao = new Date().toLocaleString('pt-BR');
         const safeFormatTime = (sec) => window.AudioManager?.formatTime ? window.AudioManager.formatTime(sec) : `${Math.floor(sec/60)}' ${Math.floor(sec%60)}''`;
 
-        // Coleta de escopo global
+        // Coleta de escopo global (Bubble-up)
         const barreirasAdmissibilidade = [];
         const jurisprudenciaVinculante = [];
-        const vereditosLocaisInjetados = []; // NOVO: Captura de vereditos perdidos
+        const vereditosLocaisInjetados = []; 
+        const diretrizesGlobaisGerais = [];
 
         let md = `---\n*Pacote de Auditoria Estrutural ED gerado em ${dataGeracao}*\n---\n\n`;
         md += `# ${config.tituloTopico}: **${(topico.nome || 'Não Nomeado').toUpperCase()}**\n\n`;
@@ -110,45 +112,50 @@ window.ExportManager = (function () {
         md += `<escopo_auditoria>\n`;
         md += `  <alegacao_vicio>\n${_safeMD(topico.alegacoes || 'Nenhum vício apontado.')}\n  </alegacao_vicio>\n`;
         md += `  <decisao_embargada>\n${_safeMD(topico.fundamentos || 'Nenhum trecho da decisão embargada colado.')}\n  </decisao_embargada>\n`;
-        if (topico.veredito && topico.veredito.trim() !== '') {
-            md += `  <veredito_assessor>\n${_safeMD(topico.veredito)}\n  </veredito_assessor>\n`;
-        }
         md += `</escopo_auditoria>\n\n`;
 
-        // 2. INJEÇÃO DAS DIRETRIZES DA IA
+        // 2. INJEÇÃO DAS DIRETRIZES GLOBAIS DA IA
         if (topico.diretrizesGlobais && topico.diretrizesGlobais.length > 0) {
             md += `<premissas_globais_da_auditoria>\n`;
             topico.diretrizesGlobais.forEach(dir => {
-                md += `  - [REGRA GERAL]: ${_safeMD(dir.texto)}\n`;
+                md += `  - [REGRA GERAL]: ${_safeMD(dir.texto, '\n  ')}\n`; // Correção de blockquote
             });
             md += `</premissas_globais_da_auditoria>\n\n`;
         }
 
+        // CORREÇÃO: BUFFER CONDICIONAL E MAPEAMENTO DE VÍCIO
+        let bufferVicios = '';
         if (topico.diretrizesPorVicio && Object.keys(topico.diretrizesPorVicio).length > 0) {
-            md += `<direcionamentos_por_vicio>\n`;
             Object.keys(topico.diretrizesPorVicio).forEach(nomeVicio => {
-                md += `  <vicio_apontado nome="${_escapeXmlAttr(nomeVicio)}">\n`;
-                topico.diretrizesPorVicio[nomeVicio].forEach(dir => {
-                     md += `    - [INSTRUÇÃO DE ANÁLISE]: ${_safeMD(dir.texto)}\n`;
-                });
-                md += `  </vicio_apontado>\n`;
+                const diretrizes = topico.diretrizesPorVicio[nomeVicio];
+                if (diretrizes && diretrizes.length > 0) {
+                    bufferVicios += `  <vicio_alvo nome="${_escapeXmlAttr(nomeVicio)}">\n`;
+                    diretrizes.forEach(dir => {
+                         bufferVicios += `    - [INSTRUÇÃO DE ANÁLISE]: ${_safeMD(dir.texto, '\n    ')}\n`;
+                    });
+                    bufferVicios += `  </vicio_alvo>\n`;
+                }
             });
-            md += `</direcionamentos_por_vicio>\n\n`;
+        }
+        
+        if (bufferVicios.trim() !== '') {
+            md += `<direcionamentos_por_vicio>\n*Atenção IA: Aplique estas métricas estritas ao auditar o vício correspondente.*\n\n${bufferVicios}</direcionamentos_por_vicio>\n\n`;
         }
 
         md += `## SEÇÃO II — ${config.rotuloSeccao}\n`;
-        md += `*Atenção IA: Aqui estão as provas documentais do vício formal. Não analise mérito.*\n\n`;
+        md += `*Atenção IA: Aqui estão as provas documentais do vício formal. É proibido reavaliar o mérito originário da causa baseando-se nestes extratos.*\n\n`;
 
         if (!topico.anotacoes || topico.anotacoes.length === 0) {
             md += `*Nenhum elemento processual foi anexado para auditoria.*\n`;
         } else {
-            // 2. ITERAÇÃO PROFUNDA COM ENVELOPAMENTO XML (Mitigação de Lost in the Middle)
+            // 3. ITERAÇÃO PROFUNDA COM ENVELOPAMENTO XML
             topico.anotacoes.forEach((an, idx) => {
                 const numIdeia = idx + 1;
                 const refCitacao = _formatarCitacaoOficial(an.pjeId, an.pagina);
-                const tituloVicio = an.tese ? an.tese : (topico.vicio || 'Análise de Higidez');
+                const tituloVicio = an.tese ? an.tese : (topico.vicio || 'Auditoria Geral');
 
-                md += `<analise_de_evidencia id="${numIdeia}" escopo_auditoria="${_escapeXmlAttr(tituloVicio)}">\n`;
+                // Correção: atributo XML agora é "vicio", espelhando a tag <vicio_alvo>
+                md += `<analise_de_evidencia id="${numIdeia}" vicio="${_escapeXmlAttr(tituloVicio)}">\n`;
                 
                 const faseContexto  = an.fase || an.documento || 'Não especificado';
                 const poloContexto  = an.polo || 'N/A';
@@ -174,7 +181,7 @@ window.ExportManager = (function () {
                     }
                 }
 
-                // Sub-provas Correlacionadas (Essencial para ED: Ex: Recurso vs Sentença)
+                // Sub-provas Correlacionadas (Confrontos)
                 if (an.itensCorrelacionados && an.itensCorrelacionados.length > 0) {
                     an.itensCorrelacionados.forEach((corr, corrIdx) => {
                         const numSub = corrIdx + 1;
@@ -191,28 +198,31 @@ window.ExportManager = (function () {
                 
                 md += `</fato_bruto_auditado>\n\n`;
 
-                // 3. INJEÇÃO DE DIRETRIZES LOCAIS (Vocabulário Agressivo para ED)
-                const imprimirNos = (listaNos, refContexto) => {
+                // CORREÇÃO: CONSOLIDAÇÃO DE DIRETRIZES LOCAIS EM UM ÚNICO BUFFER
+                let bufferDiretrizesLocais = '';
+
+                const processarNos = (listaNos, refContexto) => {
                     if (!listaNos || listaNos.length === 0) return;
                     
-                    md += `<diretrizes_de_auditoria_do_assessor>\n`;
                     listaNos.forEach((sub) => {
                         const intencao = sub.intencao || 'fallback';
-                        if (intencao === 'nota') return; // Ignora notas ocultas
+                        if (intencao === 'nota') return; 
                         
                         const textoSanitizado = _safeMD(sub.texto, '\n  ');
 
                         if (intencao === 'premissa') {
-                            md += `[CONSTATAÇÃO FORMAL INQUESTIONÁVEL${refContexto}]: ${textoSanitizado}\n`;
+                            bufferDiretrizesLocais += `[CONSTATAÇÃO FORMAL INQUESTIONÁVEL${refContexto}]: ${textoSanitizado}\n`;
                         } else if (intencao === 'refutacao') {
-                            md += `[AFASTAMENTO DO VÍCIO OBRIGATÓRIO - INEXISTÊNCIA DE FALHA${refContexto}]: ${textoSanitizado}\n`;
+                            bufferDiretrizesLocais += `[AFASTAMENTO DO VÍCIO OBRIGATÓRIO - INEXISTÊNCIA DE FALHA${refContexto}]: ${textoSanitizado}\n`;
                         } else if (intencao === 'comando') {
-                            md += `[COMANDO DE REDAÇÃO ESTRITO${refContexto}]: ${textoSanitizado}\n`;
+                            bufferDiretrizesLocais += `[COMANDO DE REDAÇÃO ESTRITO${refContexto}]: ${textoSanitizado}\n`;
                         } else if (intencao === 'texto') {
-                            md += `[COPIAR E COLAR EXATAMENTE ESTE TEXTO${refContexto}]: "${textoSanitizado}"\n`;
+                            bufferDiretrizesLocais += `[COPIAR E COLAR EXATAMENTE ESTE TEXTO${refContexto}]: "${textoSanitizado}"\n`;
                         } else if (intencao === 'fallback') {
-                            md += `[CONTEXTO FÁTICO COMPLEMENTAR PARA AUDITORIA${refContexto}]: ${textoSanitizado}\n`;
-                        } else if (intencao === 'fundamentacao') {
+                            bufferDiretrizesLocais += `[CONTEXTO FÁTICO COMPLEMENTAR PARA AUDITORIA${refContexto}]: ${textoSanitizado}\n`;
+                        } 
+                        // Escopo Global: Bubble-up
+                        else if (intencao === 'fundamentacao') {
                             jurisprudenciaVinculante.push(`[Aplicável ao item ${numIdeia}${refContexto}]: ${textoSanitizado}`);
                         } else if (intencao === 'preliminar') {
                             barreirasAdmissibilidade.push(`[Item ${numIdeia}${refContexto}]: ${textoSanitizado}`);
@@ -220,17 +230,21 @@ window.ExportManager = (function () {
                             vereditosLocaisInjetados.push(`[Auditoria da Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
                         }
                     });
-                    md += `</diretrizes_de_auditoria_do_assessor>\n`;
                 };
 
-                imprimirNos(an.subAnotacoes, '');
+                processarNos(an.subAnotacoes, '');
 
                 if (an.itensCorrelacionados && an.itensCorrelacionados.length > 0) {
                     an.itensCorrelacionados.forEach((corr) => {
                         if (corr.subAnotacoes && corr.subAnotacoes.length > 0) {
-                            imprimirNos(corr.subAnotacoes, ` (Referente ao Anexo: ${corr.documento || 'Documento'})`);
+                            processarNos(corr.subAnotacoes, ` (Anexo: ${corr.documento || 'Documento'})`);
                         }
                     });
+                }
+
+                // Só abre a tag se de fato houverem regras locais (evita a maldição da tag vazia)
+                if (bufferDiretrizesLocais.trim() !== '') {
+                    md += `<diretrizes_de_auditoria_do_assessor>\n${bufferDiretrizesLocais}</diretrizes_de_auditoria_do_assessor>\n`;
                 }
 
                 md += `</analise_de_evidencia>\n\n`;
@@ -240,7 +254,7 @@ window.ExportManager = (function () {
         // 4. INJEÇÃO GLOBAL (Bordas do Payload)
         if (barreirasAdmissibilidade.length > 0) {
             md += `<barreiras_de_admissibilidade_dos_embargos>\n`;
-            md += `*Atenção IA: Resolva estes óbices (ex: intempestividade, inovação recursal) ANTES de auditar o mérito dos embargos.*\n`;
+            md += `*Atenção IA: Resolva estes óbices (ex: intempestividade, inovação) ANTES de auditar o mérito dos embargos.*\n`;
             md += barreirasAdmissibilidade.map(c => `* 🛑 ${c}`).join('\n') + '\n';
             md += `</barreiras_de_admissibilidade_dos_embargos>\n\n`;
         }
@@ -263,7 +277,7 @@ window.ExportManager = (function () {
                 md += `[CONCLUSÃO PARCIAL ESPECÍFICA]: ${v}\n`;
             });
             
-            md += `\n*Redija o dispositivo final (Acolher/Rejeitar) obedecendo estritamente a este veredito.*\n`;
+            md += `\n*Redija o dispositivo final (Acolher/Rejeitar, com ou sem efeito modificativo) obedecendo estritamente a este veredito.*\n`;
             md += `</${config.tagVeredito}>\n`;
         }
 
