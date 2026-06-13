@@ -9,6 +9,13 @@ let _modeloSelecionadoId = null;
 let _modeloSelecionadoNodes = [];
 let _tagsGlobais = [];
 let _tagsModeloEmEdicao = [];
+let _modeloSelecionadoEscopo = 'card';
+
+// HELPER PRIVADO: Manipulação segura de DOM
+function _safeDisplay(id, styleStr) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = styleStr;
+}
 
 // --- HELPER VISUAL (Fábrica de SVGs) ---
 function getIconeAcervoSVG(intencao) {
@@ -74,6 +81,13 @@ window.abrirModalSalvarModelo = function() {
         : topico.anotacoes[_menuSubAnotacaoCtx.parentIndex];
     
     _noAlvoParaSalvar = alvo.subAnotacoes[_menuSubAnotacaoCtx.localIndex];
+
+    // Detecta o escopo de forma agnóstica
+    let escopoDetectado = 'card';
+    if (_menuSubAnotacaoCtx.viewSource === 'global') escopoDetectado = 'global';
+    else if (typeof _menuSubAnotacaoCtx.viewSource === 'string' && _menuSubAnotacaoCtx.viewSource.startsWith('tese:')) escopoDetectado = 'tese';
+    
+    _noAlvoParaSalvar.escopoOriginal = escopoDetectado;
 
     document.getElementById('sub-annotation-context-menu').style.display = 'none';
     document.querySelector('input[name="modo_salvar_modelo"][value="novo"]').checked = true;
@@ -179,9 +193,9 @@ window.abrirModalAcervo = function() {
     document.getElementById('modal-acervo-inserir').style.display = 'flex';
     
     document.getElementById('input-pesquisa-acervo').value = '';
-    document.getElementById('box-destino-acervo').style.display = 'none';
-    document.getElementById('box-preview-acervo').style.display = 'none';
-    document.getElementById('btn-inserir-acervo').style.display = 'none';
+    _safeDisplay('box-destino-dinamico-acervo', 'none');
+    _safeDisplay('box-preview-acervo', 'none');
+    _safeDisplay('btn-inserir-acervo', 'none');
     _modeloSelecionadoId = null; _modeloSelecionadoNodes = [];
     
     const container = document.getElementById('lista-acervo-geral');
@@ -198,11 +212,17 @@ window.abrirModalAcervo = function() {
                 ? `<div class="acervo-item-tags-lista">${mod.tags.map(t => `<span class="acervo-tag-chip">${TopicsManager.escaparHTML(t)}</span>`).join('')}</div>`
                 : '';
 
+            const escopoAtual = mod.escopo || 'card';
+            let escopoSelo = '';
+            
+            if(escopoAtual === 'global') escopoSelo = `<span class="acervo-node-badge" style="background:#e3f2fd; color:#0d47a1; margin-right:6px; padding:2px 6px; border-radius:4px; font-weight:bold;">🌐 Global</span>`;
+            if(escopoAtual === 'tese') escopoSelo = `<span class="acervo-node-badge" style="background:#f3e5f5; color:#6a1b9a; margin-right:6px; padding:2px 6px; border-radius:4px; font-weight:bold;">⚖️ Tese</span>`;
+
             item.innerHTML = `
                 <div class="acervo-item-header">
                     <div style="flex: 1;">
                         <div class="acervo-item-titulo">${TopicsManager.escaparHTML(mod.nome)}</div>
-                        <div style="font-size:0.7rem; color:#888;">${mod.nos.length} nó(s) salvos</div>
+                        <div style="font-size:0.7rem; color:#888; margin-top:2px; display:flex; align-items:center;">${escopoSelo} ${mod.nos.length} nó(s) salvos</div>
                         ${htmlTags}
                     </div>
                     <button class="acervo-action-btn" title="Editar este modelo" onclick="abrirEdicaoModeloAcervo(event, '${mod.id}')">
@@ -217,6 +237,7 @@ window.abrirModalAcervo = function() {
                 item.classList.add('selected');
                 _modeloSelecionadoId = mod.id;
                 _modeloSelecionadoNodes = mod.nos;
+                _modeloSelecionadoEscopo = escopoAtual;
                 
                 const previewHtml = mod.nos.map(n => `
                     <div class="acervo-node-preview">
@@ -226,9 +247,50 @@ window.abrirModalAcervo = function() {
                 `).join('');
                 
                 document.getElementById('box-preview-acervo').innerHTML = previewHtml;
-                document.getElementById('box-preview-acervo').style.display = 'block';
-                document.getElementById('box-destino-acervo').style.display = 'block';
-                document.getElementById('btn-inserir-acervo').style.display = 'block';
+                _safeDisplay('box-preview-acervo', 'block');
+                
+                // Roteamento Defensivo
+                _safeDisplay('box-destino-dinamico-acervo', 'block');
+                _safeDisplay('destino-acervo-card', 'none');
+                _safeDisplay('destino-acervo-tese', 'none');
+                _safeDisplay('destino-acervo-global', 'none');
+                
+                const btnInserir = document.getElementById('btn-inserir-acervo');
+                if(btnInserir) btnInserir.disabled = false;
+
+                const topico = topicos.find(t => t.id === TopicsManager.getActiveTabId());
+
+                if (_modeloSelecionadoEscopo === 'global') {
+                    _safeDisplay('destino-acervo-global', 'block');
+                    if(btnInserir) btnInserir.textContent = '✔ Inserir Globalmente';
+                } 
+                else if (_modeloSelecionadoEscopo === 'tese') {
+                    _safeDisplay('destino-acervo-tese', 'block');
+                    if(btnInserir) btnInserir.textContent = '✔ Inserir na Tese';
+                    
+                    const selectTese = document.getElementById('select-destino-acervo-tese');
+                    const aviso = document.getElementById('aviso-sem-tese');
+                    
+                    if(selectTese && aviso && topico) {
+                        selectTese.innerHTML = '<option value="">Selecione uma Tese existente...</option>';
+                        const tesesUnicas = [...new Set(topico.anotacoes.filter(a => a.tese && a.tese.trim() !== '').map(a => a.tese))];
+                        
+                        if (tesesUnicas.length === 0) {
+                            selectTese.style.display = 'none';
+                            aviso.style.display = 'block';
+                            if(btnInserir) btnInserir.disabled = true;
+                        } else {
+                            selectTese.style.display = 'block';
+                            aviso.style.display = 'none';
+                            tesesUnicas.forEach(t => selectTese.appendChild(new Option(t, t)));
+                        }
+                    }
+                } else {
+                    _safeDisplay('destino-acervo-card', 'block');
+                    if(btnInserir) btnInserir.textContent = '✔ Inserir no Card';
+                }
+
+                _safeDisplay('btn-inserir-acervo', 'block');
             };
             container.appendChild(item);
         });
@@ -244,33 +306,66 @@ window.fecharModalAcervo = function() {
 window.confirmarInsercaoAcervo = function() {
     if (_modeloSelecionadoNodes.length === 0) return;
 
-    const destinoIdx = parseInt(document.getElementById('input-destino-acervo').value, 10) - 1;
     const topicoId = typeof TopicsManager !== 'undefined' ? TopicsManager.getActiveTabId() : null;
-    
     if (!topicoId) return;
     const topico = topicos.find(t => t.id === topicoId);
+
+    // Preparação Imutável de Dados
+    const nosParaInjetar = _modeloSelecionadoNodes.map(node => ({
+        uuid: 'id-' + crypto.randomUUID(),
+        texto: node.texto,
+        intencao: node.intencao,
+        timestamp: Date.now()
+    }));
     
-    if (isNaN(destinoIdx) || destinoIdx < 0 || destinoIdx >= topico.anotacoes.length) {
-        return exibirToast('Número de Ideia Principal inválido.', 'erro');
+    // VALIDAÇÕES (Sem mutação de estado ainda)
+    let arrayDestino = null;
+
+    if (_modeloSelecionadoEscopo === 'global') {
+        if (!topico.diretrizesGlobais) topico.diretrizesGlobais = [];
+        arrayDestino = topico.diretrizesGlobais;
+    } 
+    else if (_modeloSelecionadoEscopo === 'tese') {
+        const teseEscolhida = document.getElementById('select-destino-acervo-tese').value;
+        if (!teseEscolhida) return exibirToast('Selecione uma tese de destino.', 'aviso');
+        
+        if (!topico.diretrizesPorTese) topico.diretrizesPorTese = {};
+        if (!topico.diretrizesPorTese[teseEscolhida]) topico.diretrizesPorTese[teseEscolhida] = [];
+        arrayDestino = topico.diretrizesPorTese[teseEscolhida];
+    } 
+    else {
+        const inputVal = document.getElementById('input-destino-acervo-card').value;
+        const destinoIdx = parseInt(inputVal, 10) - 1;
+        
+        if (isNaN(destinoIdx) || destinoIdx < 0 || destinoIdx >= topico.anotacoes.length) {
+            return exibirToast('Número de Ideia Principal inválido.', 'erro');
+        }
+        
+        const cardDestino = topico.anotacoes[destinoIdx];
+        if (!cardDestino.subAnotacoes) cardDestino.subAnotacoes = [];
+        arrayDestino = cardDestino.subAnotacoes;
     }
 
-    const cardDestino = topico.anotacoes[destinoIdx];
-    if (!cardDestino.subAnotacoes) cardDestino.subAnotacoes = [];
-    
-    _modeloSelecionadoNodes.forEach(node => {
-        cardDestino.subAnotacoes.push({
-            uuid: 'id-' + crypto.randomUUID(),
-            texto: node.texto,
-            intencao: node.intencao,
-            timestamp: Date.now()
-        });
-    });
+    // COMMIT TRANSACIONAL (Mutação segura)
+    if (arrayDestino) {
+        arrayDestino.push(...nosParaInjetar);
+        
+        if (typeof renderizarTopicos === 'function') renderizarTopicos();
+        if (typeof salvarBackupAutomatico === 'function') salvarBackupAutomatico();
+        
+        window.fecharModalAcervo();
+        exibirToast('Modelo injetado com sucesso no nível correto!', 'sucesso');
+    }
+};
 
-    if (typeof renderizarTopicos === 'function') renderizarTopicos();
-    if (typeof salvarBackupAutomatico === 'function') salvarBackupAutomatico();
-    
-    window.fecharModalAcervo();
-    exibirToast('Modelo injetado com sucesso!', 'sucesso');
+window.alterarEscopoModeloAtual = async function(novoEscopo) {
+    if (!_modeloSelecionadoId) return;
+    try {
+        await AcervoManager.atualizarEscopoDoModelo(_modeloSelecionadoId, novoEscopo);
+        exibirToast('Nível hierárquico atualizado.', 'sucesso');
+    } catch(e) {
+        exibirToast('Erro ao atualizar nível na nuvem.', 'erro');
+    }
 };
 
 // ==========================================
@@ -287,6 +382,9 @@ window.abrirEdicaoModeloAcervo = async function(event, modeloId) {
 
     document.getElementById('edit-modelo-nome').textContent = modelo.nome;
     _tagsModeloEmEdicao = modelo.tags ? [...modelo.tags] : [];
+    
+    const selectEscopo = document.getElementById('select-edicao-escopo');
+    if (selectEscopo) selectEscopo.value = modelo.escopo || 'card';
     
     const containerTags = document.getElementById('container-checkboxes-tags');
     containerTags.innerHTML = `

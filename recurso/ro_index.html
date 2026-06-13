@@ -824,14 +824,31 @@
 
         <div id="box-preview-acervo" style="display:none; margin-top: 8px; background: #fafafa; padding: 8px; border-radius: 6px; border: 1px dashed #ccc; font-size: 0.8rem; max-height: 110px; overflow-y: auto;"></div>
 
-        <div id="box-destino-acervo" style="display:none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color);">
-            <p class="popup-label">Destino (Nº do Card de Ideia Principal):</p>
-            <input type="number" id="input-destino-acervo" class="topic-select" placeholder="Ex: 2" min="1">
+        <div id="box-destino-dinamico-acervo" style="display:none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color);">
+            <p id="label-destino-acervo" class="popup-label">Destino da Inserção:</p>
+            
+            <!-- Escopo: Card -->
+            <div id="destino-acervo-card" style="display: none; margin-top: 8px;">
+                <input type="number" id="input-destino-acervo-card" class="topic-select" placeholder="Ex: 2 (Nº da Ideia Principal)" min="1">
+            </div>
+
+            <!-- Escopo: Tese -->
+            <div id="destino-acervo-tese" style="display: none; margin-top: 8px;">
+                <select id="select-destino-acervo-tese" class="topic-select">
+                    <option value="">Selecione uma Tese existente...</option>
+                </select>
+                <p id="aviso-sem-tese" style="display:none; color:#c62828; font-size:0.75rem; margin-top:4px;">Não há teses nomeadas neste tópico. Crie uma tese no painel primeiro.</p>
+            </div>
+
+            <!-- Escopo: Global -->
+            <div id="destino-acervo-global" style="display: none; margin-top: 8px; padding: 8px; background: #e3f2fd; border-radius: 6px; border: 1px solid #90caf9;">
+                <p style="font-size: 0.8rem; color: #0d47a1; margin: 0;">🌐 Este modelo será aplicado diretamente às <strong>Diretrizes Globais</strong> do tópico atual.</p>
+            </div>
         </div>
 
         <div class="wizard-actions">
             <button class="chip-btn chip-cancelar" onclick="fecharModalAcervo()">✕ Cancelar</button>
-            <button class="chip-btn chip-autora" id="btn-inserir-acervo" style="display:none; background: var(--trt-blue); color: white; border: none;" onclick="confirmarInsercaoAcervo()">✔ Inserir no Card</button>
+            <button class="chip-btn chip-autora" id="btn-inserir-acervo" style="display:none; background: var(--trt-blue); color: white; border: none;" onclick="confirmarInsercaoAcervo()">✔ Confirmar Inserção</button>
         </div>
     </div>
 
@@ -848,6 +865,15 @@
             <button class="acervo-action-btn delete-btn" title="Excluir Modelo Definitivamente" style="padding: 4px; color: #c62828;" onclick="acionarExcluirModeloAtual()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
+        </div>
+
+        <div id="area-alterar-escopo" style="margin-top: 12px; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; background: #fff;">
+            <p class="popup-label" style="margin-bottom: 6px;">Nível Hierárquico do Modelo:</p>
+            <select id="select-edicao-escopo" class="topic-select" onchange="alterarEscopoModeloAtual(this.value)">
+                <option value="card">📄 Card de Ideia (Padrão)</option>
+                <option value="tese">⚖️ Diretriz de Tese</option>
+                <option value="global">🌐 Diretriz Global</option>
+            </select>
         </div>
 
         <div id="area-associar-tags" style="margin-top: 12px; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; background: #fafafa;">
