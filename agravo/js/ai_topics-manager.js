@@ -738,8 +738,8 @@ window.TopicsManager = (function () {
                     <div class="timeline-item-master align-left nivel-hierarquico nivel-tese" id="timeline-wrapper-obice-${idObiceSeguro}">
                         <div class="main-card-wrapper" data-cidx="main">
                             <div class="annotation-number-area">
-                                <div class="timeline-icon-box" style="border: 2px solid #8ce015; color: #64748b; background: white;" title="Óbice de Admissibilidade">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                                <div class="timeline-icon-box" style="background: #A3E635; color: white; border: none; box-shadow: 0 2px 4px rgba(163, 230, 53, 0.4);" title="Óbice de Admissibilidade">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                                 </div>
                             </div>
                             <div class="annotation-card" style="padding: 12px 18px; border-left: 4px solid #A3E635;">
@@ -791,7 +791,7 @@ window.TopicsManager = (function () {
             <div class="timeline-item-master align-left nivel-hierarquico nivel-global" id="timeline-wrapper-global">
                 <div class="main-card-wrapper" data-cidx="main">
                     <div class="annotation-number-area">
-                        <div class="timeline-icon-box" style="border: 2px solid var(--trt-blue-mid); color: var(--trt-blue-mid); background: white;" title="Diretrizes Globais">
+                        <div class="timeline-icon-box" style="background: var(--trt-blue); color: white; border: none; box-shadow: 0 2px 4px rgba(26, 58, 92, 0.4);" title="Diretrizes Globais">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
                         </div>
                     </div>
@@ -960,7 +960,8 @@ window.TopicsManager = (function () {
             svgContent += `<path d="M ${startX},${startY} C ${startX},${ctrlY} ${endX},${ctrlY} ${endX},${endY}" stroke="#d32f2f" stroke-width="2.5" fill="none" stroke-linecap="round" />`;
         }
 
-        const masterItems = container.querySelectorAll('.timeline-item-master:not(.nivel-hierarquico)');
+        // VOLTAMOS A SELECIONAR TODOS AQUI, PARA A LINHA TRACEJADA FUNCIONAR NAS DIRETRIZES
+        const masterItems = container.querySelectorAll('.timeline-item-master');
         masterItems.forEach(master => {
             const mainCard = master.querySelector('.main-card-wrapper > .annotation-card');
             const subItems = master.querySelectorAll('.sub-annotation-item');
