@@ -14,12 +14,32 @@ function abrirMenuAnotacao(topicoId, index, event) {
     _posicionarMenu('annotation-context-menu', event);
 }
 
-// HELPER PRIVADO (Resolução de Referência)
+// HELPER PRIVADO (Resolução de Referência - COM SUPORTE À HIERARQUIA DE DIRETRIZES)
 function _resolverSubAlvo(topico, parentIndex, viewSource) {
+    // 1. ROTA PARA DIRETRIZES SUPERIORES (Index === null)
+    if (parentIndex === null) {
+        if (viewSource === 'global') {
+            if (!topico.diretrizesGlobais) topico.diretrizesGlobais = [];
+            // Retornamos um "card falso" com a propriedade subAnotacoes apontando 
+            // para o array real. Isso faz todas as funções do sistema funcionarem magicamente.
+            return { subAnotacoes: topico.diretrizesGlobais }; 
+            
+        } else if (viewSource.startsWith('vicio:')) {
+            const nomeVicio = viewSource.split(':')[1];
+            if (!topico.diretrizesPorVicio) topico.diretrizesPorVicio = {};
+            if (!topico.diretrizesPorVicio[nomeVicio]) topico.diretrizesPorVicio[nomeVicio] = [];
+            
+            return { subAnotacoes: topico.diretrizesPorVicio[nomeVicio] };
+        }
+    }
+
+    // 2. ROTA PADRÃO (Cards de Prova Normais)
     const cardMestre = topico.anotacoes[parentIndex];
     if (viewSource === 'main') {
         return cardMestre;
     }
+    
+    // 3. ROTA PARA CARDS AGRUPADOS (Filhos)
     const cIdx = parseInt(viewSource, 10);
     return cardMestre.itensCorrelacionados[cIdx];
 }
