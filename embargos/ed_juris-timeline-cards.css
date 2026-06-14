@@ -153,32 +153,36 @@
 
 /* --- COMPORTAMENTO DA ÁREA DE TEXTO (NÓ DE IDEIAS) --- */
 .sub-text-content {
-    position: relative; /* Adicionado para garantir estabilidade no layout */
+    position: relative; /* 🟢 CRUCIAL: Prende o efeito de degradê dentro deste elemento */
     line-height: 1.6em;
-    max-height: calc(1.6em * 10); /* Limita a 10 linhas */
+    max-height: calc(1.6em * 10);
     overflow: hidden;
     transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     display: block;
 }
 
-/* O EFEITO DE FADE-OUT (MÁSCARA DE TRANSPARÊNCIA) */
-.sub-text-content.is-truncated:not(.expanded) {
-    /* O texto fica 100% opaco (black) até 70% da altura, e começa a ficar 
-       progressivamente transparente até o final (100%) */
-    -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
-    mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+/* O EFEITO DE FADE-OUT (DEGRADÊ FÍSICO À PROVA DE BALAS) */
+.sub-text-content.is-truncated:not(.expanded)::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 4em; /* Altura de 4 linhas para um esmaecimento mais suave */
+    /* Cria o efeito do totalmente transparente até a cor de fundo do card (#fffdf2) */
+    background: linear-gradient(to bottom, rgba(255, 253, 242, 0) 0%, rgba(255, 253, 242, 1) 90%);
+    pointer-events: none; /* 🟢 Garante que o usuário consiga clicar no texto/botão por baixo */
 }
 
+/* ESTADO EXPANDIDO (Remove o limite de altura) */
 .sub-text-content.expanded { 
-    max-height: 800px; 
+    max-height: 2000px; /* Aumentei um pouco para garantir textos maiores */
     overflow-y: auto; 
     padding-right: 6px; 
     margin-right: -6px; 
-    /* Removemos a máscara para o texto voltar a ficar 100% visível */
-    -webkit-mask-image: none;
-    mask-image: none;
 }
 
+/* SCROLLBAR CUSTOMIZADA PARA O ESTADO EXPANDIDO */
 .sub-text-content.expanded::-webkit-scrollbar { width: 6px; }
 .sub-text-content.expanded::-webkit-scrollbar-track { background: transparent; }
 .sub-text-content.expanded::-webkit-scrollbar-thumb { background: #d0cabc; border-radius: 4px; }
