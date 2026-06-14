@@ -54,7 +54,7 @@ window.BalancaManager = (function() {
             iframe.srcdoc = htmlState;
         } else {
             iframe.removeAttribute('srcdoc');
-            iframe.src = 'dossie/index.html'; // Puxa o gerador da raiz
+            iframe.src = '../dossie/index.html'; // Puxa o gerador da raiz
         }
     }
 
@@ -70,7 +70,7 @@ window.BalancaManager = (function() {
         const iframe = document.getElementById('balanca-iframe');
         if (iframe) {
             iframe.removeAttribute('srcdoc');
-            iframe.src = 'dossie/index.html';
+            iframe.src = '../dossie/index.html';
         }
         abrirPainel();
         atualizarInterface();
