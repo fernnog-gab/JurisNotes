@@ -16,32 +16,66 @@ window.BalancaManager = (function() {
             
             if (!isTyping) {
                 e.preventDefault();
-                document.getElementById('upload-html-balanca').click();
+                // Se já tem HTML, apenas abre. Se não, abre o gerador.
+                htmlState ? abrirPainel() : resetToGenerator();
             }
         }
     });
 
-    function abrirPainel(event) {
-        if (event && event.ctrlKey) {
-            document.getElementById('upload-html-balanca').click();
-            return;
-        }
+    // NOVO: Validação estrita de segurança e listener de mensagens
+    window.addEventListener('message', function(event) {
+        // Aceita a própria origem (Produção) ou localhost (Dev)
+        const allowedOrigins = [window.location.origin, 'http://localhost', 'http://127.0.0.1'];
+        if (!allowedOrigins.some(origin => event.origin.startsWith(origin))) return;
 
-        const backdrop = document.getElementById('balanca-modal-backdrop');
-        const painel = document.getElementById('balanca-painel');
-        const vazia = document.getElementById('balanca-vazia');
+        if (event.data && event.data.type === 'DOSSIE_GENERATED') {
+            htmlState = event.data.html;
+            
+            const iframe = document.getElementById('balanca-iframe');
+            iframe.removeAttribute('src'); // Limpa URL do gerador
+            iframe.srcdoc = htmlState;     // Injeta Dossiê renderizado
+
+            atualizarInterface();
+            
+            if (typeof window.salvarBackupAutomatico === 'function') {
+                window.salvarBackupAutomatico();
+            }
+            if (typeof window.exibirToast === 'function') {
+                window.exibirToast('Dossiê vinculado com sucesso!', 'sucesso');
+            }
+        }
+    });
+
+    function abrirPainel() {
+        document.getElementById('balanca-modal-backdrop').style.display = 'block';
+        document.getElementById('balanca-painel').style.display = 'flex';
+
         const iframe = document.getElementById('balanca-iframe');
-
-        backdrop.style.display = 'block';
-        painel.style.display = 'flex';
-
         if (htmlState) {
-            vazia.style.display = 'none';
-            iframe.style.display = 'block';
+            iframe.removeAttribute('src');
+            iframe.srcdoc = htmlState;
         } else {
-            vazia.style.display = 'flex';
-            iframe.style.display = 'none';
+            iframe.removeAttribute('srcdoc');
+            iframe.src = 'dossie/index.html'; // Caminho realocado do gerador
         }
+    }
+
+    // NOVO: Função protegida contra perda de dados
+    function resetToGenerator() {
+        if (htmlState !== null) {
+            const confirmacao = confirm("⚠️ Atenção:\n\nIsso substituirá o Dossiê atual. Se você fez marcações de checkbox que não foram salvas no backup principal, elas serão perdidas.\n\nDeseja gerar um novo dossiê?");
+            if (!confirmacao) return;
+        }
+        
+        htmlState = null;
+        pendingTasksCount = 0;
+        const iframe = document.getElementById('balanca-iframe');
+        if (iframe) {
+            iframe.removeAttribute('srcdoc');
+            iframe.src = 'dossie/index.html';
+        }
+        abrirPainel();
+        atualizarInterface();
     }
 
     // ==========================================
@@ -213,6 +247,7 @@ window.BalancaManager = (function() {
         getHtmlState, 
         restoreHtmlState,
         resetarEstado,
+        resetToGenerator,
         getPendingTasks: avaliarTarefasPendentes // <--- Exporta a função "AO VIVO" para o Guardrail
     };
 })();

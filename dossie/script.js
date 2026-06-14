@@ -43,7 +43,7 @@ function normalizeData(data) {
 }
 
 // --- 2. GERAÇÃO E LIMPEZA ---
-async function generatePanel() {
+async function generatePanel(isInternalGenerator = false) {
     try {
         const inputElement = document.getElementById('json-input');
         const input = inputElement.value;
@@ -68,7 +68,7 @@ async function generatePanel() {
         }
 
         setTimeout(() => {
-            downloadBundledHTML();
+            downloadBundledHTML(isInternalGenerator);
         }, 500);
 
     } catch (e) {
@@ -247,12 +247,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateTreeLines();
     }
     window.addEventListener('resize', updateTreeLines);
-
-    if (typeof appVersions !== 'undefined' && appVersions.length > 0) {
-        const currentVersion = appVersions[0].version;
-        const btnVersion = document.getElementById('btn-version');
-        if (btnVersion) btnVersion.innerText = `v${currentVersion}`;
-    }
     
     updateTaskCounters();
 });
@@ -472,16 +466,24 @@ function addNewTopic() {
 }
 
 // --- 5. EXPORTAÇÃO COMPLETA ---
-async function downloadBundledHTML() {
+async function downloadBundledHTML(isInternalGenerator = false) {
     document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked ? c.setAttribute('checked', 'checked') : c.removeAttribute('checked'));
     document.querySelectorAll('input[type="text"]').forEach(i => i.setAttribute('value', i.value));
     
     const clone = document.documentElement.cloneNode(true);
+    
+    // HIGIENE DO CLONE (Removendo rastros do gerador e histórico no HTML final)
     const importer = clone.querySelector('#json-importer');
     if(importer) importer.remove();
 
     const versionBtn = clone.querySelector('#btn-version');
     if(versionBtn) versionBtn.remove();
+    
+    const versionModal = clone.querySelector('#version-modal');
+    if(versionModal) versionModal.remove();
+    
+    const versionScript = clone.querySelector('script[src*="versions.js"]');
+    if(versionScript) versionScript.remove();
     
     const container = clone.querySelector('#panel-container');
     if(container) container.style.display = 'block';
@@ -516,7 +518,17 @@ async function downloadBundledHTML() {
         const cloneScript = clone.querySelector('script[src*="script.js"]');
         if(cloneScript) cloneScript.replaceWith(scriptTag);
 
-        const blob = new Blob([clone.outerHTML], {type: 'text/html'});
+        const finalHTML = clone.outerHTML;
+
+        // RESOLUÇÃO DO CRÍTICO: Comunicação desacoplada para evitar loop de evento
+        if (isInternalGenerator && window.parent && window.parent !== window) {
+            window.parent.postMessage({ 
+                type: 'DOSSIE_GENERATED', 
+                html: finalHTML 
+            }, '*');
+        }
+
+        const blob = new Blob([finalHTML], {type: 'text/html'});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -615,33 +627,7 @@ function setupDrag() {
 }
 
 // --- 7. CONTROLE DE VERSÕES E HISTÓRICO ---
-function openVersionHistory() {
-    const modal = document.getElementById('version-modal');
-    const list = document.getElementById('version-list');
-    if (!modal || !list) return;
-
-    list.innerHTML = ''; 
-    
-    if (typeof appVersions !== 'undefined') {
-        appVersions.forEach(ver => {
-            const liItems = ver.features.map(f => `<li>${f}</li>`).join('');
-            list.innerHTML += `
-                <div class="version-item">
-                    <h4>Versão ${ver.version}</h4>
-                    <span>${ver.date}</span>
-                    <ul>${liItems}</ul>
-                </div>
-            `;
-        });
-    }
-    
-    modal.style.display = 'flex';
-}
-
-function closeVersionHistory() {
-    const modal = document.getElementById('version-modal');
-    if (modal) modal.style.display = 'none';
-}
+// (Funcionalidades legadas de versão removidas para limpeza de dependências do Dossiê)
 
 // --- NOVA SEÇÃO 8: SINCRONIZAÇÃO INTELIGENTE DE SENTENÇAS ---
 
