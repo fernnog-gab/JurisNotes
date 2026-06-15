@@ -182,7 +182,7 @@ window.TopicsManager = (function () {
             _fecharZenModeAtivo();
             requestAnimationFrame(() => {
                 const container = document.getElementById('timeline-container');
-                if (container) { posicionarNosDeIdeia(container); requestAnimationFrame(desenharConexoes); }
+                if (container) requestAnimationFrame(() => _sincronizarConexoesComAnimacao(container));
             });
         }
     });
@@ -1026,8 +1026,9 @@ window.TopicsManager = (function () {
 
     /**
      * Motor Dinâmico de Conexões Sinuosas
+     * @param {boolean} isZenActive - Indica se o Modo Zen está ativo
      */
-    function desenharConexoes() {
+    function desenharConexoes(isZenActive = false) {
         const container = document.getElementById('timeline-container');
         const svg = document.getElementById('connections-canvas');
         if (!container || !svg) return;
@@ -1042,16 +1043,8 @@ window.TopicsManager = (function () {
             const currentGroup = masterItemsForSpine[i];
             const nextGroup = masterItemsForSpine[i + 1];
 
-            // Acha o ÚLTIMO card do grupo atual (pode ser um card agrupado ou o principal)
             const currentCorrelated = currentGroup.querySelectorAll('.correlated-item-wrapper > .annotation-card');
-            let cardAtual;
-            if (currentCorrelated.length > 0) {
-                cardAtual = currentCorrelated[currentCorrelated.length - 1]; // Pega o último card agrupado
-            } else {
-                cardAtual = currentGroup.querySelector('.main-card-wrapper > .annotation-card'); // Pega o principal
-            }
-
-            // Acha o PRIMEIRO card do próximo grupo (sempre o card principal numerado)
+            let cardAtual = currentCorrelated.length > 0 ? currentCorrelated[currentCorrelated.length - 1] : currentGroup.querySelector('.main-card-wrapper > .annotation-card');
             const cardProx = nextGroup.querySelector('.main-card-wrapper > .annotation-card');
 
             if (!cardAtual || !cardProx) continue;
@@ -1059,14 +1052,10 @@ window.TopicsManager = (function () {
             const rectAtual = cardAtual.getBoundingClientRect();
             const rectProx = cardProx.getBoundingClientRect();
 
-            // Ponto de Origem: Fundo do último card do grupo A
             const startX = (rectAtual.left + rectAtual.width / 2) - containerRect.left;
             const startY = rectAtual.bottom - containerRect.top;
-            
-            // Ponto de Destino: Topo do primeiro card do grupo B
             const endX = (rectProx.left + rectProx.width / 2) - containerRect.left;
             const endY = rectProx.top - containerRect.top;
-            
             const ctrlY = (startY + endY) / 2;
 
             svgContent += `<path d="M ${startX},${startY} C ${startX},${ctrlY} ${endX},${ctrlY} ${endX},${endY}" stroke="#d32f2f" stroke-width="2.5" fill="none" stroke-linecap="round" />`;
@@ -1099,11 +1088,47 @@ window.TopicsManager = (function () {
                 const endY   = (subRect.top + subRect.height / 2) - containerRect.top;
                 const ctrlX  = (startX + endX) / 2;
 
-                svgContent += `<path d="M ${startX},${startY} C ${ctrlX},${startY} ${ctrlX},${endY} ${endX},${endY}" stroke="#777" stroke-width="1.5" stroke-dasharray="5 4" fill="none" stroke-linecap="round"/>`;
+                let strokeColor = "#777";
+                let strokeOpacity = "1";
+                let strokeWidth = "1.5";
+                let dashArray = "5 4";
+
+                if (isZenActive) {
+                    if (subItem.classList.contains('is-zen-focused')) {
+                        strokeColor = _activeTopicoCor;
+                        strokeWidth = "2.5";
+                        dashArray = "none";
+                    } else {
+                        strokeOpacity = "0.15";
+                    }
+                }
+
+                svgContent += `<path d="M ${startX},${startY} C ${ctrlX},${startY} ${ctrlX},${endY} ${endX},${endY}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-dasharray="${dashArray}" opacity="${strokeOpacity}" fill="none" stroke-linecap="round"/>`;
             });
         });
 
         svg.innerHTML = svgContent;
+    }
+
+    /**
+     * Motor de Sincronia: Executa posicionamento e aciona loop passivo de SVG
+     */
+    function _sincronizarConexoesComAnimacao(container) {
+        posicionarNosDeIdeia(container);
+        
+        const isZenModeActive = document.getElementById('topics-tab-content').classList.contains('zen-mode-ativo');
+        let start = null;
+        const duration = 350; 
+
+        function step(timestamp) {
+            if (!start) start = timestamp;
+            const progress = timestamp - start;
+            
+            desenharConexoes(isZenModeActive);
+
+            if (progress < duration) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
     }
 
     /**
@@ -1115,37 +1140,26 @@ window.TopicsManager = (function () {
         const content = card.querySelector('.sub-text-content');
         if (!content) return;
 
-        // 1. CAPTURA O ESTADO ANTES DA MUTAÇÃO
         const esteCardEstavaFocado = card.classList.contains('zen-focused');
         
-        // 2. Limpa qualquer Zen Mode na tela
         _fecharZenModeAtivo();
 
-        // 3. GUARDA DE SEGURANÇA: Se clicou em "Ocultar" no card já aberto, aborte a reabertura!
         if (esteCardEstavaFocado) {
             requestAnimationFrame(() => {
                 const container = document.getElementById('timeline-container');
-                if (container) {
-                    posicionarNosDeIdeia(container);
-                    requestAnimationFrame(() => desenharConexoes());
-                }
+                if (container) requestAnimationFrame(() => _sincronizarConexoesComAnimacao(container));
             });
-            return; // Bloqueia a execução restante
+            return;
         }
 
-        // 4. Executa abertura normal
         const isExpanded = content.classList.toggle('expanded');
         btn.innerHTML = isExpanded ? 'Ocultar detalhes ▴' : 'Ler texto completo ▾';
+        
+        if (isExpanded) _ativarZenMode(card);
 
         requestAnimationFrame(() => {
             const container = document.getElementById('timeline-container');
-            if (container) {
-                posicionarNosDeIdeia(container);
-                requestAnimationFrame(() => {
-                    desenharConexoes();
-                    if (isExpanded) _ativarZenMode(card);
-                });
-            }
+            if (container) requestAnimationFrame(() => _sincronizarConexoesComAnimacao(container));
         });
     }
 
