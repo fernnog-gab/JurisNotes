@@ -926,32 +926,47 @@ window.TopicsManager = (function () {
         }
             
         requestAnimationFrame(() => {
-            document.querySelectorAll('.sub-text-content').forEach(el => {
-                // Observa APENAS as caixas de texto que podem expandir
-                resizeObserver.observe(el);
-                
-                const btn = el.parentElement.querySelector('.btn-expand-text');
-                if (btn && el.scrollHeight > el.clientHeight) {
-                    btn.style.display = 'inline-flex';
-                }
-            });
-            const historyContainer = document.getElementById('history-container');
-            if(historyContainer) resizeObserver.observe(historyContainer);
-            
-            document.querySelectorAll('.image-resize-wrapper').forEach(wrapper => {
-                wrapper.addEventListener('mouseup', () => desenharConexoes());
-                wrapper.addEventListener('mouseleave', () => desenharConexoes());
-            });
+            const textNodes = Array.from(document.querySelectorAll('.sub-text-content'));
+            const measurements = textNodes.map(node => ({
+                el: node,
+                btn: node.parentElement.querySelector('.btn-expand-text'),
+                isOverflowing: node.scrollHeight > node.clientHeight
+            }));
 
-            const container = document.getElementById('timeline-container');
-            if (container) {
-                posicionarNosDeIdeia(container);
-                requestAnimationFrame(() => {
-                    desenharConexoes();
+            requestAnimationFrame(() => {
+                measurements.forEach(m => {
+                    // Observa APENAS as caixas de texto que podem expandir
+                    resizeObserver.observe(m.el);
+                    
+                    if (m.isOverflowing) {
+                        // Exibe o botão e aplica a classe do fade-out
+                        if (m.btn) m.btn.style.display = 'inline-flex';
+                        m.el.classList.add('is-truncated');
+                    } else {
+                        // Garante a limpeza do estado
+                        if (m.btn) m.btn.style.display = 'none';
+                        m.el.classList.remove('is-truncated');
+                    }
                 });
-            }
-            
-            _atualizarMarcadoresDeIdeia(topicoAtivo);
+                
+                const historyContainer = document.getElementById('history-container');
+                if(historyContainer) resizeObserver.observe(historyContainer);
+                
+                document.querySelectorAll('.image-resize-wrapper').forEach(wrapper => {
+                    wrapper.addEventListener('mouseup', () => desenharConexoes());
+                    wrapper.addEventListener('mouseleave', () => desenharConexoes());
+                });
+
+                const container = document.getElementById('timeline-container');
+                if (container) {
+                    posicionarNosDeIdeia(container);
+                    requestAnimationFrame(() => {
+                        desenharConexoes();
+                    });
+                }
+                
+                _atualizarMarcadoresDeIdeia(topicoAtivo);
+            });
         });
     }
 
