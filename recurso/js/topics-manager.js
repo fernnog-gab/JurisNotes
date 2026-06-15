@@ -7,6 +7,70 @@ window.TopicsManager = (function () {
 
     let _activeTopicoCor = '#ffffff';
 
+    // Observer Otimizado (Debounce de ~16ms para agrupar Recalculate Styles)
+    let _layoutDebounceTimer = null;
+    const resizeObserver = new ResizeObserver(() => {
+        clearTimeout(_layoutDebounceTimer);
+        _layoutDebounceTimer = setTimeout(() => {
+            requestAnimationFrame(() => {
+                const container = document.getElementById('timeline-container');
+                if (container) {
+                    posicionarNosDeIdeia(container);
+                    requestAnimationFrame(() => desenharConexoes());
+                }
+            });
+        }, 16); 
+    });
+
+    // Funções Privadas do Zen Mode
+    function _ativarZenMode(card) {
+        const item = card.closest('.sub-annotation-item');
+        const contentArea = document.getElementById('topics-tab-content');
+        if (!contentArea || !item) return;
+
+        contentArea.classList.add('zen-mode-ativo');
+        item.classList.add('is-zen-focused');
+        card.classList.add('zen-focused');
+
+        const scrollContainer = document.getElementById('history-container');
+        if (scrollContainer) {
+            setTimeout(() => {
+                const containerRect = scrollContainer.getBoundingClientRect();
+                const cardRect = card.getBoundingClientRect();
+                const offset = (cardRect.top - containerRect.top) + scrollContainer.scrollTop 
+                               - (scrollContainer.clientHeight / 2) + (cardRect.height / 2);
+                scrollContainer.scrollTo({ top: offset, behavior: 'smooth' });
+            }, 100);
+        }
+    }
+
+    function _fecharZenModeAtivo() {
+        const contentArea = document.getElementById('topics-tab-content');
+        if (!contentArea) return;
+
+        contentArea.classList.remove('zen-mode-ativo');
+        document.querySelectorAll('.is-zen-focused').forEach(el => el.classList.remove('is-zen-focused'));
+        document.querySelectorAll('.zen-focused').forEach(el => {
+            el.classList.remove('zen-focused');
+            const btn = el.querySelector('.btn-expand-text');
+            const txt = el.querySelector('.sub-text-content');
+            if (txt && txt.classList.contains('expanded')) {
+                txt.classList.remove('expanded');
+                if (btn) btn.innerHTML = 'Ler texto completo ▾';
+            }
+        });
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && document.querySelector('.zen-focused')) {
+            _fecharZenModeAtivo();
+            requestAnimationFrame(() => {
+                const container = document.getElementById('timeline-container');
+                if (container) { posicionarNosDeIdeia(container); requestAnimationFrame(desenharConexoes); }
+            });
+        }
+    });
+
     function obterCorContraste(hex) {
         if (!hex || !hex.startsWith('#')) return '#ffffff';
         let cleanHex = hex.replace('#', '');
@@ -380,6 +444,10 @@ window.TopicsManager = (function () {
                             <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">
                                 Ler texto completo ▾
                             </button>
+                            <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(sub.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto para a área de transferência">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                Copiar Trecho
+                            </button>
                         </div>
                     </div>`;
             }).join('');
@@ -724,6 +792,10 @@ window.TopicsManager = (function () {
                                 <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">
                                     Ler texto completo ▾
                                 </button>
+                                <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(d.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto para a área de transferência">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                    Copiar Trecho
+                                </button>
                             </div>
                         </div>`;
                     }).join('');
@@ -779,6 +851,10 @@ window.TopicsManager = (function () {
                             <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">
                                 Ler texto completo ▾
                             </button>
+                            <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(d.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto para a área de transferência">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                Copiar Trecho
+                            </button>
                         </div>
                     </div>`;
                 }).join('');
@@ -819,6 +895,9 @@ window.TopicsManager = (function () {
 
         const novoHtml = preambleHtml + conteudoCentralHtml;
             
+        // Desconecta o observer antes da árvore antiga ser destruída (Prevenção de Memory Leak)
+        if (typeof resizeObserver !== 'undefined') resizeObserver.disconnect();
+
         // KEYED MORPHING
         if (typeof morphdom !== 'undefined') {
             morphdom(contentEl, `<div id="topics-tab-content" class="topics-content-area" style="${contentEl.style.cssText}">${novoHtml}</div>`, {
@@ -832,6 +911,13 @@ window.TopicsManager = (function () {
         }
             
         requestAnimationFrame(() => {
+                // Religa o observer apenas nos nós textuais expansíveis e no container nativo
+                document.querySelectorAll('.sub-annotation-item .sub-text-content').forEach(el => {
+                    if (typeof resizeObserver !== 'undefined') resizeObserver.observe(el);
+                });
+                const historyContainer = document.getElementById('history-container');
+                if (historyContainer && typeof resizeObserver !== 'undefined') resizeObserver.observe(historyContainer);
+
                 document.querySelectorAll('.sub-text-content').forEach(el => {
                     const btn = el.parentElement.querySelector('.btn-expand-text');
                     if (btn && el.scrollHeight > el.clientHeight) {
@@ -992,30 +1078,49 @@ window.TopicsManager = (function () {
         svg.innerHTML = svgContent;
     }
 
-    // Listener de Responsividade: Recalcula as linhas se o usuário redimensionar a janela/painel
-    const resizeObserver = new ResizeObserver(() => {
-        requestAnimationFrame(() => desenharConexoes());
-    });
-    
-    // Aguarda o DOM carregar para plugar o observador
-    document.addEventListener("DOMContentLoaded", () => {
-        const historyContainer = document.getElementById('history-container');
-        if(historyContainer) resizeObserver.observe(historyContainer);
-    });
+    // Listener legado removido. O ResizeObserver unificado agora gerencia o escopo de forma segura.
 
     /**
-     * Alterna a expansão do texto longo e re-desenha as linhas dinamicamente
+     * Alterna a expansão do texto longo, gerencia o Zen Mode e re-desenha as conexões dinamicamente
      */
     function toggleTextExpansion(btn) {
-        const content = btn.parentElement.querySelector('.sub-text-content');
+        const itemContainer = btn.closest('.sub-annotation-item');
+        const card = itemContainer.querySelector('.sub-annotation-card');
+        const content = card.querySelector('.sub-text-content');
         if (!content) return;
 
+        // 1. CAPTURA O ESTADO ANTES DA MUTAÇÃO
+        const esteCardEstavaFocado = card.classList.contains('zen-focused');
+        
+        // 2. Limpa qualquer Zen Mode na tela
+        _fecharZenModeAtivo();
+
+        // 3. GUARDA DE SEGURANÇA: Se clicou em "Ocultar" no card já aberto, aborte a reabertura!
+        if (esteCardEstavaFocado) {
+            requestAnimationFrame(() => {
+                const container = document.getElementById('timeline-container');
+                if (container) {
+                    posicionarNosDeIdeia(container);
+                    requestAnimationFrame(() => desenharConexoes());
+                }
+            });
+            return;
+        }
+
+        // 4. Executa abertura normal
         const isExpanded = content.classList.toggle('expanded');
         btn.innerHTML = isExpanded ? 'Ocultar detalhes ▴' : 'Ler texto completo ▾';
-        
-        // Garante que as linhas acompanhem o redesenho pós repintura da scrollbar
-        requestAnimationFrame(() => desenharConexoes());
-        setTimeout(() => desenharConexoes(), 50); 
+
+        requestAnimationFrame(() => {
+            const container = document.getElementById('timeline-container');
+            if (container) {
+                posicionarNosDeIdeia(container);
+                requestAnimationFrame(() => {
+                    desenharConexoes();
+                    if (isExpanded) _ativarZenMode(card);
+                });
+            }
+        });
     }
 
     // API pública do módulo
