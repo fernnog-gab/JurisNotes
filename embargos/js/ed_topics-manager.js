@@ -662,8 +662,14 @@ window.TopicsManager = (function () {
 
             requestAnimationFrame(() => {
                 measurements.forEach(m => {
-                    if (m.isOverflowing && m.btn) {
-                        m.btn.style.display = 'inline-flex';
+                    if (m.isOverflowing) {
+                        // Exibe o botão e aplica a classe do fade-out
+                        if (m.btn) m.btn.style.display = 'inline-flex';
+                        m.el.classList.add('is-truncated');
+                    } else {
+                        // Garante a limpeza do estado caso a tela seja redimensionada
+                        if (m.btn) m.btn.style.display = 'none';
+                        m.el.classList.remove('is-truncated');
                     }
                 });
             });
