@@ -222,6 +222,15 @@
         
         <div id="history-container">
             <div id="topics-tabs-header" class="topics-tab-bar"></div>
+            
+            <!-- NOVO: Container do Cronômetro de Eficiência -->
+            <div id="efficiency-tracker-container" style="display: none;" onclick="TimeTrackerManager.handleClick()">
+                <div id="efficiency-tracker-pill">
+                    <div id="efficiency-tracker-dot"></div>
+                    <span id="efficiency-tracker-time">00:00</span>
+                </div>
+            </div>
+
             <div id="topics-tab-content" class="topics-content-area"></div>
         </div>
     </div>
@@ -548,6 +557,20 @@
 
     <!-- MENU FLUTUANTE DA LOGO -->
     <div id="juris-menu" class="annotation-context-menu" style="flex-direction: column; min-width: 150px; padding: 8px;">
+        <!-- NOVO: Toggle do Cronômetro -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; margin-bottom: 4px;">
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #555; font-weight: 600;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px; flex-shrink:0;">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                Cronômetro
+            </span>
+            <label class="toggle-switch-minimal">
+                <input type="checkbox" id="toggle-cronometro" onchange="TimeTrackerManager.toggleVisibility()">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
         <button class="doc-btn" style="border:none; text-align:left; margin-bottom: 4px;" onclick="abrirModalGerenciarAbas()">📑 Gerenciar Abas</button>
         
         <!-- Novo Submenu de Temas -->
@@ -964,6 +987,37 @@
         </div>
 
         <iframe id="balanca-iframe" style="flex: 1; border: none; width: 100%; display: block; background: var(--bg-page);" sandbox="allow-same-origin allow-scripts allow-forms allow-modals"></iframe>
+    </div>
+
+    <!-- MODAIS DO TIME TRACKER -->
+    <div id="modal-tracker-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.25); z-index: 4004;" onclick="TimeTrackerManager.fecharModal()"></div>
+
+    <div id="modal-tracker-config" class="crop-wizard-popup" style="display:none; z-index: 4005; min-width: 320px;">
+        <div class="wizard-header" id="tracker-modal-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; margin-right:6px; vertical-align:middle;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            Iniciar Contagem
+        </div>
+        
+        <div id="tracker-start-step">
+            <p class="popup-label" style="margin-bottom: 8px;">Classifique a complexidade do tópico:</p>
+            <select id="tracker-complexity-select" class="topic-select">
+                <option value="simples">Simples (Metas: 45m / 1h / 1h30)</option>
+                <option value="medio">Médio (Metas: 1h / 1h30 / 1h45)</option>
+                <option value="complexo">Complexo (Metas: 1h30 / 2h / 2h30)</option>
+            </select>
+            <div class="wizard-actions" style="margin-top: 16px;">
+                <button class="chip-btn chip-cancelar" onclick="TimeTrackerManager.fecharModal()">Cancelar</button>
+                <button class="chip-btn chip-autora" style="background: var(--trt-blue); color: white; border-color: var(--trt-blue);" onclick="TimeTrackerManager.iniciar()">Iniciar Análise</button>
+            </div>
+        </div>
+
+        <div id="tracker-stop-step" style="display:none;">
+            <p class="popup-label" style="margin-bottom: 16px; text-align: center; font-size: 0.9rem;">Deseja encerrar a contagem deste tópico?</p>
+            <div class="wizard-actions" style="justify-content: center;">
+                <button class="chip-btn chip-cancelar" onclick="TimeTrackerManager.fecharModal()">Continuar Contando</button>
+                <button class="chip-btn chip-re" onclick="TimeTrackerManager.parar()">Sim, Encerrar</button>
+            </div>
+        </div>
     </div>
 
     <!-- SCRIPT DE AUTENTICAÇÃO E ACERVO -->

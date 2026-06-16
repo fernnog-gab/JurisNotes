@@ -209,6 +209,10 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.dataset.activeTab = 'leitura';
     SplashScreenManager.init();
     
+    if (window.TimeTrackerManager) {
+        TimeTrackerManager.init({ getTopicos: () => topicos });
+    }
+    
     if (window.PdfEngine) {
         PdfEngine.init({
             getTopicos: () => topicos,
@@ -363,6 +367,10 @@ function trocarAba(aba) {
     if (window.AudioManager && typeof window.AudioManager.onTabChange === 'function') {
         window.AudioManager.onTabChange(aba);
     }
+
+    if (window.TimeTrackerManager) {
+        TimeTrackerManager.toggleVisibility();
+    }
 }
 
 function checkScrollFabState() {
@@ -389,12 +397,25 @@ function rolarParaFinal() {
     if (hc) hc.scrollTo({ top: hc.scrollHeight, behavior: 'smooth' });
 }
 
-function exibirToast(mensagem, tipo = 'sucesso') {
+function exibirToast(mensagem, tipo = 'sucesso', iconeSvgString = null) {
     const toast = document.getElementById('toast-feedback');
-    toast.textContent = mensagem;
-    toast.className   = `toast-feedback toast-${tipo} visivel`;
+    
+    if (iconeSvgString) {
+        toast.innerHTML = `${iconeSvgString}<span class="toast-text"></span>`;
+        toast.querySelector('.toast-text').textContent = mensagem;
+    } else {
+        toast.innerHTML = '';
+        toast.textContent = mensagem;
+    }
+
+    toast.className = `toast-feedback toast-${tipo} visivel`;
     clearTimeout(toast._timer);
-    toast._timer = setTimeout(() => toast.classList.remove('visivel'), 2800);
+    
+    const tempoExibicao = tipo === 'aviso' ? 4000 : 2800;
+    toast._timer = setTimeout(() => {
+        toast.classList.remove('visivel');
+        setTimeout(() => toast.innerHTML = '', 300);
+    }, tempoExibicao);
 }
 
 function atualizarStatusBackup(texto, ativa = false) {
@@ -439,6 +460,7 @@ function encerrarSessao() {
     if (typeof fecharTudoWizard === 'function') fecharTudoWizard();
     if (typeof fecharPopupClassificacao === 'function') fecharPopupClassificacao();
     if (window.AudioManager) window.AudioManager.encerrar();
+    if (window.TimeTrackerManager) window.TimeTrackerManager.parar();
 
     topicos      = [];
     modoRetomada = false;
@@ -1161,3 +1183,158 @@ async function acionarCriacaoBackup() {
         }
     }
 }
+
+/* ================================================
+   MÓDULO DE MEDIÇÃO DE EFICIÊNCIA (TIME TRACKER)
+   ================================================ */
+window.TimeTrackerManager = (function() {
+    let _getTopicos = () => []; 
+    
+    let isHabilitado = false;
+    let isRodando = false;
+    let tempoSegundos = 0;
+    let intervaloId = null;
+    let complexidadeAtual = null;
+    let marcosAtingidos = { excelente: false, bom: false, cautela: false };
+
+    const limites = {
+        simples: [45 * 60, 60 * 60, 90 * 60],
+        medio: [60 * 60, 90 * 60, 105 * 60],
+        complexo: [90 * 60, 120 * 60, 150 * 60]
+    };
+
+    function init(deps) {
+        if (deps && typeof deps.getTopicos === 'function') {
+            _getTopicos = deps.getTopicos;
+        }
+    }
+
+    function toggleVisibility() {
+        const toggleEl = document.getElementById('toggle-cronometro');
+        if(!toggleEl) return;
+        
+        isHabilitado = toggleEl.checked;
+        const container = document.getElementById('efficiency-tracker-container');
+        const isHistorico = document.body.dataset.activeTab === 'historico';
+        
+        container.style.display = (isHabilitado && isHistorico) ? 'flex' : 'none';
+        if (isHabilitado) sincronizarCor();
+    }
+
+    function handleClick() {
+        document.getElementById('modal-tracker-backdrop').style.display = 'block';
+        document.getElementById('modal-tracker-config').style.display = 'block';
+        
+        const svgIcon = isRodando 
+            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; margin-right:6px; vertical-align:middle;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>'
+            : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; margin-right:6px; vertical-align:middle;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
+
+        document.getElementById('tracker-modal-title').innerHTML = `${svgIcon} ${isRodando ? 'Pausar / Encerrar' : 'Iniciar Contagem'}`;
+        document.getElementById('tracker-start-step').style.display = isRodando ? 'none' : 'block';
+        document.getElementById('tracker-stop-step').style.display = isRodando ? 'block' : 'none';
+    }
+
+    function fecharModal() {
+        document.getElementById('modal-tracker-backdrop').style.display = 'none';
+        document.getElementById('modal-tracker-config').style.display = 'none';
+    }
+
+    function iniciar() {
+        complexidadeAtual = document.getElementById('tracker-complexity-select').value;
+        marcosAtingidos = { excelente: false, bom: false, cautela: false };
+        isRodando = true;
+        fecharModal();
+        
+        sincronizarCor();
+        document.getElementById('efficiency-tracker-dot').classList.add('pulsing');
+        
+        if (intervaloId) clearInterval(intervaloId);
+        intervaloId = setInterval(tick, 1000);
+    }
+
+    function parar() {
+        isRodando = false;
+        if (intervaloId) clearInterval(intervaloId);
+        fecharModal();
+        
+        const dot = document.getElementById('efficiency-tracker-dot');
+        const pill = document.getElementById('efficiency-tracker-pill');
+        if(dot) {
+            dot.classList.remove('pulsing');
+            dot.style.backgroundColor = '#ccc';
+            dot.style.boxShadow = 'none';
+        }
+        if(pill) pill.style.borderColor = '#e0e0e0';
+        
+        tempoSegundos = 0;
+        atualizarDisplay();
+    }
+
+    function tick() {
+        tempoSegundos++;
+        atualizarDisplay();
+        verificarMarcos();
+    }
+
+    function atualizarDisplay() {
+        const timeEl = document.getElementById('efficiency-tracker-time');
+        if(!timeEl) return;
+
+        const h = Math.floor(tempoSegundos / 3600);
+        const m = Math.floor((tempoSegundos % 3600) / 60);
+        const s = tempoSegundos % 60;
+        
+        let texto = '';
+        if (h > 0) texto += `${h.toString().padStart(2, '0')}:`;
+        texto += `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        timeEl.textContent = texto;
+    }
+
+    function verificarMarcos() {
+        if (!complexidadeAtual) return;
+        const metas = limites[complexidadeAtual];
+
+        const icones = {
+            sucesso: `<svg style="width:16px; height:16px; margin-right:8px; vertical-align:middle; fill:none; stroke:currentColor; stroke-width:2;"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
+            info: `<svg style="width:16px; height:16px; margin-right:8px; vertical-align:middle; fill:none; stroke:currentColor; stroke-width:2;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`,
+            aviso: `<svg style="width:16px; height:16px; margin-right:8px; vertical-align:middle; fill:none; stroke:currentColor; stroke-width:2;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`
+        };
+
+        if (tempoSegundos === metas[0] && !marcosAtingidos.excelente) {
+            exibirToast('Tempo de excelência alcançado. Ótimo ritmo de análise.', 'sucesso', icones.sucesso);
+            marcosAtingidos.excelente = true;
+        } 
+        else if (tempoSegundos === metas[1] && !marcosAtingidos.bom) {
+            exibirToast('Tempo padrão atingido. Boa cadência de trabalho mantida.', 'info', icones.info);
+            marcosAtingidos.bom = true;
+        } 
+        else if (tempoSegundos === metas[2] && !marcosAtingidos.cautela) {
+            exibirToast('Atenção ao tempo gasto. Considere encaminhar a conclusão deste tópico.', 'aviso', icones.aviso);
+            marcosAtingidos.cautela = true;
+        }
+    }
+
+    function sincronizarCor() {
+        if (!isHabilitado) return;
+        
+        const topicosData = _getTopicos();
+        const activeTabId = typeof TopicsManager !== 'undefined' ? TopicsManager.getActiveTabId() : null;
+        let cor = '#ccc'; 
+        
+        if (activeTabId && topicosData.length > 0) {
+            const topico = topicosData.find(t => t.id === activeTabId);
+            if (topico && topico.cor) cor = topico.cor;
+        }
+
+        const pill = document.getElementById('efficiency-tracker-pill');
+        const dot = document.getElementById('efficiency-tracker-dot');
+        
+        if (isRodando && dot && pill) {
+            dot.style.backgroundColor = cor;
+            dot.style.boxShadow = `0 0 8px ${cor}`;
+            pill.style.borderColor = cor;
+        }
+    }
+
+    return { init, toggleVisibility, handleClick, fecharModal, iniciar, parar, sincronizarCor };
+})();
