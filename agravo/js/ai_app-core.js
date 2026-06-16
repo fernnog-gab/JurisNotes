@@ -581,8 +581,58 @@ async function novoProcesso(event) {
 }
 
 /* ================================================
-   GESTÃO DE TÓPICOS E ANOTAÇÕES
+   GESTÃO DE TÓPICOS, ANOTAÇÕES E ACERVO (AI)
    ================================================ */
+
+function verificarAcervoEmSegundoPlano(nomeTopico) {
+    const agendarTarefaBackground = window.requestIdleCallback || ((cb, opts) => setTimeout(cb, opts?.timeout ?? 1));
+    
+    agendarTarefaBackground(async () => {
+        if (typeof window.AcervoManager === 'undefined') return;
+        
+        try {
+            const modelos = await AcervoManager.carregarModelos();
+            if (!modelos || modelos.length === 0) return;
+            
+            const nomeTopicoMin = nomeTopico.toLowerCase();
+            const modelosEncontrados = [];
+            const tagsGatilho = new Set();
+            
+            modelos.forEach(mod => {
+                if (mod.tags) {
+                    const tagMatch = mod.tags.find(tag => nomeTopicoMin.includes(tag.toLowerCase()));
+                    if (tagMatch) {
+                        modelosEncontrados.push(mod);
+                        tagsGatilho.add(tagMatch); 
+                    }
+                }
+            });
+            
+            if (modelosEncontrados.length > 0) {
+                const quantidade = modelosEncontrados.length;
+                let mensagem = "";
+                
+                if (quantidade === 1) {
+                    mensagem = `💡 Dica: Encontramos o modelo "${modelosEncontrados[0].nome}" relacionado a este tópico.`;
+                } else {
+                    const expressoes = Array.from(tagsGatilho).join(', ');
+                    mensagem = `💡 Dica: Encontramos ${quantidade} modelos no acervo baseados na expressão (${expressoes}).`;
+                }
+                
+                const DURACAO_TOAST_ORIGINAL_MS = 2800; 
+                const MARGEM_SEGURANCA_MS = 400;
+                
+                setTimeout(() => {
+                    exibirToast(mensagem, 'info');
+                }, DURACAO_TOAST_ORIGINAL_MS + MARGEM_SEGURANCA_MS);
+            }
+            
+        } catch (error) {
+            console.warn("[Juris Notes] Verificação de acervo em background falhou:", error);
+        }
+    }, { timeout: 5000 });
+}
+
 function criarTopicoPrompt() {
     const obiceInput = prompt('Agravo de Instrumento - Selecione o Óbice/Pressuposto:\n1 - Tempestividade\n2 - Preparo (Custas/GFIP)\n3 - Representação\n4 - Adequação');
     if (!obiceInput) return;
@@ -618,6 +668,9 @@ function criarTopicoPrompt() {
     salvarBackupAutomatico();
     trocarAba('historico');
     exibirToast(`Auditoria de ${obiceTipado} iniciada.`, 'sucesso');
+    
+    // Dispara a verificação de acervo de forma não bloqueante
+    verificarAcervoEmSegundoPlano(nomeCompleto);
 }
 
 function renderizarTopicos() {
