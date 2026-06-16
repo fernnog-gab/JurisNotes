@@ -412,6 +412,7 @@ body.theme-anotacoes-jasmine {
 .toast-feedback.toast-sucesso { border-left: 4px solid #81c784; }
 .toast-feedback.toast-aviso   { border-left: 4px solid #ffd54f; }
 .toast-feedback.toast-erro    { border-left: 4px solid #e57373; }
+.toast-feedback.toast-info    { border-left: 4px solid #42a5f5; background-color: #e3f2fd; color: #0d47a1; box-shadow: 0 4px 12px rgba(13, 71, 161, 0.15); }
 
 /* ================================================
    6. ATALHOS FLUTUANTES (SMART SHORTCUTS) - MODO ED
