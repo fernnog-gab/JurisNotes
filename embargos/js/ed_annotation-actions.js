@@ -249,7 +249,7 @@ function salvarEdicaoTexto() {
     const topico = topicos.find(t => t.id === _editContext.topicoId);
     if (!topico) return;
 
-    const novoTexto = document.getElementById('edit-text-input').value.trim();
+    let novoTexto = document.getElementById('edit-text-input').value.trim();
 
     // LÓGICA DO PREÂMBULO (Isolada e Segura)
     if (_editContext.tipo === 'preambulo') {
@@ -258,6 +258,12 @@ function salvarEdicaoTexto() {
         salvarBackupAutomatico();
         exibirToast('Preâmbulo salvo.', 'sucesso');
         return fecharModalEdicao();
+    }
+
+    // [NOVO] Pipeline de Higienização Restrito para Edição
+    const tiposPermitidosParaLimpeza = ['texto', 'sub', 'correlated'];
+    if (tiposPermitidosParaLimpeza.includes(_editContext.tipo) || _editContext.tipoAnotacao === 'texto') {
+        novoTexto = window.JurisUtils.limparTextoPDF(novoTexto);
     }
 
     // LÓGICA DE CARDS DE TEXTO
@@ -671,7 +677,11 @@ function adicionarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
 
 function confirmarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
     const textarea = document.getElementById('sub-input-text');
-    const texto = textarea ? textarea.value.trim() : '';
+    
+    // [NOVO] Higieniza o texto colado/digitado no Nó de Ideia
+    let texto = textarea ? textarea.value.trim() : '';
+    texto = window.JurisUtils.limparTextoPDF(texto);
+    
     if (!texto) return exibirToast('Digite uma observação.', 'aviso');
     
     const topico = topicos.find(t => t.id === topicoId);

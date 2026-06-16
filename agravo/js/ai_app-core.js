@@ -66,6 +66,20 @@ window.sincronizarHighlightsGerais = function() {
 };
 
 /* ================================================
+   MOTOR DE HIGIENIZAÇÃO DE TEXTO (JURIS UTILS)
+   ================================================ */
+window.JurisUtils = window.JurisUtils || {};
+
+window.JurisUtils.limparTextoPDF = function(texto) {
+    if (!texto || typeof texto !== 'string') return '';
+    return texto
+        .replace(/([\p{L}])-\r?\n\s*([\p{L}])/gu, '$1$2')
+        .replace(/([^\n\r])\r?\n([^\n\r])/g, '$1 $2')
+        .replace(/ {2,}/g, ' ')
+        .trim();
+};
+
+/* ================================================
    CONTROLE DE INTERFACE DE AUTENTICAÇÃO
    ================================================ */
 window.toggleLoginMenu = function(event) {
@@ -679,7 +693,10 @@ function renderizarTopicos() {
 
 function capturarTrechoSelecionado() {
     const selection = window.getSelection();
-    const selecaoTexto = selection.toString().trim();
+    
+    // [NOVO] Executa o Data Sanitization Pipeline antes de validar o length
+    let selecaoTexto = selection.toString().trim();
+    selecaoTexto = window.JurisUtils.limparTextoPDF(selecaoTexto);
 
     if (selecaoTexto.length <= 5) {
         exibirToast('Selecione um trecho válido no documento.', 'aviso');
