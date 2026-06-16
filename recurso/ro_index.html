@@ -223,15 +223,19 @@
         <div id="history-container">
             <div id="topics-tabs-header" class="topics-tab-bar"></div>
             
-            <!-- NOVO: Container do Cronômetro de Eficiência -->
-            <div id="efficiency-tracker-container" style="display: none;" onclick="TimeTrackerManager.handleClick()">
-                <div id="efficiency-tracker-pill">
-                    <div id="efficiency-tracker-dot"></div>
-                    <span id="efficiency-tracker-time">00:00</span>
+            <!-- NOVO: Wrapper relativo que encapsula o cronômetro e o conteúdo -->
+            <div style="position: relative;">
+                <!-- Cronômetro flutuante -->
+                <div id="efficiency-tracker-container" style="display: none;" onclick="TimeTrackerManager.handleClick()">
+                    <div id="efficiency-tracker-pill">
+                        <div id="efficiency-tracker-dot"></div>
+                        <span id="efficiency-tracker-time">00:00</span>
+                    </div>
                 </div>
+                
+                <!-- Área onde os cards são injetados pelo sistema -->
+                <div id="topics-tab-content" class="topics-content-area"></div>
             </div>
-
-            <div id="topics-tab-content" class="topics-content-area"></div>
         </div>
     </div>
     
