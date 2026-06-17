@@ -427,3 +427,86 @@ body[data-context="ed"] .topics-content-area {
     align-items: center;
     gap: 4px;
 }
+
+/* ================================================
+   CRONÔMETRO DE EFICIÊNCIA (TIME TRACKER)
+   ================================================ */
+#efficiency-tracker-container {
+    position: absolute;
+    top: 14px;  /* Distância do topo do bloco colorido */
+    right: 18px; /* Distância da borda direita */
+    z-index: 25; /* Garante que ele fique por cima do painel de preâmbulo e cards */
+    margin: 0;
+    padding: 0;
+}
+
+#efficiency-tracker-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px); /* Suporte nativo Safari/iOS */
+    border: 1px solid #e0e0e0;
+    border-radius: 20px;
+    padding: 4px 12px;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    transition: all 0.3s ease;
+    user-select: none;
+}
+
+#efficiency-tracker-pill:hover {
+    background: #ffffff;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transform: translateY(-1px);
+}
+
+#efficiency-tracker-pill:active {
+    transform: translateY(0);
+}
+
+#efficiency-tracker-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #ccc;
+    transition: background-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+#efficiency-tracker-dot.pulsing {
+    animation: tracker-pulse 2s infinite ease-in-out;
+}
+
+#efficiency-tracker-time {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #555;
+    font-variant-numeric: tabular-nums; /* Evita tremedeira nos números */
+    letter-spacing: 0.5px;
+}
+
+@keyframes tracker-pulse {
+    0% { transform: scale(0.9); opacity: 0.7; }
+    50% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(0.9); opacity: 0.7; }
+}
+
+/* Chave Seletora (Toggle) Minimalista */
+.toggle-switch-minimal {
+    position: relative;
+    display: inline-block;
+    width: 32px;
+    height: 18px;
+}
+.toggle-switch-minimal input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc; transition: .3s; border-radius: 18px;
+}
+.toggle-slider:before {
+    position: absolute; content: ""; height: 14px; width: 14px; left: 2px; bottom: 2px;
+    background-color: white; transition: .3s; border-radius: 50%;
+}
+.toggle-switch-minimal input:checked + .toggle-slider { background-color: var(--trt-blue); }
+.toggle-switch-minimal input:checked + .toggle-slider:before { transform: translateX(14px); }
