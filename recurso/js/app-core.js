@@ -1250,6 +1250,9 @@ window.TimeTrackerManager = (function() {
         
         if (intervaloId) clearInterval(intervaloId);
         intervaloId = setInterval(tick, 1000);
+
+        // NOVO: Feedback imediato ao usuário
+        exibirToast(`Cronômetro ativado. Foco na análise!`, 'info');
     }
 
     function parar() {
@@ -1265,6 +1268,10 @@ window.TimeTrackerManager = (function() {
             dot.style.boxShadow = 'none';
         }
         if(pill) pill.style.borderColor = '#e0e0e0';
+        
+        // NOVO: Congela o tempo na tela e avisa o usuário antes de zerar
+        const tempoFinal = document.getElementById('efficiency-tracker-time').textContent;
+        exibirToast(`Tópico concluído. Tempo de tela: ${tempoFinal}`, 'sucesso');
         
         tempoSegundos = 0;
         atualizarDisplay();
