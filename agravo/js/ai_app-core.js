@@ -1258,18 +1258,28 @@ window.TimeTrackerManager = (function() {
         if (deps && typeof deps.getTopicos === 'function') {
             _getTopicos = deps.getTopicos;
         }
+        
+        // Lê a posição da chavinha assim que o aplicativo inicia
+        const toggleEl = document.getElementById('toggle-cronometro');
+        if (toggleEl) {
+            isHabilitado = toggleEl.checked;
+        }
     }
 
-    function toggleVisibility() {
-        const toggleEl = document.getElementById('toggle-cronometro');
-        if(!toggleEl) return;
+    function toggleVisibility(fromToggle = false) {
+        if (fromToggle) {
+            const toggleEl = document.getElementById('toggle-cronometro');
+            if (toggleEl) isHabilitado = toggleEl.checked;
+        }
         
-        isHabilitado = toggleEl.checked;
         const container = document.getElementById('efficiency-tracker-container');
         const isHistorico = document.body.dataset.activeTab === 'historico';
+        const temTopico = _getTopicos().length > 0;
         
-        container.style.display = (isHabilitado && isHistorico) ? 'flex' : 'none';
-        if (isHabilitado) sincronizarCor();
+        const deveExibir = isHabilitado && isHistorico && temTopico;
+        
+        container.style.display = deveExibir ? 'flex' : 'none';
+        if (deveExibir) sincronizarCor();
     }
 
     function handleClick() {
@@ -1299,10 +1309,12 @@ window.TimeTrackerManager = (function() {
         sincronizarCor();
         document.getElementById('efficiency-tracker-dot').classList.add('pulsing');
         
+        const pill = document.getElementById('efficiency-tracker-pill');
+        if (pill) pill.classList.remove('milestone-1', 'milestone-2', 'milestone-3');
+        
         if (intervaloId) clearInterval(intervaloId);
         intervaloId = setInterval(tick, 1000);
 
-        // Feedback imediato de início
         exibirToast(`Cronômetro ativado. Foco na análise!`, 'info');
     }
 
@@ -1313,14 +1325,17 @@ window.TimeTrackerManager = (function() {
         
         const dot = document.getElementById('efficiency-tracker-dot');
         const pill = document.getElementById('efficiency-tracker-pill');
+        
         if(dot) {
             dot.classList.remove('pulsing');
             dot.style.backgroundColor = '#ccc';
             dot.style.boxShadow = 'none';
         }
-        if(pill) pill.style.borderColor = '#e0e0e0';
         
-        // Feedback imediato com tempo final
+        if(pill) {
+            pill.classList.remove('milestone-1', 'milestone-2', 'milestone-3');
+        }
+        
         const tempoFinal = document.getElementById('efficiency-tracker-time').textContent;
         exibirToast(`Tópico concluído. Tempo de tela: ${tempoFinal}`, 'sucesso');
         
@@ -1351,23 +1366,21 @@ window.TimeTrackerManager = (function() {
     function verificarMarcos() {
         if (!complexidadeAtual) return;
         const metas = limites[complexidadeAtual];
-
-        const icones = {
-            sucesso: `<svg style="width:16px; height:16px; margin-right:8px; vertical-align:middle; fill:none; stroke:currentColor; stroke-width:2;"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
-            info: `<svg style="width:16px; height:16px; margin-right:8px; vertical-align:middle; fill:none; stroke:currentColor; stroke-width:2;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`,
-            aviso: `<svg style="width:16px; height:16px; margin-right:8px; vertical-align:middle; fill:none; stroke:currentColor; stroke-width:2;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`
-        };
+        const pill = document.getElementById('efficiency-tracker-pill');
+        if (!pill) return;
 
         if (tempoSegundos === metas[0] && !marcosAtingidos.excelente) {
-            exibirToast('Tempo de excelência alcançado. Ótimo ritmo de análise.', 'sucesso', icones.sucesso);
+            pill.classList.add('milestone-1');
             marcosAtingidos.excelente = true;
         } 
         else if (tempoSegundos === metas[1] && !marcosAtingidos.bom) {
-            exibirToast('Tempo padrão atingido. Boa cadência de trabalho mantida.', 'info', icones.info);
+            pill.classList.remove('milestone-1');
+            pill.classList.add('milestone-2');
             marcosAtingidos.bom = true;
         } 
         else if (tempoSegundos === metas[2] && !marcosAtingidos.cautela) {
-            exibirToast('Atenção ao tempo gasto. Considere encaminhar a conclusão deste tópico.', 'aviso', icones.aviso);
+            pill.classList.remove('milestone-2');
+            pill.classList.add('milestone-3');
             marcosAtingidos.cautela = true;
         }
     }
@@ -1387,10 +1400,13 @@ window.TimeTrackerManager = (function() {
         const pill = document.getElementById('efficiency-tracker-pill');
         const dot = document.getElementById('efficiency-tracker-dot');
         
-        if (isRodando && dot && pill) {
+        if (pill) {
+            pill.style.setProperty('--tracker-color', cor);
+        }
+
+        if (isRodando && dot) {
             dot.style.backgroundColor = cor;
             dot.style.boxShadow = `0 0 8px ${cor}`;
-            pill.style.borderColor = cor;
         }
     }
 
