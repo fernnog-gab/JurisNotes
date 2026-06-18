@@ -1207,6 +1207,12 @@ window.TimeTrackerManager = (function() {
         if (deps && typeof deps.getTopicos === 'function') {
             _getTopicos = deps.getTopicos;
         }
+        
+        // CORREÇÃO: Lê a posição da chavinha assim que o aplicativo inicia
+        const toggleEl = document.getElementById('toggle-cronometro');
+        if (toggleEl) {
+            isHabilitado = toggleEl.checked;
+        }
     }
 
     function toggleVisibility(fromToggle = false) {

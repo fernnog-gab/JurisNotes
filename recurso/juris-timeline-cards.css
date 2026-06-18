@@ -467,6 +467,7 @@
     overflow: visible; /* Permite que a pílula apareça mesmo com height 0 */
     display: flex;
     justify-content: flex-end;
+    align-items: flex-start; /* ← A SOLUÇÃO: Impede que a pílula seja esmagada */
     margin-right: 24px;
     pointer-events: none; /* Deixa cliques atravessarem o container fantasma */
 }
