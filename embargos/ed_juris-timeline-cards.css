@@ -461,64 +461,106 @@ body[data-context="ed"] .topics-content-area {
    CRONÔMETRO DE EFICIÊNCIA (TIME TRACKER) - FLUTUANTE
    ================================================ */
 #efficiency-tracker-container {
-    position: absolute;
-    top: 14px;  /* Distância do topo do bloco colorido */
-    right: 18px; /* Distância da borda direita */
-    z-index: 25; /* Garante que ele fique por cima do painel e cards */
-    margin: 0;
-    padding: 0;
+    position: sticky;
+    top: 18px;
+    z-index: 1000;
+    height: 0;
+    overflow: visible;
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-start; /* Previne o esmagamento do flexbox */
+    margin-right: 24px;
+    pointer-events: none;
 }
 
 #efficiency-tracker-pill {
+    position: relative;
+    pointer-events: auto;
+    border-radius: 20px;
+    padding: 2px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+    user-select: none;
+    overflow: hidden;
+    background: transparent;
+    --tracker-color: #ccc;
+}
+
+#efficiency-tracker-pill:hover { transform: translateY(-2px) scale(1.02); }
+#efficiency-tracker-pill:active { transform: translateY(0) scale(0.98); }
+
+#tracker-bg-mask {
+    position: absolute;
+    inset: 2px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(4px);
+    border-radius: 18px;
+    z-index: 1;
+}
+
+.tracker-content {
+    position: relative;
+    z-index: 2;
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    border: 1px solid #e0e0e0;
-    border-radius: 20px;
     padding: 4px 12px;
-    cursor: pointer;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
-    transition: all 0.3s ease;
-    user-select: none;
-}
-
-#efficiency-tracker-pill:hover {
-    background: #ffffff;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    transform: translateY(-1px);
-}
-
-#efficiency-tracker-pill:active {
-    transform: translateY(0);
 }
 
 #efficiency-tracker-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: #ccc;
+    width: 8px; height: 8px; border-radius: 50%; background-color: #ccc;
     transition: background-color 0.4s ease, box-shadow 0.4s ease;
 }
-
-#efficiency-tracker-dot.pulsing {
-    animation: tracker-pulse 2s infinite ease-in-out;
-}
+#efficiency-tracker-dot.pulsing { animation: tracker-pulse 2s infinite ease-in-out; }
 
 #efficiency-tracker-time {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #555;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0.5px;
+    font-size: 0.75rem; font-weight: 700; color: #555;
+    font-variant-numeric: tabular-nums; letter-spacing: 0.5px;
 }
 
+/* --- EFEITOS DE ESTRELAS CADENTES (MARCOS DE TEMPO) --- */
+#efficiency-tracker-pill::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 160px;
+    height: 160px;
+    background: transparent;
+    opacity: 0;
+    z-index: 0;
+    transition: opacity 0.5s ease;
+    pointer-events: none;
+}
+
+#efficiency-tracker-pill.milestone-1::before {
+    opacity: 1;
+    background: conic-gradient(from 0deg, transparent 70%, var(--tracker-color) 95%, transparent 100%);
+    animation: spin-tracker-1 3s linear infinite;
+}
+
+#efficiency-tracker-pill.milestone-2::before {
+    opacity: 1;
+    background: conic-gradient(from 0deg, transparent 20%, var(--tracker-color) 45%, transparent 70%, var(--tracker-color) 95%, transparent 100%);
+    animation: spin-tracker-2 2s linear infinite;
+}
+
+#efficiency-tracker-pill.milestone-3 { padding: 3px; }
+#efficiency-tracker-pill.milestone-3 #tracker-bg-mask { inset: 3px; }
+#efficiency-tracker-pill.milestone-3::before {
+    opacity: 1;
+    background: conic-gradient(from 0deg, transparent 10%, var(--tracker-color) 30%, transparent 43%, var(--tracker-color) 63%, transparent 76%, var(--tracker-color) 96%, transparent 100%);
+    animation: spin-tracker-3 1.2s linear infinite;
+}
+
+@keyframes spin-tracker-1 { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(360deg); } }
+@keyframes spin-tracker-2 { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(360deg); } }
+@keyframes spin-tracker-3 { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(360deg); } }
+
 @keyframes tracker-pulse {
-    0% { transform: scale(0.9); opacity: 0.7; }
+    0%, 100% { transform: scale(0.9); opacity: 0.7; }
     50% { transform: scale(1.2); opacity: 1; }
-    100% { transform: scale(0.9); opacity: 0.7; }
 }
 
 /* Chave Seletora (Toggle) Minimalista */

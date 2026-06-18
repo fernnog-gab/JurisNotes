@@ -228,11 +228,14 @@
             
             <!-- NOVO: Wrapper relativo que encapsula o cronômetro e o conteúdo -->
             <div style="position: relative;">
-                <!-- Cronômetro flutuante -->
-                <div id="efficiency-tracker-container" style="display: none;" onclick="TimeTrackerManager.handleClick()">
-                    <div id="efficiency-tracker-pill">
-                        <div id="efficiency-tracker-dot"></div>
-                        <span id="efficiency-tracker-time">00:00</span>
+                <!-- Cronômetro flutuante ancorado no scroll -->
+                <div id="efficiency-tracker-container" style="display: none;">
+                    <div id="efficiency-tracker-pill" onclick="TimeTrackerManager.handleClick()">
+                        <div id="tracker-bg-mask"></div>
+                        <div class="tracker-content">
+                            <div id="efficiency-tracker-dot"></div>
+                            <span id="efficiency-tracker-time">00:00</span>
+                        </div>
                     </div>
                 </div>
                 
@@ -585,7 +588,7 @@
                 Cronômetro
             </span>
             <label class="toggle-switch-minimal">
-                <input type="checkbox" id="toggle-cronometro" onchange="TimeTrackerManager.toggleVisibility()">
+                <input type="checkbox" id="toggle-cronometro" checked onchange="TimeTrackerManager.toggleVisibility(true)">
                 <span class="toggle-slider"></span>
             </label>
         </div>
