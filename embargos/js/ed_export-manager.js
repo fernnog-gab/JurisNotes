@@ -398,6 +398,27 @@ window.ExportManager = (function () {
                 console.error('[ExportManager ED] Erro crítico na exportação:', error);
                 _deps.exibirToast('Erro ao exportar Embargos. Verifique o console.', 'erro');
             }
+        },
+
+        /**
+         * Retorna os dados do tópico ativo de forma segura para consumo da UI.
+         * Atua como Single Source of Truth, mantendo a regra de negócio blindada.
+         * @returns {{ nome: string, markdown: string } | null}
+         */
+        obterDadosDoTopicoAtivo: function() {
+            const activeId = _deps.getActiveTabId();
+            if (!activeId) return null;
+
+            const topicosArray = _deps.getTopicos();
+            if (!topicosArray || !Array.isArray(topicosArray)) return null;
+
+            const topicoAtivo = topicosArray.find(t => t.id === activeId);
+            if (!topicoAtivo || !topicoAtivo.anotacoes || topicoAtivo.anotacoes.length === 0) return null;
+
+            return {
+                nome: topicoAtivo.nome || 'Vício Não Nomeado',
+                markdown: _gerarMarkdown(topicoAtivo)
+            };
         }
     };
 

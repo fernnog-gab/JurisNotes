@@ -668,6 +668,120 @@ document.addEventListener('keydown', function(e) {
 });
 
 /* ================================================
+   MÓDULO: GERADOR DE CONTEXTO ESTRUTURADO (IA)
+   ================================================ */
+
+// Função utilitária de Debounce para proteger o Main Thread
+function _debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
+// Lógica principal de auto-save com Debounce de 800ms
+window.salvarRascunhoContextoDebounced = _debounce(function() {
+    try {
+        const minuta = document.getElementById('ctx-minuta-anterior').value;
+        const rascunho = document.getElementById('ctx-rascunho-ia').value;
+        sessionStorage.setItem('juris_ed_ctx_minuta', minuta);
+        sessionStorage.setItem('juris_ed_ctx_rascunho', rascunho);
+    } catch (e) {
+        console.warn('Falha ao acessar sessionStorage:', e);
+    }
+}, 800);
+
+window.abrirModalGeradorContexto = function() {
+    if (!window.ExportManager) return;
+
+    // Inversão de Controle: Pede ao Facade
+    const dadosTopico = ExportManager.obterDadosDoTopicoAtivo();
+
+    if (!dadosTopico) {
+        exibirToast('Selecione um tópico com provas estruturadas antes de gerar o contexto.', 'aviso');
+        return;
+    }
+
+    const tagProcesso = document.getElementById('tag-numero-processo');
+    const numProcesso = tagProcesso ? (tagProcesso.textContent.trim() || 'Não informado') : 'Não informado';
+
+    // Preenchimento de DOM
+    document.getElementById('ctx-metadados').value = `Processo: ${numProcesso}\nVício Analisado: ${dadosTopico.nome}`;
+    document.getElementById('ctx-diretrizes').value = dadosTopico.markdown;
+
+    // Restauração Segura do Cache
+    try {
+        document.getElementById('ctx-minuta-anterior').value = sessionStorage.getItem('juris_ed_ctx_minuta') || '';
+        document.getElementById('ctx-rascunho-ia').value = sessionStorage.getItem('juris_ed_ctx_rascunho') || '';
+    } catch (e) { /* Ignora se bloqueado por modo anônimo estrito */ }
+
+    document.getElementById('gerador-contexto-backdrop').style.display = 'block';
+    document.getElementById('modal-gerador-contexto').style.display = 'flex';
+};
+
+window.fecharModalGeradorContexto = function() {
+    document.getElementById('gerador-contexto-backdrop').style.display = 'none';
+    document.getElementById('modal-gerador-contexto').style.display = 'none';
+};
+
+window.gerarECopiarContexto = function() {
+    const btn = document.getElementById('btn-copiar-contexto');
+    const originalText = btn.innerHTML;
+    
+    // Concatenação Inteligente
+    let outputFinal = "";
+    const minuta = document.getElementById('ctx-minuta-anterior').value.trim();
+    if (minuta) outputFinal += "== MINUTA_ATUAL ==\n" + minuta + "\n\n";
+    
+    outputFinal += "== METADADOS E TÓPICO ==\n" + document.getElementById('ctx-metadados').value.trim() + "\n\n";
+    outputFinal += "== DIRETRIZES DE AUDITORIA ==\n" + document.getElementById('ctx-diretrizes').value.trim() + "\n\n";
+    
+    const rascunho = document.getElementById('ctx-rascunho-ia').value.trim();
+    if (rascunho) outputFinal += "== RASCUNHO BASE ==\n" + rascunho + "\n";
+
+    // Modifica UI para estado de processamento
+    btn.innerHTML = "⏳ Copiando...";
+    btn.style.opacity = "0.8";
+
+    // Fallback de segurança para APIs de Clipboard restritas
+    if (!navigator.clipboard) {
+        executarCopiaFallback(outputFinal, btn, originalText);
+        return;
+    }
+
+    navigator.clipboard.writeText(outputFinal).then(() => {
+        btn.innerHTML = "✅ Copiado!";
+        btn.style.backgroundColor = "#2e7d32"; 
+        btn.style.opacity = "1";
+        exibirToast('Pacote copiado! Cole no seu Chat IA.', 'sucesso');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.style.backgroundColor = "var(--trt-blue)";
+            fecharModalGeradorContexto();
+        }, 1200);
+        
+    }).catch(err => {
+        console.error('Falha na Clipboard API:', err);
+        executarCopiaFallback(outputFinal, btn, originalText);
+    });
+};
+
+function executarCopiaFallback(texto, btn, originalText) {
+    btn.innerHTML = "⚠️ Falha ao Copiar";
+    btn.style.backgroundColor = "#d32f2f";
+    btn.style.opacity = "1";
+    exibirToast('Permissão negada. Copie manualmente (Ctrl+A, Ctrl+C).', 'erro');
+    
+    // Retorna visual do botão após 3s, mas NÃO fecha o modal
+    setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.style.backgroundColor = "var(--trt-blue)";
+    }, 3000);
+}
+
+/* ================================================
    GATILHO DE SEGURANÇA: CONTROLE DE FERRAMENTAS
    Garante que botões de texto e recorte só atuem se houver tópicos e PDF.
    ================================================ */
