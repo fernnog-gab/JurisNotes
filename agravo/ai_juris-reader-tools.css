@@ -57,6 +57,21 @@
 .popup-textarea { display: none; width: 100%; min-height: 72px; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; font-size: 0.84rem; color: var(--text-dark); background: #fafafa; resize: vertical; outline: none; transition: border-color 0.2s, background 0.2s; line-height: 1.5; }
 .popup-textarea:focus { border-color: var(--trt-blue-mid); background: #ffffff; }
 
+.popup-textarea.textarea-readonly {
+    background-color: #f1f5f9;
+    border-color: #e2e8f0;
+    color: #475569;
+    cursor: not-allowed;
+    resize: none;
+}
+
+.popup-textarea.textarea-readonly:focus,
+.popup-textarea.textarea-readonly:active {
+    border-color: #e2e8f0 !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
 .annotation-context-menu { position: fixed; display: none; flex-direction: row; gap: 4px; padding: 4px; background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15); z-index: var(--z-context-menu); }
 .ann-action-btn { background: transparent; border: none; cursor: pointer; padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--text-dark); transition: background 0.2s, color 0.2s; }
 .ann-action-btn svg { width: 18px; height: 18px; pointer-events: none; }

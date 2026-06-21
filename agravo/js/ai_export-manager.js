@@ -339,7 +339,31 @@ window.ExportManager = (function () {
     // ========================================================================
     // API PÚBLICA
     // ========================================================================
+    
+    /**
+     * Retorna os dados do tópico ativo de forma segura para consumo da UI.
+     * Atua como Single Source of Truth, mantendo a regra de negócio blindada.
+     * @returns {{ nome: string, markdown: string } | null}
+     */
+    function obterDadosDoTopicoAtivo() {
+        const activeTabId = _deps.getActiveTabId();
+        if (!activeTabId) return null;
+
+        const topicosArray = _deps.getTopicos();
+        if (!topicosArray || !Array.isArray(topicosArray)) return null;
+
+        const topicoAtivo = topicosArray.find(t => t.id === activeTabId);
+        if (!topicoAtivo || !topicoAtivo.anotacoes || topicoAtivo.anotacoes.length === 0) return null;
+
+        return {
+            nome: topicoAtivo.nome || 'Tópico Sem Nome',
+            markdown: _gerarMarkdown(topicoAtivo)
+        };
+    }
+
     return {
+        obterDadosDoTopicoAtivo,
+        
         init: function (dependencies) {
             _deps = { ..._deps, ...dependencies };
         },

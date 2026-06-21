@@ -368,6 +368,10 @@ function trocarAba(aba) {
     
     const btnExportar = document.getElementById('btn-exportar-topico');
     if (btnExportar) btnExportar.style.display = isAnotacoes ? 'flex' : 'none';
+
+    // GERENCIAMENTO DA VISIBILIDADE DO GERADOR DE CONTEXTO
+    const btnGerador = document.getElementById('btn-gerador-contexto');
+    if (btnGerador) btnGerador.style.display = isAnotacoes ? 'flex' : 'none';
     
     const btnAcervo = document.getElementById('btn-acervo-modelos');
     if (btnAcervo) btnAcervo.style.display = isAnotacoes ? 'flex' : 'none';
