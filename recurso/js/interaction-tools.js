@@ -655,22 +655,27 @@ window.salvarRascunhoContextoDebounced = _debounce(function() {
 window.abrirModalGeradorContexto = function() {
     if (!window.ExportManager) return;
 
-    // Inversão de Controle: Pede ao Facade
     const dadosTopico = ExportManager.obterDadosDoTopicoAtivo();
 
-    // Guard Clause: Se falhar, retorna ANTES de travar a tela com o blur
     if (!dadosTopico) {
         exibirToast('Selecione um tópico com provas estruturadas antes de gerar o contexto.', 'aviso');
         return;
     }
 
-    // ARQUITETURA: Ativa o foco visual (desfoca e desabilita ponteiros no container do PDF)
-    window.toggleModoFoco(true);
+    // ==============================================================
+    // SOLUÇÃO BULLETPROOF: Injeta a transparência/blur forçadamente
+    // nos dois lados da tela (PDF e Anotações) assim como no Acervo.
+    // ==============================================================
+    const painelPdf = document.getElementById('pdf-container');
+    const painelAnotacoes = document.getElementById('history-container');
+    
+    if (painelPdf) painelPdf.classList.add('pdf-foco-ativo');
+    if (painelAnotacoes) painelAnotacoes.classList.add('pdf-foco-ativo');
 
+    // Preenchimento de DOM
     const tagProcesso = document.getElementById('tag-numero-processo');
     const numProcesso = tagProcesso ? (tagProcesso.textContent.trim() || 'Não informado') : 'Não informado';
 
-    // Preenchimento de DOM
     document.getElementById('ctx-metadados').value = `Processo: ${numProcesso}\nTópico: ${dadosTopico.nome}`;
     document.getElementById('ctx-diretrizes').value = dadosTopico.markdown;
 
@@ -680,15 +685,22 @@ window.abrirModalGeradorContexto = function() {
         document.getElementById('ctx-rascunho-ia').value = sessionStorage.getItem('juris_ctx_rascunho') || '';
     } catch (e) { /* Ignora se bloqueado por modo anônimo estrito */ }
 
-    // Renderização final
+    // Exibe o modal
     document.getElementById('gerador-contexto-backdrop').style.display = 'block';
     document.getElementById('modal-gerador-contexto').style.display = 'flex';
 };
 
 window.fecharModalGeradorContexto = function() {
-    // ARQUITETURA: Desativa o foco no PDF, permitindo nova interação
-    window.toggleModoFoco(false);
+    // ==============================================================
+    // SOLUÇÃO BULLETPROOF: Remove a transparência ao fechar a janela
+    // ==============================================================
+    const painelPdf = document.getElementById('pdf-container');
+    const painelAnotacoes = document.getElementById('history-container');
+    
+    if (painelPdf) painelPdf.classList.remove('pdf-foco-ativo');
+    if (painelAnotacoes) painelAnotacoes.classList.remove('pdf-foco-ativo');
 
+    // Esconde o modal
     document.getElementById('gerador-contexto-backdrop').style.display = 'none';
     document.getElementById('modal-gerador-contexto').style.display = 'none';
 };
