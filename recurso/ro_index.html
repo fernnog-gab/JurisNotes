@@ -1040,9 +1040,23 @@
     <!-- MODAL DO GERADOR DE CONTEXTO IA -->
     <div id="gerador-contexto-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.40); z-index: 4004;" onclick="fecharModalGeradorContexto()"></div>
 
-    <div id="modal-gerador-contexto" class="crop-wizard-popup" style="display:none; z-index: 4005; width: 90vw; max-width: 800px;">
+    <!-- NOTA ARQUITETURAL: width e max-width foram movidos para o CSS central -->
+    <div id="modal-gerador-contexto" class="crop-wizard-popup" style="display:none; z-index: 4005;">
         <div class="wizard-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <span>🧩 Gerador de Contexto para IA</span>
+            
+            <!-- Início da Substituição Visual (Remoção do Emoji / Inclusão do SVG Neutro) -->
+            <span style="display: flex; align-items: center; gap: 8px; color: var(--text-dark);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 22px; height: 22px;">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <path d="M16 13H8"></path>
+                    <path d="M16 17H8"></path>
+                    <path d="M10 9H8"></path>
+                </svg>
+                Gerador de Contexto para IA
+            </span>
+            <!-- Fim da Substituição Visual -->
+
             <button style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b;" onclick="fecharModalGeradorContexto()">✕</button>
         </div>
         

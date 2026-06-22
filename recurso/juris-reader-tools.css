@@ -178,3 +178,25 @@
 
 @keyframes flash-highlight { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--trt-blue) 60%, transparent); border-color: var(--trt-blue); transform: scale(1.01); } 50% { box-shadow: 0 0 0 16px transparent; background-color: color-mix(in srgb, var(--trt-blue) 5%, transparent); } 100% { box-shadow: 0 0 0 0 transparent; transform: scale(1); } }
 .card-flash-focus { animation: flash-highlight 1.2s cubic-bezier(0.25, 0.8, 0.25, 1); }
+
+/* ================================================
+   OTIMIZAÇÕES DIMENSIONAIS (MODAIS DE IA E ACERVO)
+   ================================================ */
+
+/* Expansão Dimensional do Gerador de Contexto */
+#modal-gerador-contexto {
+    width: 90vw;
+    max-width: 1050px !important; /* Expansão de ~30% em relação aos 800px anteriores */
+}
+
+/* Expansão Dimensional dos Modais do Acervo */
+#modal-acervo-inserir, 
+#modal-editar-modelo-acervo { 
+    width: 90vw; 
+    max-width: 1150px; /* Aumento a partir de 900px */
+}
+
+/* Aumento da área útil de leitura da lista do acervo */
+#lista-acervo-geral {
+    max-height: 380px !important; /* Substitui regra inline, permite visualizar mais itens */
+}
