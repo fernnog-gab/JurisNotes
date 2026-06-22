@@ -34,10 +34,18 @@ let pendingTipo     = null;   // Tipo da extração pendente: 'texto' | 'imagem'
 let pendingConteudo = null;   // Conteúdo bruto da extração pendente
 
 window.toggleModoFoco = function(ativar) {
+    // Agora capturamos OS DOIS painéis principais da tela
     const pdfContainer = document.getElementById('pdf-container');
-    if (pdfContainer) {
-        if (ativar) pdfContainer.classList.add('pdf-foco-ativo');
-        else pdfContainer.classList.remove('pdf-foco-ativo');
+    const historyContainer = document.getElementById('history-container'); // Adicionado o painel de Anotações
+
+    if (ativar) {
+        // Aplica o efeito de transparência/blur em tudo
+        if (pdfContainer) pdfContainer.classList.add('pdf-foco-ativo');
+        if (historyContainer) historyContainer.classList.add('pdf-foco-ativo');
+    } else {
+        // Remove o efeito ao fechar os modais
+        if (pdfContainer) pdfContainer.classList.remove('pdf-foco-ativo');
+        if (historyContainer) historyContainer.classList.remove('pdf-foco-ativo');
     }
 };
 
