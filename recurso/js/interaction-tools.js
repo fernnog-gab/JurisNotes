@@ -58,6 +58,7 @@ const DOC_CONFIG = [
     // --- FASE 2: Gênese do Conflito ---
     { label: 'Petição Inicial', polo: 'Parte Autora', tipo: 'auto', fase: 2 },
     { label: 'Contestação', polo: 'Parte Ré', tipo: 'auto', fase: 2 },
+    { label: 'Impugnação à Contestação', polo: 'Parte Autora', tipo: 'auto', fase: 2 },
     // Novas Entradas Execução:
     { label: 'Título Executivo', polo: 'Juízo / Tribunal', tipo: 'auto', fase: 2, isExecucao: true },
     { label: 'Cálculos de Liquidação', polo: 'DUAL', tipo: 'dual', fase: 2, isExecucao: true },
@@ -73,13 +74,15 @@ const DOC_CONFIG = [
     { label: 'Decisão de Embargos à Execução', polo: 'Juízo', tipo: 'auto', fase: 3, isExecucao: true },
 
     // --- FASE 4: Provas e Atos Processuais ---
+    { label: 'Ata de Audiência', polo: 'DUAL', tipo: 'dual', fase: 4 },
     { label: 'Laudo Pericial', polo: 'Perito', tipo: 'auto', fase: 4 },
     { label: 'Documento (Prova Pré-constituída)', polo: 'DUAL', tipo: 'dual', fase: 4 },
+    { label: 'Despacho / Decisão', polo: 'Juízo', tipo: 'auto', fase: 4 },
     // Novas Entradas Execução (substituindo a antiga genérica):
     { label: 'Mandado de Penhora', polo: 'Auxiliar da Justiça', tipo: 'auto', fase: 4, isExecucao: true },
     { label: 'Bacenjud / Sisbajud', polo: 'Juízo / Tribunal', tipo: 'auto', fase: 4, isExecucao: true },
-    { label: 'Decisão / Despacho', polo: 'Juízo / Tribunal', tipo: 'auto', fase: 4, isExecucao: true },
-    { label: 'Documento / Manifestação', polo: 'DUAL', tipo: 'dual', fase: 4, isExecucao: true }
+    { label: 'Decisão / Despacho (Execução)', polo: 'Juízo / Tribunal', tipo: 'auto', fase: 4, isExecucao: true },
+    { label: 'Documento / Manifestação', polo: 'DUAL', tipo: 'dual', fase: 4, isHibrido: true }
 ];
 
 let _docSelecionado = null;
@@ -172,19 +175,28 @@ function selecionarDocumento(docLabel, polo, context) {
         
         document.getElementById(targetDocText).innerText = docLabel;
         
-        let htmlBotoes = '';
+        // 1. Dicionário de UI (Single Source of Truth para Botões)
+        const botoesDef = {
+            autora:    `<button class="chip-btn chip-autora" onclick="confirmarPolo('Parte Autora', event)">✔ Parte Autora</button>`,
+            re:        `<button class="chip-btn chip-re" onclick="confirmarPolo('Parte Ré', event)">✔ Parte Ré</button>`,
+            exequente: `<button class="chip-btn chip-exequente" onclick="confirmarPolo('Parte Exequente', event)">✔ Parte Exequente</button>`,
+            executada: `<button class="chip-btn chip-executada" onclick="confirmarPolo('Parte Executada', event)">✔ Parte Executada</button>`,
+            juizo:     `<button class="chip-btn chip-juizo" onclick="confirmarPolo('Juízo / Tribunal', event)">🏛️ Juízo / Tribunal</button>`,
+            auxiliar:  `<button class="chip-btn chip-auxiliar" onclick="confirmarPolo('Auxiliar da Justiça', event)">⚖️ Auxiliar da Justiça</button>`
+        };
 
-        if (isExecucao) {
-            htmlBotoes += `<button class="chip-btn chip-exequente" onclick="confirmarPolo('Parte Exequente', event)">✔ Parte Exequente</button>`;
-            htmlBotoes += `<button class="chip-btn chip-executada" onclick="confirmarPolo('Parte Executada', event)">✔ Parte Executada</button>`;
-            htmlBotoes += `<button class="chip-btn chip-juizo" onclick="confirmarPolo('Juízo / Tribunal', event)">🏛️ Juízo / Tribunal</button>`;
-            htmlBotoes += `<button class="chip-btn chip-auxiliar" onclick="confirmarPolo('Auxiliar da Justiça', event)">⚖️ Auxiliar da Justiça</button>`;
-        } else {
-            htmlBotoes += `<button class="chip-btn chip-autora" onclick="confirmarPolo('Parte Autora', event)">✔ Parte Autora</button>`;
-            htmlBotoes += `<button class="chip-btn chip-re" onclick="confirmarPolo('Parte Ré', event)">✔ Parte Ré</button>`;
-        }
+        let htmlBotoes = '';
         
-        // Renderiza o botão Voltar com container extra se for no Wizard para preservar o layout original
+        // 2. Mapeamento Lógico Baseado em Metadados
+        if (conf && conf.isHibrido) {
+            htmlBotoes += `${botoesDef.autora}${botoesDef.re}${botoesDef.exequente}${botoesDef.executada}${botoesDef.juizo}`;
+        } else if (conf && conf.isExecucao) {
+            htmlBotoes += `${botoesDef.exequente}${botoesDef.executada}${botoesDef.juizo}${botoesDef.auxiliar}`;
+        } else {
+            htmlBotoes += `${botoesDef.autora}${botoesDef.re}`;
+        }
+
+        // 3. Renderização Consistente do Botão Voltar
         if (context === 'popup') {
             htmlBotoes += `<button class="chip-btn chip-cancelar" onclick="voltarParaDocumentos('popup', event)">← Voltar</button>`;
         } else {

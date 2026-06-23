@@ -157,7 +157,7 @@ window.ExportManager = (function () {
         const palavrasChaveExecucao = [
             'Agravo de Petição', 'Contraminuta', 'Sentença de Execução', 
             'Embargos à Execução', 'Título Executivo', 'Cálculos', 
-            'Liquidação', 'Penhora', 'Bacenjud', 'Sisbajud', 'Impugnação'
+            'Liquidação', 'Penhora', 'Bacenjud', 'Sisbajud', 'Impugnação aos Cálculos'
         ];
 
         return {
