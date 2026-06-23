@@ -141,6 +141,31 @@ window.ExportManager = (function () {
     }
 
     /**
+     * Remove padrões de prompt injection de forma cirúrgica.
+     * Evita bloqueio de palavras comuns no meio jurídico (ex: "ignore", "modelo").
+     */
+    function _sanitizarContraInjecao(texto) {
+        if (!texto) return '';
+        return texto
+            // Intercepta comandos diretos para a IA
+            .replace(/\b(IA|Modelo|GPT|LLM)\s*:/gi, '[SISTEMA]')
+            // Intercepta expressões exclusivas de jailbreak/injection
+            .replace(/\bignore\s+(tudo|o\s+que|as\s+instru[çc][õo]es|o\s+prompt)\b/gi, '[FILTRADO]')
+            // Intercepta injeção de novas regras de sistema
+            .replace(/(^|[.!?\n])\s*(nova\s+)?instru[çc][aã]o\s*:/gim, '$1 [FILTRADO]:');
+    }
+
+    /**
+     * Limita trechos massivos para proteger a janela de contexto do LLM.
+     * Limite ajustado para 4000 caracteres (~1.5 laudas) para evitar corte de cláusulas críticas.
+     */
+    function _truncarTextoParaIA(texto, limite = 4000) {
+        if (!texto || texto.length <= limite) return texto;
+        return texto.substring(0, limite) + 
+            `\n\n[⚠️ TRECHO TRUNCADO: O assessor destacou um bloco longo. Trabalhe com a ideia central extraída da parte acima.]`;
+    }
+
+    /**
      * Achata a hierarquia da anotação (Mestre + Correlacionados) para
      * inferência de contexto processual.
      * ATUALIZAÇÃO: Radar de palavras-chave expandido para cobrir os novos atos de Execução.
@@ -230,12 +255,15 @@ window.ExportManager = (function () {
             const poloContexto  = an.polo      || 'N/A';
             mdMatriz += `<contexto_processual>Fase: ${faseContexto} | Polo: ${poloContexto} | Referência: ${refCitacao}</contexto_processual>\n\n`;
 
-            mdMatriz += `<fato_bruto_inconteste>\n`;
+            mdMatriz += `<fato_bruto_inconteste role="foco_de_atencao">\n`;
+            mdMatriz += `> ⚠️ INSTRUÇÃO DE LEITURA: Capte a IDEIA CENTRAL deste elemento e articule-a com fluidez. PROIBIDO cópia literal, exceto se houver comando explícito em contrário.\n\n`;
 
             const docLabel = `**[${an.documento || 'Elemento'}] (${an.polo || 'Sem polo'}) ${refCitacao}:**`;
 
             if (an.tipo === 'texto') {
-                mdMatriz += `- ${docLabel} ${an.conteudo.replace(/\n/g, ' ')}\n`;
+                const conteudoSeguro = _sanitizarContraInjecao(an.conteudo);
+                const conteudoProcessado = _truncarTextoParaIA(conteudoSeguro);
+                mdMatriz += `- ${docLabel} ${conteudoProcessado.replace(/\n/g, ' ')}\n`;
             } else if (an.tipo === 'imagem') {
                 const imgNome = _gerarNomeArquivoImagem(numIdeia, null, an.pjeId, an.pagina);
                 mdMatriz += `- ${docLabel}\n  > 🖼️ **[IMAGEM FORNECIDA]** (Nome: \`${imgNome}\`).\n  > 🧠 *Comentário Humano:* ${_safeMD(an.comentario || 'Integrar à fundamentação.', '\n  > ')}\n`;
@@ -258,7 +286,9 @@ window.ExportManager = (function () {
                     const cDocLabel   = `  ↳ *Confronto [${corr.documento || 'Doc'}] (${corr.polo || 'Polo'}) ${cRefCitacao}:*`;
 
                     if (corr.tipo === 'texto') {
-                        mdMatriz += `${cDocLabel} ${_safeMD(corr.comentario ? corr.comentario : (corr.conteudo || ''), ' ')}\n`;
+                        const corrConteudoSeguro = _sanitizarContraInjecao(corr.comentario ? corr.comentario : (corr.conteudo || ''));
+                        const corrConteudoProcessado = _truncarTextoParaIA(corrConteudoSeguro);
+                        mdMatriz += `${cDocLabel} ${_safeMD(corrConteudoProcessado, ' ')}\n`;
                     } else if (corr.tipo === 'imagem') {
                         mdMatriz += `${cDocLabel}\n    > 🖼️ **[IMAGEM ANEXA: \`${_gerarNomeArquivoImagem(numIdeia, numSub, corr.pjeId, corr.pagina)}\`]**\n    > 🧠 *Comentário:* ${_safeMD(corr.comentario || 'Analise a ligação técnica.', '\n    > ')}\n`;
                     } else if (corr.tipo === 'audio') {
@@ -391,7 +421,7 @@ window.ExportManager = (function () {
             mdDiretrizesGlobais += `</diretrizes_globais_do_topico>\n\n`;
         }
 
-        return mdCabecalho + mdTags + mdDiretrizesGlobais + mdDiretrizesTeses + mdMatriz + mdVeredito;
+        return mdCabecalho + mdTags + mdVeredito + mdDiretrizesGlobais + mdDiretrizesTeses + mdMatriz;
     }
 
     // ─── DOWNLOAD DE ARQUIVO MARKDOWN ─────────────────────────────────────────
