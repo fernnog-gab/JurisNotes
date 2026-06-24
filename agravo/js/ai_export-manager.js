@@ -126,23 +126,23 @@ window.ExportManager = (function () {
         if (topico.diretrizesGlobais && topico.diretrizesGlobais.length > 0) {
             md += `<premissas_globais_de_admissibilidade>\n`;
             topico.diretrizesGlobais.forEach(dir => {
-                md += `  - [REGRA DE AUDITORIA GERAL]: ${_safeMD(dir.texto, '\n  ')}\n`;
+                md += `  [REGRA DE AUDITORIA GERAL]: ${_safeMD(dir.texto, '\n  ')}\n`;
             });
             md += `</premissas_globais_de_admissibilidade>\n\n`;
         }
 
-        // CORREÇÃO: RESTAURAÇÃO DO NÍVEL INTERMEDIÁRIO (Diretrizes por Pressuposto/Tese)
+        // CORREÇÃO: RESTAURAÇÃO DO NÍVEL INTERMEDIÁRIO E REMOÇÃO DE ATRIBUTOS
         let bufferPressupostos = '';
-        // Em AI, tratamos "Tese" como "Pressuposto" (ex: Tempestividade, Preparo)
         const diretrizesPorTeseOuVicio = topico.diretrizesPorTese || topico.diretrizesPorVicio || {};
         
         if (Object.keys(diretrizesPorTeseOuVicio).length > 0) {
             Object.keys(diretrizesPorTeseOuVicio).forEach(nomePressuposto => {
                 const diretrizes = diretrizesPorTeseOuVicio[nomePressuposto];
                 if (diretrizes && diretrizes.length > 0) {
-                    bufferPressupostos += `  <pressuposto_alvo nome="${_escapeXmlAttr(nomePressuposto)}">\n`;
+                    bufferPressupostos += `  <pressuposto_alvo>\n`;
+                    bufferPressupostos += `    [NOME DO PRESSUPOSTO]: ${_escapeXmlAttr(nomePressuposto)}\n`;
                     diretrizes.forEach(dir => {
-                         bufferPressupostos += `    - [MÉTRICA DE VALIDAÇÃO]: ${_safeMD(dir.texto, '\n    ')}\n`;
+                         bufferPressupostos += `    [MÉTRICA DE VALIDAÇÃO]: ${_safeMD(dir.texto, '\n    ')}\n`;
                     });
                     bufferPressupostos += `  </pressuposto_alvo>\n`;
                 }
@@ -150,11 +150,11 @@ window.ExportManager = (function () {
         }
         
         if (bufferPressupostos.trim() !== '') {
-            md += `<direcionamentos_por_pressuposto>\n*Atenção IA: Aplique estas métricas estritas ao auditar o respectivo pressuposto.* \n\n${bufferPressupostos}</direcionamentos_por_pressuposto>\n\n`;
+            md += `<direcionamentos_por_pressuposto>\n[ATENÇÃO IA]: Aplique estas métricas estritas ao auditar o respectivo pressuposto. \n\n${bufferPressupostos}</direcionamentos_por_pressuposto>\n\n`;
         }
         
         md += `## SEÇÃO II — ${config.rotuloSeccao}\n`;
-        md += `*Atenção IA: Avalie estritamente os requisitos extrínsecos e intrínsecos documentados abaixo. É VEDADO julgar o mérito originário da causa.*\n\n`;
+        md += `[ATENÇÃO IA]: Avalie estritamente os requisitos extrínsecos e intrínsecos documentados abaixo. É VEDADO julgar o mérito originário da causa.\n\n`;
 
         if (!topico.anotacoes || topico.anotacoes.length === 0) {
             md += `*Nenhum documento foi anexado para auditoria de admissibilidade.*\n`;
@@ -163,46 +163,47 @@ window.ExportManager = (function () {
             topico.anotacoes.forEach((an, idx) => {
                 const numIdeia = idx + 1;
                 const refCitacao = _formatarCitacaoOficial(an.pjeId, an.pagina);
-                // "Tese" no AI vira o "Pressuposto Auditado"
                 const pressupostoContexto = an.tese ? an.tese : (topico.vicio || 'Pressuposto Geral');
 
-                // Mapeamento cruzado perfeito: pressuposto="..." conversa com <pressuposto_alvo nome="...">
-                md += `<analise_de_evidencia id="${numIdeia}" pressuposto="${_escapeXmlAttr(pressupostoContexto)}">\n`;
+                // Mapeamento cruzado sem atributos XML
+                md += `<analise_de_evidencia>\n`;
+                md += `[IDENTIFICADOR DA EVIDÊNCIA]: ${numIdeia}\n`;
+                md += `[PRESSUPOSTO VINCULADO]: ${_escapeXmlAttr(pressupostoContexto)}\n`;
                 
                 const faseContexto  = an.fase || an.documento || 'Não especificado';
                 const poloContexto  = an.polo || 'N/A';
-                md += `<contexto_processual>Fase: ${faseContexto} | Origem Documento: ${poloContexto} | Ref: ${refCitacao}</contexto_processual>\n\n`;
+                md += `<contexto_processual>\nFase: ${faseContexto} | Origem Documento: ${poloContexto} | Ref: ${refCitacao}\n</contexto_processual>\n\n`;
 
                 md += `<documento_probatorio_anexado>\n`;
                 const docLabel = `**[${an.documento || 'Comprovante'}] ${refCitacao}:**`;
 
+                // Remoção de poluição visual (> 🖼️, > 🧠, emojis soltos)
                 if (an.tipo === 'texto') {
                     md += `- ${docLabel} ${_safeMD(an.conteudo, ' ')}\n`;
                 } else if (an.tipo === 'imagem') {
                     const imgNome = _gerarNomeArquivoImagem(topico.id, numIdeia);
-                    md += `- ${docLabel}\n  > 🖼️ **[IMAGEM DE COMPROVANTE FORNECIDA]** (Nome: \`${imgNome}\`).\n  > 🧠 *Nota do Assessor:* ${_safeMD(an.comentario || 'Verifique o dado contido nesta guia/certidão.', '\n  > ')}\n`;
+                    md += `- ${docLabel}\n  [IMAGEM DE COMPROVANTE FORNECIDA]: (Nome: \`${imgNome}\`).\n  [NOTA DO ASSESSOR]: ${_safeMD(an.comentario || 'Verifique o dado contido nesta guia/certidão.', '\n  ')}\n`;
                 } else if (an.tipo === 'audio') {
-                    md += `- ${docLabel} 🎙️ **[ÁUDIO REGISTRADO]** *Resumo:* ${_safeMD(an.comentario || 'Sem comentário.', '\n  > ')}\n`;
+                    md += `- ${docLabel} [ÁUDIO REGISTRADO] Resumo: ${_safeMD(an.comentario || 'Sem comentário.', '\n  ')}\n`;
                 }
 
-                // Confrontos (Ex: Comprovante de Pagamento VS Despacho Denegatório)
                 if (an.itensCorrelacionados && an.itensCorrelacionados.length > 0) {
                     an.itensCorrelacionados.forEach((corr, corrIdx) => {
                         const numSub = corrIdx + 1;
                         const cRefCitacao = _formatarCitacaoOficial(corr.pjeId, corr.pagina);
-                        const cDocLabel = `  ↳ *Confronto Direto [${corr.documento || 'Doc'}] ${cRefCitacao}:*`;
+                        // Remoção da seta visual
+                        const cDocLabel = `  [CONFRONTO DIRETO]: [${corr.documento || 'Doc'}] ${cRefCitacao}:`;
 
                         if (corr.tipo === 'texto') {
                             md += `${cDocLabel} ${_safeMD(corr.comentario ? corr.comentario : (corr.conteudo || ''), ' ')}\n`;
                         } else if (corr.tipo === 'imagem') {
-                            md += `${cDocLabel}\n    > 🖼️ **[IMAGEM ANEXA: \`${_gerarNomeArquivoImagem(topico.id, numIdeia, numSub)}\`]**\n    > 🧠 *Apontamento:* ${_safeMD(corr.comentario || 'Avalie a validade.', '\n    > ')}\n`;
+                            md += `${cDocLabel}\n    [IMAGEM ANEXA]: \`${_gerarNomeArquivoImagem(topico.id, numIdeia, numSub)}\`\n    [APONTAMENTO]: ${_safeMD(corr.comentario || 'Avalie a validade.', '\n    ')}\n`;
                         }
                     });
                 }
                 
                 md += `</documento_probatorio_anexado>\n\n`;
 
-                // BUFFER CONDICIONAL: DIRETRIZES LOCAIS
                 let bufferDiretrizesLocais = '';
 
                 const processarNos = (listaNos, refContexto) => {
@@ -212,26 +213,30 @@ window.ExportManager = (function () {
                         const intencao = sub.intencao || 'fallback';
                         if (intencao === 'nota') return; 
                         
-                        const textoSanitizado = _safeMD(sub.texto, '\n  ');
+                        // CORREÇÃO: Tratamento estrito do texto verbatim (Evita injeção de \n que quebre a intenção)
+                        if (intencao === 'texto') {
+                            const textoExato = _stripInternalTags(sub.texto);
+                            bufferDiretrizesLocais += `\n[INSTRUÇÃO DE CÓPIA EXATA${refContexto}]\nTranscreva o bloco de texto abaixo exatamente como ele está escrito, palavra por palavra. Não altere a formatação e não parafraseie.\n<texto_verbatim>\n${textoExato}\n</texto_verbatim>\n\n`;
+                        } else {
+                            const textoSanitizado = _safeMD(sub.texto, '\n');
 
-                        if (intencao === 'premissa') {
-                            bufferDiretrizesLocais += `[CONSTATAÇÃO FORMAL INQUESTIONÁVEL${refContexto}]: ${textoSanitizado}\n`;
-                        } else if (intencao === 'refutacao') {
-                            bufferDiretrizesLocais += `[AFASTAMENTO DO ÓBICE - PRESSUPOSTO ATENDIDO${refContexto}]: ${textoSanitizado}\n`;
-                        } else if (intencao === 'comando') {
-                            bufferDiretrizesLocais += `[COMANDO DE REDAÇÃO ESTRITO${refContexto}]: ${textoSanitizado}\n`;
-                        } else if (intencao === 'texto') {
-                            bufferDiretrizesLocais += `[COPIAR E COLAR EXATAMENTE ESTE TEXTO${refContexto}]: "${textoSanitizado}"\n`;
-                        } else if (intencao === 'fallback') {
-                            bufferDiretrizesLocais += `[CONTEXTO COMPLEMENTAR${refContexto}]: ${textoSanitizado}\n`;
-                        } 
-                        // Escopo Global: Bubble-up
-                        else if (intencao === 'fundamentacao') {
-                            jurisprudenciaVinculante.push(`[Referente ao item ${numIdeia}${refContexto}]: ${textoSanitizado}`);
-                        } else if (intencao === 'preliminar') {
-                            barreirasAdmissibilidade.push(`[Óbice extrínseco ${numIdeia}${refContexto}]: ${textoSanitizado}`);
-                        } else if (intencao === 'veredito') {
-                            vereditosLocaisInjetados.push(`[Auditoria da Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                            if (intencao === 'premissa') {
+                                bufferDiretrizesLocais += `[CONSTATAÇÃO FORMAL INQUESTIONÁVEL${refContexto}]: ${textoSanitizado}\n`;
+                            } else if (intencao === 'refutacao') {
+                                bufferDiretrizesLocais += `[AFASTAMENTO DO ÓBICE - PRESSUPOSTO ATENDIDO${refContexto}]: ${textoSanitizado}\n`;
+                            } else if (intencao === 'comando') {
+                                bufferDiretrizesLocais += `[COMANDO DE REDAÇÃO ESTRITO${refContexto}]: ${textoSanitizado}\n`;
+                            } else if (intencao === 'fallback') {
+                                bufferDiretrizesLocais += `[CONTEXTO COMPLEMENTAR${refContexto}]: ${textoSanitizado}\n`;
+                            } 
+                            // Escopo Global: Bubble-up
+                            else if (intencao === 'fundamentacao') {
+                                jurisprudenciaVinculante.push(`[Referente ao item ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                            } else if (intencao === 'preliminar') {
+                                barreirasAdmissibilidade.push(`[Óbice extrínseco ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                            } else if (intencao === 'veredito') {
+                                vereditosLocaisInjetados.push(`[Auditoria da Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                            }
                         }
                     });
                 };
@@ -246,7 +251,6 @@ window.ExportManager = (function () {
                     });
                 }
 
-                // Blindagem contra tag vazia
                 if (bufferDiretrizesLocais.trim() !== '') {
                     md += `<diretrizes_de_auditoria_do_assessor>\n${bufferDiretrizesLocais}</diretrizes_de_auditoria_do_assessor>\n`;
                 }
@@ -257,21 +261,21 @@ window.ExportManager = (function () {
 
         // 4. INJEÇÃO GLOBAL (Bordas do Payload)
         if (barreirasAdmissibilidade.length > 0) {
-            md += `<barreiras_intransponiveis_ao_agravo>\n`; // Corrigido jargão ED
-            md += `*Atenção IA: Óbices fatais (ex: preclusão, erro grosseiro). Aplique ANTES de analisar os demais requisitos.*\n`;
-            md += barreirasAdmissibilidade.map(c => `* 🛑 ${c}`).join('\n') + '\n';
+            md += `<barreiras_intransponiveis_ao_agravo>\n`;
+            md += `[ATENÇÃO IA]: Óbices fatais (ex: preclusão, erro grosseiro). Aplique ANTES de analisar os demais requisitos.\n`;
+            md += barreirasAdmissibilidade.map(c => `[ÓBICE]: ${c}`).join('\n') + '\n';
             md += `</barreiras_intransponiveis_ao_agravo>\n\n`;
         }
 
         if (jurisprudenciaVinculante.length > 0) {
             md += `<base_legal_e_jurisprudencial>\n`;
-            md += jurisprudenciaVinculante.map(c => `* ⚖️ ${c}`).join('\n') + '\n';
+            md += jurisprudenciaVinculante.map(c => `[BASE LEGAL]: ${c}`).join('\n') + '\n';
             md += `</base_legal_e_jurisprudencial>\n\n`;
         }
 
         if ((topico.veredito && topico.veredito.trim() !== '') || vereditosLocaisInjetados.length > 0) {
             md += `<${config.tagVeredito}>\n`;
-            md += `*Atenção IA: Estas instruções ditam o veredito da admissibilidade do recurso.*\n`;
+            md += `[ATENÇÃO IA]: Estas instruções ditam o veredito da admissibilidade do recurso.\n`;
             
             if (topico.veredito && topico.veredito.trim() !== '') {
                 md += `[CONCLUSÃO OBRIGATÓRIA GERAL]: ${topico.veredito.replace(/\n/g, ' ')}\n`;
@@ -281,7 +285,7 @@ window.ExportManager = (function () {
                 md += `[CONCLUSÃO PARCIAL ESPECÍFICA]: ${v}\n`;
             });
             
-            md += `\n*Redija o dispositivo final (Conhecer/Não Conhecer, Dar/Negar Provimento ao Agravo para destrancar o recurso principal) obedecendo estritamente a este veredito.*\n`;
+            md += `\n[INSTRUÇÃO DE CONCLUSÃO]: Redija o dispositivo final (Conhecer/Não Conhecer, Dar/Negar Provimento ao Agravo para destrancar o recurso principal) obedecendo estritamente a este veredito.\n`;
             md += `</${config.tagVeredito}>\n`;
         }
 
