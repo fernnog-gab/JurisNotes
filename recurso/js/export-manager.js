@@ -115,13 +115,12 @@ window.ExportManager = (function () {
     }
 
     /**
-     * Sanitiza textos livres do usuário para injeção segura em blocos Markdown.
-     * Previne que quebras de linha (\n) escapem da formatação do blockquote ou lista.
-     * Aplica o pipeline completo: Strip UI -> Replace quebras de linha
+     * Sanitiza textos livres do usuário para injeção segura.
+     * CORREÇÃO: Default alterado de '\n  > ' para '\n  ' para evitar Markdown blockquote.
      * @param {string} texto Conteúdo bruto.
-     * @param {string} prefixo Prefixo estrutural (ex: '\n  > ' ou '\n  ').
+     * @param {string} prefixo Prefixo estrutural.
      */
-    function _safeMD(texto, prefixo = '\n  > ') {
+    function _safeMD(texto, prefixo = '\n  ') {
         if (!texto) return '';
         const textoLimpo = _stripInternalTags(texto);
         return textoLimpo.replace(/\n/g, prefixo);
@@ -208,9 +207,9 @@ window.ExportManager = (function () {
 
         if (topico.diretrizesGlobais) {
             topico.diretrizesGlobais.forEach(dir => {
-                if (dir.intencao === 'fundamentacao') baseLegalObrigatoria.push(`[Diretriz Global]: ${_safeMD(dir.texto)}`);
-                else if (dir.intencao === 'preliminar') preliminaresInjetadas.push(`[Diretriz Global]: ${_safeMD(dir.texto)}`);
-                else if (dir.intencao === 'veredito') vereditosLocaisInjetados.push(`[Diretriz Global]: ${_safeMD(dir.texto)}`);
+                if (dir.intencao === 'fundamentacao') baseLegalObrigatoria.push(`[DIRETRIZ GLOBAL]: ${_safeMD(dir.texto)}`);
+                else if (dir.intencao === 'preliminar') preliminaresInjetadas.push(`[DIRETRIZ GLOBAL]: ${_safeMD(dir.texto)}`);
+                else if (dir.intencao === 'veredito') vereditosLocaisInjetados.push(`[DIRETRIZ GLOBAL]: ${_safeMD(dir.texto)}`);
                 else if (dir.intencao !== 'nota') { 
                     diretrizesGlobaisGerais.push(`[${(dir.intencao || 'PREMISSA GLOBAL').toUpperCase()}]: ${_safeMD(dir.texto)}`);
                 }
@@ -219,17 +218,17 @@ window.ExportManager = (function () {
 
         let mdCabecalho = `# TÓPICO RECURSAL: **${(topico.nome || 'Tópico Sem Nome').toUpperCase()}**\n\n`;
 
-        // CORREÇÃO: BUG #1, BUG #4 e FALHA DE DESIGN (Teses condicionais e alinhamento XML)
         let mdDiretrizesTeses = '';
         let bufferTeses = '';
         
         if (topico.diretrizesPorTese) {
             for (const [nomeTese, diretrizes] of Object.entries(topico.diretrizesPorTese)) {
                 if (diretrizes && diretrizes.length > 0) {
-                    bufferTeses += `<tese_alvo nome="${_escapeXmlAttr(nomeTese)}">\n`;
+                    // CORREÇÃO: Remoção de atributos XML. Nome da tese em texto livre.
+                    bufferTeses += `<tese_alvo>\n`;
+                    bufferTeses += `[NOME DA TESE]: ${_escapeXmlAttr(nomeTese)}\n`;
                     diretrizes.forEach(dir => {
-                        // Passando '\n  ' explicitly to avoid injecting Blockquote '>' syntax
-                        bufferTeses += `- [${(dir.intencao || 'DIRETRIZ').toUpperCase()}]: ${_safeMD(dir.texto, '\n  ')}\n`;
+                        bufferTeses += `[${(dir.intencao || 'DIRETRIZ').toUpperCase()}]: ${_safeMD(dir.texto, '\n')}\n`;
                     });
                     bufferTeses += `</tese_alvo>\n\n`;
                 }
@@ -237,43 +236,48 @@ window.ExportManager = (function () {
         }
         
         if (bufferTeses.trim() !== '') {
-            mdDiretrizesTeses = `<direcionamentos_por_tese>\n*Atenção IA: Regras estritas aplicáveis EXCLUSIVAMENTE ao momento em que redigir a tese correspondente.*\n\n${bufferTeses}</direcionamentos_por_tese>\n\n`;
+            mdDiretrizesTeses = `<direcionamentos_por_tese>\n[ATENÇÃO IA]: Regras estritas aplicáveis EXCLUSIVAMENTE ao momento em que redigir a tese correspondente.\n\n${bufferTeses}</direcionamentos_por_tese>\n\n`;
         }
 
-        let mdMatriz = `## MATRIZ DIALÉTICA E MAPEAMENTO PROBATÓRIO\n*Atenção IA: Esta é a sua fonte de premissas fáticas incontroversas (Premissa Menor). Nunca presuma fatos fora destes blocos.*\n\n`;
+        let mdMatriz = `<matriz_dialetica_e_provas>\n[ATENÇÃO IA]: Esta é a sua fonte de premissas fáticas incontroversas. Nunca presuma fatos fora destes blocos.\n\n`;
 
         topico.anotacoes.forEach((an, index) => {
             const numIdeia    = index + 1;
             const refCitacao  = _formatarCitacaoOficial(an.pjeId, an.pagina);
             const tituloIdeia = an.tese ? an.tese : 'Tese não nomeada pelo assessor';
 
-            mdMatriz += `<analise_da_prova id="${numIdeia}" tese="${_escapeXmlAttr(tituloIdeia)}">\n`;
+            // CORREÇÃO: Remoção de atributos XML da tag <analise_da_prova>
+            mdMatriz += `<analise_da_prova>\n`;
+            mdMatriz += `[IDENTIFICADOR DA IDEIA]: ${numIdeia}\n`;
+            mdMatriz += `[TESE VINCULADA]: ${_escapeXmlAttr(tituloIdeia)}\n`;
 
             const faseContexto  = an.fase      || an.documento || 'Não especificado';
             const poloContexto  = an.polo      || 'N/A';
-            mdMatriz += `<contexto_processual>Fase: ${faseContexto} | Polo: ${poloContexto} | Referência: ${refCitacao}</contexto_processual>\n\n`;
+            mdMatriz += `<contexto_processual>\nFase: ${faseContexto} | Polo: ${poloContexto} | Referência: ${refCitacao}\n</contexto_processual>\n\n`;
 
-            mdMatriz += `<fato_bruto_inconteste role="foco_de_atencao">\n`;
-            mdMatriz += `> ⚠️ INSTRUÇÃO DE LEITURA: Capte a IDEIA CENTRAL deste elemento e articule-a com fluidez. PROIBIDO cópia literal, exceto se houver comando explícito em contrário.\n\n`;
+            // CORREÇÃO: Remoção do atributo role="foco_de_atencao"
+            mdMatriz += `<fato_bruto_inconteste>\n`;
+            mdMatriz += `[INSTRUÇÃO DE LEITURA]: Capte a IDEIA CENTRAL deste elemento e articule-a com fluidez. PROIBIDO cópia literal, exceto se houver comando explícito em contrário nas diretrizes.\n\n`;
 
             const docLabel = `**[${an.documento || 'Elemento'}] (${an.polo || 'Sem polo'}) ${refCitacao}:**`;
 
+            // CORREÇÃO GERAL: Remoção de TODOS os blockquotes (>) e emojis formatados
             if (an.tipo === 'texto') {
                 const conteudoSeguro = _sanitizarContraInjecao(an.conteudo);
                 const conteudoProcessado = _truncarTextoParaIA(conteudoSeguro);
                 mdMatriz += `- ${docLabel} ${conteudoProcessado.replace(/\n/g, ' ')}\n`;
             } else if (an.tipo === 'imagem') {
                 const imgNome = _gerarNomeArquivoImagem(numIdeia, null, an.pjeId, an.pagina);
-                mdMatriz += `- ${docLabel}\n  > 🖼️ **[IMAGEM FORNECIDA]** (Nome: \`${imgNome}\`).\n  > 🧠 *Comentário Humano:* ${_safeMD(an.comentario || 'Integrar à fundamentação.', '\n  > ')}\n`;
+                mdMatriz += `- ${docLabel}\n  [IMAGEM FORNECIDA]: (Nome: \`${imgNome}\`).\n  [COMENTÁRIO DO ASSESSOR]: ${_safeMD(an.comentario || 'Integrar à fundamentação.', '\n  ')}\n`;
             } else if (an.tipo === 'audio') {
                 try {
                     const ad = JSON.parse(an.conteudo);
                     const oradorFinal = ad.role || ad.oradorStr || 'Orador não idt.';
-                    mdMatriz += `- ${docLabel} 🎙️ **[OITIVA DE AUDIÊNCIA]** (${oradorFinal} — ${safeFormatTime(ad.inicio)} a ${safeFormatTime(ad.fim)}).\n`;
-                    if (an.comentario) mdMatriz += `  > 🧠 *Observação:* ${_safeMD(an.comentario, '\n  > ')}\n`;
-                    if (ad.transcricao) mdMatriz += `  > 📜 *Degravação Literal:* "${_safeMD(ad.transcricao, '\n  > ')}"\n`;
+                    mdMatriz += `- ${docLabel} [OITIVA DE AUDIÊNCIA] (${oradorFinal} — ${safeFormatTime(ad.inicio)} a ${safeFormatTime(ad.fim)}).\n`;
+                    if (an.comentario) mdMatriz += `  [OBSERVAÇÃO DO ASSESSOR]: ${_safeMD(an.comentario, '\n  ')}\n`;
+                    if (ad.transcricao) mdMatriz += `  [DEGRAVAÇÃO LITERAL]: "${_safeMD(ad.transcricao, '\n  ')}"\n`;
                 } catch (e) {
-                    mdMatriz += `- ${docLabel} 🎙️ **[ÁUDIO]** *Resumo:* ${_safeMD(an.comentario || 'Sem comentário.', '\n  > ')}\n`;
+                    mdMatriz += `- ${docLabel} [ÁUDIO] Resumo: ${_safeMD(an.comentario || 'Sem comentário.', '\n  ')}\n`;
                 }
             }
 
@@ -281,23 +285,24 @@ window.ExportManager = (function () {
                 an.itensCorrelacionados.forEach((corr, corrIdx) => {
                     const numSub     = corrIdx + 1;
                     const cRefCitacao = _formatarCitacaoOficial(corr.pjeId, corr.pagina);
-                    const cDocLabel   = `  ↳ *Confronto [${corr.documento || 'Doc'}] (${corr.polo || 'Polo'}) ${cRefCitacao}:*`;
+                    // CORREÇÃO: Substituição da seta ↳ por texto estrutural
+                    const cDocLabel   = `  [CONFRONTO PROBATÓRIO ${numSub}]: [${corr.documento || 'Doc'}] (${corr.polo || 'Polo'}) ${cRefCitacao}:`;
 
                     if (corr.tipo === 'texto') {
                         const corrConteudoSeguro = _sanitizarContraInjecao(corr.comentario ? corr.comentario : (corr.conteudo || ''));
                         const corrConteudoProcessado = _truncarTextoParaIA(corrConteudoSeguro);
                         mdMatriz += `${cDocLabel} ${_safeMD(corrConteudoProcessado, ' ')}\n`;
                     } else if (corr.tipo === 'imagem') {
-                        mdMatriz += `${cDocLabel}\n    > 🖼️ **[IMAGEM ANEXA: \`${_gerarNomeArquivoImagem(numIdeia, numSub, corr.pjeId, corr.pagina)}\`]**\n    > 🧠 *Comentário:* ${_safeMD(corr.comentario || 'Analise a ligação técnica.', '\n    > ')}\n`;
+                        mdMatriz += `${cDocLabel}\n    [IMAGEM ANEXA]: \`${_gerarNomeArquivoImagem(numIdeia, numSub, corr.pjeId, corr.pagina)}\`\n    [COMENTÁRIO]: ${_safeMD(corr.comentario || 'Analise a ligação técnica.', '\n    ')}\n`;
                     } else if (corr.tipo === 'audio') {
                         try {
                             const ad = JSON.parse(corr.conteudo);
                             const oradorFinal = ad.role || ad.oradorStr || 'Orador não idt.';
-                            mdMatriz += `${cDocLabel} 🎙️ **[OITIVA]** (${oradorFinal} — ${safeFormatTime(ad.inicio)} a ${safeFormatTime(ad.fim)}).\n`;
-                            if (corr.comentario) mdMatriz += `    > 🧠 *Observação:* ${_safeMD(corr.comentario, '\n    > ')}\n`;
-                            if (ad.transcricao) mdMatriz += `    > 📜 *Degravação:* "${_safeMD(ad.transcricao, '\n    > ')}"\n`;
+                            mdMatriz += `${cDocLabel} [OITIVA] (${oradorFinal} — ${safeFormatTime(ad.inicio)} a ${safeFormatTime(ad.fim)}).\n`;
+                            if (corr.comentario) mdMatriz += `    [OBSERVAÇÃO]: ${_safeMD(corr.comentario, '\n    ')}\n`;
+                            if (ad.transcricao) mdMatriz += `    [DEGRAVAÇÃO]: "${_safeMD(ad.transcricao, '\n    ')}"\n`;
                         } catch (e) {
-                            mdMatriz += `${cDocLabel} 🎙️ **[ÁUDIO]** *Contexto:* ${_safeMD(corr.comentario || 'Ausente.', '\n    > ')}\n`;
+                            mdMatriz += `${cDocLabel} [ÁUDIO] Contexto: ${_safeMD(corr.comentario || 'Ausente.', '\n    ')}\n`;
                         }
                     }
                 });
@@ -305,7 +310,6 @@ window.ExportManager = (function () {
 
             mdMatriz += `</fato_bruto_inconteste>\n\n`;
 
-            // CORREÇÃO: BUG #2 e BUG #3. Consolidação de nós locais em buffer.
             let localNodesBuffer = '';
 
             const processarNos = (listaNos, refContexto) => {
@@ -313,27 +317,30 @@ window.ExportManager = (function () {
                 
                 listaNos.forEach((sub) => {
                     const intencao = sub.intencao || 'fallback';
-                    const textoSanitizado = _safeMD(sub.texto, '\n  ');
 
-                    // Escopo Local: vai para o buffer da prova
-                    if (intencao === 'premissa') {
-                        localNodesBuffer += `[PREMISSA LÓGICA INQUESTIONÁVEL${refContexto}]: ${textoSanitizado}\n`;
-                    } else if (intencao === 'refutacao') {
-                        localNodesBuffer += `[AFASTAMENTO DE TESE OBRIGATÓRIO${refContexto}]: ${textoSanitizado}\n`;
-                    } else if (intencao === 'comando') {
-                        localNodesBuffer += `[COMANDO DE EXECUÇÃO ESTRITA${refContexto}]: ${textoSanitizado}\n`;
-                    } else if (intencao === 'texto') {
-                        localNodesBuffer += `[COPIAR E COLAR EXATAMENTE ESTE TEXTO${refContexto}]: "${textoSanitizado}"\n`;
-                    } else if (intencao === 'fallback') {
-                        localNodesBuffer += `[CONTEXTO FÁTICO COMPLEMENTAR${refContexto}]: ${textoSanitizado}\n`;
-                    } 
-                    // Escopo Global: Bubble-up
-                    else if (intencao === 'fundamentacao') {
-                        baseLegalObrigatoria.push(`[Referência da Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
-                    } else if (intencao === 'preliminar') {
-                        preliminaresInjetadas.push(`[Referência da Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
-                    } else if (intencao === 'veredito') {
-                        vereditosLocaisInjetados.push(`[Baseado na Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                    // CORREÇÃO CRÍTICA: Tratamento assíncrono visual (Texto Fixo)
+                    // Uso EXCLUSIVO de _stripInternalTags para manter o texto virgem e sem prefixos de indentação.
+                    if (intencao === 'texto') {
+                        const textoExato = _stripInternalTags(sub.texto);
+                        localNodesBuffer += `\n[INSTRUÇÃO DE CÓPIA EXATA${refContexto}]\nTranscreva o bloco de texto abaixo exatamente como ele está escrito, palavra por palavra. Não altere a formatação e não parafraseie.\n<texto_verbatim>\n${textoExato}\n</texto_verbatim>\n\n`;
+                    } else {
+                        // Para os demais, aplica sanitização normal com quebra de linha.
+                        const textoSanitizado = _safeMD(sub.texto, '\n');
+                        if (intencao === 'premissa') {
+                            localNodesBuffer += `[PREMISSA LÓGICA INQUESTIONÁVEL${refContexto}]: ${textoSanitizado}\n`;
+                        } else if (intencao === 'refutacao') {
+                            localNodesBuffer += `[INSTRUÇÃO: AFASTAMENTO DE TESE${refContexto}]: ${textoSanitizado}\n`;
+                        } else if (intencao === 'comando') {
+                            localNodesBuffer += `[COMANDO DE EXECUÇÃO ESTRITA${refContexto}]: ${textoSanitizado}\n`;
+                        } else if (intencao === 'fallback') {
+                            localNodesBuffer += `[CONTEXTO FÁTICO COMPLEMENTAR${refContexto}]: ${textoSanitizado}\n`;
+                        } else if (intencao === 'fundamentacao') {
+                            baseLegalObrigatoria.push(`[Referência da Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                        } else if (intencao === 'preliminar') {
+                            preliminaresInjetadas.push(`[Referência da Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                        } else if (intencao === 'veredito') {
+                            vereditosLocaisInjetados.push(`[Baseado na Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                        }
                     }
                 });
             };
@@ -344,19 +351,20 @@ window.ExportManager = (function () {
                 an.itensCorrelacionados.forEach((corr) => {
                     if (corr.subAnotacoes && corr.subAnotacoes.length > 0) {
                         let docNome = corr.documento || corr.tipo;
-                        const focoContexto = ` [Foco na Prova: ${docNome} ${corr.pagina ? 'fl.' + corr.pagina : ''}]`;
+                        const focoContexto = ` (Foco na Prova: ${docNome} ${corr.pagina ? 'fl.' + corr.pagina : ''})`;
                         processarNos(corr.subAnotacoes, focoContexto);
                     }
                 });
             }
 
-            // Emissão segura da Tag Local
             if (localNodesBuffer.trim() !== '') {
                 mdMatriz += `<diretrizes_vinculantes_do_assessor>\n${localNodesBuffer}</diretrizes_vinculantes_do_assessor>\n`;
             }
 
             mdMatriz += `</analise_da_prova>\n\n`; 
         });
+        
+        mdMatriz += `</matriz_dialetica_e_provas>\n`;
 
         let mdTags = '';
         const contexto = _inferirContextoProcessual(topico.anotacoes);
