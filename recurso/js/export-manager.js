@@ -199,7 +199,6 @@ window.ExportManager = (function () {
      * pelo System Prompt externo.
      */
     function _gerarMarkdown(topico) {
-        const dataGeracao = new Date().toLocaleString('pt-BR');
         const safeFormatTime = (sec) => window.AudioManager?.formatTime ? window.AudioManager.formatTime(sec) : `${Math.floor(sec/60)}' ${Math.floor(sec%60)}''`;
 
         const preliminaresInjetadas = [];
@@ -218,8 +217,7 @@ window.ExportManager = (function () {
             });
         }
 
-        let mdCabecalho = `---\n*Pacote de Dados Estruturado via Juris Notes em ${dataGeracao}*\n---\n\n`;
-        mdCabecalho += `# TÓPICO RECURSAL: **${(topico.nome || 'Tópico Sem Nome').toUpperCase()}**\n\n`;
+        let mdCabecalho = `# TÓPICO RECURSAL: **${(topico.nome || 'Tópico Sem Nome').toUpperCase()}**\n\n`;
 
         // CORREÇÃO: BUG #1, BUG #4 e FALHA DE DESIGN (Teses condicionais e alinhamento XML)
         let mdDiretrizesTeses = '';
@@ -484,7 +482,13 @@ window.ExportManager = (function () {
                 .replace(/[^a-z0-9]/gi, '_')
                 .toLowerCase();
 
-            _downloadArquivo(`Pacote_JurisNotes_${nomeSanitizado}.md`, markdownConteudo);
+            // Leitura de estado baseada no DOM (Sem depender de variáveis de janela)
+            const tagDom = document.getElementById('tag-numero-processo');
+            const numProcesso = tagDom && tagDom.style.display !== 'none' ? tagDom.textContent.trim() : '';
+            const prefixoStr = numProcesso ? `${numProcesso}_` : '';
+
+            // Baixa o arquivo com o número inserido (ex: 0541-68.2025_nome_topico.md)
+            _downloadArquivo(`${prefixoStr}${nomeSanitizado}.md`, markdownConteudo);
             _deps.exibirToast('Pacote Markdown exportado! Preparando imagens...', 'sucesso');
 
             // ── Passo 2: Montar e executar a fila de imagens ──
