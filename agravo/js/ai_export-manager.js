@@ -389,7 +389,8 @@ window.ExportManager = (function () {
             // GUARDRAIL TAREFAS PENDENTES
             if (window.BalancaManager && window.BalancaManager.getPendingTasks() > 0) {
                 const count = window.BalancaManager.getPendingTasks();
-                const msg = `ATENÇÃO: Existem ${count} tarefa(s) pendente(s) não concluídas no Painel da Balança.\n\nTem certeza de que deseja gerar o pacote de exportação de Embargos mesmo assim?`;
+                const moduloAtual = window.JURIS_MODULE === 'ED' ? 'Embargos' : 'Agravo';
+                const msg = `ATENÇÃO: Existem ${count} tarefa(s) pendente(s) não concluídas no Painel da Balança.\n\nTem certeza de que deseja gerar o pacote de exportação de ${moduloAtual} mesmo assim?`;
                 
                 if (!confirm(msg)) {
                     _deps.exibirToast('Exportação interrompida pelo usuário.', 'aviso');
@@ -433,8 +434,9 @@ window.ExportManager = (function () {
                 await _executarFilaDeDownloads(filaDeDownloads);
 
             } catch (error) {
-                console.error('[ExportManager ED] Erro crítico na exportação:', error);
-                _deps.exibirToast('Erro ao exportar Embargos. Verifique o console.', 'erro');
+                console.error(`[ExportManager ${window.JURIS_MODULE || 'AI'}] Erro crítico na exportação:`, error);
+                const moduloAtual = window.JURIS_MODULE === 'ED' ? 'Embargos' : 'Agravo';
+                _deps.exibirToast(`Erro ao exportar ${moduloAtual}. Verifique o console.`, 'erro');
             }
         }
     };
