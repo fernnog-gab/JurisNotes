@@ -127,17 +127,18 @@ window.ExportManager = (function () {
             Object.keys(topico.diretrizesPorVicio).forEach(nomeVicio => {
                 const diretrizes = topico.diretrizesPorVicio[nomeVicio];
                 if (diretrizes && diretrizes.length > 0) {
-                    bufferVicios += `  <vicio_alvo nome="${_escapeXmlAttr(nomeVicio)}">\n`;
+                    bufferVicios += `<vicio_alvo>\n`;
+                    bufferVicios += `[NOME DO VÍCIO]: ${_escapeXmlAttr(nomeVicio)}\n`;
                     diretrizes.forEach(dir => {
-                         bufferVicios += `    - [INSTRUÇÃO DE ANÁLISE]: ${_safeMD(dir.texto, '\n    ')}\n`;
+                         bufferVicios += `[INSTRUÇÃO DE ANÁLISE]: ${_safeMD(dir.texto, '\n')}\n`;
                     });
-                    bufferVicios += `  </vicio_alvo>\n`;
+                    bufferVicios += `</vicio_alvo>\n\n`;
                 }
             });
         }
         
         if (bufferVicios.trim() !== '') {
-            md += `<direcionamentos_por_vicio>\n*Atenção IA: Aplique estas métricas estritas ao auditar o vício correspondente.*\n\n${bufferVicios}</direcionamentos_por_vicio>\n\n`;
+            md += `<direcionamentos_por_vicio>\n[ATENÇÃO IA]: Aplique estas métricas estritas ao auditar o vício correspondente.\n\n${bufferVicios}</direcionamentos_por_vicio>\n\n`;
         }
 
         md += `## SEÇÃO II — ${config.rotuloSeccao}\n`;
@@ -152,12 +153,13 @@ window.ExportManager = (function () {
                 const refCitacao = _formatarCitacaoOficial(an.pjeId, an.pagina);
                 const tituloVicio = an.tese ? an.tese : (topico.vicio || 'Auditoria Geral');
 
-                // Correção: atributo XML agora é "vicio", espelhando a tag <vicio_alvo>
-                md += `<analise_de_evidencia id="${numIdeia}" vicio="${_escapeXmlAttr(tituloVicio)}">\n`;
+                md += `<analise_de_evidencia>\n`;
+                md += `[IDENTIFICADOR DA EVIDÊNCIA]: ${numIdeia}\n`;
+                md += `[VÍCIO VINCULADO]: ${_escapeXmlAttr(tituloVicio)}\n`;
                 
                 const faseContexto  = an.fase || an.documento || 'Não especificado';
                 const poloContexto  = an.polo || 'N/A';
-                md += `<contexto_processual>Fase: ${faseContexto} | Polo: ${poloContexto} | Ref: ${refCitacao}</contexto_processual>\n\n`;
+                md += `<contexto_processual>\nFase: ${faseContexto} | Polo: ${poloContexto} | Ref: ${refCitacao}\n</contexto_processual>\n\n`;
 
                 md += `<fato_bruto_auditado>\n`;
                 const docLabel = `**[${an.documento || 'Elemento'}] (${poloContexto}) ${refCitacao}:**`;
@@ -166,16 +168,16 @@ window.ExportManager = (function () {
                     md += `- ${docLabel} ${_safeMD(an.conteudo, ' ')}\n`;
                 } else if (an.tipo === 'imagem') {
                     const imgNome = _gerarNomeArquivoImagem(topico.id, numIdeia);
-                    md += `- ${docLabel}\n  > 🖼️ **[IMAGEM FORNECIDA PARA CONFERÊNCIA]** (Nome: \`${imgNome}\`).\n  > 🧠 *Apontamento do Assessor:* ${_safeMD(an.comentario || 'Verifique a falha estrutural demonstrada na imagem.', '\n  > ')}\n`;
+                    md += `- ${docLabel}\n  [IMAGEM FORNECIDA PARA CONFERÊNCIA]: (Nome: \`${imgNome}\`).\n  [APONTAMENTO DO ASSESSOR]: ${_safeMD(an.comentario || 'Verifique a falha estrutural demonstrada na imagem.', '\n  ')}\n`;
                 } else if (an.tipo === 'audio') {
                     try {
                         const ad = JSON.parse(an.conteudo);
                         const oradorFinal = ad.role || ad.oradorStr || 'Orador não idt.';
-                        md += `- ${docLabel} 🎙️ **[OITIVA REGISTRADA]** (${oradorFinal} — ${safeFormatTime(ad.inicio)} a ${safeFormatTime(ad.fim)}).\n`;
-                        if (an.comentario) md += `  > 🧠 *Observação:* ${_safeMD(an.comentario, '\n  > ')}\n`;
-                        if (ad.transcricao) md += `  > 📜 *Degravação Literal:* "${_safeMD(ad.transcricao, '\n  > ')}"\n`;
+                        md += `- ${docLabel} [OITIVA REGISTRADA] (${oradorFinal} — ${safeFormatTime(ad.inicio)} a ${safeFormatTime(ad.fim)}).\n`;
+                        if (an.comentario) md += `  [OBSERVAÇÃO]: ${_safeMD(an.comentario, '\n  ')}\n`;
+                        if (ad.transcricao) md += `  [DEGRAVAÇÃO LITERAL]: "${_safeMD(ad.transcricao, '\n  ')}"\n`;
                     } catch (e) {
-                        md += `- ${docLabel} 🎙️ **[ÁUDIO]** *Resumo:* ${_safeMD(an.comentario || 'Sem comentário.', '\n  > ')}\n`;
+                        md += `- ${docLabel} [ÁUDIO] Resumo: ${_safeMD(an.comentario || 'Sem comentário.', '\n  ')}\n`;
                     }
                 }
 
@@ -184,12 +186,12 @@ window.ExportManager = (function () {
                     an.itensCorrelacionados.forEach((corr, corrIdx) => {
                         const numSub = corrIdx + 1;
                         const cRefCitacao = _formatarCitacaoOficial(corr.pjeId, corr.pagina);
-                        const cDocLabel = `  ↳ *Confronto Direto [${corr.documento || 'Doc'}] (${corr.polo || 'Polo'}) ${cRefCitacao}:*`;
+                        const cDocLabel = `  [CONFRONTO DIRETO ${numSub}]: [${corr.documento || 'Doc'}] (${corr.polo || 'Polo'}) ${cRefCitacao}:`;
 
                         if (corr.tipo === 'texto') {
                             md += `${cDocLabel} ${_safeMD(corr.comentario ? corr.comentario : (corr.conteudo || ''), ' ')}\n`;
                         } else if (corr.tipo === 'imagem') {
-                            md += `${cDocLabel}\n    > 🖼️ **[IMAGEM ANEXA: \`${_gerarNomeArquivoImagem(topico.id, numIdeia, numSub)}\`]**\n    > 🧠 *Apontamento:* ${_safeMD(corr.comentario || 'Avalie a incongruência.', '\n    > ')}\n`;
+                            md += `${cDocLabel}\n    [IMAGEM ANEXA]: \`${_gerarNomeArquivoImagem(topico.id, numIdeia, numSub)}\`\n    [APONTAMENTO]: ${_safeMD(corr.comentario || 'Avalie a incongruência.', '\n    ')}\n`;
                         }
                     });
                 }
@@ -205,27 +207,31 @@ window.ExportManager = (function () {
                     listaNos.forEach((sub) => {
                         const intencao = sub.intencao || 'fallback';
                         if (intencao === 'nota') return; 
-                        
-                        const textoSanitizado = _safeMD(sub.texto, '\n  ');
 
-                        if (intencao === 'premissa') {
-                            bufferDiretrizesLocais += `[CONSTATAÇÃO FORMAL INQUESTIONÁVEL${refContexto}]: ${textoSanitizado}\n`;
-                        } else if (intencao === 'refutacao') {
-                            bufferDiretrizesLocais += `[AFASTAMENTO DO VÍCIO OBRIGATÓRIO - INEXISTÊNCIA DE FALHA${refContexto}]: ${textoSanitizado}\n`;
-                        } else if (intencao === 'comando') {
-                            bufferDiretrizesLocais += `[COMANDO DE REDAÇÃO ESTRITO${refContexto}]: ${textoSanitizado}\n`;
-                        } else if (intencao === 'texto') {
-                            bufferDiretrizesLocais += `[COPIAR E COLAR EXATAMENTE ESTE TEXTO${refContexto}]: "${textoSanitizado}"\n`;
-                        } else if (intencao === 'fallback') {
-                            bufferDiretrizesLocais += `[CONTEXTO FÁTICO COMPLEMENTAR PARA AUDITORIA${refContexto}]: ${textoSanitizado}\n`;
-                        } 
-                        // Escopo Global: Bubble-up
-                        else if (intencao === 'fundamentacao') {
-                            jurisprudenciaVinculante.push(`[Aplicável ao item ${numIdeia}${refContexto}]: ${textoSanitizado}`);
-                        } else if (intencao === 'preliminar') {
-                            barreirasAdmissibilidade.push(`[Item ${numIdeia}${refContexto}]: ${textoSanitizado}`);
-                        } else if (intencao === 'veredito') {
-                            vereditosLocaisInjetados.push(`[Auditoria da Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                        // Tratamento assíncrono para texto literal (Verbatim)
+                        if (intencao === 'texto') {
+                            const textoExato = _stripInternalTags(sub.texto);
+                            bufferDiretrizesLocais += `\n[INSTRUÇÃO DE CÓPIA EXATA${refContexto}]\nTranscreva o bloco de texto abaixo exatamente como ele está escrito, palavra por palavra. Não altere a formatação e não parafraseie.\n<texto_verbatim>\n${textoExato}\n</texto_verbatim>\n\n`;
+                        } else {
+                            const textoSanitizado = _safeMD(sub.texto, '\n');
+                            
+                            if (intencao === 'premissa') {
+                                bufferDiretrizesLocais += `[CONSTATAÇÃO FORMAL INQUESTIONÁVEL${refContexto}]: ${textoSanitizado}\n`;
+                            } else if (intencao === 'refutacao') {
+                                bufferDiretrizesLocais += `[AFASTAMENTO DO VÍCIO OBRIGATÓRIO - INEXISTÊNCIA DE FALHA${refContexto}]: ${textoSanitizado}\n`;
+                            } else if (intencao === 'comando') {
+                                bufferDiretrizesLocais += `[COMANDO DE REDAÇÃO ESTRITO${refContexto}]: ${textoSanitizado}\n`;
+                            } else if (intencao === 'fallback') {
+                                bufferDiretrizesLocais += `[CONTEXTO FÁTICO COMPLEMENTAR PARA AUDITORIA${refContexto}]: ${textoSanitizado}\n`;
+                            } 
+                            // Escopo Global: Bubble-up
+                            else if (intencao === 'fundamentacao') {
+                                jurisprudenciaVinculante.push(`[Aplicável ao item ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                            } else if (intencao === 'preliminar') {
+                                barreirasAdmissibilidade.push(`[Item ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                            } else if (intencao === 'veredito') {
+                                vereditosLocaisInjetados.push(`[Auditoria da Ideia ${numIdeia}${refContexto}]: ${textoSanitizado}`);
+                            }
                         }
                     });
                 };
