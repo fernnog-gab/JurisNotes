@@ -103,7 +103,6 @@ window.ExportManager = (function () {
         // Fallback seguro para o Agravo
         const moduleContext = window.JURIS_MODULE || 'AI'; 
         const config = ESQUEMAS_CONTEXTO[moduleContext];
-        const dataGeracao = new Date().toLocaleString('pt-BR');
         const safeFormatTime = (sec) => window.AudioManager?.formatTime ? window.AudioManager.formatTime(sec) : `${Math.floor(sec/60)}' ${Math.floor(sec%60)}''`;
 
         // Coleta de escopo global (Bubble-up)
@@ -111,8 +110,7 @@ window.ExportManager = (function () {
         const jurisprudenciaVinculante = [];
         const vereditosLocaisInjetados = []; 
 
-        let md = `---\n*Pacote de Auditoria de Admissibilidade (${moduleContext}) gerado em ${dataGeracao}*\n---\n\n`;
-        md += `# ${config.tituloTopico}: **${(topico.nome || 'Não Nomeado').toUpperCase()}**\n\n`;
+        let md = `# ${config.tituloTopico}: **${(topico.nome || 'Não Nomeado').toUpperCase()}**\n\n`;
 
         // 1. COMPILAÇÃO DO ROTEIRO ESTRUTURAL
         md += `<roteiro_diretor_llm>\n`;
@@ -397,9 +395,15 @@ window.ExportManager = (function () {
 
             try {
                 // 1. Gera e baixa o Markdown
-                const config = ESQUEMAS_CONTEXTO[window.JURIS_MODULE || 'ED'];
-                const nomeSanitizado = (topicoAtivo.nome || 'Exportacao_ED').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-                const nomeArquivoFinal = `${config.prefixoArquivo}${nomeSanitizado}.md`;
+                const config = ESQUEMAS_CONTEXTO[window.JURIS_MODULE || 'AI'];
+                const nomeSanitizado = (topicoAtivo.nome || 'Exportacao_AI').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+                
+                // Leitura de estado baseada no DOM (Sem depender de variáveis de janela)
+                const tagDom = document.getElementById('tag-numero-processo');
+                const numProcesso = tagDom && tagDom.style.display !== 'none' ? tagDom.textContent.trim() : '';
+                const prefixoProcessoStr = numProcesso ? `${numProcesso}_` : '';
+                
+                const nomeArquivoFinal = `${config.prefixoArquivo}${prefixoProcessoStr}${nomeSanitizado}.md`;
                 
                 const payloadTexto = _gerarMarkdown(topicoAtivo);
                 _downloadArquivo(nomeArquivoFinal, payloadTexto);
