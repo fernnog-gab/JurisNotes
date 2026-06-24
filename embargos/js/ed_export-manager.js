@@ -90,7 +90,6 @@ window.ExportManager = (function () {
      */
     function _gerarMarkdown(topico) {
         const config = ESQUEMAS_CONTEXTO['ED'];
-        const dataGeracao = new Date().toLocaleString('pt-BR');
         const safeFormatTime = (sec) => window.AudioManager?.formatTime ? window.AudioManager.formatTime(sec) : `${Math.floor(sec/60)}' ${Math.floor(sec%60)}''`;
 
         // Coleta de escopo global (Bubble-up)
@@ -99,8 +98,7 @@ window.ExportManager = (function () {
         const vereditosLocaisInjetados = []; 
         const diretrizesGlobaisGerais = [];
 
-        let md = `---\n*Pacote de Auditoria Estrutural ED gerado em ${dataGeracao}*\n---\n\n`;
-        md += `# ${config.tituloTopico}: **${(topico.nome || 'Não Nomeado').toUpperCase()}**\n\n`;
+        let md = `# ${config.tituloTopico}: **${(topico.nome || 'Não Nomeado').toUpperCase()}**\n\n`;
 
         // 1. COMPILAÇÃO DO ROTEIRO ESTRUTURAL
         md += `<roteiro_diretor_llm>\n`;
@@ -369,7 +367,13 @@ window.ExportManager = (function () {
                 // 1. Gera e baixa o Markdown
                 const config = ESQUEMAS_CONTEXTO['ED'];
                 const nomeSanitizado = (topicoAtivo.nome || 'Exportacao_ED').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-                const nomeArquivoFinal = `${config.prefixoArquivo}${nomeSanitizado}.md`;
+                
+                // Leitura de estado baseada no DOM (Sem depender de variáveis de janela)
+                const tagDom = document.getElementById('tag-numero-processo');
+                const numProcesso = tagDom && tagDom.style.display !== 'none' ? tagDom.textContent.trim() : '';
+                const baseStr = numProcesso ? `${config.prefixoArquivo}${numProcesso}_` : config.prefixoArquivo;
+                
+                const nomeArquivoFinal = `${baseStr}${nomeSanitizado}.md`;
                 
                 const payloadTexto = _gerarMarkdown(topicoAtivo);
                 _downloadArquivo(nomeArquivoFinal, payloadTexto);

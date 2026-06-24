@@ -680,3 +680,19 @@ body[data-active-tab="leitura"] #idea-markers-list {
 #btn-lembretes-tarefa.has-tasks:not(:disabled) svg {
     stroke: white;
 }
+
+/* Feedback visual para Tag Clicável (Comporta-se como um botão tátil) */
+.tag-clicavel-copia {
+    cursor: pointer;
+    transition: transform 0.15s ease-out, filter 0.15s ease-out, box-shadow 0.15s ease-out;
+}
+.tag-clicavel-copia:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    filter: brightness(0.96);
+}
+.tag-clicavel-copia:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.05s ease-in;
+}

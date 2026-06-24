@@ -247,12 +247,13 @@ window.PdfEngine = (function () {
                         const match = sanitizedString.match(cnjRegex);
 
                         if (match && typeof _deps.onProcessoIdentificado === 'function') {
-                            // Encurtamento: remove zeros à esquerda do sequencial (Ex: "0000193" vira "193")
-                            const sequencialLimpo = parseInt(match[1], 10).toString(); 
+                            // Modificação: Em vez de parseInt, aplicamos slice(-4) na string de 7 dígitos.
+                            // Isso preserva os zeros necessários para formar 4 casas decimais.
+                            const sequencialLimpo = match[1].slice(-4); 
                             const digito = match[2];
                             const ano = match[3];
 
-                            // Monta o formato ultra-curto (Ex: 193-45.2024)
+                            // Monta o formato ultra-curto (Ex: 0541-68.2025)
                             const numeroUltraCurto = `${sequencialLimpo}-${digito}.${ano}`; 
                             
                             _deps.onProcessoIdentificado(numeroUltraCurto);

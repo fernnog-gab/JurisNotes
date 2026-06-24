@@ -251,9 +251,40 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (tagProcesso) {
                     tagProcesso.textContent = numeroCurto;
                     tagProcesso.style.display = 'inline-block';
+                    tagProcesso.title = 'Clique para copiar';
+                    tagProcesso.classList.add('tag-clicavel-copia');
+
+                    // Clone profundo para prevenir vazamento de memória com listeners acumulados
+                    const novaTag = tagProcesso.cloneNode(true);
+                    tagProcesso.parentNode.replaceChild(novaTag, tagProcesso);
+
+                    // Evento de clique com Fallback de Clipboard
+                    novaTag.addEventListener('click', async () => {
+                        try {
+                            if (navigator.clipboard && window.isSecureContext) {
+                                await navigator.clipboard.writeText(numeroCurto);
+                            } else {
+                                // Fallback para ambientes sem contexto seguro (ex: file://)
+                                const textArea = document.createElement("textarea");
+                                textArea.value = numeroCurto;
+                                textArea.style.position = "fixed";
+                                textArea.style.opacity = "0";
+                                document.body.appendChild(textArea);
+                                textArea.focus();
+                                textArea.select();
+                                const executou = document.execCommand('copy');
+                                document.body.removeChild(textArea);
+                                if (!executou) throw new Error("Comando legado falhou");
+                            }
+                            exibirToast(`Processo ${numeroCurto} copiado!`, 'sucesso');
+                        } catch (err) {
+                            console.warn("Erro no Clipboard API:", err);
+                            exibirToast('Seu navegador bloqueou a cópia. Copie manualmente.', 'erro');
+                        }
+                    });
                 }
-                // Atualiza o Estado: Nome automático para o arquivo de Backup de Embargos
-                window._nomeArquivoSugerido = `ED_${numeroCurto}_backup.json`;
+                // Define o nome de backup padrão ED SEM o sufixo arbitrário "_backup"
+                window._nomeArquivoSugerido = `ED_${numeroCurto}.json`;
             },
             onPdfCarregado: async (isRetomada) => {
                 if (isRetomada) {
