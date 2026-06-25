@@ -557,3 +557,86 @@ body[data-context="ed"] .topics-content-area {
 }
 .toggle-switch-minimal input:checked + .toggle-slider { background-color: var(--trt-blue); }
 .toggle-switch-minimal input:checked + .toggle-slider:before { transform: translateX(14px); }
+
+/* ================================================
+   ESTILOS DE NOTA OCULTA (O POST-IT) E TRACKER FLUTUANTE (LÂMPADA)
+   ================================================ */
+.sub-annotation-item.is-nota-interna {
+    opacity: 1 !important; /* Desfaz a opacidade padrão de notas antigas */
+}
+
+/* Identidade visual de papel/rascunho (Modo Escuro) */
+.sub-annotation-item.is-nota-interna .sub-annotation-card {
+    background-color: #2d3748; /* Cinza escuro (Slate) distinto da tag */
+    border: 2px dashed #4a5568;
+    border-left: 4px dashed #718096; 
+    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.15);
+    transform: rotate(-0.5deg);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+/* Tipografia diferenciada (Branco suave) */
+.sub-annotation-item.is-nota-interna .sub-text-content {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-style: italic;
+    color: #f8f9fa; /* Fonte branca amena para não cansar a vista */
+}
+
+/* Gradiente de Fade-out acompanhando o fundo escuro */
+.sub-annotation-item.is-nota-interna .sub-text-content.is-truncated:not(.expanded)::after {
+    background: linear-gradient(to bottom, transparent, #2d3748);
+}
+
+/* Ajuste de Contraste para botões no fundo escuro */
+.sub-annotation-item.is-nota-interna .btn-expand-text,
+.sub-annotation-item.is-nota-interna .btn-copiar-zen {
+    color: #90cdf4;
+}
+.sub-annotation-item.is-nota-interna .btn-copiar-zen:hover {
+    background: rgba(144, 205, 244, 0.15);
+}
+
+/* Composição de Transform no Modo Zen (com borda amarela para destaque) */
+.sub-annotation-item.is-nota-interna .sub-annotation-card.zen-focused {
+    transform: rotate(-0.5deg) scale(1.02); /* Mantém inclinação + zoom */
+    border-color: #fbbf24;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3), 4px 4px 0px rgba(0, 0, 0, 0.15);
+}
+
+/* ================================================
+   ESTILOS DO TRACKER FLUTUANTE (LÂMPADA)
+   ================================================ */
+.floating-lamp-tracker {
+    position: relative;
+    background: #ffffff;
+    border: 2px solid #ffb300;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, background-color 0.3s ease;
+    color: #ffb300;
+    pointer-events: auto;
+}
+
+.floating-lamp-tracker:hover {
+    transform: translateY(-2px) scale(1.05);
+    background: #fffdf0;
+}
+
+.floating-lamp-tracker:active {
+    transform: translateY(0) scale(0.95);
+}
+
+.floating-lamp-tracker .lamp-icon svg { width: 18px; height: 18px; }
+
+.floating-lamp-tracker .task-badge {
+    top: -4px;
+    right: -4px;
+    background-color: #7a8b9e;
+    border-color: #ffffff;
+}

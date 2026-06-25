@@ -124,11 +124,14 @@ window.ExportManager = (function () {
 
         // 2. INJEÇÃO DAS DIRETRIZES GLOBAIS
         if (topico.diretrizesGlobais && topico.diretrizesGlobais.length > 0) {
-            md += `<premissas_globais_de_admissibilidade>\n`;
-            topico.diretrizesGlobais.forEach(dir => {
-                md += `  [REGRA DE AUDITORIA GERAL]: ${_safeMD(dir.texto, '\n  ')}\n`;
-            });
-            md += `</premissas_globais_de_admissibilidade>\n\n`;
+            const globaisValidas = topico.diretrizesGlobais.filter(dir => dir.intencao !== 'nota');
+            if (globaisValidas.length > 0) {
+                md += `<premissas_globais_de_admissibilidade>\n`;
+                globaisValidas.forEach(dir => {
+                    md += `  [REGRA DE AUDITORIA GERAL]: ${_safeMD(dir.texto, '\n  ')}\n`;
+                });
+                md += `</premissas_globais_de_admissibilidade>\n\n`;
+            }
         }
 
         // CORREÇÃO: RESTAURAÇÃO DO NÍVEL INTERMEDIÁRIO E REMOÇÃO DE ATRIBUTOS
@@ -139,12 +142,15 @@ window.ExportManager = (function () {
             Object.keys(diretrizesPorTeseOuVicio).forEach(nomePressuposto => {
                 const diretrizes = diretrizesPorTeseOuVicio[nomePressuposto];
                 if (diretrizes && diretrizes.length > 0) {
-                    bufferPressupostos += `  <pressuposto_alvo>\n`;
-                    bufferPressupostos += `    [NOME DO PRESSUPOSTO]: ${_escapeXmlAttr(nomePressuposto)}\n`;
-                    diretrizes.forEach(dir => {
-                         bufferPressupostos += `    [MÉTRICA DE VALIDAÇÃO]: ${_safeMD(dir.texto, '\n    ')}\n`;
-                    });
-                    bufferPressupostos += `  </pressuposto_alvo>\n`;
+                    const diretrizesValidas = diretrizes.filter(dir => dir.intencao !== 'nota');
+                    if (diretrizesValidas.length > 0) {
+                        bufferPressupostos += `  <pressuposto_alvo>\n`;
+                        bufferPressupostos += `    [NOME DO PRESSUPOSTO]: ${_escapeXmlAttr(nomePressuposto)}\n`;
+                        diretrizesValidas.forEach(dir => {
+                             bufferPressupostos += `    [MÉTRICA DE VALIDAÇÃO]: ${_safeMD(dir.texto, '\n    ')}\n`;
+                        });
+                        bufferPressupostos += `  </pressuposto_alvo>\n`;
+                    }
                 }
             });
         }
@@ -209,9 +215,11 @@ window.ExportManager = (function () {
                 const processarNos = (listaNos, refContexto) => {
                     if (!listaNos || listaNos.length === 0) return;
                     
-                    listaNos.forEach((sub) => {
-                        const intencao = sub.intencao || 'fallback';
-                        if (intencao === 'nota') return; 
+                    const nosValidos = listaNos.filter(sub => sub.intencao !== 'nota');
+                    if (nosValidos.length === 0) return;
+
+                    nosValidos.forEach((sub) => {
+                        const intencao = sub.intencao || 'fallback'; 
                         
                         // CORREÇÃO: Tratamento estrito do texto verbatim (Evita injeção de \n que quebre a intenção)
                         if (intencao === 'texto') {

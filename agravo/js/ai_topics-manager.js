@@ -320,8 +320,11 @@ window.TopicsManager = (function () {
             
             const bordaFaseClass = faseDoCardBase === 0 ? 'borda-fase-ai-diretriz' : `borda-fase-${faseDoCardBase}`;
 
+            const isNotaInterna = intencao === 'nota';
+            const itemWrapperClass = isNotaInterna ? `sub-annotation-item is-nota-interna` : `sub-annotation-item`;
+
             return `
-                <div class="sub-annotation-item" data-source="${sub.viewSource}">
+                <div class="${itemWrapperClass}" data-source="${sub.viewSource}">
                     <div class="sub-annotation-card ${bordaFaseClass}">
                         <div class="${badgeClass}"
                              title="Opções desta diretriz"
@@ -793,8 +796,9 @@ window.TopicsManager = (function () {
                     const tesesHtml = diretrizes.map((d, sIdx) => {
                         const intencao = d.intencao || 'premissa';
                         const iconSVG = obterIconeIntencao(intencao);
+                        const itemWrapperClass = intencao === 'nota' ? 'sub-annotation-item is-nota-interna' : 'sub-annotation-item';
                         return `
-                        <div class="sub-annotation-item" data-source="${teseViewSource}">
+                        <div class="${itemWrapperClass}" data-source="${teseViewSource}">
                             <!-- NÓ DINÂMICO COM A COR DA ABA -->
                             <div class="sub-annotation-card" style="border-left: 5px solid ${_activeTopicoCor}; border-color: ${rgbaTeseBorda};">
                                 <div class="sub-badge has-intent intencao-${intencao}" 
@@ -852,8 +856,9 @@ window.TopicsManager = (function () {
                 globaisHtml = topicoAtivo.diretrizesGlobais.map((d, sIdx) => {
                     const intencao = d.intencao || 'premissa';
                     const iconSVG = obterIconeIntencao(intencao);
+                    const itemWrapperClass = intencao === 'nota' ? 'sub-annotation-item is-nota-interna' : 'sub-annotation-item';
                     return `
-                    <div class="sub-annotation-item" data-source="global">
+                    <div class="${itemWrapperClass}" data-source="global">
                         <!-- APLICA A CLASSE DE BORDA ESCURA DA DIRETRIZ GLOBAL -->
                         <div class="sub-annotation-card borda-global">
                             <div class="sub-badge has-intent intencao-${intencao}" 
@@ -966,6 +971,7 @@ window.TopicsManager = (function () {
                 }
                 
                 _atualizarMarcadoresDeIdeia(topicoAtivo);
+                atualizarContadorNotasOcultas();
             });
         });
     }
@@ -1163,6 +1169,61 @@ window.TopicsManager = (function () {
         });
     }
 
+    let notaOcultaIndexAtual = -1;
+
+    function atualizarContadorNotasOcultas() {
+        const notas = document.querySelectorAll('.sub-annotation-item.is-nota-interna');
+        const trackerContainer = document.getElementById('efficiency-tracker-container');
+        const lampTracker = document.getElementById('hidden-notes-tracker');
+        const badge = document.getElementById('hidden-notes-badge');
+        
+        if (!trackerContainer || !lampTracker || !badge) return;
+
+        if (notas.length > 0) {
+            trackerContainer.style.display = 'flex';
+            lampTracker.style.display = 'flex';
+            badge.textContent = notas.length;
+        } else {
+            lampTracker.style.display = 'none';
+            const pill = document.getElementById('efficiency-tracker-pill');
+            if (pill && pill.style.display === 'none') {
+                trackerContainer.style.display = 'none';
+            }
+        }
+        
+        notaOcultaIndexAtual = -1;
+    }
+
+    function rolarParaProximaNotaOculta() {
+        const notas = document.querySelectorAll('.sub-annotation-item.is-nota-interna');
+        if (notas.length === 0) return;
+
+        notaOcultaIndexAtual++;
+        if (notaOcultaIndexAtual >= notas.length) notaOcultaIndexAtual = 0;
+
+        const notaAlvo = notas[notaOcultaIndexAtual];
+        const scrollContainer = document.getElementById('history-container');
+        
+        if (notaAlvo && scrollContainer) {
+            const containerRect = scrollContainer.getBoundingClientRect();
+            const alvoRect = notaAlvo.getBoundingClientRect();
+            
+            const offset = (alvoRect.top - containerRect.top) + scrollContainer.scrollTop - 30;
+            
+            scrollContainer.scrollTo({ top: offset, behavior: 'smooth' });
+            
+            const cardInterno = notaAlvo.querySelector('.sub-annotation-card');
+            cardInterno.style.transition = 'box-shadow 0.2s, border-color 0.2s';
+            cardInterno.style.borderColor = '#ffb300';
+            cardInterno.style.boxShadow = '0 0 0 4px rgba(255, 179, 0, 0.3), 4px 4px 0px rgba(0, 0, 0, 0.15)';
+            
+            setTimeout(() => {
+                cardInterno.style.borderColor = ''; 
+                cardInterno.style.boxShadow = '';
+            }, 1200);
+        }
+    }
+
     // API pública do módulo
     return {
         obterCor,
@@ -1172,7 +1233,8 @@ window.TopicsManager = (function () {
         setActiveTabId: (id) => { activeTabId = id; },
         escaparHTML,
         toggleTextExpansion,
-        hexToRgba
+        hexToRgba,
+        rolarParaProximaNotaOculta
     };
 
 })();
