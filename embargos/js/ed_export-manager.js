@@ -114,11 +114,14 @@ window.ExportManager = (function () {
 
         // 2. INJEÇÃO DAS DIRETRIZES GLOBAIS DA IA
         if (topico.diretrizesGlobais && topico.diretrizesGlobais.length > 0) {
-            md += `<premissas_globais_da_auditoria>\n`;
-            topico.diretrizesGlobais.forEach(dir => {
-                md += `  - [REGRA GERAL]: ${_safeMD(dir.texto, '\n  ')}\n`; // Correção de blockquote
-            });
-            md += `</premissas_globais_da_auditoria>\n\n`;
+            const globaisValidas = topico.diretrizesGlobais.filter(dir => dir.intencao !== 'nota');
+            if (globaisValidas.length > 0) {
+                md += `<premissas_globais_da_auditoria>\n`;
+                globaisValidas.forEach(dir => {
+                    md += `  - [REGRA GERAL]: ${_safeMD(dir.texto, '\n  ')}\n`; // Correção de blockquote
+                });
+                md += `</premissas_globais_da_auditoria>\n\n`;
+            }
         }
 
         // CORREÇÃO: BUFFER CONDICIONAL E MAPEAMENTO DE VÍCIO
@@ -127,12 +130,15 @@ window.ExportManager = (function () {
             Object.keys(topico.diretrizesPorVicio).forEach(nomeVicio => {
                 const diretrizes = topico.diretrizesPorVicio[nomeVicio];
                 if (diretrizes && diretrizes.length > 0) {
-                    bufferVicios += `<vicio_alvo>\n`;
-                    bufferVicios += `[NOME DO VÍCIO]: ${_escapeXmlAttr(nomeVicio)}\n`;
-                    diretrizes.forEach(dir => {
-                         bufferVicios += `[INSTRUÇÃO DE ANÁLISE]: ${_safeMD(dir.texto, '\n')}\n`;
-                    });
-                    bufferVicios += `</vicio_alvo>\n\n`;
+                    const diretrizesValidas = diretrizes.filter(dir => dir.intencao !== 'nota');
+                    if (diretrizesValidas.length > 0) {
+                        bufferVicios += `<vicio_alvo>\n`;
+                        bufferVicios += `[NOME DO VÍCIO]: ${_escapeXmlAttr(nomeVicio)}\n`;
+                        diretrizesValidas.forEach(dir => {
+                             bufferVicios += `[INSTRUÇÃO DE ANÁLISE]: ${_safeMD(dir.texto, '\n')}\n`;
+                        });
+                        bufferVicios += `</vicio_alvo>\n\n`;
+                    }
                 }
             });
         }
@@ -204,9 +210,11 @@ window.ExportManager = (function () {
                 const processarNos = (listaNos, refContexto) => {
                     if (!listaNos || listaNos.length === 0) return;
                     
-                    listaNos.forEach((sub) => {
+                    const nosValidos = listaNos.filter(sub => sub.intencao !== 'nota');
+                    if (nosValidos.length === 0) return;
+
+                    nosValidos.forEach((sub) => {
                         const intencao = sub.intencao || 'fallback';
-                        if (intencao === 'nota') return; 
 
                         // Tratamento assíncrono para texto literal (Verbatim)
                         if (intencao === 'texto') {

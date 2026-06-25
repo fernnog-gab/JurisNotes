@@ -448,8 +448,10 @@ window.TopicsManager = (function () {
                 }
                 const bordaFaseClass = `borda-fase-${faseSub}`;
 
+                const itemWrapperClass = intencao === 'nota' ? 'sub-annotation-item is-nota-interna' : 'sub-annotation-item';
+
                 return `
-                    <div class="sub-annotation-item" data-source="${sub.viewSource}">
+                    <div class="${itemWrapperClass}" data-source="${sub.viewSource}">
                         <div class="sub-annotation-card ${bordaFaseClass}">
                             <!-- NOVO CONTRATO AQUI: Passamos viewSource E localIndex antes do event -->
                             <div class="${badgeClass}"
@@ -603,8 +605,10 @@ window.TopicsManager = (function () {
             const prefixo = isGlobal ? 'G' : 'V';
             const viewSource = isGlobal ? 'global' : `vicio:${titulo}`;
             
+            const itemWrapperClass = intencao === 'nota' ? 'sub-annotation-item is-nota-interna' : 'sub-annotation-item';
+            
             return `
-             <div class="sub-annotation-item" data-source="${viewSource}">
+             <div class="${itemWrapperClass}" data-source="${viewSource}">
                 <div class="sub-annotation-card ${classSubBorda}" style="${styleSubBorda}">
                     <div class="sub-badge has-intent intencao-${intencao}" 
                          title="Opções desta diretriz"
@@ -973,6 +977,7 @@ window.TopicsManager = (function () {
             }
             
             _atualizarMarcadoresDeIdeia(topicoAtivo);
+            atualizarContadorNotasOcultas();
         });
     }
 
@@ -1168,6 +1173,59 @@ window.TopicsManager = (function () {
         });
     }
 
+    let notaOcultaIndexAtual = -1;
+
+    function atualizarContadorNotasOcultas() {
+        const notas = document.querySelectorAll('.sub-annotation-item.is-nota-interna');
+        const trackerContainer = document.getElementById('efficiency-tracker-container');
+        const lampTracker = document.getElementById('hidden-notes-tracker');
+        const badge = document.getElementById('hidden-notes-badge');
+        
+        if (!trackerContainer || !lampTracker || !badge) return;
+
+        if (notas.length > 0) {
+            trackerContainer.style.display = 'flex';
+            lampTracker.style.display = 'flex';
+            badge.textContent = notas.length;
+        } else {
+            lampTracker.style.display = 'none';
+            const pill = document.getElementById('efficiency-tracker-pill');
+            if (pill && pill.style.display === 'none') {
+                trackerContainer.style.display = 'none';
+            }
+        }
+        notaOcultaIndexAtual = -1;
+    }
+
+    function rolarParaProximaNotaOculta() {
+        const notas = document.querySelectorAll('.sub-annotation-item.is-nota-interna');
+        if (notas.length === 0) return;
+
+        notaOcultaIndexAtual++;
+        if (notaOcultaIndexAtual >= notas.length) notaOcultaIndexAtual = 0;
+
+        const notaAlvo = notas[notaOcultaIndexAtual];
+        const scrollContainer = document.getElementById('history-container');
+        
+        if (notaAlvo && scrollContainer) {
+            const containerRect = scrollContainer.getBoundingClientRect();
+            const alvoRect = notaAlvo.getBoundingClientRect();
+            
+            const offset = (alvoRect.top - containerRect.top) + scrollContainer.scrollTop - 30;
+            scrollContainer.scrollTo({ top: offset, behavior: 'smooth' });
+            
+            const cardInterno = notaAlvo.querySelector('.sub-annotation-card');
+            cardInterno.style.transition = 'box-shadow 0.2s, border-color 0.2s';
+            cardInterno.style.borderColor = '#fbbf24';
+            cardInterno.style.boxShadow = '0 0 0 4px rgba(251, 191, 36, 0.3), 4px 4px 0px rgba(0, 0, 0, 0.15)';
+            
+            setTimeout(() => {
+                cardInterno.style.borderColor = '';
+                cardInterno.style.boxShadow = '';
+            }, 1200);
+        }
+    }
+
     // API pública do módulo
     return {
         obterCor,
@@ -1177,7 +1235,8 @@ window.TopicsManager = (function () {
         setActiveTabId: (id) => { activeTabId = id; },
         escaparHTML,
         toggleTextExpansion,
-        hexToRgba
+        hexToRgba,
+        rolarParaProximaNotaOculta
     };
 
 })();
