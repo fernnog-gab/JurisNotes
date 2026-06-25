@@ -206,14 +206,16 @@ window.ExportManager = (function () {
         const diretrizesGlobaisGerais = []; 
 
         if (topico.diretrizesGlobais) {
-            topico.diretrizesGlobais.forEach(dir => {
-                if (dir.intencao === 'fundamentacao') baseLegalObrigatoria.push(`[DIRETRIZ GLOBAL]: ${_safeMD(dir.texto)}`);
-                else if (dir.intencao === 'preliminar') preliminaresInjetadas.push(`[DIRETRIZ GLOBAL]: ${_safeMD(dir.texto)}`);
-                else if (dir.intencao === 'veredito') vereditosLocaisInjetados.push(`[DIRETRIZ GLOBAL]: ${_safeMD(dir.texto)}`);
-                else if (dir.intencao !== 'nota') { 
-                    diretrizesGlobaisGerais.push(`[${(dir.intencao || 'PREMISSA GLOBAL').toUpperCase()}]: ${_safeMD(dir.texto)}`);
-                }
-            });
+            topico.diretrizesGlobais
+                .filter(dir => dir.intencao !== 'nota') // BLINDAGEM: Remove notas ocultas globais
+                .forEach(dir => {
+                    if (dir.intencao === 'fundamentacao') baseLegalObrigatoria.push(`[DIRETRIZ GLOBAL]: ${_safeMD(dir.texto)}`);
+                    else if (dir.intencao === 'preliminar') preliminaresInjetadas.push(`[DIRETRIZ GLOBAL]: ${_safeMD(dir.texto)}`);
+                    else if (dir.intencao === 'veredito') vereditosLocaisInjetados.push(`[DIRETRIZ GLOBAL]: ${_safeMD(dir.texto)}`);
+                    else { 
+                        diretrizesGlobaisGerais.push(`[${(dir.intencao || 'PREMISSA GLOBAL').toUpperCase()}]: ${_safeMD(dir.texto)}`);
+                    }
+                });
         }
 
         let mdCabecalho = `# TÓPICO RECURSAL: **${(topico.nome || 'Tópico Sem Nome').toUpperCase()}**\n\n`;
@@ -224,13 +226,17 @@ window.ExportManager = (function () {
         if (topico.diretrizesPorTese) {
             for (const [nomeTese, diretrizes] of Object.entries(topico.diretrizesPorTese)) {
                 if (diretrizes && diretrizes.length > 0) {
-                    // CORREÇÃO: Remoção de atributos XML. Nome da tese em texto livre.
-                    bufferTeses += `<tese_alvo>\n`;
-                    bufferTeses += `[NOME DA TESE]: ${_escapeXmlAttr(nomeTese)}\n`;
-                    diretrizes.forEach(dir => {
-                        bufferTeses += `[${(dir.intencao || 'DIRETRIZ').toUpperCase()}]: ${_safeMD(dir.texto, '\n')}\n`;
-                    });
-                    bufferTeses += `</tese_alvo>\n\n`;
+                    const diretrizesValidas = diretrizes.filter(dir => dir.intencao !== 'nota'); // BLINDAGEM: Remove notas ocultas da tese
+                    
+                    if (diretrizesValidas.length > 0) {
+                        // CORREÇÃO: Remoção de atributos XML. Nome da tese em texto livre.
+                        bufferTeses += `<tese_alvo>\n`;
+                        bufferTeses += `[NOME DA TESE]: ${_escapeXmlAttr(nomeTese)}\n`;
+                        diretrizesValidas.forEach(dir => {
+                            bufferTeses += `[${(dir.intencao || 'DIRETRIZ').toUpperCase()}]: ${_safeMD(dir.texto, '\n')}\n`;
+                        });
+                        bufferTeses += `</tese_alvo>\n\n`;
+                    }
                 }
             }
         }
@@ -315,7 +321,10 @@ window.ExportManager = (function () {
             const processarNos = (listaNos, refContexto) => {
                 if (!listaNos || listaNos.length === 0) return;
                 
-                listaNos.forEach((sub) => {
+                const nosValidos = listaNos.filter(sub => sub.intencao !== 'nota'); // BLINDAGEM: Remove notas ocultas dos cards principais
+                if (nosValidos.length === 0) return;
+
+                nosValidos.forEach((sub) => {
                     const intencao = sub.intencao || 'fallback';
 
                     // CORREÇÃO CRÍTICA: Tratamento assíncrono visual (Texto Fixo)

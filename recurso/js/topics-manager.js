@@ -783,11 +783,12 @@ window.TopicsManager = (function () {
                     const corTituloTese = escurecerCor(_activeTopicoCor, 0.6);
                     
                     const tesesHtml = diretrizes.map((d, sIdx) => {
-                        const intencao = d.intencao || 'premissa';
-                        const iconSVG = obterIconeIntencao(intencao);
-                        return `
-                        <div class="sub-annotation-item" data-source="${teseViewSource}">
-                            <!-- AQUI O NÓ RECEBE A COR DINÂMICA DA ABA -->
+                            const intencao = d.intencao || 'premissa';
+                            const iconSVG = obterIconeIntencao(intencao);
+                            const itemWrapperClass = intencao === 'nota' ? 'sub-annotation-item is-nota-interna' : 'sub-annotation-item';
+                            return `
+                            <div class="${itemWrapperClass}" data-source="${teseViewSource}">
+                                <!-- AQUI O NÓ RECEBE A COR DINÂMICA DA ABA -->
                             <div class="sub-annotation-card" style="border-left: 5px solid ${_activeTopicoCor}; border-color: ${rgbaTeseBorda};">
                                 <div class="sub-badge has-intent intencao-${intencao}" 
                                      title="Opções desta diretriz"
@@ -845,8 +846,9 @@ window.TopicsManager = (function () {
                 globaisHtml = topicoAtivo.diretrizesGlobais.map((d, sIdx) => {
                     const intencao = d.intencao || 'premissa';
                     const iconSVG = obterIconeIntencao(intencao);
+                    const itemWrapperClass = intencao === 'nota' ? 'sub-annotation-item is-nota-interna' : 'sub-annotation-item';
                     return `
-                    <div class="sub-annotation-item" data-source="global">
+                    <div class="${itemWrapperClass}" data-source="global">
                         <div class="sub-annotation-card borda-global">
                             <div class="sub-badge has-intent intencao-${intencao}" 
                                  title="Opções desta diretriz"
