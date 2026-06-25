@@ -597,6 +597,7 @@ body[data-context="ed"] .topics-content-area {
     box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.15);
     transform: rotate(-0.5deg);
     transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    padding-bottom: 44px; /* NOVO: Zona segura para o botão flutuante não colar no texto */
 }
 
 /* Tipografia diferenciada (Branco suave) */
@@ -618,6 +619,59 @@ body[data-context="ed"] .topics-content-area {
 }
 .sub-annotation-item.is-nota-interna .btn-copiar-zen:hover {
     background: rgba(144, 205, 244, 0.15);
+}
+
+/* ================================================
+   NOVO: Botão de Revisão da Nota Oculta (Tracking)
+   ================================================ */
+.btn-revisao-nota {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.25s ease;
+    z-index: 5;
+    background: rgba(255, 255, 255, 0.05); /* Sutil para o dark mode */
+}
+
+.btn-revisao-nota svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Status: Pendente (Traço - Indica falta de revisão) */
+.btn-revisao-nota.pendente {
+    color: #a0aec0;
+    border-color: rgba(160, 174, 192, 0.3);
+}
+.btn-revisao-nota.pendente:hover {
+    background: rgba(160, 174, 192, 0.2);
+    color: #cbd5e0;
+    transform: scale(1.1);
+}
+
+/* Status: Revisado (Check verde) */
+.btn-revisao-nota.revisada {
+    color: #48bb78; 
+    border-color: rgba(72, 187, 120, 0.3);
+    background: rgba(72, 187, 120, 0.1);
+}
+.btn-revisao-nota.revisada:hover {
+    background: rgba(72, 187, 120, 0.2);
+    transform: scale(1.1);
+}
+
+/* Feedback Visual de Conclusão: Esmaecimento do texto para limpeza visual */
+.sub-annotation-item.is-nota-interna.is-revisada .sub-text-content {
+    opacity: 0.45;
+    transition: opacity 0.3s ease;
 }
 
 /* Composição de Transform no Modo Zen (com borda amarela para destaque) */
