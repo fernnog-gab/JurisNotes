@@ -585,3 +585,78 @@
 }
 .toggle-switch-minimal input:checked + .toggle-slider { background-color: var(--trt-blue); }
 .toggle-switch-minimal input:checked + .toggle-slider:before { transform: translateX(14px); }
+
+/* ================================================
+   ESTILOS DE NOTA OCULTA (O POST-IT) E TRACKER FLUTUANTE (LÂMPADA)
+   ================================================ */
+.sub-annotation-item.is-nota-interna {
+    opacity: 1 !important; /* Desfaz a opacidade padrão de notas antigas */
+}
+
+/* Identidade visual de papel/rascunho */
+.sub-annotation-item.is-nota-interna .sub-annotation-card {
+    background-color: #fdfdfd;
+    border: 2px dashed #a0aab5;
+    border-left: 4px dashed #7a8b9e; /* Confia na cascata, sem !important */
+    box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.05);
+    transform: rotate(-0.5deg);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+/* Tipografia diferenciada para parecer anotação pessoal */
+.sub-annotation-item.is-nota-interna .sub-text-content {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-style: italic;
+    color: #4a5568;
+}
+
+/* CORREÇÃO CRÍTICA: Gradiente de Fade-out para textos truncados */
+.sub-annotation-item.is-nota-interna .sub-text-content.is-truncated:not(.expanded)::after {
+    background: linear-gradient(to bottom, transparent, #fdfdfd);
+}
+
+/* CORREÇÃO CRÍTICA: Composição de Transform no Modo Zen */
+.sub-annotation-item.is-nota-interna .sub-annotation-card.zen-focused {
+    transform: rotate(-0.5deg) scale(1.02); /* Mantém inclinação + zoom */
+    border-color: var(--trt-blue-mid);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 4px 4px 0px rgba(0, 0, 0, 0.05);
+}
+
+/* ================================================
+   ESTILOS DO TRACKER FLUTUANTE (LÂMPADA)
+   ================================================ */
+.floating-lamp-tracker {
+    position: relative; /* Herda comportamento do Flex Container pai */
+    background: #ffffff;
+    border: 2px solid #ffb300;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, background-color 0.3s ease;
+    color: #ffb300;
+    pointer-events: auto; /* Reativa clique no container fantasma */
+}
+
+.floating-lamp-tracker:hover {
+    transform: translateY(-2px) scale(1.05);
+    background: #fffdf0;
+}
+
+.floating-lamp-tracker:active {
+    transform: translateY(0) scale(0.95);
+}
+
+.floating-lamp-tracker .lamp-icon svg { width: 18px; height: 18px; }
+
+/* Ajuste fino do Badge para este botão redondo */
+.floating-lamp-tracker .task-badge {
+    top: -4px;
+    right: -4px;
+    background-color: #7a8b9e; /* Tom cinza azulado sóbrio */
+    border-color: #ffffff;
+}
