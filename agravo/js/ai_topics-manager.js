@@ -187,6 +187,22 @@ window.TopicsManager = (function () {
         }
     });
 
+    function _gerarBtnRevisaoHtml(topicoId, parentIndex, viewSource, localIndex, intencao, isRevisada) {
+        if (intencao !== 'nota') return '';
+        
+        const safeViewSource = String(viewSource).replace(/'/g, "\\'");
+        const safeParentIdx = parentIndex === null ? 'null' : parentIndex;
+        
+        const svgPendente = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+        const svgRevisada = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+        
+        return `<button class="btn-revisao-nota ${isRevisada ? 'revisada' : 'pendente'}" 
+                title="${isRevisada ? 'Nota revisada. Clique para desmarcar.' : 'Nota pendente. Clique para marcar como revisada.'}" 
+                onclick="toggleRevisaoNotaOculta('${topicoId}', ${safeParentIdx}, '${safeViewSource}', ${localIndex}, event)">
+                ${isRevisada ? svgRevisada : svgPendente}
+                </button>`;
+    }
+
     let activeTabId = null;
 
     /**
@@ -321,7 +337,8 @@ window.TopicsManager = (function () {
             const bordaFaseClass = faseDoCardBase === 0 ? 'borda-fase-ai-diretriz' : `borda-fase-${faseDoCardBase}`;
 
             const isNotaInterna = intencao === 'nota';
-            const itemWrapperClass = isNotaInterna ? `sub-annotation-item is-nota-interna` : `sub-annotation-item`;
+            const isRevisada = sub.revisada === true;
+            const itemWrapperClass = isNotaInterna ? `sub-annotation-item is-nota-interna ${isRevisada ? 'is-revisada' : 'is-pendente'}` : `sub-annotation-item`;
 
             return `
                 <div class="${itemWrapperClass}" data-source="${sub.viewSource}">
@@ -339,6 +356,7 @@ window.TopicsManager = (function () {
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                             Copiar Trecho
                         </button>
+                        ${_gerarBtnRevisaoHtml(activeTabId, topicoIndex, sub.viewSource, sub.localIndex, intencao, isRevisada)}
                     </div>
                 </div>`;
         }).join('');
@@ -796,7 +814,8 @@ window.TopicsManager = (function () {
                     const tesesHtml = diretrizes.map((d, sIdx) => {
                         const intencao = d.intencao || 'premissa';
                         const iconSVG = obterIconeIntencao(intencao);
-                        const itemWrapperClass = intencao === 'nota' ? 'sub-annotation-item is-nota-interna' : 'sub-annotation-item';
+                        const isRevisada = d.revisada === true;
+                        const itemWrapperClass = intencao === 'nota' ? `sub-annotation-item is-nota-interna ${isRevisada ? 'is-revisada' : 'is-pendente'}` : 'sub-annotation-item';
                         return `
                         <div class="${itemWrapperClass}" data-source="${teseViewSource}">
                             <!-- NÓ DINÂMICO COM A COR DA ABA -->
@@ -814,6 +833,7 @@ window.TopicsManager = (function () {
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                                     Copiar Trecho
                                 </button>
+                                ${_gerarBtnRevisaoHtml(activeTabId, null, teseViewSource, sIdx, intencao, isRevisada)}
                             </div>
                         </div>`;
                     }).join('');
@@ -856,7 +876,8 @@ window.TopicsManager = (function () {
                 globaisHtml = topicoAtivo.diretrizesGlobais.map((d, sIdx) => {
                     const intencao = d.intencao || 'premissa';
                     const iconSVG = obterIconeIntencao(intencao);
-                    const itemWrapperClass = intencao === 'nota' ? 'sub-annotation-item is-nota-interna' : 'sub-annotation-item';
+                    const isRevisada = d.revisada === true;
+                    const itemWrapperClass = intencao === 'nota' ? `sub-annotation-item is-nota-interna ${isRevisada ? 'is-revisada' : 'is-pendente'}` : 'sub-annotation-item';
                     return `
                     <div class="${itemWrapperClass}" data-source="global">
                         <!-- APLICA A CLASSE DE BORDA ESCURA DA DIRETRIZ GLOBAL -->
@@ -874,6 +895,7 @@ window.TopicsManager = (function () {
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                                 Copiar Trecho
                             </button>
+                            ${_gerarBtnRevisaoHtml(activeTabId, null, 'global', sIdx, intencao, isRevisada)}
                         </div>
                     </div>`;
                 }).join('');
@@ -1172,7 +1194,7 @@ window.TopicsManager = (function () {
     let notaOcultaIndexAtual = -1;
 
     function atualizarContadorNotasOcultas() {
-        const notas = document.querySelectorAll('.sub-annotation-item.is-nota-interna');
+        const notas = document.querySelectorAll('.sub-annotation-item.is-nota-interna.is-pendente');
         const trackerContainer = document.getElementById('efficiency-tracker-container');
         const lampTracker = document.getElementById('hidden-notes-tracker');
         const badge = document.getElementById('hidden-notes-badge');
@@ -1195,7 +1217,7 @@ window.TopicsManager = (function () {
     }
 
     function rolarParaProximaNotaOculta() {
-        const notas = document.querySelectorAll('.sub-annotation-item.is-nota-interna');
+        const notas = document.querySelectorAll('.sub-annotation-item.is-nota-interna.is-pendente');
         if (notas.length === 0) return;
 
         notaOcultaIndexAtual++;

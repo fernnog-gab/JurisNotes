@@ -46,6 +46,21 @@ function _resolverSubAlvo(topico, parentIndex, viewSource) {
     return cardMestre.itensCorrelacionados[cIdx];
 }
 
+window.toggleRevisaoNotaOculta = function(topicoId, parentIndex, viewSource, localIndex, event) {
+    event.stopPropagation();
+    
+    const topico = topicos.find(t => t.id === topicoId);
+    if (!topico) return;
+
+    const alvo = _resolverSubAlvo(topico, parentIndex, viewSource);
+    const sub = alvo.subAnotacoes[localIndex];
+
+    sub.revisada = !sub.revisada;
+
+    renderizarTopicos(); 
+    salvarBackupAutomatico();
+};
+
 function abrirMenuSubAnotacao(topicoId, parentIndex, viewSource, localIndex, event) {
     event.stopPropagation();
     
@@ -629,6 +644,7 @@ function confirmarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
     alvo.subAnotacoes.push({ 
         uuid: 'id-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now().toString(36),
         texto, 
+        revisada: false,
         timestamp: Date.now() 
     });
     
