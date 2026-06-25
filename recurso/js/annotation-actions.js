@@ -37,6 +37,21 @@ function _resolverSubAlvo(topico, parentIndex, viewSource) {
     return cardMestre.itensCorrelacionados[cIdx];
 }
 
+window.toggleRevisaoNotaOculta = function(topicoId, parentIndex, viewSource, localIndex, event) {
+    event.stopPropagation();
+    
+    const topico = topicos.find(t => t.id === topicoId);
+    if (!topico) return;
+
+    const alvo = _resolverSubAlvo(topico, parentIndex, viewSource);
+    const sub = alvo.subAnotacoes[localIndex];
+
+    sub.revisada = !sub.revisada;
+
+    renderizarTopicos(); 
+    salvarBackupAutomatico();
+};
+
 function adicionarDiretrizEstrutural(tipo, topicoId, teseNome, event) {
     event.stopPropagation();
 
@@ -111,6 +126,7 @@ function confirmarDiretrizEstrutural() {
         uuid: 'id-' + Math.random().toString(36).substr(2, 9),
         texto: texto,
         intencao: 'premissa', // Default inicial
+        revisada: false,
         timestamp: Date.now()
     };
 
@@ -751,6 +767,7 @@ function confirmarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
     alvo.subAnotacoes.push({ 
         uuid: 'id-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now().toString(36),
         texto, 
+        revisada: false,
         timestamp: Date.now() 
     });
     
