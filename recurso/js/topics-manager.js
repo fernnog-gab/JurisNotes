@@ -434,8 +434,11 @@ window.TopicsManager = (function () {
                 }
                 const bordaFaseClass = `borda-fase-${faseSub}`;
 
+                const isNotaInterna = intencao === 'nota';
+                const itemWrapperClass = isNotaInterna ? `sub-annotation-item is-nota-interna` : `sub-annotation-item`;
+
                 return `
-                    <div class="sub-annotation-item" data-source="${sub.viewSource}">
+                    <div class="${itemWrapperClass}" data-source="${sub.viewSource}">
                         <div class="sub-annotation-card ${bordaFaseClass}">
                             <!-- NOVO CONTRATO AQUI: Passamos viewSource E localIndex antes do event -->
                             <div class="${badgeClass}"
