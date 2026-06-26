@@ -961,7 +961,13 @@
             <!-- Lista de tags será injetada aqui via JS -->
         </div>
         
-        <div class="wizard-actions">
+        <div class="wizard-actions" style="justify-content: space-between;">
+            <button class="chip-btn chip-autora" style="background: var(--trt-blue); color: white; border: none;" onclick="exportarBaseParaNotebookLM(event)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; margin-right: 6px; display: inline-block; vertical-align: text-bottom;">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Exportar Base para IA
+            </button>
             <button class="chip-btn chip-cancelar" onclick="fecharModalGerenciarTags()">✕ Voltar ao Acervo</button>
         </div>
     </div>
@@ -1103,6 +1109,41 @@
         <div class="wizard-actions">
             <button class="chip-btn chip-cancelar" onclick="fecharModalGeradorContexto()">Cancelar</button>
             <button class="chip-btn chip-autora" id="btn-copiar-contexto" style="background: var(--trt-blue); color: white; border: none; padding-left: 24px; padding-right: 24px;" onclick="gerarECopiarContexto()">📋 Copiar Pacote Final</button>
+        </div>
+    </div>
+
+    <!-- BACKDROP E MODAL: PROMPT NOTEBOOKLM (Z-index 4008+ para sobrepor as Tags em 4007) -->
+    <div id="prompt-notebooklm-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.40); z-index: 4008;" onclick="fecharModalPromptNotebookLM()"></div>
+
+    <div id="modal-prompt-notebooklm" class="crop-wizard-popup" style="display:none; z-index: 4009; max-width: 700px; width: 90vw;">
+        <div class="wizard-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>🤖 Exportação Concluída! Auditoria no NotebookLM</span>
+            <button style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b;" onclick="fecharModalPromptNotebookLM()">✕</button>
+        </div>
+        
+        <p class="popup-label" style="margin-top: 12px;">Seu arquivo de conhecimento foi baixado.</p>
+        <p style="font-size: 0.85rem; color: #555; margin-bottom: 12px;">Suba o arquivo .txt gerado no <strong>Google NotebookLM</strong> e cole o comando abaixo para auditar e organizar sua taxonomia:</p>
+        
+        <!-- O style display:block é vital aqui para anular a ocultação padrão da classe genérica de textareas do sistema -->
+        <textarea id="textarea-prompt-notebooklm" class="popup-textarea textarea-readonly" style="display: block; min-height: 250px; font-family: monospace; font-size: 0.8rem; line-height: 1.4;" readonly>Atue como um Engenheiro de Conhecimento e Especialista em Taxonomia Jurídica.
+
+Como fonte de conhecimento, você tem um arquivo exportado do meu sistema ("Juris Notes") contendo minha base de Modelos Recursais e de Teses. Atualmente, a nomenclatura desses modelos e suas tags (categorias) carecem de padronização.
+
+Sua missão é gerar um Relatório de Auditoria e Padronização do Acervo com as seguintes entregas:
+
+1. Análise de Nomenclatura e Proposta de Padrão: Avalie os nomes atuais e proponha uma estrutura lógica e padronizada (exemplo: [Tema Principal] - [Subtema] - [Especificidade]). Mostre como ficaria a nova regra.
+
+2. Tabela de Mapeamento (De -> Para): Apresente uma tabela listando o "Nome Atual do Modelo" e a sugestão de "Novo Nome Padronizado", evidenciando quais modelos precisam ter seus nomes alterados urgentemente para melhorar a clareza.
+
+3. Auditoria de Tags e Categorização:
+- Identifique sinônimos ou tags redundantes e sugira uma unificação (ex: juntar "Dano Moral" e "Danos Morais" em uma única tag oficial).
+- Liste todos os modelos que foram exportados com o status [SEM TAGS]. Com base no conteúdo textual (nós de ideia) desses modelos, sugira as tags adequadas que eu deveria cadastrar para eles no sistema.
+
+4. Árvore Taxonômica do Gabinete: Crie um pequeno sumário hierárquico com as Grandes Categorias e Subcategorias que emergem do conteúdo lido, para que eu possa criar um índice limpo e eficiente no meu software no futuro.</textarea>
+
+        <div class="wizard-actions" style="margin-top: 16px;">
+            <button class="chip-btn chip-cancelar" onclick="fecharModalPromptNotebookLM()">Fechar</button>
+            <button class="chip-btn chip-autora" style="background: #2e7d32; color: white; border: none; padding-left: 24px; padding-right: 24px;" onclick="copiarPromptNotebookLM()">📋 Copiar Prompt Mestre</button>
         </div>
     </div>
 
