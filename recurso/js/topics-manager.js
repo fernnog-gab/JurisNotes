@@ -24,7 +24,7 @@ window.TopicsManager = (function () {
 
     // Funções Privadas do Zen Mode
     function _ativarZenMode(card) {
-        const item = card.closest('.sub-annotation-item');
+        const item = card.closest('.sub-annotation-item') || card.closest('.main-card-wrapper');
         const contentArea = document.getElementById('topics-tab-content');
         if (!contentArea || !item) return;
 
@@ -53,7 +53,7 @@ window.TopicsManager = (function () {
         document.querySelectorAll('.zen-focused').forEach(el => {
             el.classList.remove('zen-focused');
             const btn = el.querySelector('.btn-expand-text');
-            const txt = el.querySelector('.sub-text-content');
+            const txt = el.querySelector('.sub-text-content, .card-texto');
             if (txt && txt.classList.contains('expanded')) {
                 txt.classList.remove('expanded');
                 if (btn) btn.innerHTML = 'Ler texto completo ▾';
@@ -71,6 +71,20 @@ window.TopicsManager = (function () {
                     requestAnimationFrame(() => _sincronizarConexoesComAnimacao(container));
                 }
             });
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        const contentArea = document.getElementById('topics-tab-content');
+        if (contentArea && contentArea.classList.contains('zen-mode-ativo')) {
+            // Se o clique não foi dentro de NENHUM container em foco, nem no botão que aciona o foco
+            if (!e.target.closest('.is-zen-focused') && !e.target.closest('.btn-expand-text')) {
+                _fecharZenModeAtivo();
+                requestAnimationFrame(() => {
+                    const container = document.getElementById('timeline-container');
+                    if (container) _sincronizarConexoesComAnimacao(container);
+                });
+            }
         }
     });
 
@@ -328,7 +342,13 @@ window.TopicsManager = (function () {
         let htmlComentario = '';
 
         if (anotacao.tipo === 'texto') {
-            htmlConteudo = `<p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(anotacao.conteudo))}"</p>`;
+            htmlConteudo = `
+            <div style="position: relative;">
+                <p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(anotacao.conteudo))}"</p>
+                <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">
+                    Ler texto completo ▾
+                </button>
+            </div>`;
             if (anotacao.comentario) htmlComentario = `<div class="card-comentario"><strong>Observação:</strong> ${escaparHTML(anotacao.comentario)}</div>`;
         } else if (anotacao.tipo === 'imagem') {
             htmlConteudo = `
@@ -490,7 +510,13 @@ window.TopicsManager = (function () {
                 let cComent = '';
                 
                 if (item.tipo === 'texto') {
-                    cConteudo = `<p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(item.conteudo))}"</p>`;
+                    cConteudo = `
+                    <div style="position: relative;">
+                        <p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(item.conteudo))}"</p>
+                        <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">
+                            Ler texto completo ▾
+                        </button>
+                    </div>`;
                     if (item.comentario) cComent = `<div class="card-comentario"><strong>Observação:</strong> ${escaparHTML(item.comentario)}</div>`;
                 } else if (item.tipo === 'imagem') {
                     cConteudo = `<div class="image-resize-wrapper" title="Arraste para redimensionar"><img class="card-imagem" src="${item.conteudo}" alt="Agrupamento"></div>`;
@@ -941,20 +967,20 @@ window.TopicsManager = (function () {
         }
             
         requestAnimationFrame(() => {
-                // Religa o observer apenas nos nós textuais expansíveis e no container nativo
-                document.querySelectorAll('.sub-annotation-item .sub-text-content').forEach(el => {
+                // 1. Observer unificado: vigia as mudanças dimensionais de ambos os tipos de cards
+                document.querySelectorAll('.sub-text-content, .card-texto').forEach(el => {
                     if (typeof resizeObserver !== 'undefined') resizeObserver.observe(el);
-                });
-                const historyContainer = document.getElementById('history-container');
-                if (historyContainer && typeof resizeObserver !== 'undefined') resizeObserver.observe(historyContainer);
-
-                document.querySelectorAll('.sub-text-content').forEach(el => {
+                    
+                    // 2. Loop lógico de Truncamento: Ativa o botão apenas se o texto for maior que o limite visual
                     const btn = el.parentElement.querySelector('.btn-expand-text');
                     if (btn && el.scrollHeight > el.clientHeight) {
                         btn.style.display = 'inline-flex';
                         el.classList.add('is-truncated');
                     }
                 });
+
+                const historyContainer = document.getElementById('history-container');
+                if (historyContainer && typeof resizeObserver !== 'undefined') resizeObserver.observe(historyContainer);
             
             document.querySelectorAll('.image-resize-wrapper').forEach(wrapper => {
                 wrapper.addEventListener('mouseup', () => desenharConexoes());
@@ -1148,9 +1174,9 @@ window.TopicsManager = (function () {
      * Alterna a expansão do texto longo, gerencia o Zen Mode e sincroniza animações
      */
     function toggleTextExpansion(btn) {
-        const itemContainer = btn.closest('.sub-annotation-item');
-        const card = itemContainer.querySelector('.sub-annotation-card');
-        const content = card.querySelector('.sub-text-content');
+        const itemContainer = btn.closest('.sub-annotation-item, .main-card-wrapper');
+        const card = itemContainer.querySelector('.sub-annotation-card, .annotation-card');
+        const content = card.querySelector('.sub-text-content, .card-texto');
         if (!content) return;
 
         const esteCardEstavaFocado = card.classList.contains('zen-focused');
