@@ -1115,7 +1115,7 @@
     <!-- BACKDROP E MODAL: PROMPT NOTEBOOKLM (Z-index 4008+ para sobrepor as Tags em 4007) -->
     <div id="prompt-notebooklm-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.40); z-index: 4008;" onclick="fecharModalPromptNotebookLM()"></div>
 
-    <div id="modal-prompt-notebooklm" class="crop-wizard-popup" style="display:none; z-index: 4009; max-width: 700px; width: 90vw;">
+    <div id="modal-prompt-notebooklm" class="crop-wizard-popup" style="display:none; z-index: 4009; max-width: 750px; width: 90vw;">
         <div class="wizard-header" style="display: flex; justify-content: space-between; align-items: center;">
             <span>🤖 Exportação Concluída! Auditoria no NotebookLM</span>
             <button style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b;" onclick="fecharModalPromptNotebookLM()">✕</button>
@@ -1124,22 +1124,33 @@
         <p class="popup-label" style="margin-top: 12px;">Seu arquivo de conhecimento foi baixado.</p>
         <p style="font-size: 0.85rem; color: #555; margin-bottom: 12px;">Suba o arquivo .txt gerado no <strong>Google NotebookLM</strong> e cole o comando abaixo para auditar e organizar sua taxonomia:</p>
         
-        <!-- O style display:block é vital aqui para anular a ocultação padrão da classe genérica de textareas do sistema -->
-        <textarea id="textarea-prompt-notebooklm" class="popup-textarea textarea-readonly" style="display: block; min-height: 250px; font-family: monospace; font-size: 0.8rem; line-height: 1.4;" readonly>Atue como um Engenheiro de Conhecimento e Especialista em Taxonomia Jurídica.
+        <!-- O style display:block é vital aqui para anular a ocultação padrão da classe genérica -->
+        <textarea id="textarea-prompt-notebooklm" class="popup-textarea textarea-readonly" style="display: block; min-height: 320px; font-family: monospace; font-size: 0.8rem; line-height: 1.4; padding: 12px;" readonly># PERSONA E CONTEXTO
+Atue como um Engenheiro de Conhecimento e Especialista em Taxonomia Jurídica.
+Como fonte de conhecimento, você tem um arquivo do sistema ("Juris Notes") contendo uma base de Modelos Recursais e de Teses do gabinete. Esta base JÁ PASSOU por uma primeira rodada de organização. 
 
-Como fonte de conhecimento, você tem um arquivo exportado do meu sistema ("Juris Notes") contendo minha base de Modelos Recursais e de Teses. Atualmente, a nomenclatura desses modelos e suas tags (categorias) carecem de padronização.
+# A REGRA DE OURO: O FILTRO DE TOLERÂNCIA
+Sua missão NÃO é buscar a perfeição absoluta ou criticar cada detalhe. Você deve atuar com um "Filtro de Bom Senso". 
+Se um modelo já possui um nome descritivo, claro e funcional (ex: aborda o tema e a especificidade de forma compreensível), considere-o [ADEQUADO] e NÃO o inclua na lista de correções. 
+Seu foco exclusivo deve ser apontar os "Outliers": nomes genéricos demais, confusos, totalmente fora de padrão lógico ou que prejudiquem a localização do arquivo.
 
-Sua missão é gerar um Relatório de Auditoria e Padronização do Acervo com as seguintes entregas:
+# ENTREGAS ESPERADAS
+Gere um Relatório de Auditoria Cirúrgica com a seguinte estrutura:
 
-1. Análise de Nomenclatura e Proposta de Padrão: Avalie os nomes atuais e proponha uma estrutura lógica e padronizada (exemplo: [Tema Principal] - [Subtema] - [Especificidade]). Mostre como ficaria a nova regra.
+1. Diagnóstico de Nomenclatura e Padrão Sugerido
+Apresente qual é a estrutura lógica ideal que você utilizou como régua para essa auditoria (exemplo: [Tema Principal] - [Subtema] - [Especificidade]).
 
-2. Tabela de Mapeamento (De -> Para): Apresente uma tabela listando o "Nome Atual do Modelo" e a sugestão de "Novo Nome Padronizado", evidenciando quais modelos precisam ter seus nomes alterados urgentemente para melhorar a clareza.
+2. Tabela de Resgate (De -> Para)
+Apresente uma tabela APENAS com os modelos que estão em estado [CRÍTICO] de nomenclatura. 
+Regra estrita: Se o nome atual já for aceitável e claro, ele está expressamente proibido de aparecer nesta tabela. 
+Colunas: "Nome Problemático Atual" | "Sugestão de Novo Nome" | "Motivo da Alteração".
 
-3. Auditoria de Tags e Categorização:
-- Identifique sinônimos ou tags redundantes e sugira uma unificação (ex: juntar "Dano Moral" e "Danos Morais" em uma única tag oficial).
-- Liste todos os modelos que foram exportados com o status [SEM TAGS]. Com base no conteúdo textual (nós de ideia) desses modelos, sugira as tags adequadas que eu deveria cadastrar para eles no sistema.
+3. Auditoria de Tags e Categorização
+* Unificação de Ruídos: Identifique apenas sinônimos óbvios ou tags fragmentadas que estejam poluindo a base (ex: juntar "Dano Moral" e "Danos Morais") e sugira a fusão.
+* Resgate de Órfãos: Liste os modelos exportados com o status [SEM TAGS]. Leia o núcleo do texto (nós de ideia) desses modelos e sugira 2 a 3 tags precisas para cada um.
 
-4. Árvore Taxonômica do Gabinete: Crie um pequeno sumário hierárquico com as Grandes Categorias e Subcategorias que emergem do conteúdo lido, para que eu possa criar um índice limpo e eficiente no meu software no futuro.</textarea>
+4. Árvore Taxonômica Essencial
+Crie um sumário hierárquico enxuto com as Grandes Categorias e Subcategorias que emergem do acervo, focado em criar um índice limpo, rápido e eficiente para o uso diário no software.</textarea>
 
         <div class="wizard-actions" style="margin-top: 16px;">
             <button class="chip-btn chip-cancelar" onclick="fecharModalPromptNotebookLM()">Fechar</button>
