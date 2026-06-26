@@ -44,8 +44,8 @@
         <header>
             <div class="header-content">
                 <small class="header-label">TRIBUNAL REGIONAL DO TRABALHO - PORTÁTIL</small>
-                <h1 id="process-id">0000000-00.0000.5.23.0000</h1>
-                <div id="parties-display" style="font-weight: 500; margin-top:5px;">Partes: ...</div>
+                <input type="text" id="process-id" class="header-input-processo" placeholder="Nº do Processo (Preencha Manualmente)" autocomplete="off" oninput="this.setAttribute('value', this.value);">
+                <input type="text" id="parties-display" class="header-input-partes" placeholder="Partes: Recorrente x Recorrido (Preencha Manualmente)" autocomplete="off" oninput="this.setAttribute('value', this.value);">
             </div>
             <div class="header-actions" style="display: flex; align-items: center; gap: 20px;">
                 <div id="task-counter-widget" class="task-counter" title="Contador de Observações Gerais">

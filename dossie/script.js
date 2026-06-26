@@ -51,8 +51,25 @@ async function generatePanel(isInternalGenerator = false) {
 
         data = normalizeData(data);
 
-        document.getElementById('process-id').innerText = data.processo || 'S/N';
-        document.getElementById('parties-display').innerText = `Partes: ${data.recorrente || ''} x ${data.recorrido || ''}`;
+        const processInput = document.getElementById('process-id');
+        const partiesInput = document.getElementById('parties-display');
+
+        if (data.processo && data.processo.trim() !== "") {
+            processInput.value = data.processo;
+            processInput.setAttribute('value', data.processo);
+        } else {
+            processInput.value = "";
+            processInput.setAttribute('value', '');
+        }
+
+        if (data.recorrente && data.recorrido && data.recorrente.trim() !== "") {
+            const partesTexto = `Partes: ${data.recorrente} x ${data.recorrido}`;
+            partiesInput.value = partesTexto;
+            partiesInput.setAttribute('value', partesTexto);
+        } else {
+            partiesInput.value = "";
+            partiesInput.setAttribute('value', '');
+        }
 
         renderContent(data);
         
@@ -540,7 +557,7 @@ async function downloadBundledHTML(isInternalGenerator = false) {
         const hh = String(now.getHours()).padStart(2, '0');
         const min = String(now.getMinutes()).padStart(2, '0');
 
-        const rawProc = document.getElementById('process-id').innerText;
+        const rawProc = document.getElementById('process-id').value;
         const procNum = rawProc.replace(/[^0-9]/g, '');
         const processoSeguro = procNum ? procNum : 'sem_processo';
 

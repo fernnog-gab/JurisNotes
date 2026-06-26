@@ -123,6 +123,53 @@ header {
   text-transform: uppercase;
 }
 
+.header-input-processo {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 2em;
+    font-weight: bold;
+    font-family: inherit;
+    width: 100%;
+    outline: none;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.4);
+    margin: 0.2em 0;
+    padding-bottom: 4px;
+    transition: border-color 0.2s ease;
+}
+
+.header-input-processo:focus {
+    border-bottom: 1px solid var(--theme-orange);
+}
+
+.header-input-processo::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+    font-weight: 500;
+}
+
+.header-input-partes {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 1rem;
+    font-weight: 500;
+    font-family: inherit;
+    width: 100%;
+    outline: none;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.4);
+    margin-top: 5px;
+    padding-bottom: 4px;
+    transition: border-color 0.2s ease;
+}
+
+.header-input-partes:focus {
+    border-bottom: 1px solid var(--theme-orange);
+}
+
+.header-input-partes::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
 .section-title { 
   font-size: 0.9rem; 
   color: var(--text-sub); 
