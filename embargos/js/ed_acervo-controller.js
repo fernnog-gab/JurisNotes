@@ -698,3 +698,135 @@ window.acionarExcluirModeloAtual = async function() {
         window.abrirModalAcervo(); 
     } catch(e) { exibirToast('Erro de permissão ou rede ao excluir o modelo.', 'erro'); }
 };
+
+// ==========================================
+// MÓDULO 3: EXPORTAÇÃO PARA IA (GOVERNANÇA)
+// ==========================================
+
+/**
+ * Função pura e local para geração de download em memória.
+ * Mantém o acervo-controller isolado sem quebrar o Revealing Module do ExportManager.
+ */
+function _downloadTextoComoArquivo(nomeArquivo, conteudoTexto) {
+    const blob = new Blob([conteudoTexto], { type: 'text/plain;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', nomeArquivo);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    
+    // Limpeza assíncrona segura para evitar memory leaks sem quebrar o download
+    setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }, 150);
+}
+
+window.exportarBaseParaNotebookLM = async function(event) {
+    if (!window.AcervoManager) return exibirToast('Conecte-se ao Firebase primeiro.', 'erro');
+    
+    // Captura segura e imutável do alvo
+    const btnExport = event ? event.currentTarget : null;
+    let textoOriginal = '';
+    
+    if (btnExport) {
+        textoOriginal = btnExport.innerHTML;
+        btnExport.innerHTML = '⌛ Compilando...';
+        btnExport.disabled = true;
+    }
+
+    try {
+        const modelos = await AcervoManager.carregarModelos();
+        
+        if (!modelos || modelos.length === 0) {
+            exibirToast('Seu acervo está vazio. Nada para exportar.', 'aviso');
+            return;
+        }
+
+        // 1. Geração do Payload Markdown
+        let txtConteudo = "=================================================\n";
+        txtConteudo += "BASE DE CONHECIMENTO JURIS NOTES - AUDITORIA DE IA\n";
+        txtConteudo += "Data de Exportação: " + new Date().toLocaleString() + "\n";
+        txtConteudo += "=================================================\n\n";
+
+        modelos.forEach(mod => {
+            const tags = (mod.tags && mod.tags.length > 0) ? mod.tags.join(', ') : '[SEM TAGS]';
+            const escopo = mod.escopo ? mod.escopo.toUpperCase() : 'CARD';
+            
+            txtConteudo += `### NOME DO MODELO: ${mod.nome}\n`;
+            txtConteudo += `TAGS: ${tags}\n`;
+            txtConteudo += `ESCOPO: ${escopo}\n`;
+            txtConteudo += `CONTEÚDO (Nós de Ideia):\n`;
+            
+            if (mod.nos && mod.nos.length > 0) {
+                mod.nos.forEach(no => {
+                    txtConteudo += `- [${(no.intencao || 'PREMISSA').toUpperCase()}]: ${no.texto}\n`;
+                });
+            } else {
+                txtConteudo += `- [VAZIO]\n`;
+            }
+            txtConteudo += `\n-------------------------------------------------\n\n`;
+        });
+
+        // 2. Aciona Download Seguro
+        const dataFormatada = new Date().toISOString().slice(0,10);
+        _downloadTextoComoArquivo(`JurisNotes_Acervo_Exportacao_${dataFormatada}.txt`, txtConteudo);
+
+        // 3. Destruição visual de Modais (Bypass de Side-effects)
+        // Evitamos chamar as funções originais do sistema para não disparar 'reads' desnecessários no Firebase.
+        const modalTags = document.getElementById('modal-gerenciar-tags');
+        const modalAcervo = document.getElementById('modal-acervo-inserir');
+        const wizardBackdrop = document.getElementById('wizard-backdrop');
+        
+        if(modalTags) modalTags.style.display = 'none';
+        if(modalAcervo) modalAcervo.style.display = 'none';
+        if(wizardBackdrop) wizardBackdrop.style.display = 'none';
+        
+        // 4. Exibição do Prompt
+        window.abrirModalPromptNotebookLM();
+
+    } catch (error) {
+        console.error("[AcervoController] Erro na exportação:", error);
+        exibirToast('Erro ao exportar base de dados.', 'erro');
+    } finally {
+        // Restaura estado original do botão
+        if (btnExport) {
+            btnExport.innerHTML = textoOriginal;
+            btnExport.disabled = false;
+        }
+    }
+};
+
+window.abrirModalPromptNotebookLM = function() {
+    document.getElementById('prompt-notebooklm-backdrop').style.display = 'block';
+    document.getElementById('modal-prompt-notebooklm').style.display = 'flex';
+};
+
+window.fecharModalPromptNotebookLM = function() {
+    document.getElementById('prompt-notebooklm-backdrop').style.display = 'none';
+    document.getElementById('modal-prompt-notebooklm').style.display = 'none';
+};
+
+window.copiarPromptNotebookLM = function() {
+    const textarea = document.getElementById('textarea-prompt-notebooklm');
+    if (!textarea) return;
+    
+    textarea.select();
+    textarea.setSelectionRange(0, 99999);
+    
+    // Fallback de Clipboard protegido
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(textarea.value).then(() => {
+            exibirToast('Comando copiado! Cole no NotebookLM.', 'sucesso');
+        }).catch(err => {
+            exibirToast('Falha ao copiar comando.', 'erro');
+        });
+    } else {
+        document.execCommand('copy');
+        exibirToast('Comando copiado.', 'sucesso');
+    }
+};
