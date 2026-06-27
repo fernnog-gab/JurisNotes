@@ -138,7 +138,7 @@ window.TopicsManager = (function () {
 
     // Funções Privadas do Zen Mode
     function _ativarZenMode(card) {
-        const item = card.closest('.sub-annotation-item');
+        const item = card.closest('.sub-annotation-item') || card.closest('.main-card-wrapper');
         const contentArea = document.getElementById('topics-tab-content');
         if (!contentArea || !item) return;
 
@@ -168,7 +168,7 @@ window.TopicsManager = (function () {
         document.querySelectorAll('.zen-focused').forEach(el => {
             el.classList.remove('zen-focused');
             const btn = el.querySelector('.btn-expand-text');
-            const txt = el.querySelector('.sub-text-content');
+            const txt = el.querySelector('.sub-text-content, .card-texto');
             if (txt && txt.classList.contains('expanded')) {
                 txt.classList.remove('expanded');
                 if (btn) btn.innerHTML = 'Ler texto completo ▾';
@@ -184,6 +184,20 @@ window.TopicsManager = (function () {
                 const container = document.getElementById('timeline-container');
                 if (container) requestAnimationFrame(() => _sincronizarConexoesComAnimacao(container));
             });
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        const contentArea = document.getElementById('topics-tab-content');
+        if (contentArea && contentArea.classList.contains('zen-mode-ativo')) {
+            // Se o clique não foi dentro de NENHUM container em foco, nem no botão que aciona o foco
+            if (!e.target.closest('.is-zen-focused') && !e.target.closest('.btn-expand-text')) {
+                _fecharZenModeAtivo();
+                requestAnimationFrame(() => {
+                    const container = document.getElementById('timeline-container');
+                    if (container) _sincronizarConexoesComAnimacao(container);
+                });
+            }
         }
     });
 
@@ -380,7 +394,13 @@ window.TopicsManager = (function () {
         let htmlComentario = '';
 
         if (anotacao.tipo === 'texto') {
-            htmlConteudo = `<p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(anotacao.conteudo))}"</p>`;
+            htmlConteudo = `
+            <div style="position: relative;">
+                <p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(anotacao.conteudo))}"</p>
+                <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">
+                    Ler texto completo ▾
+                </button>
+            </div>`;
             if (anotacao.comentario) htmlComentario = `<div class="card-comentario"><strong>Observação:</strong> ${escaparHTML(anotacao.comentario)}</div>`;
         } else if (anotacao.tipo === 'imagem') {
             htmlConteudo = `
@@ -473,7 +493,13 @@ window.TopicsManager = (function () {
                 let cComent = '';
                 
                 if (item.tipo === 'texto') {
-                    cConteudo = `<p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(item.conteudo))}"</p>`;
+                    cConteudo = `
+                    <div style="position: relative;">
+                        <p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(item.conteudo))}"</p>
+                        <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">
+                            Ler texto completo ▾
+                        </button>
+                    </div>`;
                     if (item.comentario) cComent = `<div class="card-comentario"><strong>Observação:</strong> ${escaparHTML(item.comentario)}</div>`;
                 } else if (item.tipo === 'imagem') {
                     cConteudo = `<div class="image-resize-wrapper" title="Arraste para redimensionar"><img class="card-imagem" src="${item.conteudo}" alt="Agrupamento"></div>`;
@@ -953,7 +979,7 @@ window.TopicsManager = (function () {
         }
             
         requestAnimationFrame(() => {
-            const textNodes = Array.from(document.querySelectorAll('.sub-text-content'));
+            const textNodes = Array.from(document.querySelectorAll('.sub-text-content, .card-texto'));
             const measurements = textNodes.map(node => ({
                 el: node,
                 btn: node.parentElement.querySelector('.btn-expand-text'),
@@ -1163,9 +1189,9 @@ window.TopicsManager = (function () {
      * Alterna a expansão do texto longo e re-desenha as linhas dinamicamente
      */
     function toggleTextExpansion(btn) {
-        const itemContainer = btn.closest('.sub-annotation-item');
-        const card = itemContainer.querySelector('.sub-annotation-card');
-        const content = card.querySelector('.sub-text-content');
+        const itemContainer = btn.closest('.sub-annotation-item, .main-card-wrapper');
+        const card = itemContainer.querySelector('.sub-annotation-card, .annotation-card');
+        const content = card.querySelector('.sub-text-content, .card-texto');
         if (!content) return;
 
         const esteCardEstavaFocado = card.classList.contains('zen-focused');
