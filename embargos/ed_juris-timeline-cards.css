@@ -60,7 +60,40 @@
 
 .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 4px; }
 .card-meta { font-size: 0.75rem; color: #888; font-weight: 400; }
-.card-texto { font-size: 0.88rem; color: #333; line-height: 1.6; font-style: italic; margin-top: 4px; }
+.card-texto { 
+    font-size: 0.88rem; color: #333; line-height: 1.6; font-style: italic; margin-top: 4px; 
+    /* Regras aditivas para truncamento */
+    display: -webkit-box; 
+    -webkit-line-clamp: 15; 
+    -webkit-box-orient: vertical; 
+    overflow: hidden; 
+    max-height: 24em; 
+    position: relative; 
+}
+.card-texto.expanded { 
+    -webkit-line-clamp: unset; 
+    display: block; 
+    overflow-y: auto; 
+    max-height: 450px; 
+    padding-right: 6px; 
+}
+.card-texto.is-truncated:not(.expanded)::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 4em;
+    pointer-events: none;
+    background: linear-gradient(to bottom, transparent, var(--theme-bg-white, #ffffff));
+}
+
+/* Herança do gradiente conforme a fase metodológica para camuflagem perfeita */
+.fase-1 .card-texto.is-truncated:not(.expanded)::after { background: linear-gradient(to bottom, transparent, var(--fase-1-bg)); }
+.fase-2 .card-texto.is-truncated:not(.expanded)::after { background: linear-gradient(to bottom, transparent, var(--fase-2-bg)); }
+.fase-3 .card-texto.is-truncated:not(.expanded)::after { background: linear-gradient(to bottom, transparent, var(--fase-3-bg)); }
+.fase-4 .card-texto.is-truncated:not(.expanded)::after { background: linear-gradient(to bottom, transparent, var(--fase-4-bg)); }
+
 .card-imagem { max-width: 100%; border-radius: 6px; margin-top: 10px; border: 1px solid var(--border-color); display: block; }
 .card-comentario { font-size: 0.84rem; color: #444; margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border-color); line-height: 1.6; }
 .card-comentario strong { color: var(--trt-blue-mid); font-weight: 600; }
@@ -204,12 +237,26 @@
 }
 
 #topics-tab-content.zen-mode-ativo .sub-annotation-item:not(.is-zen-focused),
-#topics-tab-content.zen-mode-ativo .main-card-wrapper,
+#topics-tab-content.zen-mode-ativo .main-card-wrapper:not(.is-zen-focused),
 #topics-tab-content.zen-mode-ativo .thesis-summary-panel,
 #topics-tab-content.zen-mode-ativo .topic-preamble-panel {
     opacity: 0.15;
     filter: blur(2px);
     pointer-events: none;
+}
+
+#topics-tab-content.zen-mode-ativo .main-card-wrapper.is-zen-focused {
+    opacity: 1 !important;
+    filter: none !important;
+    pointer-events: auto !important;
+    z-index: 10;
+}
+
+.main-card-wrapper.is-zen-focused > .annotation-card {
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+    transform: scale(1.02);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border-color: var(--trt-blue-mid) !important;
 }
 
 .sub-annotation-card.zen-focused {
