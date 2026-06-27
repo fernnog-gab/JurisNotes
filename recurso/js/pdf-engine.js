@@ -12,6 +12,9 @@ window.PdfEngine = (function () {
     const _pageMetadataCache = new Map();
     let _pdfRenderObserver = null;
     let _pdfReadTracker = null;
+    let _alturaEstimada = 0;
+    let _scrollHandler = null;
+    const _paginasRenderizadas = new Map();
 
     // Dependências Injetadas pelo app.js (Inversão de Controle)
     let _deps = {
@@ -67,19 +70,16 @@ window.PdfEngine = (function () {
         },
         
         goTo: function(pageNum) {
-            const pageContainer = document.querySelector(`.pdf-page-container[data-page-number="${pageNum}"]`);
+            if (!pageNum || !_alturaEstimada) return;
             const scrollContainer = document.getElementById('pdf-container');
+            if (!scrollContainer) return;
             
-            if (pageContainer && scrollContainer) {
-                const containerRect = scrollContainer.getBoundingClientRect();
-                const pageRect = pageContainer.getBoundingClientRect();
-                const targetScrollTop = scrollContainer.scrollTop + (pageRect.top - containerRect.top) - 16;
-                
-                scrollContainer.scrollTo({ top: targetScrollTop, behavior: 'auto' });
-                _deps.exibirToast(`Acessando fl. ${pageNum} via sumário.`, 'sucesso');
-            } else {
-                _deps.exibirToast('Página alvo não encontrada no DOM.', 'erro');
-            }
+            const targetTop = (pageNum - 1) * _alturaEstimada;
+            scrollContainer.scrollTo({ top: targetTop, behavior: 'auto' });
+            
+            _currentPage = pageNum;
+            _deps.atualizarDisplayPaginador(pageNum);
+            _deps.exibirToast(`Acessando fl. ${pageNum} via sumário.`, 'sucesso');
         },
         
         getDestinationHash: function(dest) { return ''; },
@@ -205,11 +205,20 @@ window.PdfEngine = (function () {
 
                     _deps.habilitarFerramentas();
 
+                    const firstPage = await pdf.getPage(1);
+                    const viewportCSS = firstPage.getViewport({ scale: 1.5 });
+                    const MARGEM = 24;
+                    _alturaEstimada = Math.floor(viewportCSS.height) + MARGEM;
+
                     const wrapper = document.getElementById('pdf-wrapper');
                     wrapper.innerHTML = '';
-                    wrapper.style.display = 'flex';
+                    wrapper.style.display = 'block';
+                    wrapper.style.height = `${pdf.numPages * _alturaEstimada}px`;
+                    
                     document.getElementById('pdf-placeholder').style.display = 'none';
                     document.getElementById('floating-page-panel').style.display = 'flex';
+                    
+                    const containerScroll = document.getElementById('pdf-container');
 
                     if (_pdfRenderObserver) _pdfRenderObserver.disconnect();
                     _pdfRenderObserver = new IntersectionObserver((entries) => {
@@ -220,7 +229,7 @@ window.PdfEngine = (function () {
                                 entry.target.dataset.loaded = 'true';
                             }
                         });
-                    }, { root: document.getElementById('pdf-container'), rootMargin: '600px 0px', threshold: 0 });
+                    }, { root: containerScroll, rootMargin: '600px 0px', threshold: 0 });
 
                     if (_pdfReadTracker) _pdfReadTracker.disconnect();
                     _pdfReadTracker = new IntersectionObserver((entries) => {
@@ -231,55 +240,87 @@ window.PdfEngine = (function () {
                                 _deps.atualizarDisplayPaginador(pageNum);
                             }
                         });
-                    }, { root: document.getElementById('pdf-container'), rootMargin: '-15% 0px -80% 0px', threshold: 0 });
-
-                    const firstPage = await pdf.getPage(1);
-                    const viewportCSS = firstPage.getViewport({ scale: 1.5 });
+                    }, { root: containerScroll, rootMargin: '-15% 0px -80% 0px', threshold: 0 });
 
                     try {
                         const textContentFirstPage = await firstPage.getTextContent();
-                        // 1. Higieniza o texto (remove espaços para evitar erros de leitura do PDF)
                         const rawString = textContentFirstPage.items.map(item => item.str).join('');
                         const sanitizedString = rawString.replace(/\s+/g, '');
 
-                        // 2. Regex atualizada para capturar 3 grupos: Sequencial, Dígito e Ano
-                    const cnjRegex = /(\d{7})[-]?(\d{2})\.?(\d{4})\.?\d\.?\d{2}\.?\d{4}/;
-                    const match = sanitizedString.match(cnjRegex);
+                        const cnjRegex = /(\d{7})[-]?(\d{2})\.?(\d{4})\.?\d\.?\d{2}\.?\d{4}/;
+                        const match = sanitizedString.match(cnjRegex);
 
-                    if (match && typeof _deps.onProcessoIdentificado === 'function') {
-                        // Modificação: Em vez de parseInt, aplicamos slice(-4) na string de 7 dígitos.
-                        // Isso preserva os zeros necessários para formar 4 casas decimais.
-                        const sequencialLimpo = match[1].slice(-4); 
-                        const digito = match[2];
-                        const ano = match[3];
-
-                        // Monta o formato ultra-curto (Ex: 0541-68.2025)
-                        const numeroUltraCurto = `${sequencialLimpo}-${digito}.${ano}`; 
-                        
-                        _deps.onProcessoIdentificado(numeroUltraCurto);
-                    }
+                        if (match && typeof _deps.onProcessoIdentificado === 'function') {
+                            const sequencialLimpo = match[1].slice(-4); 
+                            const digito = match[2];
+                            const ano = match[3];
+                            const numeroUltraCurto = `${sequencialLimpo}-${digito}.${ano}`; 
+                            
+                            _deps.onProcessoIdentificado(numeroUltraCurto);
+                        }
                     } catch (err) {
                         console.warn("[Juris Notes] Falha ao tentar capturar o número do processo na capa.", err);
                     }
 
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const pageContainer = document.createElement('div');
-                        pageContainer.className = 'pdf-page-container';
-                        pageContainer.dataset.pageNumber = i;
-                        pageContainer.dataset.loaded = 'false';
-                        pageContainer.style.cssText = `
-                            width: ${viewportCSS.width}px;
-                            height: ${viewportCSS.height}px;
-                            position: relative;
-                            margin-bottom: 24px;
-                            background-color: var(--pdf-bg-color);
-                            box-shadow: var(--shadow-md);
-                        `;
-                        wrapper.appendChild(pageContainer);
+                    // Motor Virtual Scroller
+                    function processarVirtualScroller() {
+                        if (!_pdfDoc) return;
                         
-                        _pdfRenderObserver.observe(pageContainer);
-                        _pdfReadTracker.observe(pageContainer);
+                        const scrollTop = containerScroll.scrollTop;
+                        const viewportHeight = containerScroll.clientHeight;
+
+                        const startPage = Math.max(1, Math.floor(scrollTop / _alturaEstimada) - 2);
+                        const endPage = Math.min(pdf.numPages, Math.ceil((scrollTop + viewportHeight) / _alturaEstimada) + 2);
+
+                        const chavesParaRemover = [];
+                        for (const [pageNum, el] of _paginasRenderizadas.entries()) {
+                            if (pageNum < startPage - 4 || pageNum > endPage + 4) {
+                                chavesParaRemover.push(pageNum);
+                            }
+                        }
+                        
+                        chavesParaRemover.forEach(pageNum => {
+                            const el = _paginasRenderizadas.get(pageNum);
+                            if (_pdfRenderObserver) _pdfRenderObserver.unobserve(el);
+                            if (_pdfReadTracker) _pdfReadTracker.unobserve(el);
+                            if (el._renderTask) el._renderTask.cancel(); 
+                            
+                            if (wrapper.contains(el)) wrapper.removeChild(el);
+                            _paginasRenderizadas.delete(pageNum);
+                        });
+
+                        for (let i = startPage; i <= endPage; i++) {
+                            if (!_paginasRenderizadas.has(i)) {
+                                const pageContainer = document.createElement('div');
+                                pageContainer.className = 'pdf-page-container';
+                                pageContainer.dataset.pageNumber = i;
+                                pageContainer.dataset.loaded = 'false';
+                                
+                                pageContainer.style.width = `${Math.floor(viewportCSS.width)}px`;
+                                pageContainer.style.height = `${Math.floor(viewportCSS.height)}px`;
+                                pageContainer.style.top = `${(i - 1) * _alturaEstimada}px`;
+                                pageContainer.style.boxShadow = 'var(--shadow-md)';
+                                
+                                wrapper.appendChild(pageContainer);
+                                _paginasRenderizadas.set(i, pageContainer);
+                                
+                                if (_pdfRenderObserver) _pdfRenderObserver.observe(pageContainer);
+                                if (_pdfReadTracker) _pdfReadTracker.observe(pageContainer);
+                            }
+                        }
                     }
+
+                    // Vínculo do Listener e Warm-up Recursivo
+                    if (_scrollHandler) containerScroll.removeEventListener('scroll', _scrollHandler);
+                    _scrollHandler = processarVirtualScroller;
+                    containerScroll.addEventListener('scroll', _scrollHandler, { passive: true });
+
+                    // Salto imediato para o fim (Gatilho da Fase Recursal)
+                    const posicaoFinal = Math.max(0, (pdf.numPages - 1) * _alturaEstimada - viewportCSS.height);
+                    containerScroll.scrollTop = posicaoFinal;
+
+                    // Aciona o Scroller a primeira vez
+                    processarVirtualScroller();
 
                     await _deps.onPdfCarregado(isRetomada);
                 })
@@ -498,6 +539,11 @@ window.PdfEngine = (function () {
     }
 
     function encerrar() {
+        const containerScroll = document.getElementById('pdf-container');
+        if (_scrollHandler && containerScroll) {
+            containerScroll.removeEventListener('scroll', _scrollHandler);
+            _scrollHandler = null;
+        }
         if (_pdfRenderObserver) {
             _pdfRenderObserver.disconnect();
             _pdfRenderObserver = null;
@@ -506,6 +552,9 @@ window.PdfEngine = (function () {
             _pdfReadTracker.disconnect();
             _pdfReadTracker = null;
         }
+        
+        _paginasRenderizadas.clear();
+        _alturaEstimada = 0;
         _pdfDoc = null;
         _pageLabelsGlobais = null;
         _pageMetadataCache.clear();

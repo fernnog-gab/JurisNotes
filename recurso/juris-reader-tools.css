@@ -9,10 +9,26 @@
 #pdf-container { flex: 1; overflow: auto; padding: 24px; display: flex; flex-direction: column; align-items: center; position: relative; }
 #pdf-placeholder { color: #aab; text-align: center; margin-top: 60px; font-size: 0.95rem; line-height: 1.7; }
 #pdf-placeholder svg { display: block; margin: 0 auto 16px; opacity: 0.3; }
-#pdf-wrapper { position: relative; display: none; flex-shrink: 0; width: 100%; flex-direction: column; align-items: center; }
+#pdf-wrapper { position: relative; display: none; width: 100%; overflow: hidden; }
 
-.pdf-page-container { background-color: var(--pdf-bg-color) !important; transition: background-color 0.3s ease; }
+.pdf-page-container { position: absolute; left: 50%; transform: translateX(-50%); background-color: var(--pdf-bg-color) !important; transition: opacity 0.3s ease; will-change: transform; }
 .pdf-page-container canvas { mix-blend-mode: multiply; }
+
+.pdf-page-container[data-loaded="false"] {
+    background: linear-gradient(
+        90deg,
+        var(--pdf-bg-color) 25%,
+        color-mix(in srgb, var(--pdf-bg-color) 85%, #d1d5db) 50%,
+        var(--pdf-bg-color) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s infinite linear;
+}
+
+@keyframes skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
 
 .textLayer { position: absolute; top: 0; left: 0; right: 0; bottom: 0; overflow: hidden; line-height: 1; pointer-events: auto; user-select: text; transform-origin: 0% 0%; }
 .textLayer span { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; }
