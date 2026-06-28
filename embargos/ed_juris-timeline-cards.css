@@ -291,6 +291,45 @@
     gap: 4px;
 }
 
+/* ================================================
+   1. Highlight visual do card correlacionado focado 
+   ================================================ */
+.correlated-item-wrapper .annotation-card.zen-focused {
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+    transform: scale(1.02);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border-color: var(--trt-blue-mid) !important;
+    z-index: 10;
+}
+
+/* ================================================
+   2. Neutraliza o card mestre se ele não for o foco principal 
+   ================================================ */
+#topics-tab-content.zen-mode-ativo .main-card-wrapper.is-zen-focused > .annotation-card:not(.zen-focused) {
+    transform: none;
+    border-color: inherit !important;
+    box-shadow: var(--shadow-sm); /* Retorna à sombra base */
+}
+
+/* ================================================
+   3. Esmaece o wrapper inteiro dos cards irmãos (ocultando drag handles) 
+   ================================================ */
+#topics-tab-content.zen-mode-ativo .main-card-wrapper.is-zen-focused .correlated-item-wrapper {
+    opacity: 0.18;
+    filter: blur(1.5px);
+    pointer-events: none;
+    transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+/* ================================================
+   4. Protege o wrapper específico que contém o card focado 
+   ================================================ */
+#topics-tab-content.zen-mode-ativo .main-card-wrapper.is-zen-focused .correlated-item-wrapper:has(.annotation-card.zen-focused) {
+    opacity: 1 !important;
+    filter: none !important;
+    pointer-events: auto !important;
+}
+
 /* --- DIRETRIZES DA IA (ESTRUTURA VISUAL) --- */
 .timeline-item-master.nivel-hierarquico { margin-bottom: 24px; }
 

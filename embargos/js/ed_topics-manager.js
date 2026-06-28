@@ -40,6 +40,9 @@ window.TopicsManager = (function () {
 
     // Funções Privadas do Zen Mode
     function _ativarZenMode(card) {
+        // ARQUITETURA: Uso intencional de Short-Circuit.
+        // 1. Tenta achar o container se for um Nó de Ideia (.sub-annotation-item).
+        // 2. Fallback: Se for um Card Mestre ou Correlacionado, pega o grupo raiz (.main-card-wrapper).
         const item = card.closest('.sub-annotation-item') || card.closest('.main-card-wrapper');
         const contentArea = document.getElementById('topics-tab-content');
         if (!contentArea || !item) return;
@@ -94,7 +97,8 @@ window.TopicsManager = (function () {
     document.addEventListener('click', (e) => {
         const contentArea = document.getElementById('topics-tab-content');
         if (contentArea && contentArea.classList.contains('zen-mode-ativo')) {
-            if (!e.target.closest('.is-zen-focused') && !e.target.closest('.btn-expand-text')) {
+            // Alterado de .is-zen-focused para .zen-focused para destravar o fechamento clicando nos fundos esmaecidos
+            if (!e.target.closest('.zen-focused') && !e.target.closest('.btn-expand-text')) {
                 if (typeof _fecharZenModeAtivo === 'function') _fecharZenModeAtivo();
                 requestAnimationFrame(() => {
                     const container = document.getElementById('timeline-container');
@@ -1191,8 +1195,10 @@ window.TopicsManager = (function () {
      * Alterna a expansão do texto longo (com MÁQUINA DE ESTADO e ZEN MODE)
      */
     function toggleTextExpansion(btn) {
-        const itemContainer = btn.closest('.sub-annotation-item, .main-card-wrapper');
-        const card = itemContainer.querySelector('.sub-annotation-card, .annotation-card');
+        // Busca ascendente resolve o erro de target: pega o card exato, seja mestre ou correlacionado
+        const card = btn.closest('.sub-annotation-card, .annotation-card');
+        if (!card) return;
+
         const content = card.querySelector('.sub-text-content, .card-texto');
         if (!content) return;
 
