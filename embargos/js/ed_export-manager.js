@@ -154,14 +154,16 @@ window.ExportManager = (function () {
             md += `*Nenhum elemento processual foi anexado para auditoria.*\n`;
         } else {
             // 3. ITERAÇÃO PROFUNDA COM ENVELOPAMENTO XML
-            topico.anotacoes.forEach((an, idx) => {
-                const numIdeia = idx + 1;
-                const refCitacao = _formatarCitacaoOficial(an.pjeId, an.pagina);
-                const tituloVicio = an.tese ? an.tese : (topico.vicio || 'Auditoria Geral');
+                topico.anotacoes.forEach((an, idx) => {
+                    const numIdeia = idx + 1;
+                    const refCitacao = _formatarCitacaoOficial(an.pjeId, an.pagina);
+                    
+                    // Avaliação OK: Utiliza o SSOT com renderHtml=false para garantir uma string limpa no payload da IA
+                    const tituloVicio = window.JurisUtils.obterBadgeTeseCompleto(an.vicio || topico.vicio, an.tese, false) || 'Auditoria Geral';
 
-                md += `<analise_de_evidencia>\n`;
-                md += `[IDENTIFICADOR DA EVIDÊNCIA]: ${numIdeia}\n`;
-                md += `[VÍCIO VINCULADO]: ${_escapeXmlAttr(tituloVicio)}\n`;
+                    md += `<analise_de_evidencia>\n`;
+                    md += `[IDENTIFICADOR DA EVIDÊNCIA]: ${numIdeia}\n`;
+                    md += `[VÍCIO VINCULADO]: ${_escapeXmlAttr(tituloVicio)}\n`;
                 
                 const faseContexto  = an.fase || an.documento || 'Não especificado';
                 const poloContexto  = an.polo || 'N/A';

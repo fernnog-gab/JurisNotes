@@ -947,13 +947,16 @@ window.TopicsManager = (function () {
                         }
 
                         const matureClass = isMature ? 'mature' : '';
-                        const txt = escaparHTML(an.tese);
+                        
+                        // Escapa apenas a tese digitada pelo usuário e aciona o novo motor (SSOT)
+                        const teseEscapada = an.tese ? escaparHTML(an.tese) : '';
+                        const textoPainelRenderizado = window.JurisUtils.obterBadgeTeseCompleto(an.vicio || tipoVicio, teseEscapada, true);
 
                         sumarioHtml += `
                             <div class="thesis-badge ${matureClass}" onclick="abrirModalTese('${activeTabId}', ${idx})">
                                 <div class="thesis-badge-inner" ${bgStyle}>
                                     <span class="num" style="background-color: ${_activeTopicoCor}; color: ${corTextoTese};">${idx + 1}</span> 
-                                    <span class="texto-tese">${txt}</span>
+                                    <span class="texto-tese">${textoPainelRenderizado}</span>
                                 </div>
                             </div>`;
                     }

@@ -78,6 +78,30 @@ window.JurisUtils.limparTextoPDF = function(texto) {
         .trim();
 };
 
+window.JurisUtils.formatarVicioED = function(vicioRaw) {
+    if (!vicioRaw) return 'Vício Não Especificado';
+    
+    // Dicionário de Correção Gramatical e Tipificação
+    const dicionario = {
+        'omissao': 'Omissão',
+        'contradicao': 'Contradição',
+        'erro': 'Erro Material / Obscuridade'
+    };
+    
+    return dicionario[vicioRaw.toLowerCase()] || vicioRaw;
+};
+
+window.JurisUtils.obterBadgeTeseCompleto = function(vicioRaw, teseTexto, renderHtml = false) {
+    const vicioFormatado = window.JurisUtils.formatarVicioED(vicioRaw);
+    if (teseTexto && teseTexto.trim() !== '') {
+        return `${vicioFormatado} — ${teseTexto.trim()}`;
+    }
+    // Se a tese estiver vazia, aplicamos a melhoria de UX caso a flag renderHtml seja true
+    return renderHtml 
+        ? `${vicioFormatado} <span style="opacity:0.6; font-style:italic; font-weight:normal;">— (Clique para definir a tese recursal)</span>` 
+        : vicioFormatado;
+};
+
 /* ================================================
    CONTROLE DE INTERFACE DE AUTENTICAÇÃO
    ================================================ */
