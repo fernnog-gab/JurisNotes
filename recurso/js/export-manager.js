@@ -461,7 +461,7 @@ window.ExportManager = (function () {
      *   1. Markdown estruturado (.md) — o "Roteiro do Diretor"
      *   2. Imagens referenciadas (.png) — baixadas em fila sequencial segura
      */
-    async function exportarTopicoAtivo() {
+    function exportarTopicoAtivo() {
         const activeId = _deps.getActiveTabId();
         if (!activeId) {
             _deps.exibirToast('Selecione um tópico antes de exportar.', 'aviso');
@@ -474,13 +474,10 @@ window.ExportManager = (function () {
             return;
         }
 
-        // --- CÓDIGO REFATORADO (Assíncrono e Seguro) ---
-        if (window.BalancaManager) {
-            const prosseguir = await window.BalancaManager.executarGuardrailDeTarefas('gerar o pacote de exportação para a IA');
-            if (!prosseguir) {
-                _deps.exibirToast('Exportação interrompida pelo usuário.', 'aviso');
-                return; // Aborta a exportação
-            }
+        // --- CÓDIGO REFATORADO (Substitui o bloco antigo de BalancaManager) ---
+        if (window.BalancaManager && !window.BalancaManager.executarGuardrailDeTarefas('gerar o pacote de exportação para a IA')) {
+            _deps.exibirToast('Exportação interrompida pelo usuário.', 'aviso');
+            return; // Aborta a exportação
         }
         // --- FIM DA REFATORAÇÃO ---
 

@@ -586,7 +586,7 @@ window.adicionarTagGlobal = async function() {
 
 window.editarTagGlobal = async function(idx) {
     const tagAntiga = _tagsGlobais[idx];
-    const novoNome = await window.DialogManager.prompt('Renomear tag (atualizará todos os modelos):', tagAntiga, '🏷️ Renomear Tag');
+    const novoNome = prompt('Renomear tag (atualizará todos os modelos):', tagAntiga);
     if (!novoNome || novoNome.trim() === '' || novoNome.trim() === tagAntiga) return;
     
     const nomeLimpo = novoNome.trim();
@@ -606,8 +606,7 @@ window.editarTagGlobal = async function(idx) {
 
 window.excluirTagGlobal = async function(idx) {
     const tagAntiga = _tagsGlobais[idx];
-    const confirmou = await window.DialogManager.confirmDestructive(`Excluir a tag "${tagAntiga}"?\nEla será removida de todos os modelos que a utilizam.`, 'Excluir Tag');
-    if(!confirmou) return;
+    if(!confirm(`Excluir a tag "${tagAntiga}"?\nEla será removida de todos os modelos que a utilizam.`)) return;
     
     const removida = _tagsGlobais.splice(idx, 1)[0];
     try {
@@ -648,8 +647,7 @@ window.excluirNoAcervo = async function(modeloId, nodeIndex) {
     if (!modelo) return;
 
     if (modelo.nos.length === 1) {
-        const confirmou = await window.DialogManager.confirmDestructive(`ATENÇÃO: Este é o último nó do modelo!\n\nAo excluí-lo, o modelo "${modelo.nome}" será inteiramente apagado do acervo.\nDeseja continuar?`, 'Excluir Modelo');
-        if (!confirmou) return;
+        if (!confirm(`ATENÇÃO: Este é o último nó do modelo!\n\nAo excluí-lo, o modelo "${modelo.nome}" será inteiramente apagado do acervo.\nDeseja continuar?`)) return;
         try {
             await AcervoManager.excluirModeloCompleto(modeloId);
             exibirToast('Último nó removido e modelo excluído.', 'sucesso');
@@ -659,8 +657,7 @@ window.excluirNoAcervo = async function(modeloId, nodeIndex) {
         return; 
     } 
 
-    const confirmouNo = await window.DialogManager.confirmDestructive('Tem certeza que deseja excluir este nó do modelo?', 'Excluir Nó');
-    if (!confirmouNo) return;
+    if (!confirm('Tem certeza que deseja excluir este nó do modelo?')) return;
     try {
         await AcervoManager.removerNoDoModelo(modeloId, nodeIndex);
         exibirToast('Nó excluído com sucesso.', 'sucesso');
@@ -672,7 +669,7 @@ window.acionarRenomearModeloAtual = async function() {
     if (!_modeloSelecionadoId) return exibirToast('Nenhum modelo selecionado.', 'erro');
     const nomeElemento = document.getElementById('edit-modelo-nome');
     const nomeAtual = nomeElemento.textContent;
-    const novoNome = await window.DialogManager.prompt('Digite o novo nome para este modelo:', nomeAtual, 'Renomear Modelo');
+    const novoNome = prompt('Digite o novo nome para este modelo:', nomeAtual);
     
     if (novoNome === null || novoNome.trim() === '' || novoNome.trim() === nomeAtual) return;
 
@@ -687,8 +684,7 @@ window.acionarExcluirModeloAtual = async function() {
     if (!_modeloSelecionadoId) return;
     const nomeAtual = document.getElementById('edit-modelo-nome').textContent;
     
-    const confirmou = await window.DialogManager.confirmDestructive(`Você está prestes a excluir definitivamente o modelo "${nomeAtual}" e todos os seus dados.\n\nEsta ação NÃO pode ser desfeita. Confirmar exclusão?`, 'Excluir Modelo Definitivamente');
-    if (!confirmou) return;
+    if (!confirm(`ATENÇÃO: Você está prestes a excluir definitivamente o modelo "${nomeAtual}" e todos os seus dados.\n\nEsta ação NÃO pode ser desfeita. Confirmar exclusão?`)) return;
 
     try {
         await AcervoManager.excluirModeloCompleto(_modeloSelecionadoId);

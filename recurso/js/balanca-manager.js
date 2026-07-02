@@ -61,13 +61,9 @@ window.BalancaManager = (function() {
     }
 
     // NOVO: Função protegida contra perda de dados
-    async function resetToGenerator() {
+    function resetToGenerator() {
         if (htmlState !== null) {
-            const confirmacao = await window.DialogManager.confirm(
-                "⚠️ Atenção:\n\nIsso substituirá o Dossiê atual. Se você fez marcações de checkbox que não foram salvas no backup principal, elas serão perdidas.\n\nDeseja gerar um novo dossiê?", 
-                "Aviso de Substituição", 
-                "Sim, substituir"
-            );
+            const confirmacao = confirm("⚠️ Atenção:\n\nIsso substituirá o Dossiê atual. Se você fez marcações de checkbox que não foram salvas no backup principal, elas serão perdidas.\n\nDeseja gerar um novo dossiê?");
             if (!confirmacao) return;
         }
         
@@ -245,101 +241,19 @@ window.BalancaManager = (function() {
     }
 
     /**
-     * Valida tarefas pendentes e emite um alerta assíncrono se houver pendências.
+     * Valida tarefas pendentes e emite um alerta nativo síncrono se houver pendências.
      * @param {string} acaoDesejada - Texto descritivo da ação (ex: "copiar o pacote para a IA").
-     * @returns {Promise<boolean>} - Retorna true se puder prosseguir, false se abortado.
+     * @returns {boolean} - Retorna true se puder prosseguir (sem tarefas ou usuário confirmou), false se abortado.
      */
-    async function executarGuardrailDeTarefas(acaoDesejada) {
+    function executarGuardrailDeTarefas(acaoDesejada) {
+        // PERFOMANCE: Chamada única ao DOM para evitar layout thrashing
         const count = avaliarTarefasPendentes(); 
-        if (count > 0) {
-            const msg = `Existem ${count} tarefa(s) pendente(s) não concluídas no Painel da Balança.\n\nTem certeza de que deseja ${acaoDesejada} mesmo assim?`;
-            return await window.DialogManager.confirm(msg, 'Pendências Detectadas', 'Sim, prosseguir');
-        }
-        return true; 
-    }
-
-    // ==========================================
-    // NOVO: GERAÇÃO DE ABAS EM LOTE (ONE-CLICK)
-    // ==========================================
-    async function gerarTopicosEmLote() {
-        const iframe = document.getElementById('balanca-iframe');
-        if (!iframe || !iframe.contentDocument) return;
-
-        // Localiza a lista principal no Dossiê
-        const containerLista = iframe.contentDocument.getElementById('obs-list');
-        if (!containerLista) {
-            window.exibirToast('Não foi possível localizar a lista no dossiê.', 'erro');
-            return;
-        }
-
-        // Em vez de buscar checkboxes marcados, pegamos TODOS os itens da lista (<li>)
-        const blocosDeTopicos = containerLista.querySelectorAll('li');
-
-        if (blocosDeTopicos.length === 0) {
-            window.exibirToast('O Dossiê está vazio. Não há matérias para gerar.', 'aviso');
-            return;
-        }
-
-        const nomesSanitizadosExtracao = new Set();
-        const topicosAtuais = topicos.map(t => t.nome.replace(/\s+/g, ' ').trim().toLowerCase());
-
-        blocosDeTopicos.forEach(bloco => {
-            let rawText = '';
-            
-            // Estratégia de Fallback em Cascata para achar o nome do tópico dentro do bloco
-            const hElem = bloco.querySelector('h3, h4, strong, .topic-title');
-            
-            if (hElem) {
-                rawText = hElem.textContent; // Achou um título forte
-            } else {
-                const lbl = bloco.querySelector('label');
-                if (lbl) {
-                    rawText = lbl.textContent; // Achou um label
-                } else {
-                    // Último recurso: pega apenas o texto direto (ignora botões internos)
-                    rawText = bloco.firstChild ? bloco.firstChild.textContent : ''; 
-                }
-            }
-
-            // Limpeza de espaços duplos e quebras de linha
-            const cleanName = rawText.replace(/\s+/g, ' ').trim();
-            
-            // Evita criar abas com nomes vazios ou gigantes (sujeira de HTML)
-            if (cleanName.length > 0 && cleanName.length < 100) {
-                nomesSanitizadosExtracao.add(cleanName);
-            }
-        });
-
-        const novosParaCriar = Array.from(nomesSanitizadosExtracao).filter(nome => 
-            !topicosAtuais.includes(nome.toLowerCase())
-        );
-
-        if (novosParaCriar.length === 0) {
-            window.exibirToast('Todas as matérias do Dossiê já existem como abas.', 'info');
-            return;
-        }
-
-        // Trava de segurança para não poluir a tela sem querer
-        if (novosParaCriar.length > 8) {
-            const confirmacao = await window.DialogManager.confirm(
-                `O sistema identificou ${novosParaCriar.length} tópicos no Dossiê. Isso irá expandir bastante sua área de trabalho.\n\nDeseja criar todas as abas?`, 
-                'Criação em Massa', 
-                'Sim, criar tudo'
-            );
-            if (!confirmacao) return;
-        }
-
-        // Cria as abas em lote na memória
-        novosParaCriar.forEach(nomeTopico => {
-            const cor = TopicsManager.obterCor(topicos.length);
-            topicos.push({ id: 'topico-' + Date.now() + '-' + Math.random().toString(36).substring(7), nome: nomeTopico, cor, anotacoes: [] });
-        });
-
-        // Atualiza a tela de uma só vez (Performance)
-        if (typeof renderizarTopicos === 'function') renderizarTopicos();
-        if (typeof salvarBackupAutomatico === 'function') salvarBackupAutomatico();
         
-        window.exibirToast(`${novosParaCriar.length} tópicos criados com sucesso!`, 'sucesso');
+        if (count > 0) {
+            const msg = `ATENÇÃO: Existem ${count} tarefa(s) pendente(s) não concluídas no Painel da Balança.\n\nTem certeza de que deseja ${acaoDesejada} mesmo assim?`;
+            return confirm(msg); // Bloqueia a thread e retorna a decisão do usuário
+        }
+        return true; // Passe livre se não houver tarefas
     }
 
     return { 
@@ -351,7 +265,6 @@ window.BalancaManager = (function() {
         resetarEstado,
         resetToGenerator,
         getPendingTasks: avaliarTarefasPendentes,
-        executarGuardrailDeTarefas,
-        gerarTopicosEmLote // <--- NOVO
+        executarGuardrailDeTarefas // <--- NOVA FUNÇÃO EXPORTADA
     };
 })();

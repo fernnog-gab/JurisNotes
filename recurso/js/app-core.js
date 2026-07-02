@@ -3,70 +3,6 @@
    ORQUESTRADOR CENTRAL E INFRAESTRUTURA DA APLICAÇÃO
    ================================================ */
 
-window.DialogManager = (function() {
-    function abrir(config) {
-        return new Promise((resolve) => {
-            const modal = document.getElementById('custom-dialog-modal');
-            const backdrop = document.getElementById('custom-dialog-backdrop');
-            const input = document.getElementById('custom-dialog-input');
-            const btnOk = document.getElementById('custom-dialog-btn-ok');
-            const btnCancel = document.getElementById('custom-dialog-btn-cancel');
-            
-            document.getElementById('custom-dialog-title').innerHTML = config.titulo || '⚠️ Atenção';
-            document.getElementById('custom-dialog-message').textContent = config.mensagem;
-            btnOk.textContent = config.btnOk || 'Confirmar';
-            btnCancel.textContent = config.btnCancel || 'Cancelar';
-            
-            btnOk.style.background = config.isDestructive ? '#c62828' : 'var(--trt-blue)';
-            
-            if (config.isPrompt) {
-                input.style.display = 'block';
-                input.value = config.valorPadrao || '';
-            } else {
-                input.style.display = 'none';
-            }
-
-            backdrop.style.display = 'block';
-            modal.style.display = 'flex';
-            if (config.isPrompt) setTimeout(() => input.focus(), 50);
-
-            const fechar = (resultado) => {
-                backdrop.style.display = 'none';
-                modal.style.display = 'none';
-                btnOk.replaceWith(btnOk.cloneNode(true));
-                btnCancel.replaceWith(btnCancel.cloneNode(true));
-                document.removeEventListener('keydown', handleKeydown);
-                resolve(resultado);
-            };
-
-            const handleActionOk = () => {
-                const res = config.isPrompt ? input.value.trim() : true;
-                if (config.isPrompt && !res && config.requireInput) {
-                    window.exibirToast('Este campo não pode ficar vazio.', 'aviso');
-                    input.focus();
-                    return;
-                }
-                fechar(res);
-            };
-
-            document.getElementById('custom-dialog-btn-ok').addEventListener('click', handleActionOk);
-            document.getElementById('custom-dialog-btn-cancel').addEventListener('click', () => fechar(config.isPrompt ? null : false));
-
-            const handleKeydown = (e) => {
-                if (e.key === 'Escape') fechar(config.isPrompt ? null : false);
-                if (e.key === 'Enter') handleActionOk();
-            };
-            document.addEventListener('keydown', handleKeydown);
-        });
-    }
-
-    return {
-        confirm: (msg, titulo, btnOk, btnCancel) => abrir({ mensagem: msg, titulo, btnOk, btnCancel, isPrompt: false }),
-        confirmDestructive: (msg, titulo = '⚠️ Exclusão Irreversível') => abrir({ mensagem: msg, titulo, btnOk: 'Sim, Excluir', isDestructive: true, isPrompt: false }),
-        prompt: (msg, valorPadrao, titulo = '✏️ Inserir Dados') => abrir({ mensagem: msg, titulo, valorPadrao, isPrompt: true, btnOk: 'Salvar', requireInput: false })
-    };
-})();
-
 /* ================================================
    MÓDULO DA SPLASH SCREEN (GERENCIADOR DE ESTADO E EVENT LOOP)
    ================================================ */
@@ -661,10 +597,7 @@ async function salvarBackupAutomatico() {
 
 async function novoProcesso(event) {
     if ((topicos.length > 0 || (window.PdfEngine && PdfEngine.getPdfDoc())) && !modoRetomada) {
-        const continuar = await window.DialogManager.confirmDestructive(
-            'Iniciar um novo processo irá apagar as anotações em memória não salvas.\n\nDeseja continuar?', 
-            'Novo Processo'
-        );
+        const continuar = confirm('Iniciar um novo processo irá apagar as anotações em memória não salvas.\nDeseja continuar?');
         if (!continuar) {
             event.target.value = '';
             return;
@@ -1053,10 +986,10 @@ function fecharModalGerenciarAbas() {
     document.getElementById('modal-gerenciar-abas').style.display = 'none';
 }
 
-async function renomearAba(id) {
+function renomearAba(id) {
     const topico = topicos.find(t => t.id === id);
     if (!topico) return;
-    const novoNome = await window.DialogManager.prompt('Digite o novo nome para a aba:', topico.nome, 'Renomear Aba');
+    const novoNome = prompt('Digite o novo nome para a aba:', topico.nome);
     if (novoNome && novoNome.trim() !== '') {
         topico.nome = novoNome.trim();
         renderizarTopicos();
