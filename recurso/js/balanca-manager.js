@@ -257,7 +257,7 @@ window.BalancaManager = (function() {
     }
 
     // ==========================================
-    // NOVO: MOTOR DE EXTRAÇÃO DE ABAS (ULTRA-RESILIENTE)
+    // NOVO: MOTOR DE EXTRAÇÃO DE ABAS (PRECISÃO ESTRUTURAL)
     // ==========================================
     function extrairAbasEmLote() {
         const iframe = document.getElementById('balanca-iframe');
@@ -268,73 +268,63 @@ window.BalancaManager = (function() {
 
         const doc = iframe.contentDocument;
         let nomesExtraidos = [];
-        let headerNode = null;
 
         try {
-            // PASSO 1: Varredura Profunda para achar o texto, não importando a tag (h1, strong, div, p...)
-            const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_ELEMENT, null, false);
-            while (walker.nextNode()) {
-                const el = walker.currentNode;
-                // Evita nós gigantes (body, main) e foca em elementos que contêm o texto diretamente
-                if (el.children.length <= 2 && el.textContent.length < 150) { 
-                    const textoLimpo = el.textContent.toLowerCase();
-                    if (textoLimpo.includes('trilha') && textoLimpo.includes('julgamento')) {
-                        headerNode = el;
-                        break; // Achou o ponto de ancoragem!
+            // ESTRATÉGIA PRINCIPAL: Mapeamento exato da arquitetura do Dossiê Recursal
+            // O Dossiê agrupa a Trilha no ID "sortable-list"
+            const listaTrilha = doc.getElementById('sortable-list');
+            
+            if (listaTrilha) {
+                // Captura todos os itens arrastáveis
+                const itens = listaTrilha.querySelectorAll('.checklist-item');
+                
+                itens.forEach(item => {
+                    // O título pode estar como texto fixo (span) ou em modo de edição (input)
+                    const spanTitulo = item.querySelector('.item-title');
+                    const inputTitulo = item.querySelector('.item-title-input');
+                    
+                    let texto = '';
+                    if (spanTitulo) {
+                        texto = spanTitulo.textContent;
+                    } else if (inputTitulo) {
+                        // Tenta ler o valor digitado ou o atributo HTML exportado
+                        texto = inputTitulo.value || inputTitulo.getAttribute('value') || '';
+                    }
+
+                    // Limpa quebras de linha e múltiplos espaços
+                    texto = texto.trim().replace(/\s+/g, ' ');
+                    
+                    // Se houver um texto válido, entra para a fila de criação
+                    if (texto.length > 2) {
+                        nomesExtraidos.push(texto);
+                    }
+                });
+            } else {
+                // FALLBACK: Caso no futuro o ID "sortable-list" mude, caçamos pelo título da seção
+                const titulosSecao = Array.from(doc.querySelectorAll('.section-title'));
+                const tituloTrilha = titulosSecao.find(el => 
+                    el.textContent.toLowerCase().includes('trilha') && 
+                    el.textContent.toLowerCase().includes('julgamento')
+                );
+                
+                if (tituloTrilha) {
+                    const containerProximo = tituloTrilha.nextElementSibling;
+                    if (containerProximo && containerProximo.classList.contains('checklist-container')) {
+                        const spans = containerProximo.querySelectorAll('.item-title');
+                        spans.forEach(span => {
+                            const texto = span.textContent.trim().replace(/\s+/g, ' ');
+                            if (texto.length > 2) nomesExtraidos.push(texto);
+                        });
                     }
                 }
             }
 
-            if (headerNode) {
-                // PASSO 2: Acha a primeira Lista HTML (ul, ol) que aparece fisicamente DEPOIS do título
-                let targetList = null;
-                const allLists = Array.from(doc.querySelectorAll('ul, ol'));
-                
-                for (let list of allLists) {
-                    // compareDocumentPosition = 4 significa que a lista está DEPOIS do título no HTML
-                    if (headerNode.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING) {
-                        targetList = list;
-                        break;
-                    }
-                }
-
-                // Se achou uma lista padrão de HTML, extrai os <li>
-                if (targetList) {
-                    const items = targetList.querySelectorAll('li');
-                    items.forEach(li => {
-                        const text = Array.from(li.childNodes)
-                            .filter(node => node.nodeType === Node.TEXT_NODE)
-                            .map(node => node.textContent)
-                            .join('')
-                            .trim()
-                            .replace(/\s+/g, ' '); // Tira espaços múltiplos
-                        if (text.length > 2) nomesExtraidos.push(text);
-                    });
-                } 
-                
-                // PASSO 3 (FALLBACK DE INTELIGÊNCIA): E se o Dossiê usar caixas de texto (textarea)?
-                if (nomesExtraidos.length === 0) {
-                    const allTextareas = Array.from(doc.querySelectorAll('textarea'));
-                    for (let ta of allTextareas) {
-                        if (headerNode.compareDocumentPosition(ta) & Node.DOCUMENT_POSITION_FOLLOWING) {
-                            // Pega o texto da textarea, quebra por linhas (Enters)
-                            const linhas = ta.value.split('\n');
-                            linhas.forEach(linha => {
-                                // Limpa caracteres que o usuário possa ter usado (hífen, pontos, números ex: "1. ", "- ")
-                                const linhaLimpa = linha.replace(/^[-*•\d.)\]]+\s*/, '').trim();
-                                if (linhaLimpa.length > 2) nomesExtraidos.push(linhaLimpa);
-                            });
-                            break; // Pega apenas a primeira textarea após o título
-                        }
-                    }
-                }
-            }
-
-            // PASSO 4: Validação Final e Envio
+            // Validação Final
             if (nomesExtraidos.length === 0) {
-                throw new Error("Marcador 'Trilha de Julgamento' encontrado, mas nenhuma lista ou texto localizado após ele.");
+                throw new Error("A Trilha de Julgamento foi localizada, mas não há itens cadastrados nela.");
             }
 
+            // Envia para o motor global do AppCore (que faz a deduplicação e mutação)
             if (typeof window.criarTopicosEmLote === 'function') {
                 window.criarTopicosEmLote(nomesExtraidos);
             }
@@ -342,7 +332,7 @@ window.BalancaManager = (function() {
         } catch (e) {
             console.warn("[Juris Notes] Detalhe do Erro na Extração em Lote:", e);
             if (typeof window.exibirToast === 'function') {
-                window.exibirToast('Trilha de Julgamento não localizada ou está vazia no documento atual.', 'aviso');
+                window.exibirToast('Trilha de Julgamento vazia ou não localizada no documento.', 'aviso');
             }
         }
     }
