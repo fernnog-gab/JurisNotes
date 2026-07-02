@@ -256,6 +256,67 @@ window.BalancaManager = (function() {
         return true; // Passe livre se não houver tarefas
     }
 
+    function extrairAbasEmLote() {
+        const iframe = document.getElementById('balanca-iframe');
+        if (!iframe || !iframe.contentDocument) {
+            if (typeof window.exibirToast === 'function') window.exibirToast('Não foi possível ler o documento do Dossiê.', 'erro');
+            return;
+        }
+
+        const doc = iframe.contentDocument;
+        let nomesExtraidos = [];
+
+        try {
+            const headings = Array.from(doc.querySelectorAll('h1, h2, h3, h4, h5, .titulo-secao'));
+            const trilhaHeader = headings.find(h => 
+                h.textContent.toLowerCase().includes('trilha') && h.textContent.toLowerCase().includes('julgamento')
+            );
+
+            if (trilhaHeader) {
+                let sibling = trilhaHeader.nextElementSibling;
+                let listElement = null;
+                
+                for (let i = 0; i < 5 && sibling; i++) {
+                    if (sibling.tagName === 'UL' || sibling.tagName === 'OL') {
+                        listElement = sibling; break;
+                    }
+                    const internalList = sibling.querySelector('ul, ol');
+                    if (internalList) {
+                        listElement = internalList; break;
+                    }
+                    sibling = sibling.nextElementSibling;
+                }
+
+                if (listElement) {
+                    const items = listElement.querySelectorAll('li');
+                    items.forEach(li => {
+                        // ARQUITETURA OTIMIZADA: Extrai apenas nós de texto direto, ignorando tags aninhadas (inputs/buttons)
+                        const text = Array.from(li.childNodes)
+                            .filter(node => node.nodeType === Node.TEXT_NODE)
+                            .map(node => node.nodeContext || node.textContent)
+                            .join('')
+                            .trim()
+                            .replace(/\s+/g, ' ');
+                            
+                        if (text.length > 2) nomesExtraidos.push(text);
+                    });
+                }
+            } else {
+                const fallbackList = doc.querySelectorAll('.lista-trilha-julgamento li');
+                fallbackList.forEach(li => nomesExtraidos.push(li.textContent.trim()));
+            }
+
+            if (nomesExtraidos.length === 0) throw new Error("Estrutura não encontrada.");
+
+            if (typeof window.criarTopicosEmLote === 'function') {
+                window.criarTopicosEmLote(nomesExtraidos);
+            }
+        } catch (e) {
+            console.warn("[Juris Notes] Erro ao extrair trilha:", e);
+            if (typeof window.exibirToast === 'function') window.exibirToast('Não localizamos a estrutura da Trilha de Julgamento.', 'aviso');
+        }
+    }
+
     return { 
         abrirPainel, 
         fecharPainel, 
@@ -265,6 +326,7 @@ window.BalancaManager = (function() {
         resetarEstado,
         resetToGenerator,
         getPendingTasks: avaliarTarefasPendentes,
-        executarGuardrailDeTarefas // <--- NOVA FUNÇÃO EXPORTADA
+        executarGuardrailDeTarefas, // <--- NOVA FUNÇÃO EXPORTADA
+        extrairAbasEmLote           // <--- EXPORTAÇÃO DA EXTRAÇÃO LOTE
     };
 })();
