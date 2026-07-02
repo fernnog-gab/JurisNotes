@@ -718,6 +718,13 @@ window.fecharModalGeradorContexto = function() {
 };
 
 window.gerarECopiarContexto = function() {
+    // --- NOVO BLOCO DE SEGURANÇA PADRONIZADO ---
+    if (window.BalancaManager && !window.BalancaManager.executarGuardrailDeTarefas('copiar o pacote para a IA')) {
+        exibirToast('Cópia interrompida pelo usuário.', 'aviso');
+        return; // Impede a concatenação e a cópia para o clipboard
+    }
+    // --- FIM DO NOVO BLOCO ---
+
     const btn = document.getElementById('btn-copiar-contexto');
     const originalText = btn.innerHTML;
     

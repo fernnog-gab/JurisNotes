@@ -474,17 +474,12 @@ window.ExportManager = (function () {
             return;
         }
 
-        // GUARDRAIL TAREFAS PENDENTES
-        if (window.BalancaManager && window.BalancaManager.getPendingTasks() > 0) {
-            const count = window.BalancaManager.getPendingTasks();
-            const msg = `ATENÇÃO: Existem ${count} tarefa(s) pendente(s) não concluídas no Painel da Balança.\n\nTem certeza de que deseja gerar o pacote de exportação para a IA mesmo assim?`;
-            
-            // O confirm nativo interrompe o thread e impede a exportação sem complicação
-            if (!confirm(msg)) {
-                _deps.exibirToast('Exportação interrompida pelo usuário.', 'aviso');
-                return;
-            }
+        // --- CÓDIGO REFATORADO (Substitui o bloco antigo de BalancaManager) ---
+        if (window.BalancaManager && !window.BalancaManager.executarGuardrailDeTarefas('gerar o pacote de exportação para a IA')) {
+            _deps.exibirToast('Exportação interrompida pelo usuário.', 'aviso');
+            return; // Aborta a exportação
         }
+        // --- FIM DA REFATORAÇÃO ---
 
         try {
             // ── Passo 1: Gerar e baixar o Markdown ──────────────────────────
