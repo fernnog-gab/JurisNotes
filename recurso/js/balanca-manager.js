@@ -265,36 +265,46 @@ window.BalancaManager = (function() {
         const iframe = document.getElementById('balanca-iframe');
         if (!iframe || !iframe.contentDocument) return;
 
+        // Localiza a lista principal no Dossiê
         const containerLista = iframe.contentDocument.getElementById('obs-list');
         if (!containerLista) {
-            window.exibirToast('Não foi possível localizar a lista de tarefas no dossiê.', 'erro');
+            window.exibirToast('Não foi possível localizar a lista no dossiê.', 'erro');
             return;
         }
 
-        const marcados = containerLista.querySelectorAll('.chk-input:checked');
-        if (marcados.length === 0) {
-            window.exibirToast('Nenhuma matéria marcada para geração.', 'aviso');
+        // Em vez de buscar checkboxes marcados, pegamos TODOS os itens da lista (<li>)
+        const blocosDeTopicos = containerLista.querySelectorAll('li');
+
+        if (blocosDeTopicos.length === 0) {
+            window.exibirToast('O Dossiê está vazio. Não há matérias para gerar.', 'aviso');
             return;
         }
 
         const nomesSanitizadosExtracao = new Set();
         const topicosAtuais = topicos.map(t => t.nome.replace(/\s+/g, ' ').trim().toLowerCase());
 
-        marcados.forEach(chk => {
+        blocosDeTopicos.forEach(bloco => {
             let rawText = '';
-            const parentBlock = chk.closest('li, div'); 
             
-            if (parentBlock) {
-                const hElem = parentBlock.querySelector('h3, h4, strong');
-                if (hElem) rawText = hElem.textContent;
-                else {
-                    const lbl = parentBlock.querySelector('label');
-                    if (lbl) rawText = lbl.textContent;
+            // Estratégia de Fallback em Cascata para achar o nome do tópico dentro do bloco
+            const hElem = bloco.querySelector('h3, h4, strong, .topic-title');
+            
+            if (hElem) {
+                rawText = hElem.textContent; // Achou um título forte
+            } else {
+                const lbl = bloco.querySelector('label');
+                if (lbl) {
+                    rawText = lbl.textContent; // Achou um label
+                } else {
+                    // Último recurso: pega apenas o texto direto (ignora botões internos)
+                    rawText = bloco.firstChild ? bloco.firstChild.textContent : ''; 
                 }
             }
-            if (!rawText) rawText = chk.value || '';
 
+            // Limpeza de espaços duplos e quebras de linha
             const cleanName = rawText.replace(/\s+/g, ' ').trim();
+            
+            // Evita criar abas com nomes vazios ou gigantes (sujeira de HTML)
             if (cleanName.length > 0 && cleanName.length < 100) {
                 nomesSanitizadosExtracao.add(cleanName);
             }
@@ -305,28 +315,31 @@ window.BalancaManager = (function() {
         );
 
         if (novosParaCriar.length === 0) {
-            window.exibirToast('Todas as matérias marcadas já existem como abas.', 'info');
+            window.exibirToast('Todas as matérias do Dossiê já existem como abas.', 'info');
             return;
         }
 
+        // Trava de segurança para não poluir a tela sem querer
         if (novosParaCriar.length > 8) {
             const confirmacao = await window.DialogManager.confirm(
-                `O sistema identificou ${novosParaCriar.length} novos tópicos para criar.\n\nDeseja continuar?`, 
+                `O sistema identificou ${novosParaCriar.length} tópicos no Dossiê. Isso irá expandir bastante sua área de trabalho.\n\nDeseja criar todas as abas?`, 
                 'Criação em Massa', 
                 'Sim, criar tudo'
             );
             if (!confirmacao) return;
         }
 
+        // Cria as abas em lote na memória
         novosParaCriar.forEach(nomeTopico => {
             const cor = TopicsManager.obterCor(topicos.length);
             topicos.push({ id: 'topico-' + Date.now() + '-' + Math.random().toString(36).substring(7), nome: nomeTopico, cor, anotacoes: [] });
         });
 
+        // Atualiza a tela de uma só vez (Performance)
         if (typeof renderizarTopicos === 'function') renderizarTopicos();
         if (typeof salvarBackupAutomatico === 'function') salvarBackupAutomatico();
         
-        window.exibirToast(`${novosParaCriar.length} abas geradas instantaneamente!`, 'sucesso');
+        window.exibirToast(`${novosParaCriar.length} tópicos criados com sucesso!`, 'sucesso');
     }
 
     return { 
