@@ -256,6 +256,9 @@ window.BalancaManager = (function() {
         return true; // Passe livre se não houver tarefas
     }
 
+    // ==========================================
+    // NOVO: MOTOR DE EXTRAÇÃO DE ABAS (ULTRA-RESILIENTE)
+    // ==========================================
     function extrairAbasEmLote() {
         const iframe = document.getElementById('balanca-iframe');
         if (!iframe || !iframe.contentDocument) {
@@ -265,55 +268,82 @@ window.BalancaManager = (function() {
 
         const doc = iframe.contentDocument;
         let nomesExtraidos = [];
+        let headerNode = null;
 
         try {
-            const headings = Array.from(doc.querySelectorAll('h1, h2, h3, h4, h5, .titulo-secao'));
-            const trilhaHeader = headings.find(h => 
-                h.textContent.toLowerCase().includes('trilha') && h.textContent.toLowerCase().includes('julgamento')
-            );
-
-            if (trilhaHeader) {
-                let sibling = trilhaHeader.nextElementSibling;
-                let listElement = null;
-                
-                for (let i = 0; i < 5 && sibling; i++) {
-                    if (sibling.tagName === 'UL' || sibling.tagName === 'OL') {
-                        listElement = sibling; break;
+            // PASSO 1: Varredura Profunda para achar o texto, não importando a tag (h1, strong, div, p...)
+            const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_ELEMENT, null, false);
+            while (walker.nextNode()) {
+                const el = walker.currentNode;
+                // Evita nós gigantes (body, main) e foca em elementos que contêm o texto diretamente
+                if (el.children.length <= 2 && el.textContent.length < 150) { 
+                    const textoLimpo = el.textContent.toLowerCase();
+                    if (textoLimpo.includes('trilha') && textoLimpo.includes('julgamento')) {
+                        headerNode = el;
+                        break; // Achou o ponto de ancoragem!
                     }
-                    const internalList = sibling.querySelector('ul, ol');
-                    if (internalList) {
-                        listElement = internalList; break;
-                    }
-                    sibling = sibling.nextElementSibling;
                 }
-
-                if (listElement) {
-                    const items = listElement.querySelectorAll('li');
-                    items.forEach(li => {
-                        // ARQUITETURA OTIMIZADA: Extrai apenas nós de texto direto, ignorando tags aninhadas (inputs/buttons)
-                        const text = Array.from(li.childNodes)
-                            .filter(node => node.nodeType === Node.TEXT_NODE)
-                            .map(node => node.nodeContext || node.textContent)
-                            .join('')
-                            .trim()
-                            .replace(/\s+/g, ' ');
-                            
-                        if (text.length > 2) nomesExtraidos.push(text);
-                    });
-                }
-            } else {
-                const fallbackList = doc.querySelectorAll('.lista-trilha-julgamento li');
-                fallbackList.forEach(li => nomesExtraidos.push(li.textContent.trim()));
             }
 
-            if (nomesExtraidos.length === 0) throw new Error("Estrutura não encontrada.");
+            if (headerNode) {
+                // PASSO 2: Acha a primeira Lista HTML (ul, ol) que aparece fisicamente DEPOIS do título
+                let targetList = null;
+                const allLists = Array.from(doc.querySelectorAll('ul, ol'));
+                
+                for (let list of allLists) {
+                    // compareDocumentPosition = 4 significa que a lista está DEPOIS do título no HTML
+                    if (headerNode.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING) {
+                        targetList = list;
+                        break;
+                    }
+                }
+
+                // Se achou uma lista padrão de HTML, extrai os <li>
+                if (targetList) {
+                    const items = targetList.querySelectorAll('li');
+                    items.forEach(li => {
+                        const text = Array.from(li.childNodes)
+                            .filter(node => node.nodeType === Node.TEXT_NODE)
+                            .map(node => node.textContent)
+                            .join('')
+                            .trim()
+                            .replace(/\s+/g, ' '); // Tira espaços múltiplos
+                        if (text.length > 2) nomesExtraidos.push(text);
+                    });
+                } 
+                
+                // PASSO 3 (FALLBACK DE INTELIGÊNCIA): E se o Dossiê usar caixas de texto (textarea)?
+                if (nomesExtraidos.length === 0) {
+                    const allTextareas = Array.from(doc.querySelectorAll('textarea'));
+                    for (let ta of allTextareas) {
+                        if (headerNode.compareDocumentPosition(ta) & Node.DOCUMENT_POSITION_FOLLOWING) {
+                            // Pega o texto da textarea, quebra por linhas (Enters)
+                            const linhas = ta.value.split('\n');
+                            linhas.forEach(linha => {
+                                // Limpa caracteres que o usuário possa ter usado (hífen, pontos, números ex: "1. ", "- ")
+                                const linhaLimpa = linha.replace(/^[-*•\d.)\]]+\s*/, '').trim();
+                                if (linhaLimpa.length > 2) nomesExtraidos.push(linhaLimpa);
+                            });
+                            break; // Pega apenas a primeira textarea após o título
+                        }
+                    }
+                }
+            }
+
+            // PASSO 4: Validação Final e Envio
+            if (nomesExtraidos.length === 0) {
+                throw new Error("Marcador 'Trilha de Julgamento' encontrado, mas nenhuma lista ou texto localizado após ele.");
+            }
 
             if (typeof window.criarTopicosEmLote === 'function') {
                 window.criarTopicosEmLote(nomesExtraidos);
             }
+
         } catch (e) {
-            console.warn("[Juris Notes] Erro ao extrair trilha:", e);
-            if (typeof window.exibirToast === 'function') window.exibirToast('Não localizamos a estrutura da Trilha de Julgamento.', 'aviso');
+            console.warn("[Juris Notes] Detalhe do Erro na Extração em Lote:", e);
+            if (typeof window.exibirToast === 'function') {
+                window.exibirToast('Trilha de Julgamento não localizada ou está vazia no documento atual.', 'aviso');
+            }
         }
     }
 

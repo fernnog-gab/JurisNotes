@@ -436,6 +436,9 @@ function rolarParaFinal() {
 function exibirToast(mensagem, tipo = 'sucesso', iconeSvgString = null) {
     const toast = document.getElementById('toast-feedback');
     
+    // NOVO: Força o Toast a ficar acima de ABSOLUTAMENTE tudo (Modais, Dossiê, etc)
+    toast.style.zIndex = '99999'; 
+    
     if (iconeSvgString) {
         toast.innerHTML = `${iconeSvgString}<span class="toast-text"></span>`;
         toast.querySelector('.toast-text').textContent = mensagem;
