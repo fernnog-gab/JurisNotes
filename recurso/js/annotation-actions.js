@@ -431,7 +431,7 @@ function acionarNovoNoIdeia() {
     adicionarSubAnotacao(topicoId, index, cIdx);
 }
 
-function excluirAnotacao() {
+async function excluirAnotacao() {
     if (!_menuAnotacaoCtx) return;
     const { topicoId, index } = _menuAnotacaoCtx;
     const topico = topicos.find(t => t.id === topicoId);
@@ -442,8 +442,9 @@ function excluirAnotacao() {
     const temSub = cardAlvo.subAnotacoes && cardAlvo.subAnotacoes.length > 0;
 
     if (temCorrelacionados) {
-        const msg = '⚠️ ATENÇÃO: Esta prova é um Card Mestre e agrupa outros itens.\n\nDeseja excluir apenas esta prova principal e PROMOVER a próxima do grupo para assumir o seu lugar?';
-        if (!confirm(msg)) return;
+        const msg = 'Esta prova é um Card Mestre e agrupa outros itens.\n\nDeseja excluir apenas esta prova principal e PROMOVER a próxima do grupo para assumir o seu lugar?';
+        const confirmou = await window.DialogManager.confirmDestructive(msg, 'Excluir e Promover');
+        if (!confirmou) return;
 
         // Clone profundo para evitar mutação cruzada (Garante a integridade do grupo)
         const cloneProfundo = structuredClone(cardAlvo);
@@ -469,7 +470,8 @@ function excluirAnotacao() {
         if (temSub) {
             msg = 'Excluir esta prova e todos os seus Nós de Ideia atrelados a ela?';
         }
-        if (!confirm(msg)) return;
+        const confirmou = await window.DialogManager.confirmDestructive(msg, 'Excluir Prova Principal');
+        if (!confirmou) return;
 
         // 1. Mutação DIRETA na memória global
         topico.anotacoes.splice(index, 1);
@@ -506,9 +508,10 @@ function reordenarAnotacao() {
     document.getElementById('annotation-context-menu').style.display = 'none';
 }
 
-function excluirSubAnotacao() {
+async function excluirSubAnotacao() {
     if (!_menuSubAnotacaoCtx) return;
-    if (!confirm('Excluir esta ideia secundária?')) return;
+    const confirmou = await window.DialogManager.confirmDestructive('Excluir esta ideia secundária?', 'Excluir Ideia');
+    if (!confirmou) return;
     
     const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
     const alvo = _resolverSubAlvo(topico, _menuSubAnotacaoCtx.parentIndex, _menuSubAnotacaoCtx.viewSource);
@@ -693,10 +696,13 @@ function confirmarTransferenciaSub() {
     _menuSubAnotacaoCtx = null;
 }
 
-function excluirItemCorrelacionado(topicoId, parentIndex, correlacionadoIndex) {
-    if (!confirm('Excluir este item correlacionado?')) return;
+async function excluirItemCorrelacionado(topicoId, parentIndex, correlacionadoIndex) {
+    const confirmou = await window.DialogManager.confirmDestructive('Excluir este item correlacionado?', 'Excluir Prova Anexa');
+    if (!confirmou) return;
+    
     topicos.find(t => t.id === topicoId).anotacoes[parentIndex].itensCorrelacionados.splice(correlacionadoIndex, 1);
-    renderizarTopicos(); salvarBackupAutomatico();
+    renderizarTopicos(); 
+    salvarBackupAutomatico();
     if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
     exibirToast('Item correlacionado excluído.', 'sucesso');
 }

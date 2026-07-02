@@ -1019,6 +1019,12 @@
                     Novo Dossiê
                 </button>
                 
+                <!-- NOVO: Gerar Abas em Lote -->
+                <button class="chip-btn chip-autora" style="padding: 6px 12px; font-size: 0.8rem; display: flex; align-items: center; gap: 6px; background: #2e7d32; color: white; border: none;" onclick="BalancaManager.gerarTopicosEmLote()" title="Transformar marcações em abas">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"></path></svg>
+                    Gerar Abas
+                </button>
+
                 <button style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b;" onclick="BalancaManager.fecharPainel()">✕</button>
             </div>
         </div>
@@ -1155,6 +1161,21 @@ Crie um sumário hierárquico enxuto com as Grandes Categorias e Subcategorias q
         <div class="wizard-actions" style="margin-top: 16px;">
             <button class="chip-btn chip-cancelar" onclick="fecharModalPromptNotebookLM()">Fechar</button>
             <button class="chip-btn chip-autora" style="background: #2e7d32; color: white; border: none; padding-left: 24px; padding-right: 24px;" onclick="copiarPromptNotebookLM()">📋 Copiar Prompt Mestre</button>
+        </div>
+    </div>
+
+    <!-- Módulo Universal de Diálogos Customizados (Z-index Supremo) -->
+    <div id="custom-dialog-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.65); z-index: 9998; backdrop-filter: blur(2px);"></div>
+    <div id="custom-dialog-modal" class="crop-wizard-popup" style="display:none; z-index: 9999; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); min-width: 380px; max-width: 90vw; flex-direction: column; padding: 20px;">
+        <div class="wizard-header" id="custom-dialog-title" style="color: var(--trt-blue); border-bottom: none; padding-bottom: 0; margin-bottom: 8px;">⚠️ Atenção</div>
+        
+        <p class="popup-label" id="custom-dialog-message" style="margin: 8px 0 16px 0; font-size: 0.95rem; white-space: pre-wrap; line-height: 1.5; color: var(--text-dark);"></p>
+        
+        <input type="text" id="custom-dialog-input" class="topic-select" style="display: none; margin-bottom: 16px; width: 100%;" autocomplete="off">
+        
+        <div class="wizard-actions" style="justify-content: flex-end; border-top: 1px solid var(--border-color); padding-top: 16px; gap: 12px;">
+            <button id="custom-dialog-btn-cancel" class="chip-btn chip-cancelar">Cancelar</button>
+            <button id="custom-dialog-btn-ok" class="chip-btn chip-autora" style="background: var(--trt-blue); color: white; border: none;">Confirmar</button>
         </div>
     </div>
 

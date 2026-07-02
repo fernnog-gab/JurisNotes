@@ -61,9 +61,13 @@ window.BalancaManager = (function() {
     }
 
     // NOVO: Função protegida contra perda de dados
-    function resetToGenerator() {
+    async function resetToGenerator() {
         if (htmlState !== null) {
-            const confirmacao = confirm("⚠️ Atenção:\n\nIsso substituirá o Dossiê atual. Se você fez marcações de checkbox que não foram salvas no backup principal, elas serão perdidas.\n\nDeseja gerar um novo dossiê?");
+            const confirmacao = await window.DialogManager.confirm(
+                "⚠️ Atenção:\n\nIsso substituirá o Dossiê atual. Se você fez marcações de checkbox que não foram salvas no backup principal, elas serão perdidas.\n\nDeseja gerar um novo dossiê?", 
+                "Aviso de Substituição", 
+                "Sim, substituir"
+            );
             if (!confirmacao) return;
         }
         
@@ -241,19 +245,88 @@ window.BalancaManager = (function() {
     }
 
     /**
-     * Valida tarefas pendentes e emite um alerta nativo síncrono se houver pendências.
+     * Valida tarefas pendentes e emite um alerta assíncrono se houver pendências.
      * @param {string} acaoDesejada - Texto descritivo da ação (ex: "copiar o pacote para a IA").
-     * @returns {boolean} - Retorna true se puder prosseguir (sem tarefas ou usuário confirmou), false se abortado.
+     * @returns {Promise<boolean>} - Retorna true se puder prosseguir, false se abortado.
      */
-    function executarGuardrailDeTarefas(acaoDesejada) {
-        // PERFOMANCE: Chamada única ao DOM para evitar layout thrashing
+    async function executarGuardrailDeTarefas(acaoDesejada) {
         const count = avaliarTarefasPendentes(); 
-        
         if (count > 0) {
-            const msg = `ATENÇÃO: Existem ${count} tarefa(s) pendente(s) não concluídas no Painel da Balança.\n\nTem certeza de que deseja ${acaoDesejada} mesmo assim?`;
-            return confirm(msg); // Bloqueia a thread e retorna a decisão do usuário
+            const msg = `Existem ${count} tarefa(s) pendente(s) não concluídas no Painel da Balança.\n\nTem certeza de que deseja ${acaoDesejada} mesmo assim?`;
+            return await window.DialogManager.confirm(msg, 'Pendências Detectadas', 'Sim, prosseguir');
         }
-        return true; // Passe livre se não houver tarefas
+        return true; 
+    }
+
+    // ==========================================
+    // NOVO: GERAÇÃO DE ABAS EM LOTE (ONE-CLICK)
+    // ==========================================
+    async function gerarTopicosEmLote() {
+        const iframe = document.getElementById('balanca-iframe');
+        if (!iframe || !iframe.contentDocument) return;
+
+        const containerLista = iframe.contentDocument.getElementById('obs-list');
+        if (!containerLista) {
+            window.exibirToast('Não foi possível localizar a lista de tarefas no dossiê.', 'erro');
+            return;
+        }
+
+        const marcados = containerLista.querySelectorAll('.chk-input:checked');
+        if (marcados.length === 0) {
+            window.exibirToast('Nenhuma matéria marcada para geração.', 'aviso');
+            return;
+        }
+
+        const nomesSanitizadosExtracao = new Set();
+        const topicosAtuais = topicos.map(t => t.nome.replace(/\s+/g, ' ').trim().toLowerCase());
+
+        marcados.forEach(chk => {
+            let rawText = '';
+            const parentBlock = chk.closest('li, div'); 
+            
+            if (parentBlock) {
+                const hElem = parentBlock.querySelector('h3, h4, strong');
+                if (hElem) rawText = hElem.textContent;
+                else {
+                    const lbl = parentBlock.querySelector('label');
+                    if (lbl) rawText = lbl.textContent;
+                }
+            }
+            if (!rawText) rawText = chk.value || '';
+
+            const cleanName = rawText.replace(/\s+/g, ' ').trim();
+            if (cleanName.length > 0 && cleanName.length < 100) {
+                nomesSanitizadosExtracao.add(cleanName);
+            }
+        });
+
+        const novosParaCriar = Array.from(nomesSanitizadosExtracao).filter(nome => 
+            !topicosAtuais.includes(nome.toLowerCase())
+        );
+
+        if (novosParaCriar.length === 0) {
+            window.exibirToast('Todas as matérias marcadas já existem como abas.', 'info');
+            return;
+        }
+
+        if (novosParaCriar.length > 8) {
+            const confirmacao = await window.DialogManager.confirm(
+                `O sistema identificou ${novosParaCriar.length} novos tópicos para criar.\n\nDeseja continuar?`, 
+                'Criação em Massa', 
+                'Sim, criar tudo'
+            );
+            if (!confirmacao) return;
+        }
+
+        novosParaCriar.forEach(nomeTopico => {
+            const cor = TopicsManager.obterCor(topicos.length);
+            topicos.push({ id: 'topico-' + Date.now() + '-' + Math.random().toString(36).substring(7), nome: nomeTopico, cor, anotacoes: [] });
+        });
+
+        if (typeof renderizarTopicos === 'function') renderizarTopicos();
+        if (typeof salvarBackupAutomatico === 'function') salvarBackupAutomatico();
+        
+        window.exibirToast(`${novosParaCriar.length} abas geradas instantaneamente!`, 'sucesso');
     }
 
     return { 
@@ -265,6 +338,7 @@ window.BalancaManager = (function() {
         resetarEstado,
         resetToGenerator,
         getPendingTasks: avaliarTarefasPendentes,
-        executarGuardrailDeTarefas // <--- NOVA FUNÇÃO EXPORTADA
+        executarGuardrailDeTarefas,
+        gerarTopicosEmLote // <--- NOVO
     };
 })();
