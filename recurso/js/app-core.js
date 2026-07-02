@@ -436,9 +436,6 @@ function rolarParaFinal() {
 function exibirToast(mensagem, tipo = 'sucesso', iconeSvgString = null) {
     const toast = document.getElementById('toast-feedback');
     
-    // NOVO: Força o Toast a ficar acima de ABSOLUTAMENTE tudo (Modais, Dossiê, etc)
-    toast.style.zIndex = '99999'; 
-    
     if (iconeSvgString) {
         toast.innerHTML = `${iconeSvgString}<span class="toast-text"></span>`;
         toast.querySelector('.toast-text').textContent = mensagem;
@@ -633,105 +630,6 @@ async function novoProcesso(event) {
 /* ================================================
    GESTÃO DE TÓPICOS E ANOTAÇÕES E ACERVO
    ================================================ */
-
-window.criarTopicosEmLote = function(nomesExtraidos) {
-    if (!nomesExtraidos || nomesExtraidos.length === 0) return;
-
-    let criados = 0;
-    let ignorados = 0;
-    let nomesCriados = [];
-
-    // Função interna para higienização militar contra sujeira de PDFs/Tribunais
-    const higienizarString = (str) => {
-        return str.trim()
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, "") // Remove acentos para comparação
-            .replace(/[\u200B-\u200D\uFEFF]/g, '')            // Remove Zero-Width spaces (Crucial para PJe)
-            .toLowerCase();
-    };
-
-    nomesExtraidos.forEach((nome, index) => {
-        if (!nome.trim()) return;
-        const stringLimpaComparacao = higienizarString(nome);
-
-        const duplicado = topicos.some(t => higienizarString(t.nome) === stringLimpaComparacao);
-
-        if (duplicado) {
-            ignorados++;
-        } else {
-            const cor = TopicsManager.obterCor(topicos.length);
-            // Preservamos o nome original com formatação correta para exibição
-            const nomeExibicao = nome.trim().replace(/[\u200B-\u200D\uFEFF]/g, ''); 
-            topicos.push({ 
-                id: 'topico-lote-' + Date.now() + '-' + index, 
-                nome: nomeExibicao, 
-                cor: cor, 
-                anotacoes: [] 
-            });
-            nomesCriados.push(nomeExibicao);
-            criados++;
-        }
-    });
-
-    if (criados > 0) {
-        // CORREÇÃO CRÍTICA UX: Fecha o modal fixo ANTES de comandar a troca de abas ao fundo
-        if (window.BalancaManager) BalancaManager.fecharPainel();
-        
-        renderizarTopicos();
-        salvarBackupAutomatico();
-        
-        if (document.body.dataset.activeTab !== 'historico') trocarAba('historico');
-        
-        // Disparo Desacoplado: Agregação Inteligente para o Acervo
-        if (typeof verificarAcervoEmLoteSegundoPlano === 'function') {
-            verificarAcervoEmLoteSegundoPlano(nomesCriados);
-        }
-    }
-
-    let msg = criados > 0 
-        ? `${criados} aba(s) gerada(s). ${ignorados > 0 ? `${ignorados} ignorada(s).` : ''}` 
-        : `Todas as ${ignorados} abas encontradas já existem.`;
-
-    exibirToast(msg, criados > 0 ? 'sucesso' : 'info');
-};
-
-function verificarAcervoEmLoteSegundoPlano(nomesTopicos) {
-    const agendarTarefaBackground = window.requestIdleCallback || ((cb, opts) => setTimeout(cb, opts?.timeout ?? 1));
-    
-    agendarTarefaBackground(async () => {
-        if (typeof window.AcervoManager === 'undefined') return;
-        try {
-            const modelos = await AcervoManager.carregarModelos();
-            if (!modelos || modelos.length === 0) return;
-            
-            let totalEncontrados = 0;
-            const tagsGatilho = new Set();
-            
-            nomesTopicos.forEach(nomeTopico => {
-                const nomeMin = nomeTopico.toLowerCase();
-                modelos.forEach(mod => {
-                    if (mod.tags) {
-                        const tagMatch = mod.tags.find(tag => nomeMin.includes(tag.toLowerCase()));
-                        if (tagMatch) {
-                            totalEncontrados++;
-                            tagsGatilho.add(tagMatch);
-                        }
-                    }
-                });
-            });
-            
-            if (totalEncontrados > 0) {
-                const expressoes = Array.from(tagsGatilho).slice(0, 3).join(', ');
-                const complemento = tagsGatilho.size > 3 ? '...' : '';
-                const mensagem = `💡 Dica: Encontramos ${totalEncontrados} modelo(s) no acervo relacionados aos novos temas (${expressoes}${complemento}).`;
-                
-                // Emite após o toast principal de sucesso das abas para não atropelar
-                setTimeout(() => exibirToast(mensagem, 'info'), 3200);
-            }
-        } catch (error) {
-            console.warn("[Juris Notes] Verificação de acervo em lote falhou:", error);
-        }
-    }, { timeout: 6000 });
-}
 
 function verificarAcervoEmSegundoPlano(nomeTopico) {
     const agendarTarefaBackground = window.requestIdleCallback || ((cb, opts) => setTimeout(cb, opts?.timeout ?? 1));

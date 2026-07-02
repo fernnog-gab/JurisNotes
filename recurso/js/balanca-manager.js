@@ -256,87 +256,6 @@ window.BalancaManager = (function() {
         return true; // Passe livre se não houver tarefas
     }
 
-    // ==========================================
-    // NOVO: MOTOR DE EXTRAÇÃO DE ABAS (PRECISÃO ESTRUTURAL)
-    // ==========================================
-    function extrairAbasEmLote() {
-        const iframe = document.getElementById('balanca-iframe');
-        if (!iframe || !iframe.contentDocument) {
-            if (typeof window.exibirToast === 'function') window.exibirToast('Não foi possível ler o documento do Dossiê.', 'erro');
-            return;
-        }
-
-        const doc = iframe.contentDocument;
-        let nomesExtraidos = [];
-
-        try {
-            // ESTRATÉGIA PRINCIPAL: Mapeamento exato da arquitetura do Dossiê Recursal
-            // O Dossiê agrupa a Trilha no ID "sortable-list"
-            const listaTrilha = doc.getElementById('sortable-list');
-            
-            if (listaTrilha) {
-                // Captura todos os itens arrastáveis
-                const itens = listaTrilha.querySelectorAll('.checklist-item');
-                
-                itens.forEach(item => {
-                    // O título pode estar como texto fixo (span) ou em modo de edição (input)
-                    const spanTitulo = item.querySelector('.item-title');
-                    const inputTitulo = item.querySelector('.item-title-input');
-                    
-                    let texto = '';
-                    if (spanTitulo) {
-                        texto = spanTitulo.textContent;
-                    } else if (inputTitulo) {
-                        // Tenta ler o valor digitado ou o atributo HTML exportado
-                        texto = inputTitulo.value || inputTitulo.getAttribute('value') || '';
-                    }
-
-                    // Limpa quebras de linha e múltiplos espaços
-                    texto = texto.trim().replace(/\s+/g, ' ');
-                    
-                    // Se houver um texto válido, entra para a fila de criação
-                    if (texto.length > 2) {
-                        nomesExtraidos.push(texto);
-                    }
-                });
-            } else {
-                // FALLBACK: Caso no futuro o ID "sortable-list" mude, caçamos pelo título da seção
-                const titulosSecao = Array.from(doc.querySelectorAll('.section-title'));
-                const tituloTrilha = titulosSecao.find(el => 
-                    el.textContent.toLowerCase().includes('trilha') && 
-                    el.textContent.toLowerCase().includes('julgamento')
-                );
-                
-                if (tituloTrilha) {
-                    const containerProximo = tituloTrilha.nextElementSibling;
-                    if (containerProximo && containerProximo.classList.contains('checklist-container')) {
-                        const spans = containerProximo.querySelectorAll('.item-title');
-                        spans.forEach(span => {
-                            const texto = span.textContent.trim().replace(/\s+/g, ' ');
-                            if (texto.length > 2) nomesExtraidos.push(texto);
-                        });
-                    }
-                }
-            }
-
-            // Validação Final
-            if (nomesExtraidos.length === 0) {
-                throw new Error("A Trilha de Julgamento foi localizada, mas não há itens cadastrados nela.");
-            }
-
-            // Envia para o motor global do AppCore (que faz a deduplicação e mutação)
-            if (typeof window.criarTopicosEmLote === 'function') {
-                window.criarTopicosEmLote(nomesExtraidos);
-            }
-
-        } catch (e) {
-            console.warn("[Juris Notes] Detalhe do Erro na Extração em Lote:", e);
-            if (typeof window.exibirToast === 'function') {
-                window.exibirToast('Trilha de Julgamento vazia ou não localizada no documento.', 'aviso');
-            }
-        }
-    }
-
     return { 
         abrirPainel, 
         fecharPainel, 
@@ -346,7 +265,6 @@ window.BalancaManager = (function() {
         resetarEstado,
         resetToGenerator,
         getPendingTasks: avaliarTarefasPendentes,
-        executarGuardrailDeTarefas, // <--- NOVA FUNÇÃO EXPORTADA
-        extrairAbasEmLote           // <--- EXPORTAÇÃO DA EXTRAÇÃO LOTE
+        executarGuardrailDeTarefas // <--- NOVA FUNÇÃO EXPORTADA
     };
 })();
