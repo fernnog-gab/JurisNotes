@@ -661,6 +661,15 @@ window.limparAreaInternaLGPD = function() {
     exibirToast('Área restrita limpa.', 'info');
 };
 
+/* --- NOVA FUNÇÃO DE LIMPEZA MANUAL --- */
+window.limparAreaInternaLGPD = function() {
+    document.getElementById('ctx-teor-sentenca').value = '';
+    document.getElementById('ctx-teor-recurso').value = '';
+    sessionStorage.removeItem('juris_ctx_sentenca');
+    sessionStorage.removeItem('juris_ctx_recurso');
+    exibirToast('Área restrita limpa.', 'info');
+};
+
 /* --- ATUALIZAÇÃO DO AUTO-SAVE COM INJEÇÃO DE HASH DO PROCESSO --- */
 window.salvarRascunhoContextoDebounced = _debounce(function() {
     try {
