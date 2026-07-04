@@ -680,18 +680,40 @@ function _debounce(func, wait) {
     };
 }
 
-// Lógica principal de auto-save com Debounce de 800ms
+/* --- NOVA FUNÇÃO DE LIMPEZA MANUAL --- */
+window.limparAreaInternaLGPD = function() {
+    document.getElementById('ctx-teor-decisao').value = '';
+    document.getElementById('ctx-teor-embargos').value = '';
+    sessionStorage.removeItem('juris_ed_ctx_decisao');
+    sessionStorage.removeItem('juris_ed_ctx_embargos');
+    exibirToast('Área restrita limpa.', 'info');
+};
+
+/* --- ATUALIZAÇÃO DO AUTO-SAVE COM INJEÇÃO DE HASH DO PROCESSO --- */
 window.salvarRascunhoContextoDebounced = _debounce(function() {
     try {
         const minuta = document.getElementById('ctx-minuta-anterior').value;
         const rascunho = document.getElementById('ctx-rascunho-ia').value;
+        const decisao = document.getElementById('ctx-teor-decisao').value;
+        const embargos = document.getElementById('ctx-teor-embargos').value;
+        
+        // Captura o processo atual como ID de Segurança
+        const tagProcesso = document.getElementById('tag-numero-processo');
+        const numProcesso = tagProcesso ? tagProcesso.textContent.trim() : 'sem-processo';
+        
         sessionStorage.setItem('juris_ed_ctx_minuta', minuta);
         sessionStorage.setItem('juris_ed_ctx_rascunho', rascunho);
+        
+        // Só salva o sigilo se houver dados, amarrado ao ID do processo atual
+        sessionStorage.setItem('juris_ed_ctx_decisao', decisao);
+        sessionStorage.setItem('juris_ed_ctx_embargos', embargos);
+        sessionStorage.setItem('juris_ed_ctx_processo_ref', numProcesso);
     } catch (e) {
         console.warn('Falha ao acessar sessionStorage:', e);
     }
 }, 800);
 
+/* --- ATUALIZAÇÃO DA ABERTURA DO MODAL COM VERIFICAÇÃO DE CONTAMINAÇÃO --- */
 window.abrirModalGeradorContexto = function() {
     if (!window.ExportManager) return;
 
@@ -703,38 +725,71 @@ window.abrirModalGeradorContexto = function() {
         return;
     }
 
+    // Injeta o efeito de desfoque (Foco Ativo)
+    const painelPdf = document.getElementById('pdf-container');
+    const painelAnotacoes = document.getElementById('history-container');
+    if (painelPdf) painelPdf.classList.add('pdf-foco-ativo');
+    if (painelAnotacoes) painelAnotacoes.classList.add('pdf-foco-ativo');
+
     const tagProcesso = document.getElementById('tag-numero-processo');
-    const numProcesso = tagProcesso ? (tagProcesso.textContent.trim() || 'Não informado') : 'Não informado';
+    const numProcessoAtual = tagProcesso ? (tagProcesso.textContent.trim() || 'Não informado') : 'Não informado';
 
     // Preenchimento de DOM
-    document.getElementById('ctx-metadados').value = `Processo: ${numProcesso}\nVício Analisado: ${dadosTopico.nome}`;
+    document.getElementById('ctx-metadados').value = `Processo: ${numProcessoAtual}\nVício Analisado: ${dadosTopico.nome}`;
     document.getElementById('ctx-diretrizes').value = dadosTopico.markdown;
 
-    // Restauração Segura do Cache
     try {
+        // 1. Restaura dados seguros de forma livre
         document.getElementById('ctx-minuta-anterior').value = sessionStorage.getItem('juris_ed_ctx_minuta') || '';
         document.getElementById('ctx-rascunho-ia').value = sessionStorage.getItem('juris_ed_ctx_rascunho') || '';
-    } catch (e) { /* Ignora se bloqueado por modo anônimo estrito */ }
+        
+        // 2. VERIFICAÇÃO LGPD: Compara o processo salvo vs processo atual
+        const processoSalvoRef = sessionStorage.getItem('juris_ed_ctx_processo_ref');
+        
+        if (processoSalvoRef && processoSalvoRef !== numProcessoAtual) {
+            // Contaminação detectada: Limpa silenciosamente os dados sensíveis
+            console.info("JurisNotes ED: Troca de contexto detectada. Limpando cache sigiloso anterior.");
+            sessionStorage.removeItem('juris_ed_ctx_decisao');
+            sessionStorage.removeItem('juris_ed_ctx_embargos');
+            sessionStorage.setItem('juris_ed_ctx_processo_ref', numProcessoAtual);
+            
+            document.getElementById('ctx-teor-decisao').value = '';
+            document.getElementById('ctx-teor-embargos').value = '';
+        } else {
+            // Contexto seguro, mesma sessão
+            document.getElementById('ctx-teor-decisao').value = sessionStorage.getItem('juris_ed_ctx_decisao') || '';
+            document.getElementById('ctx-teor-embargos').value = sessionStorage.getItem('juris_ed_ctx_embargos') || '';
+        }
+    } catch (e) { /* Ignora se bloqueado por restrições do navegador */ }
 
     document.getElementById('gerador-contexto-backdrop').style.display = 'block';
     document.getElementById('modal-gerador-contexto').style.display = 'flex';
 };
 
 window.fecharModalGeradorContexto = function() {
+    // Remove o efeito de desfoque
+    const painelPdf = document.getElementById('pdf-container');
+    const painelAnotacoes = document.getElementById('history-container');
+    if (painelPdf) painelPdf.classList.remove('pdf-foco-ativo');
+    if (painelAnotacoes) painelAnotacoes.classList.remove('pdf-foco-ativo');
+
     document.getElementById('gerador-contexto-backdrop').style.display = 'none';
     document.getElementById('modal-gerador-contexto').style.display = 'none';
 };
 
-window.gerarECopiarContexto = function() {
-    // --- NOVO BLOCO DE SEGURANÇA PADRONIZADO ---
-    if (window.BalancaManager && !window.BalancaManager.executarGuardrailDeTarefas('copiar o pacote para a IA')) {
+/* --- ATUALIZAÇÃO DA EXPORTAÇÃO COM TRAVA LGPD E TAGS XML --- */
+window.gerarECopiarContexto = function(modo = 'pro') {
+    const nomeAcao = modo === 'interno' ? 'copiar DADOS COMPLETOS para ChatJT' : 'copiar DADOS SEGUROS para Gemini PRO';
+    
+    // Guardrail context-aware
+    if (window.BalancaManager && !window.BalancaManager.executarGuardrailDeTarefas(nomeAcao)) {
         exibirToast('Cópia interrompida pelo usuário.', 'aviso');
-        return; // Impede a concatenação e a cópia para o clipboard
+        return; 
     }
-    // --- FIM DO NOVO BLOCO ---
 
-    const btn = document.getElementById('btn-copiar-contexto');
-    const originalText = btn.innerHTML;
+    const btnId = modo === 'interno' ? 'btn-copiar-contexto-interno' : 'btn-copiar-contexto-pro';
+    const btn = document.getElementById(btnId);
+    const originalText = btn.innerHTML; // Preserva a estrutura original
     
     // Concatenação Inteligente
     let outputFinal = "";
@@ -745,62 +800,77 @@ window.gerarECopiarContexto = function() {
     outputFinal += "== DIRETRIZES DE AUDITORIA ==\n" + document.getElementById('ctx-diretrizes').value.trim() + "\n\n";
     
     const rascunho = document.getElementById('ctx-rascunho-ia').value.trim();
-    if (rascunho) outputFinal += "== RASCUNHO BASE ==\n" + rascunho + "\n";
+    if (rascunho) outputFinal += "== RASCUNHO BASE ==\n" + rascunho + "\n\n";
 
-    // Modifica UI para estado de processamento
-    btn.innerHTML = "⏳ Copiando...";
+    // INJEÇÃO XML SIGILOSA: Só ocorre se o modo for interno
+    if (modo === 'interno') {
+        const decisao = document.getElementById('ctx-teor-decisao').value.trim();
+        const embargos = document.getElementById('ctx-teor-embargos').value.trim();
+
+        if (decisao || embargos) {
+            outputFinal += "<relatorio_do_conflito>\n";
+            if (decisao) {
+                outputFinal += "  <inteiro_teor_decisao_embargada>\n";
+                // Identação profunda para delimitar pro LLM
+                outputFinal += `    ${decisao.replace(/\n/g, '\n    ')}\n`; 
+                outputFinal += "  </inteiro_teor_decisao_embargada>\n\n";
+            }
+            if (embargos) {
+                outputFinal += "  <inteiro_teor_embargos>\n";
+                outputFinal += `    ${embargos.replace(/\n/g, '\n    ')}\n`;
+                outputFinal += "  </inteiro_teor_embargos>\n";
+            }
+            outputFinal += "</relatorio_do_conflito>\n";
+        }
+    }
+
+    // Feedback Visual Progressivo
+    btn.innerHTML = "<span style='font-weight: bold;'>⏳ Copiando...</span>";
     btn.style.opacity = "0.8";
 
-    // Fallback de segurança para APIs de Clipboard restritas
     if (!navigator.clipboard) {
-        executarCopiaFallback(outputFinal, btn, originalText);
+        executarCopiaFallback(outputFinal, btn, originalText, modo);
         return;
     }
 
     navigator.clipboard.writeText(outputFinal).then(() => {
-        btn.innerHTML = "✅ Copiado!";
+        btn.innerHTML = "<span style='font-weight: bold;'>✅ Sucesso!</span>";
         btn.style.backgroundColor = "#2e7d32"; 
         btn.style.opacity = "1";
-        exibirToast('Pacote copiado! Cole no seu Chat IA.', 'sucesso');
+        
+        const msgToast = modo === 'interno' ? 'Pacote Interno copiado (com XML).' : 'Pacote PRO seguro copiado.';
+        exibirToast(msgToast, 'sucesso');
         
         setTimeout(() => {
             btn.innerHTML = originalText;
-            btn.style.backgroundColor = "var(--trt-blue)";
+            btn.style.backgroundColor = modo === 'interno' ? '#f57c00' : 'var(--trt-blue)';
             fecharModalGeradorContexto();
-        }, 1200);
+        }, 1500); 
         
     }).catch(err => {
         console.error('Falha na Clipboard API:', err);
-        executarCopiaFallback(outputFinal, btn, originalText);
+        executarCopiaFallback(outputFinal, btn, originalText, modo);
     });
 };
 
-function executarCopiaFallback(texto, btn, originalText) {
-    btn.innerHTML = "⚠️ Falha ao Copiar";
+function executarCopiaFallback(texto, btn, originalText, modo) {
+    btn.innerHTML = "<span style='font-weight: bold;'>⚠️ Falha ao Copiar</span>";
     btn.style.backgroundColor = "#d32f2f";
     btn.style.opacity = "1";
     exibirToast('Permissão negada. Copie manualmente (Ctrl+A, Ctrl+C).', 'erro');
     
-    // Retorna visual do botão após 3s, mas NÃO fecha o modal
     setTimeout(() => {
         btn.innerHTML = originalText;
-        btn.style.backgroundColor = "var(--trt-blue)";
+        btn.style.backgroundColor = modo === 'interno' ? '#f57c00' : 'var(--trt-blue)';
     }, 3000);
 }
 
 /* ================================================
    GATILHO DE SEGURANÇA: CONTROLE DE FERRAMENTAS
-   Garante que botões de texto e recorte só atuem se houver tópicos e PDF.
    ================================================ */
 document.addEventListener('DOMContentLoaded', () => {
     const btnTexto = document.getElementById('btn-ferramenta-texto');
     const btnRecorte = document.getElementById('btn-ferramenta-recorte');
-
-    // Remove eventuais bloqueios residuais herdados do sistema antigo
     if(btnTexto) btnTexto.removeAttribute('disabled');
     if(btnRecorte) btnRecorte.removeAttribute('disabled');
-    
-    // As funções capturarTrechoSelecionado() (no app.js) e iniciarRecorteWizard() 
-    // já possuem travas internas que avisam o usuário caso ele tente usá-las
-    // sem ter criado tópicos antes. Logo, a UI pode ficar habilitada.
 });
