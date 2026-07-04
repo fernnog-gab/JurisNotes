@@ -389,6 +389,9 @@ function trocarAba(aba) {
     const btnRecorte = document.getElementById('btn-ferramenta-recorte');
     if (btnRecorte) btnRecorte.style.display = isLeitura ? 'flex' : 'none';
 
+    const btnExtrator = document.getElementById('btn-ferramenta-extrator');
+    if (btnExtrator) btnExtrator.style.display = isLeitura ? 'flex' : 'none';
+
     const fabContainer = document.getElementById('scroll-fab-container');
     if (fabContainer) {
         fabContainer.style.display = 'flex';
@@ -461,7 +464,7 @@ function atualizarStatusBackup(texto, ativa = false) {
 }
 
 function habilitarFerramentasDeTrabalho() {
-    ['btn-ferramenta-recorte', 'btn-ferramenta-texto', 'btn-novo-topico', 'btn-encerrar-sessao', 'btn-ferramenta-audio', 'btn-balanca-justica']
+    ['btn-ferramenta-recorte', 'btn-ferramenta-texto', 'btn-novo-topico', 'btn-encerrar-sessao', 'btn-ferramenta-audio', 'btn-balanca-justica', 'btn-ferramenta-extrator']
         .forEach(id => {
             const btn = document.getElementById(id);
             if (btn) btn.disabled = false;
@@ -527,11 +530,13 @@ function encerrarSessao() {
     }
     window._nomeArquivoSugerido = null;
 
-    ['btn-ferramenta-recorte', 'btn-ferramenta-texto', 'btn-novo-topico', 'btn-encerrar-sessao', 'btn-ferramenta-audio']
+    ['btn-ferramenta-recorte', 'btn-ferramenta-texto', 'btn-novo-topico', 'btn-encerrar-sessao', 'btn-ferramenta-audio', 'btn-ferramenta-extrator']
         .forEach(id => {
             const el = document.getElementById(id);
-            el.disabled = true;
-            el.classList.remove('confirmando', 'ativo');
+            if (el) {
+                el.disabled = true;
+                el.classList.remove('confirmando', 'ativo');
+            }
         });
     btn.title = 'Encerrar Sessão';
 

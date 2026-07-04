@@ -38,6 +38,15 @@
 #crop-overlay { display: none; z-index: var(--z-crop-overlay); background: rgba(0, 0, 0, 0.08); cursor: crosshair; pointer-events: auto; }
 #crop-box { position: absolute; border: 2px dashed var(--trt-blue); background: rgba(26, 58, 92, 0.08); pointer-events: none; }
 
+/* Cursor dinâmico informando o estado da aplicação */
+body.modo-extrator-ativo #crop-overlay { display: block; cursor: crosshair; background: rgba(46, 125, 50, 0.05); z-index: var(--z-crop-overlay); }
+
+/* Pino injetado na highlightLayer do PDF */
+.pdf-extrator-pin { position: absolute; width: 20px; height: 20px; transform: translate(-10px, -20px); border-radius: 50% 50% 50% 0; border: 2px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 20; display: flex; align-items: center; justify-content: center; }
+.pdf-extrator-pin::after { content: ''; width: 6px; height: 6px; background: white; border-radius: 50%; }
+.pin-inicio { background-color: #2e7d32; }
+.pin-fim { background-color: #c62828; }
+
 /* ================================================
    3. MODAIS E POPUPS GERAIS (WIZARDS)
    ================================================ */

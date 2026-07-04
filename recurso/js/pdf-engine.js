@@ -165,6 +165,44 @@ window.PdfEngine = (function () {
     }
 
     /* ================================================
+       EXTRAÇÃO MATEMÁTICA DE TEXTO POR REGIÃO (ALFINETE)
+       ================================================ */
+    async function extrairTextoPorRegiao(marcoInicio, marcoFim) {
+        if (!_pdfDoc) return "";
+        
+        let textoExtraido = "";
+        const pInicio = Math.min(marcoInicio.pagina, marcoFim.pagina);
+        const pFim = Math.max(marcoInicio.pagina, marcoFim.pagina);
+        
+        // Garante que o Y Inicial corresponde à página inicial correta (caso o usuário inverta a ordem de marcação)
+        const yInicioDOM = (pInicio === marcoInicio.pagina) ? marcoInicio.offsetY : marcoFim.offsetY;
+        const yFimDOM = (pFim === marcoFim.pagina) ? marcoFim.offsetY : marcoInicio.offsetY;
+
+        for (let i = pInicio; i <= pFim; i++) {
+            const page = await _pdfDoc.getPage(i);
+            const viewport = page.getViewport({ scale: 1.5 }); // Mesma escala do renderizador visual
+            const textContent = await page.getTextContent();
+            
+            // CONVERSÃO CIENTÍFICA: PDF.js 'y' cresce de baixo pra cima. 
+            // Transformamos a coordenada Y do DOM (pixels relativos à div) para o Y nativo do PDF.
+            const pdfTopBound = (i === pInicio) ? (viewport.height - yInicioDOM) : viewport.height;
+            const pdfBottomBound = (i === pFim) ? (viewport.height - yFimDOM) : 0;
+
+            let textoPagina = textContent.items
+                .filter(item => {
+                    const textY = item.transform[5];
+                    // Aceita texto que está ABAIXO do limite superior e ACIMA do limite inferior
+                    return textY <= pdfTopBound && textY >= pdfBottomBound;
+                })
+                .map(item => item.str)
+                .join(' ');
+                
+            textoExtraido += textoPagina + " \n\n ";
+        }
+        return textoExtraido;
+    }
+
+    /* ================================================
        CARREGAMENTO DE ARQUIVO E RENDERIZAÇÃO
        ================================================ */
     async function carregarPDF(file, isRetomada) {
@@ -513,16 +551,17 @@ window.PdfEngine = (function () {
     }
 
     return {
-        init,
-        carregarPDF,
-        sincronizarHighlightsGerais,
-        obterRotuloPagina,
-        getDisplayLabel,
-        extrairMetadadosDaPagina,
-        resolverPagina,
-        goToPage: jurisLinkService.goTo,
-        getPdfDoc: () => _pdfDoc,
-        getCurrentPage: () => _currentPage,
-        encerrar
-    };
-})();
+            init,
+            carregarPDF,
+            sincronizarHighlightsGerais,
+            obterRotuloPagina,
+            getDisplayLabel,
+            extrairMetadadosDaPagina,
+            extrairTextoPorRegiao,
+            resolverPagina,
+            goToPage: jurisLinkService.goTo,
+            getPdfDoc: () => _pdfDoc,
+            getCurrentPage: () => _currentPage,
+            encerrar
+        };
+    })();
