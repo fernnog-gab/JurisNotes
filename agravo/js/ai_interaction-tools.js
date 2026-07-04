@@ -18,9 +18,11 @@
 const overlay = document.getElementById('crop-overlay');
 
 /* ================================================
-   ESTADO DO WIZARD DE RECORTE
+   ESTADO DO WIZARD DE RECORTE E EXTRATOR
    ================================================ */
 let modoRecorteAtivo         = false;
+let modoExtratorAtivo        = false;
+let extratorTempState        = null;
 let startX, startY;
 let cropBox                  = null;
 let _wizardTopicoSelecionado = null;  // ID do tópico confirmado no Passo 1
@@ -524,10 +526,93 @@ document.getElementById('seletor-topico').addEventListener('change', (e) => {
 });
 
 /* ================================================
-   EVENT LISTENERS PERMANENTES DO OVERLAY DE RECORTE
+   MÓDULO: EXTRATOR INTELIGENTE DE TEXTO (ALFINETE)
+   ================================================ */
+window.iniciarMarcadorExtracao = function() {
+    if (topicos.length === 0) {
+        exibirToast('Crie um tópico recursal primeiro.', 'aviso'); return;
+    }
+    if (modoRecorteAtivo) desativarOverlayRecorte(); 
+    
+    modoExtratorAtivo = true;
+    document.body.classList.add('modo-extrator-ativo');
+    
+    const r = document.getElementById('pdf-container').getBoundingClientRect();
+    overlay.style.cssText = `position:fixed; left:${r.left}px; top:${r.top}px; width:${r.width}px; height:${r.height}px; display:block;`;
+    
+    exibirToast('Clique na linha do PDF onde o texto começa ou termina.', 'info');
+};
+
+window.salvarMarcadorExtracao = function() {
+    const topicoId = document.getElementById('extrator-topic-select').value;
+    const docTipo = document.getElementById('extrator-doc-select').value;
+    const fronteira = document.getElementById('extrator-fronteira-select').value;
+    
+    const topico = topicos.find(t => t.id === topicoId);
+    if (!topico.marcosExtracao) topico.marcosExtracao = [];
+    
+    topico.marcosExtracao = topico.marcosExtracao.filter(m => !(m.docTipo === docTipo && m.fronteira === fronteira));
+    topico.marcosExtracao.push({ ...extratorTempState, docTipo, fronteira });
+
+    cancelarMarcadorExtracao();
+    exibirToast(`Marco de ${fronteira} definido com sucesso!`, 'sucesso');
+    
+    if(window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
+    if(typeof salvarBackupAutomatico === 'function') salvarBackupAutomatico();
+};
+
+window.cancelarMarcadorExtracao = function() {
+    document.getElementById('extrator-modal-backdrop').style.display = 'none';
+    document.getElementById('extrator-wizard-popup').style.display = 'none';
+    extratorTempState = null;
+    modoExtratorAtivo = false;
+    document.body.classList.remove('modo-extrator-ativo');
+    if (!modoRecorteAtivo) overlay.style.display = 'none';
+};
+
+/* ================================================
+   DISPATCHER DE EVENTOS DO OVERLAY (RECORTE E EXTRATOR)
    ================================================ */
 
 overlay.addEventListener('mousedown', function (e) {
+    if (modoExtratorAtivo) {
+        const rect = overlay.getBoundingClientRect();
+        let targetContainer = null, localY = 0;
+        
+        document.querySelectorAll('.pdf-page-container').forEach(container => {
+            const r = container.getBoundingClientRect();
+            if (e.clientY >= r.top && e.clientY <= r.bottom) {
+                targetContainer = container;
+                localY = e.clientY - r.top; 
+            }
+        });
+
+        if (!targetContainer) return;
+        
+        extratorTempState = { 
+            pagina: parseInt(targetContainer.dataset.pageNumber), 
+            offsetY: localY 
+        };
+        
+        modoExtratorAtivo = false;
+        document.body.classList.remove('modo-extrator-ativo');
+        overlay.style.display = 'none';
+
+        const select = document.getElementById('extrator-topic-select');
+        select.innerHTML = '';
+        
+        const activeTabId = (typeof TopicsManager !== 'undefined') ? TopicsManager.getActiveTabId() : null;
+        topicos.forEach(t => {
+            const opt = new Option(t.nome, t.id);
+            if (t.id === activeTabId) opt.selected = true;
+            select.appendChild(opt);
+        });
+        
+        document.getElementById('extrator-modal-backdrop').style.display = 'block';
+        document.getElementById('extrator-wizard-popup').style.display = 'flex';
+        return; // Early return bloqueia a execução do Recorte
+    }
+
     const rect = overlay.getBoundingClientRect();
     startX = e.clientX - rect.left;
     startY = e.clientY - rect.top;
@@ -716,8 +801,8 @@ window.salvarRascunhoContextoDebounced = _debounce(function() {
     }
 }, 800);
 
-/* --- ATUALIZAÇÃO DA ABERTURA DO MODAL COM VERIFICAÇÃO DE CONTAMINAÇÃO --- */
-window.abrirModalGeradorContexto = function() {
+/* --- ABERTURA ASSÍNCRONA DO MODAL DE CONTEXTO (COM EXTRAÇÃO JIT) --- */
+window.abrirModalGeradorContexto = async function() {
     if (!window.ExportManager) return;
     const dadosTopico = ExportManager.obterDadosDoTopicoAtivo();
     if (!dadosTopico) {
@@ -725,44 +810,89 @@ window.abrirModalGeradorContexto = function() {
         return;
     }
 
-    // Padronização com RO: Aplica o blur focal
-    const painelPdf = document.getElementById('pdf-container');
-    const painelAnotacoes = document.getElementById('history-container');
-    if (painelPdf) painelPdf.classList.add('pdf-foco-ativo');
-    if (painelAnotacoes) painelAnotacoes.classList.add('pdf-foco-ativo');
+    // 1. UI UNBLOCKING: Feedback visual imediato antes da operação pesada na Main Thread
+    const btnGerador = document.getElementById('btn-gerador-contexto');
+    const originalHTML = btnGerador.innerHTML;
+    btnGerador.innerHTML = "⏳";
+    btnGerador.style.pointerEvents = "none";
 
-    const tagProcesso = document.getElementById('tag-numero-processo');
-    const numProcessoAtual = tagProcesso ? (tagProcesso.textContent.trim() || 'Não informado') : 'Não informado';
-
-    document.getElementById('ctx-metadados').value = `Processo: ${numProcessoAtual}\nTópico: ${dadosTopico.nome}`;
-    document.getElementById('ctx-diretrizes').value = dadosTopico.markdown;
+    // Cede controle para o navegador renderizar o loading (micro-delay)
+    await new Promise(resolve => setTimeout(resolve, 50));
 
     try {
-        // 1. Restaura dados seguros de forma livre
-        document.getElementById('ctx-minuta-anterior').value = sessionStorage.getItem('juris_ctx_minuta') || '';
-        document.getElementById('ctx-rascunho-ia').value = sessionStorage.getItem('juris_ctx_rascunho') || '';
+        // 2. EXTRAÇÃO ASSÍNCRONA DINÂMICA (Baseada nos Pinos)
+        const topicoBruto = topicos.find(t => t.id === TopicsManager.getActiveTabId());
         
-        // 2. VERIFICAÇÃO LGPD: Compara o processo salvo vs processo atual
-        const processoSalvoRef = sessionStorage.getItem('juris_ctx_processo_ref');
-        
-        if (processoSalvoRef && processoSalvoRef !== numProcessoAtual) {
-            // Contaminação detectada: Limpa silenciosamente os dados sensíveis
-            console.info("JurisNotes (AI): Troca de contexto detectada. Limpando cache sigiloso anterior.");
-            sessionStorage.removeItem('juris_ctx_sentenca');
-            sessionStorage.removeItem('juris_ctx_recurso');
-            sessionStorage.setItem('juris_ctx_processo_ref', numProcessoAtual);
-            
-            document.getElementById('ctx-teor-sentenca').value = '';
-            document.getElementById('ctx-teor-recurso').value = '';
-        } else {
-            // Contexto seguro, mesma sessão
-            document.getElementById('ctx-teor-sentenca').value = sessionStorage.getItem('juris_ctx_sentenca') || '';
-            document.getElementById('ctx-teor-recurso').value = sessionStorage.getItem('juris_ctx_recurso') || '';
-        }
-    } catch (e) { /* Ignora se bloqueado por restrições do navegador */ }
+        if (topicoBruto && topicoBruto.marcosExtracao && topicoBruto.marcosExtracao.length > 0) {
+            // Agrupar marcos pareados por tipo de documento
+            const agrupados = topicoBruto.marcosExtracao.reduce((acc, curr) => {
+                if(!acc[curr.docTipo]) acc[curr.docTipo] = {};
+                acc[curr.docTipo][curr.fronteira] = curr;
+                return acc;
+            }, {});
 
-    document.getElementById('gerador-contexto-backdrop').style.display = 'block';
-    document.getElementById('modal-gerador-contexto').style.display = 'flex';
+            let sentencaXML = "";
+            let recursoXML = "";
+
+            for (const [docTipo, limites] of Object.entries(agrupados)) {
+                if (limites.inicio && limites.fim) {
+                    const textoBruto = await window.PdfEngine.extrairTextoPorRegiao(limites.inicio, limites.fim);
+                    const textoLimpo = window.JurisUtils.limparTextoPDF(textoBruto);
+                    
+                    // GERAÇÃO DE XML PROFUNDO PARA A IA
+                    const tagName = docTipo.toUpperCase();
+                    const xml = `\n<${tagName}>\n${textoLimpo}\n</${tagName}>\n`;
+                    
+                    if (docTipo === 'sentenca') sentencaXML += xml;
+                    else recursoXML += xml;
+                }
+            }
+
+            // Injeta nas textareas protegidas por LGPD
+            if (sentencaXML) sessionStorage.setItem('juris_ctx_sentenca', sentencaXML.trim());
+            if (recursoXML) sessionStorage.setItem('juris_ctx_recurso', recursoXML.trim());
+        }
+
+        // 3. FLUXO ORIGINAL DE ABERTURA DO MODAL
+        // Padronização com RO: Aplica o blur focal
+        const painelPdf = document.getElementById('pdf-container');
+        const painelAnotacoes = document.getElementById('history-container');
+        if (painelPdf) painelPdf.classList.add('pdf-foco-ativo');
+        if (painelAnotacoes) painelAnotacoes.classList.add('pdf-foco-ativo');
+
+        const tagProcesso = document.getElementById('tag-numero-processo');
+        const numProcessoAtual = tagProcesso ? (tagProcesso.textContent.trim() || 'Não informado') : 'Não informado';
+        
+        document.getElementById('ctx-metadados').value = `Processo: ${numProcessoAtual}\nTópico: ${dadosTopico.nome}`;
+        document.getElementById('ctx-diretrizes').value = dadosTopico.markdown;
+        
+        try {
+            document.getElementById('ctx-minuta-anterior').value = sessionStorage.getItem('juris_ctx_minuta') || '';
+            document.getElementById('ctx-rascunho-ia').value = sessionStorage.getItem('juris_ctx_rascunho') || '';
+            
+            const processoSalvoRef = sessionStorage.getItem('juris_ctx_processo_ref');
+            
+            if (processoSalvoRef && processoSalvoRef !== numProcessoAtual) {
+                console.info("JurisNotes (AI): Troca de contexto detectada. Limpando cache sigiloso anterior.");
+                window.limparAreaInternaLGPD();
+                sessionStorage.setItem('juris_ctx_processo_ref', numProcessoAtual);
+            } else {
+                document.getElementById('ctx-teor-sentenca').value = sessionStorage.getItem('juris_ctx_sentenca') || '';
+                document.getElementById('ctx-teor-recurso').value = sessionStorage.getItem('juris_ctx_recurso') || '';
+            }
+        } catch (e) { /* Ignora se bloqueado por restrições do navegador */ }
+
+        document.getElementById('gerador-contexto-backdrop').style.display = 'block';
+        document.getElementById('modal-gerador-contexto').style.display = 'flex';
+
+    } catch (error) {
+        console.error("Erro na compilação do contexto:", error);
+        exibirToast("Erro ao processar os trechos. Tente marcar novamente.", "erro");
+    } finally {
+        // Restaura botão original
+        btnGerador.innerHTML = originalHTML;
+        btnGerador.style.pointerEvents = "auto";
+    }
 };
 
 window.fecharModalGeradorContexto = function() {
