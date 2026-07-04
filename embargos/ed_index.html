@@ -161,6 +161,13 @@
                     </svg>
                 </button>
 
+                <button class="icon-btn" id="btn-ferramenta-extrator" onclick="iniciarMarcadorExtracao()" title="Alfinete de Extração (Marcar Início/Fim para IA)" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                </button>
+
                 <button class="icon-btn" id="btn-ferramenta-audio" onclick="AudioManager.iniciarSessao()" title="Analisar Audiência (Áudio)" disabled>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line>
@@ -1191,6 +1198,37 @@ Crie um sumário hierárquico enxuto com as Grandes Categorias e Subcategorias q
         <div class="wizard-actions" style="margin-top: 16px;">
             <button class="chip-btn chip-cancelar" onclick="fecharModalPromptNotebookLM()">Fechar</button>
             <button class="chip-btn chip-autora" style="background: #2e7d32; color: white; border: none; padding-left: 24px; padding-right: 24px;" onclick="copiarPromptNotebookLM()">📋 Copiar Prompt Mestre</button>
+        </div>
+    </div>
+
+    <!-- MODAL E BACKDROP DO EXTRATOR INTELIGENTE -->
+    <div id="extrator-modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.40); z-index: 4004;" onclick="cancelarMarcadorExtracao()"></div>
+    <div id="extrator-wizard-popup" class="crop-wizard-popup" style="display:none; z-index: 4005;">
+        <div class="wizard-header">📍 Definir Limite de Extração</div>
+        
+        <p class="popup-label">Vincular a qual Vício Analisado?</p>
+        <select id="extrator-topic-select" class="topic-select"></select>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px;">
+            <div>
+                <p class="popup-label">Peça Processual:</p>
+                <select id="extrator-doc-select" class="topic-select">
+                    <option value="decisao">Decisão Embargada (Sentença/Acórdão)</option>
+                    <option value="embargos">Inteiro Teor dos Embargos</option>
+                </select>
+            </div>
+            <div>
+                <p class="popup-label">Este clique representa o:</p>
+                <select id="extrator-fronteira-select" class="topic-select">
+                    <option value="inicio">🟢 Marco de Início</option>
+                    <option value="fim">🔴 Marco de Fim</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="wizard-actions">
+            <button class="chip-btn chip-cancelar" onclick="cancelarMarcadorExtracao()">✕ Cancelar</button>
+            <button class="chip-btn chip-autora" onclick="salvarMarcadorExtracao()">✔ Fixar Alfinete</button>
         </div>
     </div>
 
