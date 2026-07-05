@@ -561,6 +561,7 @@ window.ExportManager = (function () {
 
     // ─── HUB DE EXPORTAÇÃO RAG ──────────────────────────────────────────────
     let _documentosParaExtracaoCache = {};
+    let _isExporting = false; // Trava de concorrência global da exportação
 
     function abrirPainelExportacao() {
         const activeId = _deps.getActiveTabId();
@@ -653,20 +654,24 @@ window.ExportManager = (function () {
     }
 
     async function gerarExportacaoPersonalizada() {
+        if (_isExporting) {
+            _deps.exibirToast('Uma exportação já está em andamento. Aguarde.', 'aviso');
+            return;
+        }
+        
+        _isExporting = true;
         const topicos = _deps.getTopicos();
         const topico = topicos.find(t => t.id === _deps.getActiveTabId());
         
-        const btn = document.getElementById('btn-gerar-arquivo-exportacao');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '⏳ Extraindo Dados do PDF...';
-        btn.style.pointerEvents = 'none';
-        btn.style.opacity = '0.7';
+        // UX: Fecha o modal IMEDIATAMENTE para liberar a tela para o usuário
+        fecharPainelExportacao();
+        _deps.exibirToast('⏳ Iniciando extração de dados em segundo plano...', 'info');
 
         try {
             let conteudoFinal = "";
             const elMatriz = document.getElementById('checkbox-matriz-export');
             const incluirMatriz = elMatriz && elMatriz.checked;
-            const checkboxesDocsExtra = document.querySelectorAll('.extra-doc-checkbox:checked');
+            const checkboxesDocsExtra = Array.from(document.querySelectorAll('.extra-doc-checkbox:checked'));
 
             // 1. Injeção de Contexto (Obrigatório para o LLM não se perder)
             if (incluirMatriz) {
@@ -685,18 +690,32 @@ window.ExportManager = (function () {
                     : "     TEOR INTEGRAL DE PEÇAS E DOCUMENTOS\n";
                 conteudoFinal += "     ========================================== -->\n\n";
 
-                for (const cb of checkboxesDocsExtra) {
+                // Orquestração da fila de documentos
+                for (let idx = 0; idx < checkboxesDocsExtra.length; idx++) {
+                    const cb = checkboxesDocsExtra[idx];
                     const docTipo = cb.value;
                     const limites = _documentosParaExtracaoCache[docTipo];
                     const tagName = docTipo.toUpperCase();
                     
                     try {
-                        const textoBruto = await window.PdfEngine.extrairTextoPorRegiao(limites.inicio, limites.fim);
+                        const textoBruto = await window.PdfEngine.extrairTextoPorRegiao(
+                            limites.inicio, 
+                            limites.fim,
+                            // Progress Tracking interpolado pelo orquestrador
+                            (atual, totalPagsDoc) => {
+                                const docNumber = idx + 1;
+                                _deps.exibirToast(`⏳ Processando Peça ${docNumber}/${checkboxesDocsExtra.length} (Pág ${atual} de ${totalPagsDoc})...`, 'info');
+                            }
+                        );
+                        
                         const textoLimpo = (window.JurisUtils && window.JurisUtils.limparTextoPDF) 
-                            ? window.JurisUtils.limparTextoPDF(textoBruto) 
-                            : textoBruto;
+                            ? window.JurisUtils.limparTextoPDF(textoBruto) : textoBruto;
                         conteudoFinal += `<${tagName}>\n${textoLimpo}\n</${tagName}>\n\n`;
+                        
                     } catch (extraError) {
+                        if (extraError.message && extraError.message.includes("CONCURRENCY_VIOLATION")) {
+                            throw extraError; // Repassa erro fatal para cima abortando o processo
+                        }
                         console.warn(`[ExportManager] Falha ao extrair ${docTipo}:`, extraError);
                         conteudoFinal += `<${tagName}>\n[AVISO DE SISTEMA: Falha na extração. Possível página corrompida.]\n</${tagName}>\n\n`;
                     }
@@ -732,18 +751,19 @@ window.ExportManager = (function () {
                 _deps.exibirToast('Texto exportado. Iniciando imagens...', 'info');
                 _executarFilaDeDownloads(filaDeDownloads);
             } else {
-                _deps.exibirToast('Arquivo gerado com sucesso!', 'sucesso');
+                _deps.exibirToast('✅ Arquivo gerado com sucesso!', 'sucesso');
             }
-            
-            fecharPainelExportacao();
 
         } catch (error) {
             console.error('[ExportManager] Erro fatal na exportação:', error);
-            _deps.exibirToast('Erro crítico ao gerar arquivo. Verifique o console.', 'erro');
+            if (error.message && error.message.includes("CONCURRENCY_VIOLATION")) {
+                _deps.exibirToast('Exportação abortada: O documento PDF foi alterado.', 'erro');
+            } else {
+                _deps.exibirToast('Erro crítico ao gerar arquivo. Verifique o console.', 'erro');
+            }
         } finally {
-            btn.innerHTML = originalText;
-            btn.style.pointerEvents = 'auto';
-            btn.style.opacity = '1';
+            // LIBERA A TRAVA EM QUALQUER CENÁRIO
+            _isExporting = false;
         }
     }
 
