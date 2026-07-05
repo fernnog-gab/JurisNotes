@@ -301,8 +301,8 @@ window.ExportManager = (function () {
     /**
      * Download seguro do arquivo Markdown
      */
-    function _downloadArquivo(nomeArquivo, conteudoTexto) {
-        const blob = new Blob([conteudoTexto], { type: 'text/markdown;charset=utf-8;' });
+    function _downloadArquivo(nomeArquivo, conteudoTexto, mimeType = 'text/markdown;charset=utf-8;') {
+        const blob = new Blob([conteudoTexto], { type: mimeType });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
@@ -342,6 +342,158 @@ window.ExportManager = (function () {
             await new Promise(resolve => setTimeout(resolve, 650)); // Delay estratégico
         }
         _deps.exibirToast('Todas as evidências foram baixadas.', 'sucesso');
+    }
+
+    // ─── HUB DE EXPORTAÇÃO RAG (ED) ─────────────────────────────────────────
+    let _documentosParaExtracaoCache = {};
+
+    function abrirPainelExportacao() {
+        const activeId = _deps.getActiveTabId();
+        if (!activeId) {
+            _deps.exibirToast('Selecione um tópico antes de exportar.', 'aviso');
+            return;
+        }
+
+        const topico = _deps.getTopicos().find(t => t.id === activeId);
+        if (!topico || topico.anotacoes.length === 0) {
+            _deps.exibirToast('O tópico está vazio ou inválido.', 'aviso');
+            return;
+        }
+
+        if (window.BalancaManager && !window.BalancaManager.executarGuardrailDeTarefas('gerar o pacote de exportação para a IA')) {
+            _deps.exibirToast('Exportação interrompida pelo usuário.', 'aviso');
+            return; 
+        }
+
+        const container = document.getElementById('export-options-container');
+        container.innerHTML = '';
+        _documentosParaExtracaoCache = {};
+
+        container.innerHTML += `
+            <label class="export-option-card locked-option">
+                <input type="checkbox" checked disabled>
+                <div class="export-option-details">
+                    <span class="export-option-title">Matriz de Embargos (Juris Notes) + Imagens Anexas</span>
+                    <span class="export-option-subtitle">Auditoria estrita de vícios e download das provas demarcadas.</span>
+                </div>
+            </label>
+        `;
+
+        if (topico.marcosExtracao && topico.marcosExtracao.length > 0) {
+            const agrupados = topico.marcosExtracao.reduce((acc, curr) => {
+                if(!acc[curr.docTipo]) acc[curr.docTipo] = {};
+                acc[curr.docTipo][curr.fronteira] = curr;
+                return acc;
+            }, {});
+
+            const docNomes = {
+                decisao: "Decisão Embargada", 
+                embargos: "Inteiro Teor dos Embargos"
+            };
+
+            for (const [docTipo, limites] of Object.entries(agrupados)) {
+                if (limites.inicio && limites.fim) {
+                    _documentosParaExtracaoCache[docTipo] = limites;
+                    const nomeF = docNomes[docTipo] || docTipo.toUpperCase();
+                    container.innerHTML += `
+                        <label class="export-option-card">
+                            <input type="checkbox" value="${docTipo}" class="extra-doc-checkbox" checked>
+                            <div class="export-option-details">
+                                <span class="export-option-title">Teor Integral: ${nomeF}</span>
+                                <span class="export-option-subtitle">Conteúdo capturado entre as fls. ${limites.inicio.pagina} e ${limites.fim.pagina}.</span>
+                            </div>
+                        </label>
+                    `;
+                }
+            }
+        }
+
+        document.getElementById('export-avancado-backdrop').style.display = 'block';
+        document.getElementById('modal-exportacao-avancada').style.display = 'block';
+    }
+
+    function fecharPainelExportacao() {
+        document.getElementById('export-avancado-backdrop').style.display = 'none';
+        document.getElementById('modal-exportacao-avancada').style.display = 'none';
+    }
+
+    async function gerarExportacaoPersonalizada() {
+        const topicos = _deps.getTopicos();
+        const topico = topicos.find(t => t.id === _deps.getActiveTabId());
+        
+        const btn = document.getElementById('btn-gerar-arquivo-exportacao');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '⏳ Extraindo Dados do PDF...';
+        btn.style.pointerEvents = 'none';
+        btn.style.opacity = '0.7';
+
+        try {
+            let conteudoFinal = _gerarMarkdown(topico) + "\n\n";
+
+            const checkboxes = document.querySelectorAll('.extra-doc-checkbox:checked');
+            if (checkboxes.length > 0) {
+                conteudoFinal += "<!-- ==========================================\n";
+                conteudoFinal += "     DOCUMENTOS COMPLEMENTARES ANEXOS\n";
+                conteudoFinal += "     ========================================== -->\n\n";
+            }
+
+            for (const cb of checkboxes) {
+                const docTipo = cb.value;
+                const limites = _documentosParaExtracaoCache[docTipo];
+                const tagName = docTipo.toUpperCase();
+                
+                try {
+                    const textoBruto = await window.PdfEngine.extrairTextoPorRegiao(limites.inicio, limites.fim);
+                    const textoLimpo = (window.JurisUtils && window.JurisUtils.limparTextoPDF) 
+                        ? window.JurisUtils.limparTextoPDF(textoBruto) 
+                        : textoBruto;
+                    conteudoFinal += `<${tagName}>\n${textoLimpo}\n</${tagName}>\n\n`;
+                } catch (extraError) {
+                    console.warn(`[ExportManager ED] Falha ao extrair ${docTipo}:`, extraError);
+                    conteudoFinal += `<${tagName}>\n[AVISO DE SISTEMA: Falha na extração deste documento no PDF. Possível página corrompida.]\n</${tagName}>\n\n`;
+                }
+            }
+
+            const filaDeDownloads = [];
+            topico.anotacoes.forEach((an, idx) => {
+                const numIdeia = idx + 1;
+                if (an.tipo === 'imagem') {
+                    filaDeDownloads.push({ dados: an.conteudo, nome: _gerarNomeArquivoImagem(topico.id, numIdeia) });
+                }
+                if (an.itensCorrelacionados && an.itensCorrelacionados.length > 0) {
+                    an.itensCorrelacionados.forEach((corr, corrIdx) => {
+                        if (corr.tipo === 'imagem') {
+                            filaDeDownloads.push({ dados: corr.conteudo, nome: _gerarNomeArquivoImagem(topico.id, numIdeia, corrIdx + 1) });
+                        }
+                    });
+                }
+            });
+
+            const config = ESQUEMAS_CONTEXTO['ED'];
+            const nomeSanitizado = (topico.nome || 'Exportacao_ED').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+            const tagDom = document.getElementById('tag-numero-processo');
+            const numProcesso = tagDom && tagDom.style.display !== 'none' ? tagDom.textContent.trim() : '';
+            const baseStr = numProcesso ? `${config.prefixoArquivo}${numProcesso}_` : config.prefixoArquivo;
+
+            _downloadArquivo(`${baseStr}${nomeSanitizado}_CONTEXTO_RAG.txt`, conteudoFinal, 'text/plain;charset=utf-8;');
+            
+            if(filaDeDownloads.length > 0) {
+                _deps.exibirToast('Texto exportado. Iniciando imagens...', 'info');
+                _executarFilaDeDownloads(filaDeDownloads);
+            } else {
+                _deps.exibirToast('Arquivo gerado com sucesso!', 'sucesso');
+            }
+            
+            fecharPainelExportacao();
+
+        } catch (error) {
+            console.error('[ExportManager ED] Erro fatal na exportação:', error);
+            _deps.exibirToast('Erro crítico ao gerar arquivo. Verifique o console.', 'erro');
+        } finally {
+            btn.innerHTML = originalText;
+            btn.style.pointerEvents = 'auto';
+            btn.style.opacity = '1';
+        }
     }
 
     // ========================================================================
@@ -435,7 +587,10 @@ window.ExportManager = (function () {
                 nome: topicoAtivo.nome || 'Vício Não Nomeado',
                 markdown: _gerarMarkdown(topicoAtivo)
             };
-        }
+        },
+        abrirPainelExportacao, 
+        fecharPainelExportacao, 
+        gerarExportacaoPersonalizada
     };
 
 })();

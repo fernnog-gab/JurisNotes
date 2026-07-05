@@ -174,7 +174,7 @@
                     </svg>
                 </button>
 
-                <button class="icon-btn" id="btn-exportar-topico" onclick="ExportManager.exportarTopicoAtivo('ED')" title="Exportar Tópico para IA (Markdown)" style="display: none;">
+                <button class="icon-btn" id="btn-exportar-topico" onclick="ExportManager.abrirPainelExportacao()" title="Exportação Avançada para IA" style="display: none;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line>
                     </svg>
@@ -1229,6 +1229,30 @@ Crie um sumário hierárquico enxuto com as Grandes Categorias e Subcategorias q
         <div class="wizard-actions">
             <button class="chip-btn chip-cancelar" onclick="cancelarMarcadorExtracao()">✕ Cancelar</button>
             <button class="chip-btn chip-autora" onclick="salvarMarcadorExtracao()">✔ Fixar Alfinete</button>
+        </div>
+    </div>
+
+    <!-- MODAL EXPORTAÇÃO AVANÇADA (HUB RAG - ED) -->
+    <div id="export-avancado-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.40); z-index: 4010;" onclick="ExportManager.fecharPainelExportacao()"></div>
+
+    <div id="modal-exportacao-avancada" class="crop-wizard-popup" style="display:none; z-index: 4011; max-width: 600px; width: 90vw;">
+        <div class="wizard-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="display: flex; align-items: center; gap: 8px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Hub de Exportação de Contexto (IA)
+            </span>
+            <button style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b;" onclick="ExportManager.fecharPainelExportacao()">✕</button>
+        </div>
+        
+        <p class="popup-label" style="margin-top: 12px;">Selecione os documentos para compor a base de conhecimento:</p>
+        
+        <div id="export-options-container" style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px; max-height: 40vh; overflow-y: auto; padding-right: 4px;"></div>
+
+        <div class="wizard-actions" style="margin-top: 16px;">
+            <button class="chip-btn chip-cancelar" onclick="ExportManager.fecharPainelExportacao()">Cancelar</button>
+            <button id="btn-gerar-arquivo-exportacao" class="chip-btn chip-autora" style="background: var(--trt-blue); color: white; border: none; padding-left: 24px; padding-right: 24px;" onclick="ExportManager.gerarExportacaoPersonalizada()">
+                📥 Gerar Arquivo Exportação
+            </button>
         </div>
     </div>
 
