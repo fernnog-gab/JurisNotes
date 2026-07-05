@@ -556,6 +556,9 @@ window.salvarMarcadorExtracao = function() {
     
     if(window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
     if(typeof salvarBackupAutomatico === 'function') salvarBackupAutomatico();
+    
+    // [NOVO] Valida o botão imediatamente após salvar um novo marco
+    if (window.atualizarStatusBotaoExtrator) window.atualizarStatusBotaoExtrator();
 };
 
 window.cancelarMarcadorExtracao = function() {
