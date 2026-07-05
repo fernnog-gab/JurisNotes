@@ -167,18 +167,36 @@ window.PdfEngine = (function () {
     /* ================================================
        EXTRAÇÃO MATEMÁTICA DE TEXTO POR REGIÃO (ALFINETE)
        ================================================ */
-    async function extrairTextoPorRegiao(marcoInicio, marcoFim) {
+    
+    // Função utilitária para liberar a Main Thread (macro-task)
+    const _yieldToMain = () => new Promise(resolve => setTimeout(resolve, 0));
+
+    async function extrairTextoPorRegiao(marcoInicio, marcoFim, onProgress = null) {
         if (!_pdfDoc) return "";
         
+        // LOCK DE INTEGRIDADE: Captura a instância atual do documento
+        const targetPdfInstance = _pdfDoc;
         let textoExtraido = "";
+        
         const pInicio = Math.min(marcoInicio.pagina, marcoFim.pagina);
         const pFim = Math.max(marcoInicio.pagina, marcoFim.pagina);
         
         // Garante que o Y Inicial corresponde à página inicial correta (caso o usuário inverta a ordem)
         const yInicioDOM = (pInicio === marcoInicio.pagina) ? marcoInicio.offsetY : marcoFim.offsetY;
         const yFimDOM = (pFim === marcoFim.pagina) ? marcoFim.offsetY : marcoInicio.offsetY;
+        
+        const totalPaginas = (pFim - pInicio) + 1;
+        
+        // Inicia o cronômetro para o Time Budget
+        let lastYieldTime = performance.now();
+        const TIME_BUDGET_MS = 40; // Limiar de bloqueio aceitável
 
         for (let i = pInicio; i <= pFim; i++) {
+            // VALIDAÇÃO DE ESTADO: Verifica se o usuário trocou o PDF durante um yield
+            if (_pdfDoc !== targetPdfInstance) {
+                throw new Error("CONCURRENCY_VIOLATION: O documento original foi alterado durante a extração.");
+            }
+
             const page = await _pdfDoc.getPage(i);
             const viewport = page.getViewport({ scale: 1.5 }); // Mesma escala do renderizador
             const textContent = await page.getTextContent();
@@ -197,6 +215,21 @@ window.PdfEngine = (function () {
                 .join(' ');
                 
             textoExtraido += textoPagina + " \n\n ";
+
+            if (onProgress) {
+                try {
+                    const atual = (i - pInicio) + 1;
+                    onProgress(atual, totalPaginas);
+                } catch (e) {
+                    console.warn("[PdfEngine] Erro silenciado no callback de progresso UI.", e);
+                }
+            }
+
+            // GESTÃO DE PERFORMANCE: Só cede o controle se estourou o orçamento de tempo
+            if (performance.now() - lastYieldTime > TIME_BUDGET_MS) {
+                await _yieldToMain();
+                lastYieldTime = performance.now(); // Reseta o cronômetro
+            }
         }
         return textoExtraido;
     }
