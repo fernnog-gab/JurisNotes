@@ -585,8 +585,8 @@ window.ExportManager = (function () {
         _documentosParaExtracaoCache = {};
 
         container.innerHTML += `
-            <label class="export-option-card locked-option">
-                <input type="checkbox" checked disabled>
+            <label class="export-option-card">
+                <input type="checkbox" id="checkbox-matriz-export" class="export-control-checkbox" checked>
                 <div class="export-option-details">
                     <span class="export-option-title">Matriz Probatória (Juris Notes) + Imagens Anexas</span>
                     <span class="export-option-subtitle">Teses, diretrizes e o download das provas visuais demarcadas.</span>
@@ -613,7 +613,7 @@ window.ExportManager = (function () {
                     const nomeF = docNomes[docTipo] || docTipo.toUpperCase();
                     container.innerHTML += `
                         <label class="export-option-card">
-                            <input type="checkbox" value="${docTipo}" class="extra-doc-checkbox" checked>
+                            <input type="checkbox" value="${docTipo}" class="extra-doc-checkbox export-control-checkbox" checked>
                             <div class="export-option-details">
                                 <span class="export-option-title">Teor Integral: ${nomeF}</span>
                                 <span class="export-option-subtitle">Conteúdo capturado entre as fls. ${limites.inicio.pagina} e ${limites.fim.pagina}.</span>
@@ -626,6 +626,25 @@ window.ExportManager = (function () {
 
         document.getElementById('export-avancado-backdrop').style.display = 'block';
         document.getElementById('modal-exportacao-avancada').style.display = 'block';
+
+        const btnExportar = document.getElementById('btn-gerar-arquivo-exportacao');
+        btnExportar.disabled = false;
+        btnExportar.style.opacity = '1';
+
+        container.addEventListener('change', function(e) {
+            if (e.target && e.target.classList.contains('export-control-checkbox')) {
+                const totalChecked = container.querySelectorAll('.export-control-checkbox:checked').length;
+                if (totalChecked === 0) {
+                    btnExportar.disabled = true;
+                    btnExportar.style.opacity = '0.4';
+                    btnExportar.style.cursor = 'not-allowed';
+                } else {
+                    btnExportar.disabled = false;
+                    btnExportar.style.opacity = '1';
+                    btnExportar.style.cursor = 'pointer';
+                }
+            }
+        });
     }
 
     function fecharPainelExportacao() {
@@ -644,54 +663,70 @@ window.ExportManager = (function () {
         btn.style.opacity = '0.7';
 
         try {
-            let conteudoFinal = _gerarMarkdown(topico) + "\n\n";
+            let conteudoFinal = "";
+            const elMatriz = document.getElementById('checkbox-matriz-export');
+            const incluirMatriz = elMatriz && elMatriz.checked;
+            const checkboxesDocsExtra = document.querySelectorAll('.extra-doc-checkbox:checked');
 
-            const checkboxes = document.querySelectorAll('.extra-doc-checkbox:checked');
-            if (checkboxes.length > 0) {
+            // 1. Injeção de Contexto (Obrigatório para o LLM não se perder)
+            if (incluirMatriz) {
+                conteudoFinal += _gerarMarkdown(topico) + "\n\n";
+            } else {
+                const nomeTopicoFormatado = (topico.nome || 'Tópico Sem Nome').toUpperCase();
+                conteudoFinal += `# TÓPICO RECURSAL: **${nomeTopicoFormatado}**\n`;
+                conteudoFinal += `[AVISO DE SISTEMA]: O usuário optou por não enviar a matriz probatória. Use os documentos integrais abaixo para análise.\n\n`;
+            }
+
+            // 2. Anexação dos Documentos Complementares
+            if (checkboxesDocsExtra.length > 0) {
                 conteudoFinal += "<!-- ==========================================\n";
-                conteudoFinal += "     DOCUMENTOS COMPLEMENTARES ANEXOS\n";
+                conteudoFinal += incluirMatriz 
+                    ? "     DOCUMENTOS COMPLEMENTARES ANEXOS\n" 
+                    : "     TEOR INTEGRAL DE PEÇAS E DOCUMENTOS\n";
                 conteudoFinal += "     ========================================== -->\n\n";
-            }
 
-            for (const cb of checkboxes) {
-                const docTipo = cb.value;
-                const limites = _documentosParaExtracaoCache[docTipo];
-                const tagName = docTipo.toUpperCase();
-                
-                try {
-                    const textoBruto = await window.PdfEngine.extrairTextoPorRegiao(limites.inicio, limites.fim);
-                    const textoLimpo = (window.JurisUtils && window.JurisUtils.limparTextoPDF) 
-                        ? window.JurisUtils.limparTextoPDF(textoBruto) 
-                        : textoBruto;
-                    conteudoFinal += `<${tagName}>\n${textoLimpo}\n</${tagName}>\n\n`;
-                } catch (extraError) {
-                    console.warn(`[ExportManager] Falha ao extrair ${docTipo}:`, extraError);
-                    conteudoFinal += `<${tagName}>\n[AVISO DE SISTEMA: Falha na extração deste documento no PDF. Possível página corrompida.]\n</${tagName}>\n\n`;
+                for (const cb of checkboxesDocsExtra) {
+                    const docTipo = cb.value;
+                    const limites = _documentosParaExtracaoCache[docTipo];
+                    const tagName = docTipo.toUpperCase();
+                    
+                    try {
+                        const textoBruto = await window.PdfEngine.extrairTextoPorRegiao(limites.inicio, limites.fim);
+                        const textoLimpo = (window.JurisUtils && window.JurisUtils.limparTextoPDF) 
+                            ? window.JurisUtils.limparTextoPDF(textoBruto) 
+                            : textoBruto;
+                        conteudoFinal += `<${tagName}>\n${textoLimpo}\n</${tagName}>\n\n`;
+                    } catch (extraError) {
+                        console.warn(`[ExportManager] Falha ao extrair ${docTipo}:`, extraError);
+                        conteudoFinal += `<${tagName}>\n[AVISO DE SISTEMA: Falha na extração. Possível página corrompida.]\n</${tagName}>\n\n`;
+                    }
                 }
             }
 
+            // 3. Fila de Downloads Visuais (Restrita à Matriz)
             const filaDeDownloads = [];
-            topico.anotacoes.forEach((an, index) => {
-                const numIdeia = index + 1;
-                if (an.tipo === 'imagem') {
-                    filaDeDownloads.push({ dados: an.conteudo, nome: _gerarNomeArquivoImagem(numIdeia, null, an.pjeId, an.pagina) });
-                }
-                if (an.itensCorrelacionados && an.itensCorrelacionados.length > 0) {
-                    an.itensCorrelacionados.forEach((corr, corrIdx) => {
-                        if (corr.tipo === 'imagem') {
-                            filaDeDownloads.push({ dados: corr.conteudo, nome: _gerarNomeArquivoImagem(numIdeia, corrIdx + 1, corr.pjeId, corr.pagina) });
-                        }
-                    });
-                }
-            });
+            if (incluirMatriz) {
+                topico.anotacoes.forEach((an, index) => {
+                    const numIdeia = index + 1;
+                    if (an.tipo === 'imagem') filaDeDownloads.push({ dados: an.conteudo, nome: _gerarNomeArquivoImagem(numIdeia, null, an.pjeId, an.pagina) });
+                    if (an.itensCorrelacionados && an.itensCorrelacionados.length > 0) {
+                        an.itensCorrelacionados.forEach((corr, corrIdx) => {
+                            if (corr.tipo === 'imagem') filaDeDownloads.push({ dados: corr.conteudo, nome: _gerarNomeArquivoImagem(numIdeia, corrIdx + 1, corr.pjeId, corr.pagina) });
+                        });
+                    }
+                });
+            }
 
+            // 4. Fechamento e Download Dinâmico
             const nomeBase = topico.nome || 'Exportacao_JurisNotes';
             const nomeSanitizado = nomeBase.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/gi, '_').toLowerCase();
             const tagDom = document.getElementById('tag-numero-processo');
             const numProcesso = tagDom && tagDom.style.display !== 'none' ? tagDom.textContent.trim() : '';
             const prefixoStr = numProcesso ? `${numProcesso}_` : '';
+            
+            const sufixoArquivo = incluirMatriz ? "_CONTEXTO_RAG.txt" : "_TEOR_INTEGRAL.txt";
 
-            _downloadArquivo(`${prefixoStr}${nomeSanitizado}_CONTEXTO_RAG.txt`, conteudoFinal, 'text/plain;charset=utf-8;');
+            _downloadArquivo(`${prefixoStr}${nomeSanitizado}${sufixoArquivo}`, conteudoFinal, 'text/plain;charset=utf-8;');
             
             if(filaDeDownloads.length > 0) {
                 _deps.exibirToast('Texto exportado. Iniciando imagens...', 'info');
