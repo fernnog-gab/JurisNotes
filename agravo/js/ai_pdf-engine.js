@@ -520,20 +520,21 @@ window.PdfEngine = (function () {
             };
             desenharMarcacoes(topico.anotacoes);
 
-            // [NOVO] Renderização dos Alfinetes de Extração
+            // [NOVO] Renderização dos Alfinetes de Extração (Dumb Components)
             if (topico.marcosExtracao && topico.marcosExtracao.length > 0) {
                 topico.marcosExtracao.forEach(marco => {
                     if (marco.pagina === pageNum) {
                         const pin = document.createElement('div');
-                        pin.className = 'pdf-extrator-pin'; // Usa a classe base refatorada
+                        pin.className = 'pdf-extrator-pin'; 
                         pin.style.top = marco.offsetY + 'px';
                         pin.style.borderColor = topico.cor; 
                         pin.style.color = topico.cor; 
                         
-                        const fronteiraTxt = marco.fronteira === 'inicio' ? 'Início' : 'Fim';
-                        pin.title = `Marco de ${fronteiraTxt}\nDoc: ${marco.docTipo}\nTópico: ${topico.nome}`;
+                        // DATA-ATTRIBUTES para a Event Delegation (Performance)
+                        pin.dataset.tooltipFronteira = marco.fronteira;
+                        pin.dataset.tooltipDoc = marco.docTipo;
+                        pin.dataset.tooltipTopico = topico.nome;
 
-                        // Ícone SVG inserido diretamente
                         pin.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M16 11.78L20.24 16H13v6l-1 2-1-2v-6H3.76L8 11.78V4h1V2h6v2h1v7.78z"></path></svg>`;
 
                         highlightLayerDiv.appendChild(pin);

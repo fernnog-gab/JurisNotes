@@ -997,3 +997,47 @@ function executarCopiaFallback(texto, btn, originalText, modo) {
         btn.style.backgroundColor = modo === 'interno' ? '#f57c00' : 'var(--trt-blue)';
     }, 3000);
 }
+
+/* ================================================
+   DELEGAÇÃO DE EVENTOS (EVENT DELEGATION) - TOOLTIPS DOS ALFINETES
+   ================================================ */
+// Singleton para Cache do elemento Tooltip
+let _cachedTooltip = null;
+
+document.addEventListener('mouseover', (e) => {
+    const pin = e.target.closest('.pdf-extrator-pin');
+    if (!pin) return;
+
+    if (!_cachedTooltip) _cachedTooltip = document.getElementById('quick-intent-tooltip');
+    if (!_cachedTooltip) return;
+
+    const fronteira = pin.dataset.tooltipFronteira === 'inicio' ? 'INÍCIO' : 'FIM';
+    const docTipo = pin.dataset.tooltipDoc;
+    const topicoNome = pin.dataset.tooltipTopico;
+
+    // Dicionário visual adaptado para o Módulo AI
+    const docNomes = { sentenca: "Decisão / Sentença", recurso_autora: "Agravo (Autora)", recurso_re: "Agravo (Ré)", contrarrazões_autora: "Contraminuta (Autora)", contrarrazões_re: "Contraminuta (Ré)", inicial: "Recurso Ordinário" };
+    const nomeBonito = docNomes[docTipo] || (docTipo ? docTipo.toUpperCase() : 'DESCONHECIDO');
+
+    _cachedTooltip.innerHTML = `<strong>📍 MARCADOR DE ${fronteira}</strong>Documento: ${nomeBonito}<br>Tópico: ${topicoNome}`;
+    _cachedTooltip.style.display = 'block';
+    
+    // Cálculo seguro de viewport
+    let x = e.clientX + 15;
+    let y = e.clientY + 15;
+    const rect = _cachedTooltip.getBoundingClientRect();
+    if (x + rect.width > window.innerWidth) x = e.clientX - rect.width - 15;
+    if (y + rect.height > window.innerHeight) y = e.clientY - rect.height - 15;
+
+    _cachedTooltip.style.left = `${x}px`;
+    _cachedTooltip.style.top = `${y}px`;
+    requestAnimationFrame(() => _cachedTooltip.classList.add('visible'));
+});
+
+document.addEventListener('mouseout', (e) => {
+    const pin = e.target.closest('.pdf-extrator-pin');
+    if (pin && _cachedTooltip) {
+        _cachedTooltip.classList.remove('visible');
+        setTimeout(() => { _cachedTooltip.style.display = 'none'; }, 200);
+    }
+});

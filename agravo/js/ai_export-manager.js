@@ -369,18 +369,19 @@ window.ExportManager = (function () {
         }
 
         const container = document.getElementById('export-options-container');
-        container.innerHTML = '';
         _documentosParaExtracaoCache = {};
 
-        container.innerHTML += `
-            <label class="export-option-card">
+        const htmlBuffer = [];
+
+        htmlBuffer.push(`
+            <label class="export-option-card matriz-destaque-ro">
                 <input type="checkbox" id="checkbox-matriz-export" class="export-control-checkbox" checked>
                 <div class="export-option-details">
                     <span class="export-option-title">Matriz Probatória (Juris Notes) + Imagens Anexas</span>
                     <span class="export-option-subtitle">Teses, diretrizes e o download das provas visuais demarcadas.</span>
                 </div>
             </label>
-        `;
+        `);
 
         if (topico.marcosExtracao && topico.marcosExtracao.length > 0) {
             const agrupados = topico.marcosExtracao.reduce((acc, curr) => {
@@ -395,23 +396,46 @@ window.ExportManager = (function () {
                 inicial: "Recurso Ordinário"
             };
 
+            const svgPin = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 11.78L20.24 16H13v6l-1 2-1-2v-6H3.76L8 11.78V4h1V2h6v2h1v7.78z"></path></svg>`;
+
             for (const [docTipo, limites] of Object.entries(agrupados)) {
-                if (limites.inicio && limites.fim) {
-                    _documentosParaExtracaoCache[docTipo] = limites;
-                    const nomeF = docNomes[docTipo] || docTipo.toUpperCase();
-                    container.innerHTML += `
-                        <label class="export-option-card">
-                            <input type="checkbox" value="${docTipo}" class="extra-doc-checkbox export-control-checkbox" checked>
-                            <div class="export-option-details">
-                                <span class="export-option-title">Teor Integral: ${nomeF}</span>
-                                <span class="export-option-subtitle">Conteúdo capturado entre as fls. ${limites.inicio.pagina} e ${limites.fim.pagina}.</span>
-                            </div>
-                        </label>
-                    `;
-                }
+                const hasInicio = !!limites.inicio;
+                const hasFim = !!limites.fim;
+                const isCompleto = hasInicio && hasFim;
+                
+                if (isCompleto) _documentosParaExtracaoCache[docTipo] = limites;
+                
+                const nomeF = docNomes[docTipo] || docTipo.toUpperCase();
+                
+                const btnInicio = hasInicio 
+                    ? `<button type="button" class="pin-action-btn pin-start-active" onclick="event.preventDefault(); event.stopPropagation(); excluirMarcadorExtracao('${topico.id}', '${docTipo}', 'inicio');" title="Excluir Início (Fl. ${limites.inicio.pagina})">${svgPin}</button>`
+                    : `<button type="button" class="pin-action-btn pin-missing" title="Falta Marcador de Início">${svgPin}</button>`;
+                    
+                const btnFim = hasFim 
+                    ? `<button type="button" class="pin-action-btn pin-end-active" onclick="event.preventDefault(); event.stopPropagation(); excluirMarcadorExtracao('${topico.id}', '${docTipo}', 'fim');" title="Excluir Fim (Fl. ${limites.fim.pagina})">${svgPin}</button>`
+                    : `<button type="button" class="pin-action-btn pin-missing" title="Falta Marcador de Fim">${svgPin}</button>`;
+
+                const statusTexto = isCompleto 
+                    ? `Conteúdo capturado entre as fls. ${limites.inicio.pagina} e ${limites.fim.pagina}.`
+                    : `<span style="color:#c62828; font-weight:700;">⚠️ Extração bloqueada: Faltam marcadores.</span>`;
+
+                htmlBuffer.push(`
+                    <label class="export-option-card ${!isCompleto ? 'locked-option' : ''}">
+                        <input type="checkbox" value="${docTipo}" class="extra-doc-checkbox export-control-checkbox" ${isCompleto ? 'checked' : 'disabled'}>
+                        <div class="export-option-details">
+                            <span class="export-option-title">Teor Integral: ${nomeF}</span>
+                            <span class="export-option-subtitle">${statusTexto}</span>
+                        </div>
+                        <div class="export-pin-controls">
+                            ${btnInicio}
+                            ${btnFim}
+                        </div>
+                    </label>
+                `);
             }
         }
 
+        container.innerHTML = htmlBuffer.join('');
         document.getElementById('export-avancado-backdrop').style.display = 'block';
         document.getElementById('modal-exportacao-avancada').style.display = 'block';
 
