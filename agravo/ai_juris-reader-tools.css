@@ -228,3 +228,36 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
 
 @keyframes flash-highlight { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--trt-blue) 60%, transparent); border-color: var(--trt-blue); transform: scale(1.01); } 50% { box-shadow: 0 0 0 16px transparent; background-color: color-mix(in srgb, var(--trt-blue) 5%, transparent); } 100% { box-shadow: 0 0 0 0 transparent; transform: scale(1); } }
 .card-flash-focus { animation: flash-highlight 1.2s cubic-bezier(0.25, 0.8, 0.25, 1); }
+
+/* ================================================
+   HUB DE EXPORTAÇÃO AVANÇADA (RAG IA)
+   ================================================ */
+.export-option-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: #fdfdfd;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.export-option-card:hover {
+    background: #f4f7f9;
+    border-color: var(--trt-blue-mid);
+}
+.export-option-card.locked-option {
+    background: #e3f2fd;
+    border-color: #90caf9;
+    cursor: not-allowed;
+}
+.export-option-card input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: inherit;
+    accent-color: var(--trt-blue);
+}
+.export-option-details { display: flex; flex-direction: column; }
+.export-option-title { font-size: 0.9rem; font-weight: 700; color: var(--trt-blue); }
+.export-option-subtitle { font-size: 0.75rem; color: #666; margin-top: 2px; }
