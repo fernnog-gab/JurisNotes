@@ -433,6 +433,9 @@ function trocarAba(aba) {
     if (window.TimeTrackerManager) {
         TimeTrackerManager.toggleVisibility();
     }
+
+    // [NOVO] Reavalia o botão ao trocar o contexto visual (Aba)
+    if (window.atualizarStatusBotaoExtrator) window.atualizarStatusBotaoExtrator();
 }
 
 function checkScrollFabState() {
@@ -750,6 +753,8 @@ function criarTopicoPrompt() {
 
 function renderizarTopicos() {
     TopicsManager.renderizarFichario(topicos);
+    // [NOVO] Garante coerência visual após re-renderizações (ex: restauração de backup)
+    if (window.atualizarStatusBotaoExtrator) window.atualizarStatusBotaoExtrator();
 }
 
 function capturarTrechoSelecionado() {
@@ -1451,3 +1456,47 @@ window.TimeTrackerManager = (function() {
 
     return { init, toggleVisibility, handleClick, fecharModal, iniciar, parar, sincronizarCor };
 })();
+
+/* ================================================
+   [NOVO] Validador de Estado do Extrator (Escopo: Tópico Ativo)
+   ================================================ */
+window.atualizarStatusBotaoExtrator = function() {
+    const btn = document.getElementById('btn-ferramenta-extrator');
+    if (!btn) return;
+
+    // Remove o destaque caso não haja aba ativa
+    const activeTabId = typeof TopicsManager !== 'undefined' ? TopicsManager.getActiveTabId() : null;
+    if (!activeTabId) {
+        btn.classList.remove('extrator-completo');
+        return;
+    }
+
+    const topico = topicos.find(t => t.id === activeTabId);
+    if (!topico || !topico.marcosExtracao || topico.marcosExtracao.length === 0) {
+        btn.classList.remove('extrator-completo');
+        return;
+    }
+
+    // Flags para espelhar a exata regra do gerador de payload da IA
+    let hasSentencaInicio = false, hasSentencaFim = false;
+    let hasRecursoInicio = false, hasRecursoFim = false;
+
+    topico.marcosExtracao.forEach(m => {
+        // A lógica espelha: if (docTipo === 'sentenca') { ... } else { /* é recurso */ }
+        if (m.docTipo === 'sentenca') {
+            if (m.fronteira === 'inicio') hasSentencaInicio = true;
+            if (m.fronteira === 'fim') hasSentencaFim = true;
+        } else {
+            if (m.fronteira === 'inicio') hasRecursoInicio = true;
+            if (m.fronteira === 'fim') hasRecursoFim = true;
+        }
+    });
+
+    if (hasSentencaInicio && hasSentencaFim && hasRecursoInicio && hasRecursoFim) {
+        btn.classList.add('extrator-completo');
+        btn.title = 'Contexto Completo! (Decisão e Recurso mapeados)';
+    } else {
+        btn.classList.remove('extrator-completo');
+        btn.title = 'Alfinete de Extração (Marcar Início/Fim para IA)';
+    }
+};

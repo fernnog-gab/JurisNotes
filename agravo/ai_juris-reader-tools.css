@@ -41,11 +41,52 @@
 /* Cursor dinâmico informando o estado da aplicação */
 body.modo-extrator-ativo #crop-overlay { display: block; cursor: crosshair; background: rgba(46, 125, 50, 0.05); z-index: var(--z-crop-overlay); }
 
-/* Pino injetado na highlightLayer do PDF */
-.pdf-extrator-pin { position: absolute; width: 20px; height: 20px; transform: translate(-10px, -20px); border-radius: 50% 50% 50% 0; border: 2px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 20; display: flex; align-items: center; justify-content: center; }
-.pdf-extrator-pin::after { content: ''; width: 6px; height: 6px; background: white; border-radius: 50%; }
-.pin-inicio { background-color: #2e7d32; }
-.pin-fim { background-color: #c62828; }
+/* ================================================
+   ESTILOS DO ALFINETE VISUAL E ESTADO DO BOTÃO
+   ================================================ */
+
+/* Estado concluído do botão Extrator (Amarelo) - Alta especificidade sem !important */
+button#btn-ferramenta-extrator.extrator-completo:not(:disabled) {
+    background-color: #fbc02d;
+    border-color: #f57f17;
+    color: white;
+    box-shadow: 0 4px 10px rgba(251, 192, 45, 0.4);
+}
+
+/* Garante que o ícone interno respeite a inversão de cores (cobre fill e stroke) */
+button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
+    stroke: white;
+    fill: white;
+}
+
+/* Refatoração da classe existente: Pino colorido por dado (Inline Style) */
+.pdf-extrator-pin {
+    position: absolute;
+    left: 4px;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    border: 2px solid; /* Cor injetada via JS */
+    cursor: help;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pdf-extrator-pin:hover {
+    transform: translateY(-50%) scale(1.15);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.pdf-extrator-pin svg {
+    width: 14px;
+    height: 14px;
+}
 
 /* ================================================
    3. MODAIS E POPUPS GERAIS (WIZARDS)
