@@ -838,6 +838,33 @@ function identificarFaseMetodologica(docNome) {
     return 4; 
 }
 
+/**
+ * Exclui um marco de extração com segurança de estado e atualiza a UI.
+ */
+window.excluirMarcadorExtracao = function(topicoId, docTipo, fronteira) {
+    const fronteiraLabel = fronteira === 'inicio' ? 'INÍCIO' : 'FIM';
+    if (!confirm(`Deseja apagar o marcador de ${fronteiraLabel} deste documento?`)) return;
+
+    const topico = topicos.find(t => t.id === topicoId);
+    if (!topico || !topico.marcosExtracao) return;
+
+    // Mutação Segura: Filtra o array preservando imutabilidade estrutural
+    topico.marcosExtracao = topico.marcosExtracao.filter(m => !(m.docTipo === docTipo && m.fronteira === fronteira));
+
+    exibirToast(`Marcador de ${fronteiraLabel} excluído.`, 'sucesso');
+    
+    // Atualização em Cascata (Assíncrona para não bloquear a UI)
+    requestAnimationFrame(() => {
+        if (typeof salvarBackupAutomatico === 'function') salvarBackupAutomatico();
+        if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
+        if (window.atualizarStatusBotaoExtrator) window.atualizarStatusBotaoExtrator();
+        // Re-renderiza o painel atualizado
+        if (window.ExportManager && typeof window.ExportManager.abrirPainelExportacao === 'function') {
+            window.ExportManager.abrirPainelExportacao();
+        }
+    });
+};
+
 async function salvarAnotacao(tipo, conteudo, documento, polo, topicoId, comentario = '', targetParentIndex = null, anchorPageOverride = null, vicioAlegado = null) {
     const capturedHighlights = (tipo === 'texto' || tipo === 'imagem') && _tempHighlightState.rects 
         ? structuredClone(_tempHighlightState.rects) : null;
