@@ -250,3 +250,36 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
 #lista-acervo-geral {
     max-height: 380px !important; /* Substitui regra inline, permite visualizar mais itens */
 }
+
+/* ================================================
+   HUB DE EXPORTAÇÃO AVANÇADA (RAG IA)
+   ================================================ */
+.export-option-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: #fdfdfd;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.export-option-card:hover {
+    background: #f4f7f9;
+    border-color: var(--trt-blue-mid);
+}
+.export-option-card.locked-option {
+    background: #e3f2fd;
+    border-color: #90caf9;
+    cursor: not-allowed;
+}
+.export-option-card input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: inherit;
+    accent-color: var(--trt-blue);
+}
+.export-option-details { display: flex; flex-direction: column; }
+.export-option-title { font-size: 0.9rem; font-weight: 700; color: var(--trt-blue); }
+.export-option-subtitle { font-size: 0.75rem; color: #666; margin-top: 2px; }

@@ -441,8 +441,8 @@ window.ExportManager = (function () {
 
     // ─── DOWNLOAD DE ARQUIVO MARKDOWN ─────────────────────────────────────────
 
-    function _downloadArquivo(nomeArquivo, conteudo) {
-        const blob = new Blob([conteudo], { type: 'text/markdown;charset=utf-8;' });
+    function _downloadArquivo(nomeArquivo, conteudo, mimeType = 'text/markdown;charset=utf-8;') {
+        const blob = new Blob([conteudo], { type: mimeType });
         const link = document.createElement('a');
         const url  = URL.createObjectURL(blob);
         link.setAttribute('href', url);
@@ -559,6 +559,159 @@ window.ExportManager = (function () {
         };
     }
 
-    return { init, exportarTopicoAtivo, obterDadosDoTopicoAtivo };
+    // ─── HUB DE EXPORTAÇÃO RAG ──────────────────────────────────────────────
+    let _documentosParaExtracaoCache = {};
+
+    function abrirPainelExportacao() {
+        const activeId = _deps.getActiveTabId();
+        if (!activeId) {
+            _deps.exibirToast('Selecione um tópico antes de exportar.', 'aviso');
+            return;
+        }
+
+        const topico = _deps.getTopicos().find(t => t.id === activeId);
+        if (!topico || topico.anotacoes.length === 0) {
+            _deps.exibirToast('O tópico está vazio ou inválido.', 'aviso');
+            return;
+        }
+
+        if (window.BalancaManager && !window.BalancaManager.executarGuardrailDeTarefas('gerar o pacote de exportação para a IA')) {
+            _deps.exibirToast('Exportação interrompida pelo usuário.', 'aviso');
+            return; 
+        }
+
+        const container = document.getElementById('export-options-container');
+        container.innerHTML = '';
+        _documentosParaExtracaoCache = {};
+
+        container.innerHTML += `
+            <label class="export-option-card locked-option">
+                <input type="checkbox" checked disabled>
+                <div class="export-option-details">
+                    <span class="export-option-title">Matriz Probatória (Juris Notes) + Imagens Anexas</span>
+                    <span class="export-option-subtitle">Teses, diretrizes e o download das provas visuais demarcadas.</span>
+                </div>
+            </label>
+        `;
+
+        if (topico.marcosExtracao && topico.marcosExtracao.length > 0) {
+            const agrupados = topico.marcosExtracao.reduce((acc, curr) => {
+                if(!acc[curr.docTipo]) acc[curr.docTipo] = {};
+                acc[curr.docTipo][curr.fronteira] = curr;
+                return acc;
+            }, {});
+
+            const docNomes = {
+                sentenca: "Sentença / Acórdão", recurso_autora: "Recurso (Autora)", recurso_re: "Recurso (Ré)",
+                contrarrazões_autora: "Contrarrazões (Autora)", contrarrazões_re: "Contrarrazões (Ré)",
+                inicial: "Petição Inicial", contestacao: "Contestação"
+            };
+
+            for (const [docTipo, limites] of Object.entries(agrupados)) {
+                if (limites.inicio && limites.fim) {
+                    _documentosParaExtracaoCache[docTipo] = limites;
+                    const nomeF = docNomes[docTipo] || docTipo.toUpperCase();
+                    container.innerHTML += `
+                        <label class="export-option-card">
+                            <input type="checkbox" value="${docTipo}" class="extra-doc-checkbox" checked>
+                            <div class="export-option-details">
+                                <span class="export-option-title">Teor Integral: ${nomeF}</span>
+                                <span class="export-option-subtitle">Conteúdo capturado entre as fls. ${limites.inicio.pagina} e ${limites.fim.pagina}.</span>
+                            </div>
+                        </label>
+                    `;
+                }
+            }
+        }
+
+        document.getElementById('export-avancado-backdrop').style.display = 'block';
+        document.getElementById('modal-exportacao-avancada').style.display = 'block';
+    }
+
+    function fecharPainelExportacao() {
+        document.getElementById('export-avancado-backdrop').style.display = 'none';
+        document.getElementById('modal-exportacao-avancada').style.display = 'none';
+    }
+
+    async function gerarExportacaoPersonalizada() {
+        const topicos = _deps.getTopicos();
+        const topico = topicos.find(t => t.id === _deps.getActiveTabId());
+        
+        const btn = document.getElementById('btn-gerar-arquivo-exportacao');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '⏳ Extraindo Dados do PDF...';
+        btn.style.pointerEvents = 'none';
+        btn.style.opacity = '0.7';
+
+        try {
+            let conteudoFinal = _gerarMarkdown(topico) + "\n\n";
+
+            const checkboxes = document.querySelectorAll('.extra-doc-checkbox:checked');
+            if (checkboxes.length > 0) {
+                conteudoFinal += "<!-- ==========================================\n";
+                conteudoFinal += "     DOCUMENTOS COMPLEMENTARES ANEXOS\n";
+                conteudoFinal += "     ========================================== -->\n\n";
+            }
+
+            for (const cb of checkboxes) {
+                const docTipo = cb.value;
+                const limites = _documentosParaExtracaoCache[docTipo];
+                const tagName = docTipo.toUpperCase();
+                
+                try {
+                    const textoBruto = await window.PdfEngine.extrairTextoPorRegiao(limites.inicio, limites.fim);
+                    const textoLimpo = (window.JurisUtils && window.JurisUtils.limparTextoPDF) 
+                        ? window.JurisUtils.limparTextoPDF(textoBruto) 
+                        : textoBruto;
+                    conteudoFinal += `<${tagName}>\n${textoLimpo}\n</${tagName}>\n\n`;
+                } catch (extraError) {
+                    console.warn(`[ExportManager] Falha ao extrair ${docTipo}:`, extraError);
+                    conteudoFinal += `<${tagName}>\n[AVISO DE SISTEMA: Falha na extração deste documento no PDF. Possível página corrompida.]\n</${tagName}>\n\n`;
+                }
+            }
+
+            const filaDeDownloads = [];
+            topico.anotacoes.forEach((an, index) => {
+                const numIdeia = index + 1;
+                if (an.tipo === 'imagem') {
+                    filaDeDownloads.push({ dados: an.conteudo, nome: _gerarNomeArquivoImagem(numIdeia, null, an.pjeId, an.pagina) });
+                }
+                if (an.itensCorrelacionados && an.itensCorrelacionados.length > 0) {
+                    an.itensCorrelacionados.forEach((corr, corrIdx) => {
+                        if (corr.tipo === 'imagem') {
+                            filaDeDownloads.push({ dados: corr.conteudo, nome: _gerarNomeArquivoImagem(numIdeia, corrIdx + 1, corr.pjeId, corr.pagina) });
+                        }
+                    });
+                }
+            });
+
+            const nomeBase = topico.nome || 'Exportacao_JurisNotes';
+            const nomeSanitizado = nomeBase.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            const tagDom = document.getElementById('tag-numero-processo');
+            const numProcesso = tagDom && tagDom.style.display !== 'none' ? tagDom.textContent.trim() : '';
+            const prefixoStr = numProcesso ? `${numProcesso}_` : '';
+
+            _downloadArquivo(`${prefixoStr}${nomeSanitizado}_CONTEXTO_RAG.txt`, conteudoFinal, 'text/plain;charset=utf-8;');
+            
+            if(filaDeDownloads.length > 0) {
+                _deps.exibirToast('Texto exportado. Iniciando imagens...', 'info');
+                _executarFilaDeDownloads(filaDeDownloads);
+            } else {
+                _deps.exibirToast('Arquivo gerado com sucesso!', 'sucesso');
+            }
+            
+            fecharPainelExportacao();
+
+        } catch (error) {
+            console.error('[ExportManager] Erro fatal na exportação:', error);
+            _deps.exibirToast('Erro crítico ao gerar arquivo. Verifique o console.', 'erro');
+        } finally {
+            btn.innerHTML = originalText;
+            btn.style.pointerEvents = 'auto';
+            btn.style.opacity = '1';
+        }
+    }
+
+    return { init, exportarTopicoAtivo, obterDadosDoTopicoAtivo, abrirPainelExportacao, fecharPainelExportacao, gerarExportacaoPersonalizada };
 
 })();
