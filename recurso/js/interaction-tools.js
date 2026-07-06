@@ -989,33 +989,74 @@ document.addEventListener('mouseover', (e) => {
     if (!_cachedTooltip) _cachedTooltip = document.getElementById('quick-intent-tooltip');
     if (!_cachedTooltip) return;
 
+    // 1. STATE SYNC: Cancela temporizadores pendentes no elemento global (previne concorrência de timers)
+    if (_cachedTooltip._timer) clearTimeout(_cachedTooltip._timer);
+
     const fronteira = pin.dataset.tooltipFronteira === 'inicio' ? 'INÍCIO' : 'FIM';
     const docTipo = pin.dataset.tooltipDoc;
     const topicoNome = pin.dataset.tooltipTopico;
 
     // Dicionário visual
-    const docNomes = { sentenca: "Sentença / Acórdão", recurso_autora: "Recurso (Autora)", recurso_re: "Recurso (Ré)", contrarrazões_autora: "Contrarrazões (Autora)", contrarrazões_re: "Contrarrazões (Ré)", inicial: "Petição Inicial", contestacao: "Contestação" };
+    const docNomes = { 
+        sentenca: "Sentença / Acórdão", 
+        recurso_autora: "Recurso (Autora)", 
+        recurso_re: "Recurso (Ré)", 
+        contrarrazões_autora: "Contrarrazões (Autora)", 
+        contrarrazões_re: "Contrarrazões (Ré)", 
+        inicial: "Petição Inicial", 
+        contestacao: "Contestação" 
+    };
     const nomeBonito = docNomes[docTipo] || (docTipo ? docTipo.toUpperCase() : 'DESCONHECIDO');
+    const corFronteira = fronteira === 'INÍCIO' ? '#34db98' : '#e74c3c';
 
-    _cachedTooltip.innerHTML = `<strong>📍 MARCADOR DE ${fronteira}</strong>Documento: ${nomeBonito}<br>Tópico: ${topicoNome}`;
+    // 2. DOM MUTATION: Injeta o novo conteúdo e semântica de cores
+    _cachedTooltip.innerHTML = `
+        <strong style="color: ${corFronteira};">📍 MARCO DE ${fronteira}</strong>
+        <span style="display:block; margin-top:4px; font-size: 0.8rem; color:#ecf0f1;">
+            <b>Doc:</b> ${nomeBonito}<br>
+            <b>Tópico:</b> ${topicoNome}
+        </span>
+    `;
+
+    // Garante que o elemento seja posicionado em display block mas permaneça temporariamente invisível
+    _cachedTooltip.classList.remove('visible');
     _cachedTooltip.style.display = 'block';
+
+    // 3. ANCORAGEM GEOMÉTRICA FIXA: Cálculo estático com base na posição física do pino
+    const pinRect = pin.getBoundingClientRect();
+    const tooltipRect = _cachedTooltip.getBoundingClientRect();
     
-    // Cálculo seguro de viewport
-    let x = e.clientX + 15;
-    let y = e.clientY + 15;
-    const rect = _cachedTooltip.getBoundingClientRect();
-    if (x + rect.width > window.innerWidth) x = e.clientX - rect.width - 15;
-    if (y + rect.height > window.innerHeight) y = e.clientY - rect.height - 15;
+    let x = pinRect.left + (pinRect.width / 2) - (tooltipRect.width / 2);
+    let y = pinRect.bottom + 10;
+
+    // Proteção de limites da Viewport (Viewport Collision Prevention)
+    if (x + tooltipRect.width > window.innerWidth) x = window.innerWidth - tooltipRect.width - 15;
+    if (x < 0) x = 15;
+    if (y + tooltipRect.height > window.innerHeight) y = pinRect.top - tooltipRect.height - 10;
 
     _cachedTooltip.style.left = `${x}px`;
     _cachedTooltip.style.top = `${y}px`;
-    requestAnimationFrame(() => _cachedTooltip.classList.add('visible'));
+
+    // 4. PAINT/ANIMATION TIER: Exibição gradual sob agendamento
+    _cachedTooltip._timer = setTimeout(() => {
+        requestAnimationFrame(() => _cachedTooltip.classList.add('visible'));
+    }, 150);
 });
 
 document.addEventListener('mouseout', (e) => {
     const pin = e.target.closest('.pdf-extrator-pin');
-    if (pin && _cachedTooltip) {
-        _cachedTooltip.classList.remove('visible');
-        setTimeout(() => { _cachedTooltip.style.display = 'none'; }, 200);
-    }
+    if (!pin || !_cachedTooltip) return;
+
+    // BOUNDARY CHECK: Se o movimento ocorreu dentro dos limites internos do próprio pino, ignora o fechamento
+    if (pin.contains(e.relatedTarget)) return;
+
+    // Cancela o ciclo de exibição caso o mouse saia antes de expirar o timeout de ativação
+    if (_cachedTooltip._timer) clearTimeout(_cachedTooltip._timer);
+
+    _cachedTooltip.classList.remove('visible');
+    
+    // Libera o espaço de exibição no DOM após o encerramento da transição de opacidade (200ms)
+    _cachedTooltip._timer = setTimeout(() => { 
+        _cachedTooltip.style.display = 'none'; 
+    }, 200);
 });
