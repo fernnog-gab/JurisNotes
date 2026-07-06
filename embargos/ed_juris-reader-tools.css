@@ -87,6 +87,7 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
     border: 2px solid; /* Cor injetada via JS */
     cursor: help;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    pointer-events: auto; /* Permite passagem de eventos no container do pino */
 }
 
 .pdf-extrator-pin:hover {
@@ -97,6 +98,11 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
 .pdf-extrator-pin svg {
     width: 14px;
     height: 14px;
+    pointer-events: none; /* Bloqueia bubbling interno nos elementos filhos */
+}
+
+.pdf-extrator-pin path {
+    pointer-events: none; /* Garante consistência de interação no nível de vetor */
 }
 
 /* ================================================
