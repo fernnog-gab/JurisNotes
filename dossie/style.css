@@ -758,3 +758,66 @@ header {
 .sync-accordion-wrapper.is-open .chevron-main {
     transform: rotate(90deg);
 }
+
+/* --- UI DE CATEGORIZAÇÃO DE LEMBRETES --- */
+.topic-circle-indicator {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    cursor: pointer;
+    margin-right: 12px;
+    flex-shrink: 0;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
+
+.topic-circle-indicator:hover {
+    transform: scale(1.15);
+}
+
+.obs-topic-selector-menu {
+    position: absolute;
+    z-index: 9999;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    min-width: 200px;
+    max-height: 250px;
+    overflow-y: auto;
+    padding: 6px;
+    animation: fadeInMenu 0.15s ease-out;
+}
+
+.obs-topic-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    color: #334155;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.obs-topic-option:hover {
+    background-color: #f1f5f9;
+}
+
+.obs-topic-divider {
+    height: 1px;
+    background: #e2e8f0;
+    margin: 4px 0;
+}
+
+.color-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+@keyframes fadeInMenu {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}

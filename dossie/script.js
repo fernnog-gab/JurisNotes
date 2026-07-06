@@ -256,6 +256,33 @@ function renderContent(data) {
     updateTreeLines();
 }
 
+let windowAvailableTopics = [];
+
+// 1. OUVINTE DE MENSAGENS GLOBAL
+window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'SYNC_TOPICS') {
+        windowAvailableTopics = event.data.topicos || [];
+        hydrateReminders(); // Hidrata lembretes antigos garantindo a nova UI
+    }
+    
+    if (event.data && event.data.type === 'SCROLL_TO_TASKS') {
+        // Busca resiliente pelo título da seção
+        const headers = Array.from(document.querySelectorAll('.section-title'));
+        const obsTitle = headers.find(el => el.textContent.toLowerCase().includes('observações gerais'));
+        
+        if (obsTitle) {
+            obsTitle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Feedback visual sutil (pisca o bloco para guiar o olhar)
+            const obsContainer = document.getElementById('obs-list');
+            if (obsContainer) {
+                obsContainer.style.transition = 'box-shadow 0.3s ease';
+                obsContainer.style.boxShadow = '0 0 0 2px #3b82f6'; // Azul destaque
+                setTimeout(() => obsContainer.style.boxShadow = 'none', 1000);
+            }
+        }
+    }
+});
+
 // --- 3. INICIALIZAÇÃO LIMPA E ATUALIZAÇÃO DE LINHAS ---
 document.addEventListener('DOMContentLoaded', () => {
     const importer = document.getElementById('json-importer');
@@ -435,14 +462,45 @@ function toggleSubtopic(btn) {
     updateTreeLines();
 }
 
+// 2. HIDRATAÇÃO DE DOM (Retrocompatibilidade)
+function hydrateReminders() {
+    const obsList = document.getElementById('obs-list');
+    if (!obsList) return;
+
+    const items = obsList.querySelectorAll('.checklist-item');
+    items.forEach(item => {
+        // Se já tem o indicador, ignora
+        if (item.querySelector('.topic-circle-indicator')) return;
+        
+        item.style.position = 'relative'; // Garante contexto para o menu absoluto
+
+        // Cria e injeta o indicador antes do input de texto
+        const circle = document.createElement('div');
+        circle.className = 'topic-circle-indicator';
+        circle.title = 'Global (Todo o Processo)';
+        circle.setAttribute('style', 'background-color: #ffffff; border: 2px solid #cbd5e1;');
+        circle.onclick = function() { window.openObsTopicSelector(this); };
+
+        // Localiza a div que contém o input text
+        const textWrapper = item.querySelector('div[style*="flex:1"]');
+        if (textWrapper) {
+            item.insertBefore(circle, textWrapper);
+        }
+    });
+}
+
+// 3. ALTERAÇÃO DA CRIAÇÃO DE NOVOS LEMBRETES
 function addNewObs() {
     const container = document.getElementById('obs-list');
     const div = document.createElement('div');
     div.className = 'checklist-item';
+    div.style.position = 'relative'; 
+    
     div.innerHTML = `
         <input type="checkbox" class="chk-input" onchange="toggleRow(this);">
+        <div class="topic-circle-indicator" title="Global (Todo o Processo)" style="background-color: #ffffff; border: 2px solid #cbd5e1;" onclick="window.openObsTopicSelector(this)"></div>
         <div style="flex:1;">
-            <input type="text" class="input-details" placeholder="Escreva aqui..." oninput="this.setAttribute('value', this.value);" style="width:100%">
+            <input type="text" class="input-details" placeholder="Escreva o lembrete aqui..." oninput="this.setAttribute('value', this.value);" style="width:100%">
         </div>
         <button onclick="this.parentElement.remove(); updateTaskCounters();" 
                 style="border:none; background:none; cursor:pointer; color:#cbd5e1;">✕</button>
@@ -450,6 +508,67 @@ function addNewObs() {
     container.appendChild(div);
     updateTaskCounters();
 }
+
+// 4. LÓGICA DO MENU FLUTUANTE DE SELEÇÃO
+window.openObsTopicSelector = function(circleEl) {
+    closeAllObsTopicSelectors();
+
+    const menu = document.createElement('div');
+    menu.className = 'obs-topic-selector-menu';
+    
+    let htmlContent = `<div class="obs-topic-option" onclick="window.applyObsTopic(this, 'Global (Todo o Processo)', '#ffffff')">
+        <div class="color-dot" style="background: #ffffff; border: 1px solid #ccc;"></div> Global
+    </div>`;
+
+    if (windowAvailableTopics.length > 0) {
+        htmlContent += `<div class="obs-topic-divider"></div>`;
+        windowAvailableTopics.forEach(t => {
+            const safeName = t.nome.replace(/'/g, "\\'");
+            htmlContent += `<div class="obs-topic-option" onclick="window.applyObsTopic(this, '${safeName}', '${t.cor}')">
+                <div class="color-dot" style="background: ${t.cor};"></div> ${t.nome}
+            </div>`;
+        });
+    }
+
+    menu.innerHTML = htmlContent;
+    circleEl.parentElement.appendChild(menu);
+    
+    // Cálculo preciso de posicionamento
+    const rect = circleEl.getBoundingClientRect();
+    const parentRect = circleEl.parentElement.getBoundingClientRect();
+    menu.style.top = (rect.bottom - parentRect.top + 8) + 'px';
+    menu.style.left = (rect.left - parentRect.left) + 'px';
+    
+    // Desacopla o listener de fechamento
+    requestAnimationFrame(() => {
+        document.addEventListener('click', closeAllObsTopicSelectors);
+    });
+};
+
+window.applyObsTopic = function(optionEl, topicName, topicColor) {
+    const container = optionEl.closest('.checklist-item');
+    const circle = container.querySelector('.topic-circle-indicator');
+    
+    circle.style.backgroundColor = topicColor;
+    circle.setAttribute('title', topicName);
+    
+    if (topicColor === '#ffffff' || topicColor === 'white') {
+        circle.style.border = '2px solid #cbd5e1';
+        circle.style.boxShadow = 'none';
+    } else {
+        circle.style.border = '2px solid transparent';
+        circle.style.boxShadow = `0 0 6px ${topicColor}40`;
+    }
+    
+    // Essencial para a persistência no backup de HTML bruto
+    circle.setAttribute('style', circle.style.cssText);
+};
+
+window.closeAllObsTopicSelectors = function() {
+    const menus = document.querySelectorAll('.obs-topic-selector-menu');
+    menus.forEach(menu => menu.remove());
+    document.removeEventListener('click', closeAllObsTopicSelectors);
+};
 
 function addNewTopic() {
     const container = document.getElementById('sortable-list');
@@ -484,6 +603,9 @@ function addNewTopic() {
 
 // --- 5. EXPORTAÇÃO COMPLETA ---
 async function downloadBundledHTML(isInternalGenerator = false) {
+    // NOVA LINHA DE SEGURANÇA (Pre-Flight Cleanup)
+    if (typeof closeAllObsTopicSelectors === 'function') closeAllObsTopicSelectors();
+    
     document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked ? c.setAttribute('checked', 'checked') : c.removeAttribute('checked'));
     document.querySelectorAll('input[type="text"]').forEach(i => i.setAttribute('value', i.value));
     

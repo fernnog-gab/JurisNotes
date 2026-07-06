@@ -51,12 +51,59 @@ window.BalancaManager = (function() {
         document.getElementById('balanca-painel').style.display = 'flex';
 
         const iframe = document.getElementById('balanca-iframe');
+        
+        // Listener seguro que se auto-destrói para evitar memory leak
+        const onIframeLoad = () => {
+            sincronizarContextoDossie();
+            iframe.removeEventListener('load', onIframeLoad);
+        };
+        iframe.addEventListener('load', onIframeLoad);
+
         if (htmlState) {
             iframe.removeAttribute('src');
             iframe.srcdoc = htmlState;
         } else {
             iframe.removeAttribute('srcdoc');
             iframe.src = '../dossie/index.html'; // Caminho realocado do gerador
+        }
+    }
+
+    // NOVA FUNÇÃO: Ponto de entrada exclusivo para Lembretes
+    function abrirLembretes(event) {
+        if(event) event.stopPropagation();
+        
+        // Abrimos o painel normalmente
+        abrirPainel(); 
+        
+        const iframe = document.getElementById('balanca-iframe');
+        
+        // Disparamos o SCROLL apenas quando o iframe terminar de montar o DOM
+        const onIframeLoadScroll = () => {
+            if (iframe.contentWindow) {
+                iframe.contentWindow.postMessage({ type: 'SCROLL_TO_TASKS' }, '*');
+            }
+            iframe.removeEventListener('load', onIframeLoadScroll);
+        };
+        
+        // Se o srcdoc já estiver renderizado (readyState complete), disparamos imediatamente,
+        // caso contrário, aguardamos o evento 'load'.
+        if (iframe.contentDocument && iframe.contentDocument.readyState === 'complete' && htmlState) {
+            iframe.contentWindow.postMessage({ type: 'SCROLL_TO_TASKS' }, '*');
+        } else {
+            iframe.addEventListener('load', onIframeLoadScroll);
+        }
+    }
+
+    function sincronizarContextoDossie() {
+        const iframe = document.getElementById('balanca-iframe');
+        if (iframe && iframe.contentWindow) {
+            // Mapeamento limpo dos tópicos atuais da matriz
+            const topicosAtivos = (window.topicos || []).map(t => ({
+                id: t.id,
+                nome: t.nome,
+                cor: t.cor
+            }));
+            iframe.contentWindow.postMessage({ type: 'SYNC_TOPICS', topicos: topicosAtivos }, '*');
         }
     }
 
@@ -258,6 +305,7 @@ window.BalancaManager = (function() {
 
     return { 
         abrirPainel, 
+        abrirLembretes, 
         fecharPainel, 
         processarUpload, 
         getHtmlState, 
