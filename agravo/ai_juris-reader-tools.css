@@ -33,6 +33,17 @@
 .page-nav-box.floating-nav #goto-page-input::placeholder { color: #bbb; font-weight: 400; }
 
 /* ================================================
+   OTIMIZAÇÃO NATIVA: CONTENT VISIBILITY
+   ================================================ */
+.pdf-page-container {
+    /* Força o navegador a pular o rendering de nós invisíveis */
+    content-visibility: auto;
+    /* Evita que o scroll colapse antes do inline-style ser aplicado. 
+       Será retroalimentado pelo JS se necessário */
+    contain-intrinsic-size: 1000px 1400px;
+}
+
+/* ================================================
    2. FERRAMENTA DE RECORTE DE IMAGEM E EXTRATOR
    ================================================ */
 #crop-overlay { display: none; z-index: var(--z-crop-overlay); background: rgba(0, 0, 0, 0.08); cursor: crosshair; pointer-events: auto; }
