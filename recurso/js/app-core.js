@@ -1201,18 +1201,14 @@ document.addEventListener('visibilitychange', () => {
             return;
         }
 
-        if (window.PdfEngine && PdfEngine.getPdfDoc() && topicos.length > 0) {
-            const visiveis = document.querySelectorAll('.pdf-page-container');
-            visiveis.forEach(container => {
-                const rect = container.getBoundingClientRect();
-                if (rect.top < window.innerHeight && rect.bottom > 0) {
-                    const canvas = container.querySelector('canvas');
-                    if (!canvas || canvas.width === 0) {
-                        container.dataset.loaded = 'false';
-                    }
-                }
-            });
-            TopicsManager.renderizarFichario(topicos);
+        // Recuperação ativa e cirúrgica dos Canvases (Sem layout thrashing O(N))
+        if (window.PdfEngine && window.PdfEngine.getPdfDoc && PdfEngine.getPdfDoc() && topicos.length > 0) {
+            console.log("[JURIS LOG] Retornou à aba. Reconstruindo contexto das páginas na viewport...");
+            // O(1) restrito às páginas ativas (Tracking via Set)
+            PdfEngine.forcarReRenderizacaoVisiveis();
+            
+            // Re-renderização leve e síncrona do UI pararelo
+            if(window.TopicsManager) TopicsManager.renderizarFichario(topicos);
         }
     }
 });

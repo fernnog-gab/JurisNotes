@@ -12,6 +12,8 @@ window.PdfEngine = (function () {
     const _pageMetadataCache = new Map();
     let _pdfRenderObserver = null;
     let _pdfReadTracker = null;
+    let _pdfDestroyObserver = null;
+    const _activePages = new Set();
 
     // Dependências Injetadas pelo app.js (Inversão de Controle)
     let _deps = {
@@ -282,6 +284,10 @@ window.PdfEngine = (function () {
                     document.getElementById('floating-page-panel').style.display = 'flex';
 
                     if (_pdfRenderObserver) _pdfRenderObserver.disconnect();
+                    if (_pdfDestroyObserver) _pdfDestroyObserver.disconnect();
+                    _activePages.clear();
+
+                    // Observer 1: Renderiza cedo (800px)
                     _pdfRenderObserver = new IntersectionObserver((entries) => {
                         entries.forEach(entry => {
                             if (entry.isIntersecting && entry.target.dataset.loaded === 'false') {
@@ -290,7 +296,23 @@ window.PdfEngine = (function () {
                                 entry.target.dataset.loaded = 'true';
                             }
                         });
-                    }, { root: document.getElementById('pdf-container'), rootMargin: '600px 0px', threshold: 0 });
+                    }, { root: document.getElementById('pdf-container'), rootMargin: '800px 0px', threshold: 0 });
+
+                    // Observer 2: Destrói tarde (Histerese de 3000px)
+                    _pdfDestroyObserver = new IntersectionObserver((entries) => {
+                        entries.forEach(entry => {
+                            const container = entry.target;
+                            if (entry.isIntersecting) {
+                                _activePages.add(container);
+                            } else {
+                                _activePages.delete(container);
+                                if (container.dataset.loaded === 'true') {
+                                    descarregarPaginaElemento(container);
+                                    container.dataset.loaded = 'false';
+                                }
+                            }
+                        });
+                    }, { root: document.getElementById('pdf-container'), rootMargin: '3000px 0px', threshold: 0 });
 
                     if (_pdfReadTracker) _pdfReadTracker.disconnect();
                     _pdfReadTracker = new IntersectionObserver((entries) => {
@@ -348,6 +370,7 @@ window.PdfEngine = (function () {
                         wrapper.appendChild(pageContainer);
                         
                         _pdfRenderObserver.observe(pageContainer);
+                        _pdfDestroyObserver.observe(pageContainer);
                         _pdfReadTracker.observe(pageContainer);
                     }
 
@@ -369,6 +392,7 @@ window.PdfEngine = (function () {
         container.innerHTML = '';
 
         const page = await _pdfDoc.getPage(num);
+        container._pdfPageRef = page; // Salva referência para GC granular
         const dpr = window.devicePixelRatio || 1;
         const scale = 1.5;
         const viewport = page.getViewport({ scale: scale });
@@ -589,15 +613,52 @@ window.PdfEngine = (function () {
         });
     }
 
+    /* ================================================
+       OTIMIZAÇÃO DE MEMÓRIA (GARBAGE COLLECTION) E RECUPERAÇÃO
+       ================================================ */
+    function descarregarPaginaElemento(container) {
+        if (container._renderTask) {
+            container._renderTask.cancel();
+            container._renderTask = null;
+        }
+        container.innerHTML = '';
+        
+        // Limpeza granular O(1) de cache na API do PDF.js 
+        // (Libera Memória VRAM e Bitmap sem destruir o Parser Global)
+        if (container._pdfPageRef && typeof container._pdfPageRef.cleanup === 'function') {
+            try { container._pdfPageRef.cleanup(); } catch(e){}
+            container._pdfPageRef = null;
+        }
+    }
+
+    function forcarReRenderizacaoVisiveis() {
+        if (!_pdfDoc) return;
+        // Travessia assintótica de O(N=4000) reduzida para O(K=~15)
+        _activePages.forEach(container => {
+            const canvas = container.querySelector('canvas');
+            // Se o navegador ceifou o contexto do Canvas na suspensão da aba
+            if (!canvas || canvas.width === 0) {
+                descarregarPaginaElemento(container);
+                renderizarPaginaElemento(parseInt(container.dataset.pageNumber), container);
+                container.dataset.loaded = 'true';
+            }
+        });
+    }
+
     function encerrar() {
         if (_pdfRenderObserver) {
             _pdfRenderObserver.disconnect();
             _pdfRenderObserver = null;
         }
+        if (_pdfDestroyObserver) {
+            _pdfDestroyObserver.disconnect();
+            _pdfDestroyObserver = null;
+        }
         if (_pdfReadTracker) {
             _pdfReadTracker.disconnect();
             _pdfReadTracker = null;
         }
+        _activePages.clear();
         _pdfDoc = null;
         _pageLabelsGlobais = null;
         _pageMetadataCache.clear();
@@ -616,6 +677,7 @@ window.PdfEngine = (function () {
             goToPage: jurisLinkService.goTo,
             getPdfDoc: () => _pdfDoc,
             getCurrentPage: () => _currentPage,
+            forcarReRenderizacaoVisiveis,
             encerrar
         };
     })();
