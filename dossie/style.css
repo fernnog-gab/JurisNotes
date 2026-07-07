@@ -821,3 +821,26 @@ header {
     from { opacity: 0; transform: translateY(-4px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* Abra o arquivo style.css do Dossiê e adicione este bloco NO FINAL do arquivo: */
+
+/* =========================================
+   CORREÇÃO DE MENU FLUTUANTE (OBSERVAÇÕES)
+   ========================================= */
+
+/* 1. Remove a 'guilhotina' do contêiner de observações permitindo que o menu vaze */
+#obs-list {
+    overflow: visible !important;
+}
+
+/* 2. Mantém o recorte arredondado estético no primeiro e último item 
+      para não vazar a cor cinza quando você passa o mouse por cima (hover) */
+#obs-list .checklist-item:first-child {
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+#obs-list .checklist-item:last-child {
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
