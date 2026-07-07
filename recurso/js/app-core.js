@@ -716,6 +716,11 @@ function renderizarTopicos() {
     TopicsManager.renderizarFichario(topicos);
     // [NOVO] Garante coerência visual após re-renderizações (ex: restauração de backup)
     if (window.atualizarStatusBotaoExtrator) window.atualizarStatusBotaoExtrator();
+    
+    // NOVO: Broadcast seguro em tempo real para o Dossiê Recursal
+    if (window.BalancaManager && typeof window.BalancaManager.sincronizarTopicos === 'function') {
+        window.BalancaManager.sincronizarTopicos();
+    }
 }
 
 function capturarTrechoSelecionado() {

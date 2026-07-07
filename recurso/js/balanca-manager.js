@@ -313,6 +313,7 @@ window.BalancaManager = (function() {
         resetarEstado,
         resetToGenerator,
         getPendingTasks: avaliarTarefasPendentes,
-        executarGuardrailDeTarefas // <--- NOVA FUNÇÃO EXPORTADA
+        executarGuardrailDeTarefas, // <--- NOVA FUNÇÃO EXPORTADA
+        sincronizarTopicos: sincronizarContextoDossie // <-- EXPOSIÇÃO DA FUNÇÃO
     };
 })();

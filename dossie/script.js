@@ -263,6 +263,35 @@ window.addEventListener('message', function(event) {
     if (event.data && event.data.type === 'SYNC_TOPICS') {
         windowAvailableTopics = event.data.topicos || [];
         hydrateReminders(); // Hidrata lembretes antigos garantindo a nova UI
+        
+        // MOTOR DE AUTO-CURA POR ID (Resolução de Bug de Renomeação)
+        const circles = document.querySelectorAll('.topic-circle-indicator');
+        circles.forEach(circle => {
+            // Se não tem ID, assumimos estado legado/global.
+            const topicId = circle.dataset.topicId || 'global';
+            
+            if (topicId !== 'global') {
+                const topicExists = windowAvailableTopics.find(t => t.id === topicId);
+                
+                if (topicExists) {
+                    // Tópico existe: Atualiza Cor E Nome (Caso tenha sido renomeado)
+                    circle.style.backgroundColor = topicExists.cor;
+                    circle.style.border = '2px solid transparent';
+                    circle.style.boxShadow = `0 0 6px ${topicExists.cor}40`;
+                    circle.setAttribute('title', topicExists.nome); // Sync do Tooltip
+                    circle.setAttribute('style', circle.style.cssText); // Persiste no HTML exportado
+                } else {
+                    // Tópico apagado: Reverte para estado Global com segurança
+                    circle.dataset.topicId = 'global';
+                    circle.setAttribute('data-topic-id', 'global');
+                    circle.style.backgroundColor = '#ffffff';
+                    circle.style.border = '2px solid #cbd5e1';
+                    circle.style.boxShadow = 'none';
+                    circle.setAttribute('title', 'Global (Todo o Processo)');
+                    circle.setAttribute('style', circle.style.cssText); 
+                }
+            }
+        });
     }
     
     if (event.data && event.data.type === 'SCROLL_TO_TASKS') {
@@ -516,7 +545,8 @@ window.openObsTopicSelector = function(circleEl) {
     const menu = document.createElement('div');
     menu.className = 'obs-topic-selector-menu';
     
-    let htmlContent = `<div class="obs-topic-option" onclick="window.applyObsTopic(this, 'Global (Todo o Processo)', '#ffffff')">
+    // Passando explicitamente o ID 'global'
+    let htmlContent = `<div class="obs-topic-option" onclick="window.applyObsTopic(this, 'global', 'Global (Todo o Processo)', '#ffffff')">
         <div class="color-dot" style="background: #ffffff; border: 1px solid #ccc;"></div> Global
     </div>`;
 
@@ -524,7 +554,8 @@ window.openObsTopicSelector = function(circleEl) {
         htmlContent += `<div class="obs-topic-divider"></div>`;
         windowAvailableTopics.forEach(t => {
             const safeName = t.nome.replace(/'/g, "\\'");
-            htmlContent += `<div class="obs-topic-option" onclick="window.applyObsTopic(this, '${safeName}', '${t.cor}')">
+            // Passando o t.id como parâmetro de identidade
+            htmlContent += `<div class="obs-topic-option" onclick="window.applyObsTopic(this, '${t.id}', '${safeName}', '${t.cor}')">
                 <div class="color-dot" style="background: ${t.cor};"></div> ${t.nome}
             </div>`;
         });
@@ -545,14 +576,18 @@ window.openObsTopicSelector = function(circleEl) {
     });
 };
 
-window.applyObsTopic = function(optionEl, topicName, topicColor) {
+window.applyObsTopic = function(optionEl, topicId, topicName, topicColor) {
     const container = optionEl.closest('.checklist-item');
     const circle = container.querySelector('.topic-circle-indicator');
+    
+    // Persistência vital do Estado (Data Attribute)
+    circle.dataset.topicId = topicId;
+    circle.setAttribute('data-topic-id', topicId); // Garante a captura no exportHTML
     
     circle.style.backgroundColor = topicColor;
     circle.setAttribute('title', topicName);
     
-    if (topicColor === '#ffffff' || topicColor === 'white') {
+    if (topicId === 'global') {
         circle.style.border = '2px solid #cbd5e1';
         circle.style.boxShadow = 'none';
     } else {
