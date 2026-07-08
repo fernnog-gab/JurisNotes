@@ -70,26 +70,27 @@ window.BalancaManager = (function() {
     function abrirLembretes(event) {
         if(event) event.stopPropagation();
         
-        // Abrimos o painel normalmente
         abrirPainel(); 
-        
         const iframe = document.getElementById('balanca-iframe');
         
-        // Disparamos o SCROLL apenas quando o iframe terminar de montar o DOM
-        const onIframeLoadScroll = () => {
+        // BLINDAGEM: Trava de disparo único
+        let scrollDisparado = false;
+        const dispararScroll = () => {
+            if (scrollDisparado) return;
+            scrollDisparado = true;
+            
             if (iframe.contentWindow) {
                 iframe.contentWindow.postMessage({ type: 'SCROLL_TO_TASKS' }, '*');
             }
-            iframe.removeEventListener('load', onIframeLoadScroll);
+            iframe.removeEventListener('load', dispararScroll);
         };
         
-        // Se o srcdoc já estiver renderizado (readyState complete), disparamos imediatamente,
-        // caso contrário, aguardamos o evento 'load'.
-        if (iframe.contentDocument && iframe.contentDocument.readyState === 'complete' && htmlState) {
-            iframe.contentWindow.postMessage({ type: 'SCROLL_TO_TASKS' }, '*');
-        } else {
-            iframe.addEventListener('load', onIframeLoadScroll);
-        }
+        // Tenta usar a via expressa (evento nativo)
+        iframe.addEventListener('load', dispararScroll);
+        
+        // Fallback: Se o navegador for preguiçoso e pular o evento nativo, 
+        // forçamos o scroll após 400ms.
+        setTimeout(dispararScroll, 400);
     }
 
     function sincronizarContextoDossie(topicosInjetados) {
