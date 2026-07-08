@@ -72,25 +72,23 @@ window.BalancaManager = (function() {
     function abrirLembretes(event) {
         if(event) event.stopPropagation();
         
-        // Abrimos o painel normalmente
         abrirPainel(); 
         
         const iframe = document.getElementById('balanca-iframe');
         
-        // Disparamos o SCROLL apenas quando o iframe terminar de montar o DOM
-        const onIframeLoadScroll = () => {
+        const dispararScroll = () => {
             if (iframe.contentWindow) {
                 iframe.contentWindow.postMessage({ type: 'SCROLL_TO_TASKS' }, '*');
             }
-            iframe.removeEventListener('load', onIframeLoadScroll);
         };
         
-        // Se o srcdoc já estiver renderizado (readyState complete), disparamos imediatamente,
-        // caso contrário, aguardamos o evento 'load'.
+        // Validação estrita do ciclo de vida nativo do DOM do iframe
         if (iframe.contentDocument && iframe.contentDocument.readyState === 'complete' && htmlState) {
-            iframe.contentWindow.postMessage({ type: 'SCROLL_TO_TASKS' }, '*');
+            // Se o DOM já está injetado (srcdoc parseado), usamos rAF para garantir que o JS interno (listeners) foi avaliado
+            requestAnimationFrame(dispararScroll);
         } else {
-            iframe.addEventListener('load', onIframeLoadScroll);
+            // Event Listener auto-destrutivo evita Memory Leaks caso a função seja chamada múltiplas vezes
+            iframe.addEventListener('load', dispararScroll, { once: true });
         }
     }
 

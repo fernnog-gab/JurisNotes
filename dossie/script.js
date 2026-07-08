@@ -545,58 +545,70 @@ window.openObsTopicSelector = function(circleEl) {
     const menu = document.createElement('div');
     menu.className = 'obs-topic-selector-menu';
     
-    // Passando explicitamente o ID 'global'
-    let htmlContent = `<div class="obs-topic-option" onclick="window.applyObsTopic(this, 'global', 'Global (Todo o Processo)', '#ffffff')">
-        <div class="color-dot" style="background: #ffffff; border: 1px solid #ccc;"></div> Global
-    </div>`;
+    // Criando a opção "Global" programaticamente
+    const optionGlobal = document.createElement('div');
+    optionGlobal.className = 'obs-topic-option';
+    optionGlobal.innerHTML = `<div class="color-dot" style="background: #ffffff; border: 1px solid #ccc;"></div> Global`;
+    // CLOSURE: Referência de circleEl é passada diretamente sem variáveis globais
+    optionGlobal.addEventListener('click', () => {
+        window.applyObsTopic(circleEl, 'global', 'Global (Todo o Processo)', '#ffffff');
+    });
+    menu.appendChild(optionGlobal);
 
     if (windowAvailableTopics.length > 0) {
-        htmlContent += `<div class="obs-topic-divider"></div>`;
+        const divider = document.createElement('div');
+        divider.className = 'obs-topic-divider';
+        menu.appendChild(divider);
+
+        // Iterando para criar nós baseados no estado injetado
         windowAvailableTopics.forEach(t => {
+            const option = document.createElement('div');
+            option.className = 'obs-topic-option';
+            
+            // Tratamento de aspas no nome para segurança no innerHTML
             const safeName = t.nome.replace(/'/g, "\\'");
-            // Passando o t.id como parâmetro de identidade
-            htmlContent += `<div class="obs-topic-option" onclick="window.applyObsTopic(this, '${t.id}', '${safeName}', '${t.cor}')">
-                <div class="color-dot" style="background: ${t.cor};"></div> ${t.nome}
-            </div>`;
+            option.innerHTML = `<div class="color-dot" style="background: ${t.cor};"></div> ${safeName}`;
+            
+            // CLOSURE: Encapsulamento da referência segura
+            option.addEventListener('click', () => {
+                window.applyObsTopic(circleEl, t.id, t.nome, t.cor);
+            });
+            menu.appendChild(option);
         });
     }
 
-    menu.innerHTML = htmlContent;
-    circleEl.parentElement.appendChild(menu);
+    // ANCORAGEM TOP LAYER: O menu é pendurado no body, escapando do overflow:hidden
+    document.body.appendChild(menu);
     
-    // Cálculo preciso de posicionamento
+    // Matemática de posicionamento calculando offset global do scroll
     const rect = circleEl.getBoundingClientRect();
-    const parentRect = circleEl.parentElement.getBoundingClientRect();
-    menu.style.top = (rect.bottom - parentRect.top + 8) + 'px';
-    menu.style.left = (rect.left - parentRect.left) + 'px';
+    menu.style.top = (rect.bottom + window.scrollY + 8) + 'px';
+    menu.style.left = (rect.left + window.scrollX) + 'px';
     
-    // Desacopla o listener de fechamento
+    // Delegação de fechamento no próximo micro-task para evitar auto-fechamento
     requestAnimationFrame(() => {
         document.addEventListener('click', closeAllObsTopicSelectors);
     });
 };
 
-window.applyObsTopic = function(optionEl, topicId, topicName, topicColor) {
-    const container = optionEl.closest('.checklist-item');
-    const circle = container.querySelector('.topic-circle-indicator');
+window.applyObsTopic = function(circleEl, topicId, topicName, topicColor) {
+    if (!circleEl) return;
     
-    // Persistência vital do Estado (Data Attribute)
-    circle.dataset.topicId = topicId;
-    circle.setAttribute('data-topic-id', topicId); // Garante a captura no exportHTML
+    circleEl.dataset.topicId = topicId;
+    circleEl.setAttribute('data-topic-id', topicId); 
     
-    circle.style.backgroundColor = topicColor;
-    circle.setAttribute('title', topicName);
+    circleEl.style.backgroundColor = topicColor;
+    circleEl.setAttribute('title', topicName);
     
     if (topicId === 'global') {
-        circle.style.border = '2px solid #cbd5e1';
-        circle.style.boxShadow = 'none';
+        circleEl.style.border = '2px solid #cbd5e1';
+        circleEl.style.boxShadow = 'none';
     } else {
-        circle.style.border = '2px solid transparent';
-        circle.style.boxShadow = `0 0 6px ${topicColor}40`;
+        circleEl.style.border = '2px solid transparent';
+        circleEl.style.boxShadow = `0 0 6px ${topicColor}40`;
     }
     
-    // Essencial para a persistência no backup de HTML bruto
-    circle.setAttribute('style', circle.style.cssText);
+    circleEl.setAttribute('style', circleEl.style.cssText);
 };
 
 window.closeAllObsTopicSelectors = function() {
