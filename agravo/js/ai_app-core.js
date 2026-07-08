@@ -755,6 +755,11 @@ function renderizarTopicos() {
     TopicsManager.renderizarFichario(topicos);
     // [NOVO] Garante coerência visual após re-renderizações (ex: restauração de backup)
     if (window.atualizarStatusBotaoExtrator) window.atualizarStatusBotaoExtrator();
+    
+    // NOVO: Broadcast seguro enviando a variável EXPLICITAMENTE (Injeção de Dependência)
+    if (window.BalancaManager && typeof window.BalancaManager.sincronizarTopicos === 'function') {
+        window.BalancaManager.sincronizarTopicos(topicos);
+    }
 }
 
 function capturarTrechoSelecionado() {
