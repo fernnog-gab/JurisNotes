@@ -73,23 +73,26 @@ window.BalancaManager = (function() {
         if(event) event.stopPropagation();
         
         abrirPainel(); 
-        
         const iframe = document.getElementById('balanca-iframe');
         
+        // BLINDAGEM: Trava de disparo único
+        let scrollDisparado = false;
         const dispararScroll = () => {
+            if (scrollDisparado) return;
+            scrollDisparado = true;
+            
             if (iframe.contentWindow) {
                 iframe.contentWindow.postMessage({ type: 'SCROLL_TO_TASKS' }, '*');
             }
+            iframe.removeEventListener('load', dispararScroll);
         };
         
-        // Validação estrita do ciclo de vida nativo do DOM do iframe
-        if (iframe.contentDocument && iframe.contentDocument.readyState === 'complete' && htmlState) {
-            // Se o DOM já está injetado (srcdoc parseado), usamos rAF para garantir que o JS interno (listeners) foi avaliado
-            requestAnimationFrame(dispararScroll);
-        } else {
-            // Event Listener auto-destrutivo evita Memory Leaks caso a função seja chamada múltiplas vezes
-            iframe.addEventListener('load', dispararScroll, { once: true });
-        }
+        // Tenta usar a via expressa (evento nativo)
+        iframe.addEventListener('load', dispararScroll);
+        
+        // Fallback: Se o navegador for preguiçoso e pular o evento nativo, 
+        // forçamos o scroll após 400ms.
+        setTimeout(dispararScroll, 400);
     }
 
     function sincronizarContextoDossie(topicosInjetados) {

@@ -540,16 +540,19 @@ function addNewObs() {
 
 // 4. LÓGICA DO MENU FLUTUANTE DE SELEÇÃO
 window.openObsTopicSelector = function(circleEl) {
+    // BLINDAGEM 1: Impede que o clique atual vaze e feche o menu instantaneamente
+    if (window.event) {
+        window.event.stopPropagation();
+    }
+    
     closeAllObsTopicSelectors();
 
     const menu = document.createElement('div');
     menu.className = 'obs-topic-selector-menu';
     
-    // Criando a opção "Global" programaticamente
     const optionGlobal = document.createElement('div');
     optionGlobal.className = 'obs-topic-option';
     optionGlobal.innerHTML = `<div class="color-dot" style="background: #ffffff; border: 1px solid #ccc;"></div> Global`;
-    // CLOSURE: Referência de circleEl é passada diretamente sem variáveis globais
     optionGlobal.addEventListener('click', () => {
         window.applyObsTopic(circleEl, 'global', 'Global (Todo o Processo)', '#ffffff');
     });
@@ -560,16 +563,12 @@ window.openObsTopicSelector = function(circleEl) {
         divider.className = 'obs-topic-divider';
         menu.appendChild(divider);
 
-        // Iterando para criar nós baseados no estado injetado
         windowAvailableTopics.forEach(t => {
             const option = document.createElement('div');
             option.className = 'obs-topic-option';
-            
-            // Tratamento de aspas no nome para segurança no innerHTML
             const safeName = t.nome.replace(/'/g, "\\'");
             option.innerHTML = `<div class="color-dot" style="background: ${t.cor};"></div> ${safeName}`;
             
-            // CLOSURE: Encapsulamento da referência segura
             option.addEventListener('click', () => {
                 window.applyObsTopic(circleEl, t.id, t.nome, t.cor);
             });
@@ -577,18 +576,16 @@ window.openObsTopicSelector = function(circleEl) {
         });
     }
 
-    // ANCORAGEM TOP LAYER: O menu é pendurado no body, escapando do overflow:hidden
     document.body.appendChild(menu);
     
-    // Matemática de posicionamento calculando offset global do scroll
     const rect = circleEl.getBoundingClientRect();
     menu.style.top = (rect.bottom + window.scrollY + 8) + 'px';
     menu.style.left = (rect.left + window.scrollX) + 'px';
     
-    // Delegação de fechamento no próximo micro-task para evitar auto-fechamento
-    requestAnimationFrame(() => {
+    // BLINDAGEM 2: Espera 50 milissegundos (imperceptível) antes de ativar a armadilha de fechar
+    setTimeout(() => {
         document.addEventListener('click', closeAllObsTopicSelectors);
-    });
+    }, 50);
 };
 
 window.applyObsTopic = function(circleEl, topicId, topicName, topicColor) {
