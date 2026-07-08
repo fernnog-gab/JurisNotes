@@ -52,7 +52,7 @@ window.BalancaManager = (function() {
         
         // Listener seguro que se auto-destrói para evitar memory leak
         const onIframeLoad = () => {
-            sincronizarContextoDossie();
+            sincronizarContextoDossie(typeof topicos !== 'undefined' ? topicos : []);
             iframe.removeEventListener('load', onIframeLoad);
         };
         iframe.addEventListener('load', onIframeLoad);
@@ -92,11 +92,14 @@ window.BalancaManager = (function() {
         }
     }
 
-    function sincronizarContextoDossie() {
+    function sincronizarContextoDossie(topicosInjetados) {
         const iframe = document.getElementById('balanca-iframe');
         if (iframe && iframe.contentWindow) {
+            // Resolve o "Scoping Trap": Usa o array injetado. Se não houver, tenta o escopo local com segurança.
+            const arrayReferencia = topicosInjetados || (typeof topicos !== 'undefined' ? topicos : []);
+            
             // Mapeamento limpo dos tópicos atuais da matriz
-            const topicosAtivos = (window.topicos || []).map(t => ({
+            const topicosAtivos = arrayReferencia.map(t => ({
                 id: t.id,
                 nome: t.nome,
                 cor: t.cor
@@ -311,6 +314,7 @@ window.BalancaManager = (function() {
         resetarEstado,
         resetToGenerator,
         getPendingTasks: avaliarTarefasPendentes,
-        executarGuardrailDeTarefas // <--- NOVA FUNÇÃO EXPORTADA
+        executarGuardrailDeTarefas, // <--- NOVA FUNÇÃO EXPORTADA
+        sincronizarTopicos: sincronizarContextoDossie // <-- EXPOSIÇÃO DA FUNÇÃO
     };
 })();
