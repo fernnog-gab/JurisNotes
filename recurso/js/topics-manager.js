@@ -723,10 +723,10 @@ window.TopicsManager = (function () {
             <div class="topic-preamble-panel">
                 <div class="preamble-card preamble-alegacao ${!topicoAtivo.alegacoes ? 'is-empty' : ''}" onclick="abrirEdicaoPreambulo('${activeTabId}', 'alegacoes')">
                     
-                    <!-- NOVO: Gatilho da IA (Injeção direta do texto sanitizado para evitar buscas na memória global) -->
+                    <!-- NOVO: Gatilho da IA (Tratamento robusto contra quebras de linha e aspas no HTML) -->
                     <div class="preamble-icon ai-trigger-btn" 
                          title="✨ Inteligência Artificial: Buscar modelos compatíveis" 
-                         onclick="event.stopPropagation(); AIRecommendationManager.buscarModelosCompativeis('${activeTabId}', '${escaparHTML(topicoAtivo.alegacoes || '').replace(/'/g, "\\'")}')">
+                         onclick="event.stopPropagation(); AIRecommendationManager.buscarModelosCompativeis('${activeTabId}', decodeURIComponent('${encodeURIComponent(topicoAtivo.alegacoes || '').replace(/'/g, "%27")}'))">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                             <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" class="ai-sparkle" style="display:none; transform-origin: 12px 12px;"></path>
