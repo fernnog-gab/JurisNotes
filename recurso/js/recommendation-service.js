@@ -6,7 +6,7 @@ window.AIRecommendationManager = (function() {
     'use strict';
 
     const STORAGE_KEY = 'juris_groq_api_key';
-    const GROQ_MODEL = 'qwen/qwen3.6-27b'; 
+    const GROQ_MODEL = 'llama-3.3-70b-versatile'; // Trocado para modelo rápido e sem tags <think>
 
     function _obterChaveAPI() {
         let key = localStorage.getItem(STORAGE_KEY);
@@ -22,105 +22,73 @@ window.AIRecommendationManager = (function() {
     }
 
     async function buscarModelosCompativeis(topicoId, textoAlegacoes) {
-        if (!textoAlegacoes || textoAlegacoes.trim() === '') {
-            if (window.exibirToast) exibirToast('Redija as Razões Recursais primeiro.', 'aviso');
-            return;
-        }
-
-        if (typeof window.AcervoManager === 'undefined') {
-            if (window.exibirToast) exibirToast('Módulo do Acervo não está carregado.', 'erro');
-            return;
-        }
-
+        if (!textoAlegacoes || textoAlegacoes.trim() === '') return window.exibirToast?.('Redija as Razões Recursais primeiro.', 'aviso');
+        
         const apiKey = _obterChaveAPI();
-        if (!apiKey) {
-            if (window.exibirToast) exibirToast('Operação cancelada. Chave de API necessária.', 'aviso');
-            return;
-        }
+        if (!apiKey) return;
 
-        // 1. Snapshot do Catálogo Otimizado
         const modelos = await AcervoManager.carregarModelos();
-        if (modelos.length === 0) {
-            if (window.exibirToast) exibirToast('Seu acervo está vazio.', 'aviso');
-            return;
-        }
+        if (modelos.length === 0) return window.exibirToast?.('Seu acervo está vazio.', 'aviso');
 
-        const catalogoComprimido = modelos.map(m => {
-            const tags = m.tags ? m.tags.join(", ") : "Geral";
-            return `[Nome: ${m.nome} | Tags: ${tags}]`;
-        }).join("\n");
+        // PAYLOAD OTIMIZADO: Apenas ID e Título
+        const catalogoComprimido = modelos.map(m => `ID: ${m.id} | Título: ${m.nome}`).join("\n");
 
-        // 2. Feedback de Interface
         const btnIcon = document.querySelector('.preamble-alegacao .ai-trigger-btn');
         if (btnIcon) btnIcon.classList.add('is-thinking');
-        if (window.exibirToast) exibirToast('IA processando afinidades...', 'info');
+        if (window.exibirToast) exibirToast('IA analisando o Acervo...', 'info');
 
         try {
-            const prompt = `Atue como um indexador jurídico.
-OBJETIVO: Encontrar o modelo correspondente ao pedido abaixo.
-PEDIDO (Razões): "${textoAlegacoes}"
-CATÁLOGO DISPONÍVEL:
+            const prompt = `Atue como um indexador jurídico. Analise a tese e encontre os modelos compatíveis.
+TESE: "${textoAlegacoes}"
+
+ACERVO:
 ${catalogoComprimido}
 
-REGRA ESTRITA: Responda APENAS com o NOME EXATO ou a TAG do modelo mais compatível listado no catálogo acima. Não inclua tags de pensamento, explicações, aspas ou pontos. Se nenhum for compatível, responda "NENHUM".`;
+REGRA ESTABELECIDA:
+Se houver modelos compatíveis, responda OBRIGATORIAMENTE no formato exato: [IDs: mod-xxx, mod-yyy]
+Se NÃO houver NENHUM modelo compatível com o tema, responda OBRIGATORIAMENTE: [IDs: NENHUM]`;
 
-            // 3. Chamada de Rede Protegida
             const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                 method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${apiKey}`,
-                    "Content-Type": "application/json"
-                },
+                headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    model: GROQ_MODEL,
+                    model: GROQ_MODEL, 
                     messages: [{ role: "user", content: prompt }],
-                    temperature: 0.1, // Quase determinístico
-                    max_tokens: 50    // Aumentado levemente para permitir o bloco <think> caso o modelo force
+                    temperature: 0.1,
+                    max_tokens: 800 // Permitimos o raciocínio completo do modelo para evitar truncation
                 })
             });
 
-            if (!response.ok) {
-                if (response.status === 401) {
-                    localStorage.removeItem(STORAGE_KEY);
-                    throw new Error("Chave de API inválida ou expirada.");
-                }
-                throw new Error(`Erro na API: ${response.status}`);
-            }
+            if (!response.ok) throw new Error("Falha na API da IA.");
 
             const data = await response.json();
-            
-            // 4. Parse Seguro e Sanitização de Chain of Thought
-            const respostaBruta = data?.choices?.[0]?.message?.content;
-            if (!respostaBruta) throw new Error("A API retornou uma resposta vazia.");
+            const respostaBruta = data?.choices?.[0]?.message?.content || "";
 
-            // Remove o bloco <think>...</think> (típico de DeepSeek/Qwen) e quebras de linha
-            const respostaLimpa = respostaBruta.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/\n/g, '').trim();
+            // EXTRAÇÃO BLINDADA: Busca por "NENHUM" dentro do padrão
+            if (respostaBruta.includes("NENHUM")) {
+                if (window.exibirToast) exibirToast('Nenhum modelo de alta afinidade encontrado.', 'aviso');
+                return; 
+            }
 
-            const keywordIA = respostaLimpa.replace(/['".,]/g, '');
+            // EXTRAÇÃO BLINDADA: Coleta apenas os IDs no padrão 'mod-[qualquer coisa permitida no Firebase]'
+            const idsExtraidos = respostaBruta.match(/mod-[a-zA-Z0-9_-]+/g);
 
-            if (keywordIA.toUpperCase() === "NENHUM" || keywordIA === "") {
-                if (window.exibirToast) exibirToast('Nenhum modelo altamente compatível foi encontrado.', 'aviso');
+            if (!idsExtraidos || idsExtraidos.length === 0) {
+                if (window.exibirToast) exibirToast('Nenhum modelo foi classificado como compatível.', 'aviso');
                 return;
             }
 
-            console.log("[Juris IA] Afinidade detectada:", keywordIA);
+            console.log("[Juris IA] Recomendações:", idsExtraidos);
 
-            // 5. Orquestração da UI Nativa
-            if (typeof abrirModalAcervo === 'function') abrirModalAcervo();
-            
-            const inputBusca = document.getElementById('input-pesquisa-acervo');
-            if (inputBusca && typeof filtrarListaUIDebounced === 'function') {
-                inputBusca.value = keywordIA;
-                // Dispara o filtro nativo da aplicação
-                filtrarListaUIDebounced(keywordIA, 'lista-acervo-geral');
+            // Abre a UI no Modo IA
+            if (typeof aplicarFiltroIAAcervo === 'function') {
+                aplicarFiltroIAAcervo(idsExtraidos);
+                if (window.exibirToast) exibirToast('Filtro de Inteligência Artificial aplicado ✨', 'sucesso');
             }
-            
-            if (window.exibirToast) exibirToast(`Filtro aplicado por IA: "${keywordIA}" ✨`, 'sucesso');
 
         } catch (error) {
             console.error("[Juris IA Error]", error);
-            const msg = error.message === "Failed to fetch" ? "Erro de conexão (CORS/Rede)." : error.message;
-            if (window.exibirToast) exibirToast(`Falha na IA: ${msg}`, 'erro');
+            if (window.exibirToast) exibirToast('Falha na comunicação com a Inteligência Artificial.', 'erro');
         } finally {
             if (btnIcon) btnIcon.classList.remove('is-thinking');
         }
