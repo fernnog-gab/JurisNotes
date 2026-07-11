@@ -901,15 +901,22 @@
 
 /* --- MODO TELA CHEIA (FULLSCREEN) --- */
 #modal-acervo-inserir.is-fullscreen #box-preview-container {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    z-index: 100;
+    position: fixed; /* Desprende do modal e ancora na tela do dispositivo */
+    top: 5vh; 
+    left: 5vw; 
+    right: 5vw; 
+    bottom: 5vh;
+    z-index: 9999;
     border-radius: 12px;
     background: #ffffff;
-    box-shadow: 0 12px 48px rgba(0,0,0,0.3);
+    box-shadow: 0 12px 64px rgba(0,0,0,0.6); /* Sombra mais densa para foco */
+    display: flex;
+    flex-direction: column;
 }
 
 #modal-acervo-inserir.is-fullscreen #box-preview-acervo {
-    max-height: calc(100vh - 120px); /* Ocupa quase todo o modal verticalmente */
-    height: 100%;
+    flex: 1; /* Ocupa 100% do espaço vertical restante automaticamente */
+    max-height: none;
+    height: auto;
+    overflow-y: auto;
 }
