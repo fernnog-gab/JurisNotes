@@ -62,7 +62,7 @@ PEDIDO (Razões): "${textoAlegacoes}"
 CATÁLOGO DISPONÍVEL:
 ${catalogoComprimido}
 
-REGRA ESTrita: Retorne ÚNICA E EXCLUSIVAMENTE a palavra-chave central (Nome ou Tag) de 1 modelo compatível. Se nada for compatível, retorne "NENHUM". Não adicione pontos, aspas ou explicações.`;
+REGRA ESTRITA: Responda APENAS com o NOME EXATO ou a TAG do modelo mais compatível listado no catálogo acima. Não inclua tags de pensamento, explicações, aspas ou pontos. Se nenhum for compatível, responda "NENHUM".`;
 
             // 3. Chamada de Rede Protegida
             const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -75,7 +75,7 @@ REGRA ESTrita: Retorne ÚNICA E EXCLUSIVAMENTE a palavra-chave central (Nome ou 
                     model: GROQ_MODEL,
                     messages: [{ role: "user", content: prompt }],
                     temperature: 0.1, // Quase determinístico
-                    max_tokens: 15    // Hard cap de segurança
+                    max_tokens: 50    // Aumentado levemente para permitir o bloco <think> caso o modelo force
                 })
             });
 
@@ -89,13 +89,16 @@ REGRA ESTrita: Retorne ÚNICA E EXCLUSIVAMENTE a palavra-chave central (Nome ou 
 
             const data = await response.json();
             
-            // 4. Parse Seguro (Optional Chaining)
+            // 4. Parse Seguro e Sanitização de Chain of Thought
             const respostaBruta = data?.choices?.[0]?.message?.content;
             if (!respostaBruta) throw new Error("A API retornou uma resposta vazia.");
 
-            const keywordIA = respostaBruta.trim().replace(/['".,]/g, '');
+            // Remove o bloco <think>...</think> (típico de DeepSeek/Qwen) e quebras de linha
+            const respostaLimpa = respostaBruta.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/\n/g, '').trim();
 
-            if (keywordIA.toUpperCase() === "NENHUM") {
+            const keywordIA = respostaLimpa.replace(/['".,]/g, '');
+
+            if (keywordIA.toUpperCase() === "NENHUM" || keywordIA === "") {
                 if (window.exibirToast) exibirToast('Nenhum modelo altamente compatível foi encontrado.', 'aviso');
                 return;
             }
