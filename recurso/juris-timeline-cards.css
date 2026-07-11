@@ -867,3 +867,49 @@
     border-color: var(--trt-blue-mid);
 }
 .acervo-item.ai-recommended.selected .acervo-item-titulo { color: var(--trt-blue); }
+
+/* ==========================================
+   ACERVO: ARQUITETURA DE VIEW SWAP E FULLSCREEN
+   ========================================== */
+   
+/* Transições de View (Opacidade e GPU) */
+#acervo-list-view,
+#acervo-focus-view {
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    will-change: opacity, transform;
+}
+
+#acervo-focus-view {
+    transform: translateY(10px);
+}
+#acervo-focus-view.is-active {
+    display: flex !important;
+    opacity: 1 !important;
+    transform: translateY(0);
+}
+
+/* Modificadores do Box de Preview no Modo Normal */
+#box-preview-acervo {
+    max-height: 35vh; /* Altura generosa padrão em modo foco */
+}
+.acervo-node-text.wrap-text {
+    white-space: normal;
+    line-height: 1.5;
+    display: block;
+    margin-top: 2px;
+}
+
+/* --- MODO TELA CHEIA (FULLSCREEN) --- */
+#modal-acervo-inserir.is-fullscreen #box-preview-container {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 100;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.3);
+}
+
+#modal-acervo-inserir.is-fullscreen #box-preview-acervo {
+    max-height: calc(100vh - 120px); /* Ocupa quase todo o modal verticalmente */
+    height: 100%;
+}

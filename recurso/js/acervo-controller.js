@@ -203,6 +203,16 @@ window.abrirModalAcervo = function() {
     document.getElementById('wizard-backdrop').style.display = 'block';
     document.getElementById('modal-acervo-inserir').style.display = 'flex';
     
+    // GATILHO ARQUITETURAL: Resetar para Modo Lista sempre que abrir
+    document.getElementById('modal-acervo-inserir').classList.remove('is-fullscreen');
+    document.getElementById('acervo-focus-view').style.display = 'none';
+    document.getElementById('acervo-focus-view').classList.remove('is-active');
+    const listView = document.getElementById('acervo-list-view');
+    if (listView) {
+        listView.style.display = 'block';
+        listView.style.opacity = '1';
+    }
+    
     // Controle Arquitetural de Layout (Modo IA vs Modo Manual)
     if (_idsRecomendadosIA) {
         _safeDisplay('banner-filtro-ia', 'flex');
@@ -267,21 +277,25 @@ window.abrirModalAcervo = function() {
 
                 document.querySelectorAll('#lista-acervo-geral .acervo-item').forEach(el => el.classList.remove('selected'));
                 item.classList.add('selected');
+                
                 _modeloSelecionadoId = mod.id;
                 _modeloSelecionadoNodes = mod.nos;
                 _modeloSelecionadoEscopo = escopoAtual;
                 
+                // MUDANÇA: Quebra de linha no texto para leitura expandida (classe wrap-text)
                 const previewHtml = mod.nos.map(n => `
                     <div class="acervo-node-preview">
                         ${getIconeAcervoSVG(n.intencao)}
-                        <span class="acervo-node-text">${TopicsManager.escaparHTML(n.texto)}</span>
+                        <span class="acervo-node-text wrap-text">${TopicsManager.escaparHTML(n.texto)}</span>
                     </div>
                 `).join('');
                 
                 document.getElementById('box-preview-acervo').innerHTML = previewHtml;
-                _safeDisplay('box-preview-acervo', 'block');
                 
-                // Roteamento Defensivo
+                // Ativa a nova Arquitetura Visual
+                window.ativarModoFocoAcervo(mod.nome);
+                
+                // Roteamento Defensivo (Legado Mantido Intacto)
                 _safeDisplay('box-destino-dinamico-acervo', 'block');
                 _safeDisplay('destino-acervo-card', 'none');
                 _safeDisplay('destino-acervo-tese', 'none');
@@ -865,4 +879,52 @@ window.copiarPromptNotebookLM = function() {
         document.execCommand('copy');
         exibirToast('Comando copiado.', 'sucesso');
     }
+};
+
+// ==========================================
+// FUNÇÕES DE CONTROLE DE VIEW SWAP (ACERVO)
+// ==========================================
+
+window.ativarModoFocoAcervo = function(tituloModelo) {
+    document.getElementById('focus-modelo-titulo').textContent = TopicsManager.escaparHTML(tituloModelo);
+    
+    const listView = document.getElementById('acervo-list-view');
+    const focusView = document.getElementById('acervo-focus-view');
+    
+    // Animação de saída da lista
+    listView.style.opacity = '0';
+    setTimeout(() => {
+        listView.style.display = 'none';
+        // Prepara e anima entrada do foco
+        focusView.style.display = 'flex';
+        // Força reflow mínimo para garantir a animação de entrada
+        void focusView.offsetWidth; 
+        focusView.classList.add('is-active');
+    }, 250); // Sincronizado com CSS
+};
+
+window.desativarModoFocoAcervo = function() {
+    const listView = document.getElementById('acervo-list-view');
+    const focusView = document.getElementById('acervo-focus-view');
+    
+    // Desativa Tela Cheia por segurança ao voltar
+    document.getElementById('modal-acervo-inserir').classList.remove('is-fullscreen');
+    
+    focusView.classList.remove('is-active');
+    focusView.style.opacity = '0';
+    setTimeout(() => {
+        focusView.style.display = 'none';
+        listView.style.display = 'block';
+        void listView.offsetWidth;
+        listView.style.opacity = '1';
+        
+        // Limpa estado selecionado (legado)
+        document.querySelectorAll('#lista-acervo-geral .acervo-item').forEach(el => el.classList.remove('selected'));
+        _modeloSelecionadoId = null;
+    }, 250);
+};
+
+window.toggleFullscreenAcervo = function() {
+    const modal = document.getElementById('modal-acervo-inserir');
+    if(modal) modal.classList.toggle('is-fullscreen');
 };
