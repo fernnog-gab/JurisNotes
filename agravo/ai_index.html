@@ -819,6 +819,7 @@
     
 <script src="js/ai_app-core.js"></script>
 <script src="js/ai_acervo-controller.js"></script>
+<script src="js/ai_recommendation-service.js"></script>
 
     
     <div id="quick-intent-tooltip" class="quick-tooltip" style="display: none;"></div>
@@ -888,14 +889,25 @@
 
     <div id="modal-acervo-inserir" class="crop-wizard-popup" style="display:none; z-index: 4005;">
         <div class="wizard-header">Acervo de Modelos</div>
-        <div style="display: flex; gap: 8px; margin-bottom: 12px; width: 100%;">
+        
+        <div id="acervo-search-wrapper" style="display: flex; gap: 8px; margin-bottom: 12px; width: 100%;">
             <input type="text" id="input-pesquisa-acervo" class="topic-select" placeholder="Pesquisar modelo ou tag..." style="flex: 1;" oninput="filtrarListaUIDebounced(this.value, 'lista-acervo-geral')">
             <button class="acervo-action-btn tag-btn-creme" title="Gerenciar Tags" onclick="abrirModalGerenciarTags()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
-                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
-                    <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line>
                 </svg>
             </button>
+        </div>
+
+        <!-- NOVO: Banner de Feedback do Filtro IA (Inicia oculto) -->
+        <div id="banner-filtro-ia" class="banner-ia-filter" style="display:none;">
+            <span class="banner-ia-text">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+                Recomendações da IA para esta tese
+            </span>
+            <button class="chip-btn btn-limpar-ia" onclick="limparFiltroIAAcervo()">✕ Limpar</button>
         </div>
         
         <div id="lista-acervo-geral" class="doc-list-container" style="max-height: 220px;">
