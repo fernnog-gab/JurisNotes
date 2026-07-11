@@ -854,10 +854,17 @@ window.TopicsManager = (function () {
         // NOVO: Painel Preâmbulo Estático gerado incondicionalmente
         const preambleHtml = `
             <div class="topic-preamble-panel" style="position: sticky; top: 0; z-index: 10;">
-                <div class="preamble-card preamble-alegacao" onclick="abrirEdicaoPreambulo('${activeTabId}', 'alegacoes')">
-                    <div class="preamble-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                <div class="preamble-card preamble-alegacao ${!topicoAtivo.alegacoes ? 'is-empty' : ''}" onclick="abrirEdicaoPreambulo('${activeTabId}', 'alegacoes')">
+                    
+                    <div class="preamble-icon ai-trigger-btn" 
+                         title="✨ Inteligência Artificial: Buscar modelos compatíveis" 
+                         onclick="event.stopPropagation(); AIRecommendationManager.buscarModelosCompativeis('${activeTabId}', decodeURIComponent('${encodeURIComponent(topicoAtivo.alegacoes || '').replace(/'/g, "%27")}'))">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" class="ai-sparkle" style="display:none; transform-origin: 12px 12px;"></path>
+                        </svg>
                     </div>
+
                     <div class="preamble-content">
                         <span class="preamble-title">${ED_UI_LABELS.alegacao.titulo}</span>
                         ${topicoAtivo.alegacoes ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.alegacoes)) : `<span class="preamble-empty">${ED_UI_LABELS.alegacao.placeholder}</span>`}

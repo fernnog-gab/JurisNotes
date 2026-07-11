@@ -4,7 +4,18 @@
    ================================================ */
 
 // Variáveis de Estado Isolado para o Acervo
+let _idsRecomendadosIA = null;
 let _noAlvoParaSalvar = null;
+
+window.aplicarFiltroIAAcervo = function(idsArray) {
+    _idsRecomendadosIA = idsArray;
+    window.abrirModalAcervo();
+};
+
+window.limparFiltroIAAcervo = function() {
+    _idsRecomendadosIA = null;
+    window.abrirModalAcervo(); 
+};
 let _modeloSelecionadoId = null;
 let _modeloSelecionadoNodes = [];
 let _tagsGlobais = [];
@@ -193,7 +204,15 @@ window.abrirModalAcervo = function() {
     document.getElementById('wizard-backdrop').style.display = 'block';
     document.getElementById('modal-acervo-inserir').style.display = 'flex';
     
-    document.getElementById('input-pesquisa-acervo').value = '';
+    if (_idsRecomendadosIA) {
+        _safeDisplay('banner-filtro-ia', 'flex');
+        _safeDisplay('acervo-search-wrapper', 'none'); 
+    } else {
+        _safeDisplay('banner-filtro-ia', 'none');
+        _safeDisplay('acervo-search-wrapper', 'flex');
+        document.getElementById('input-pesquisa-acervo').value = '';
+    }
+    
     _safeDisplay('box-destino-dinamico-acervo', 'none');
     _safeDisplay('box-preview-acervo', 'none');
     _safeDisplay('btn-inserir-acervo', 'none');
@@ -203,10 +222,20 @@ window.abrirModalAcervo = function() {
     container.innerHTML = '<div class="acervo-loader"></div>';
     
     AcervoManager.carregarModelos().then(modelos => {
-        container.innerHTML = modelos.length === 0 ? '<p style="text-align:center; font-size:0.8rem;">Acervo vazio.</p>' : '';
+        container.innerHTML = '';
+        let exibidos = 0;
+
+        if (modelos.length === 0) {
+            container.innerHTML = '<p class="empty-state">Acervo vazio.</p>';
+            return;
+        }
+
         modelos.forEach(mod => {
+            if (_idsRecomendadosIA && !_idsRecomendadosIA.includes(mod.id)) return;
+            exibidos++;
+
             const item = document.createElement('div');
-            item.className = 'acervo-item';
+            item.className = _idsRecomendadosIA ? 'acervo-item ai-recommended' : 'acervo-item';
             item.dataset.tags = mod.tags?.filter(Boolean).join(' ').toLowerCase() || '';
             
             const htmlTags = (mod.tags && mod.tags.length > 0) 
@@ -298,6 +327,14 @@ window.abrirModalAcervo = function() {
             };
             container.appendChild(item);
         });
+
+        if (_idsRecomendadosIA && exibidos === 0) {
+            container.innerHTML = `
+                <div style="text-align:center; padding: 20px; color:#c62828; font-size:0.85rem;">
+                    <strong>Nenhum modelo compatível encontrado.</strong><br>
+                    <span style="color:#777;">A IA não identificou correlação entre o Vício atual e o acervo.</span>
+                </div>`;
+        }
     }).catch(() => container.innerHTML = '<p style="color:red; text-align:center;">Erro ao conectar.</p>');
 };
 

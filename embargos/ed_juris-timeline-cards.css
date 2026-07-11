@@ -735,7 +735,32 @@ body[data-context="ed"] .topics-content-area {
 /* Status: Pendente (Traço - Indica falta de revisão) */
 .btn-revisao-nota.pendente {
     color: #a0aec0;
-    border-color: rgba(160, 174, 192, 0.3);
+    /* ==========================================
+   ESTILOS: RECOMENDAÇÃO DE IA NO ACERVO
+   ========================================== */
+.banner-ia-filter { display: flex; align-items: center; justify-content: space-between; background: #fff8e1; border: 1px solid #ffe082; padding: 10px 14px; border-radius: 6px; margin-bottom: 12px; }
+.banner-ia-text { font-size: 0.85rem; color: #f57f17; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.banner-ia-text svg { width: 16px; height: 16px; }
+.btn-limpar-ia { background: white; border: 1px solid #ffe082; color: #f57f17; font-size: 0.75rem; padding: 4px 10px; cursor: pointer; transition: 0.2s; }
+.btn-limpar-ia:hover { background: #ffe082; color: #e65100; }
+
+.acervo-item.ai-recommended {
+    border-left: 4px solid #f57f17;
+    background-image: linear-gradient(to right, rgba(255, 248, 225, 0.4), #ffffff);
+}
+.acervo-item.ai-recommended .acervo-item-titulo { color: #e65100; }
+
+.acervo-item.ai-recommended:hover, 
+.acervo-item.ai-recommended.selected {
+    background-image: none;
+    background-color: var(--trt-light-bg);
+    border-color: var(--trt-blue-mid);
+}
+.acervo-item.ai-recommended.selected .acervo-item-titulo { color: var(--trt-blue); }
+
+@keyframes ai-pulse {
+    0% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(245,124,0,0)); }
+    100% { transform: scale(1.1); filter: drop-shadow(0 0 6px rgba(245,124,0,0.5)); }
 }
 .btn-revisao-nota.pendente:hover {
     background: rgba(160, 174, 192, 0.2);
