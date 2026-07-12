@@ -982,3 +982,68 @@ function fecharTooltipRapido() {
 }
 
 // window.SubDnDManager removido na refatoração de limpeza
+
+/* ================================================
+   ROTEADOR CENTRAL DE EVENTOS (DELEGAÇÃO)
+   ================================================ */
+window.TimelineEventDelegator = (function() {
+    function init() {
+        const container = document.getElementById('history-container');
+        if (!container) return;
+
+        // Listener anexado na raiz, aguardando o bubbling
+        container.addEventListener('click', function(e) {
+            const targetEl = e.target.closest('[data-action]');
+            if (!targetEl) return;
+
+            // Bloqueia comportamento padrão caso seja um <button> dentro de formulário invisível
+            e.preventDefault(); 
+            
+            const action = targetEl.dataset.action;
+            const topicoId = targetEl.dataset.topico;
+            
+            // [AI MODULE PARSER]
+            // Diferente do app Padrão, no painel de Agravo de Instrumento o 'index' 
+            // pode ser string ("global", "obice:X") ou numérico (índices padrão de arrays)
+            let index = targetEl.dataset.index;
+            if (index && !isNaN(index)) {
+                index = parseInt(index, 10);
+            }
+
+            const cIdx = targetEl.dataset.cidx !== undefined ? parseInt(targetEl.dataset.cidx, 10) : null;
+            const viewSource = targetEl.dataset.view;
+            const localIndex = targetEl.dataset.local !== undefined ? parseInt(targetEl.dataset.local, 10) : null;
+
+            // Ponte de Retrocompatibilidade (Atualiza a variável legada)
+            if (topicoId && index !== undefined) {
+                window._menuAnotacaoCtx = { topicoId, index, cIdx };
+            }
+
+            // Roteador de Ações
+            switch (action) {
+                case 'edit-item':
+                    if (cIdx !== null) editarItemCorrelacionado();
+                    else editarAnotacao();
+                    break;
+                case 'add-subnode':
+                    acionarNovoNoIdeia();
+                    break;
+                case 'smart-move':
+                    abrirModalSmartMove(topicoId, index, cIdx);
+                    break;
+                case 'delete-item':
+                    if (cIdx !== null) excluirItemCorrelacionado(topicoId, index, cIdx);
+                    else excluirAnotacao();
+                    break;
+                case 'open-submenu':
+                    // e (event) é repassado para cálculo de X e Y do menu pop-up
+                    abrirMenuSubAnotacao(topicoId, index, viewSource, localIndex, e);
+                    break;
+                default:
+                    console.warn(`[Juris Notes AI] Ação de delegação não mapeada: ${action}`);
+            }
+        });
+    }
+
+    return { init };
+})();
