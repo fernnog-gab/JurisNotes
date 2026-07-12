@@ -205,16 +205,13 @@ window.TopicsManager = (function () {
 
     function _gerarBtnRevisaoHtml(topicoId, parentIndex, viewSource, localIndex, intencao, isRevisada) {
         if (intencao !== 'nota') return '';
-        
-        const safeViewSource = String(viewSource).replace(/'/g, "\\'");
-        const safeParentIdx = parentIndex === null ? 'null' : parentIndex;
-        
+        const dataParent = parentIndex !== null ? `data-parent="${parentIndex}"` : ''; // Trata null corretamente
         const svgPendente = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
         const svgRevisada = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
         
         return `<button class="btn-revisao-nota ${isRevisada ? 'revisada' : 'pendente'}" 
-                title="${isRevisada ? 'Nota revisada. Clique para desmarcar.' : 'Nota pendente. Clique para marcar como revisada.'}" 
-                onclick="toggleRevisaoNotaOculta('${topicoId}', ${safeParentIdx}, '${safeViewSource}', ${localIndex}, event)">
+                title="${isRevisada ? 'Nota revisada.' : 'Nota pendente.'}" 
+                data-action="toggle-revision" data-topico="${escaparHTML(topicoId)}" ${dataParent} data-view="${escaparHTML(String(viewSource))}" data-local="${localIndex}">
                 ${isRevisada ? svgRevisada : svgPendente}
                 </button>`;
     }
@@ -724,40 +721,19 @@ window.TopicsManager = (function () {
         // NOVO: Painel Preâmbulo Estático gerado incondicionalmente
         const preambleHtml = `
             <div class="topic-preamble-panel">
-                <div class="preamble-card preamble-alegacao ${!topicoAtivo.alegacoes ? 'is-empty' : ''}" onclick="abrirEdicaoPreambulo('${activeTabId}', 'alegacoes')">
-                    
-                    <!-- NOVO: Gatilho da IA (Tratamento robusto contra quebras de linha e aspas no HTML) -->
-                    <div class="preamble-icon ai-trigger-btn" 
-                         title="✨ Inteligência Artificial: Buscar modelos compatíveis" 
-                         onclick="event.stopPropagation(); AIRecommendationManager.buscarModelosCompativeis('${activeTabId}', decodeURIComponent('${encodeURIComponent(topicoAtivo.alegacoes || '').replace(/'/g, "%27")}'))">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" class="ai-sparkle" style="display:none; transform-origin: 12px 12px;"></path>
-                        </svg>
+                <div class="preamble-card preamble-alegacao ${!topicoAtivo.alegacoes ? 'is-empty' : ''}" data-action="edit-preamble" data-topico="${escaparHTML(activeTabId)}" data-campo="alegacoes">
+                    <div class="preamble-icon ai-trigger-btn" title="IA: Modelos" data-action="ai-trigger" data-topico="${escaparHTML(activeTabId)}" data-conteudo="${escaparHTML(encodeURIComponent(topicoAtivo.alegacoes || ''))}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                     </div>
-
-                    <div class="preamble-content">
-                        <span class="preamble-title">Razões Recursais</span>
-                        ${topicoAtivo.alegacoes ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.alegacoes)) : '<span class="preamble-empty">Clique para redigir as alegações recursais...</span>'}
-                    </div>
+                    <div class="preamble-content"><span class="preamble-title">Razões Recursais</span>${topicoAtivo.alegacoes ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.alegacoes)) : '<span class="preamble-empty">Redigir alegações...</span>'}</div>
                 </div>
-                <div class="preamble-card preamble-origem ${!topicoAtivo.fundamentos ? 'is-empty' : ''}" onclick="abrirEdicaoPreambulo('${activeTabId}', 'fundamentos')">
-                    <div class="preamble-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 21V7l6-4 6 4v14"></path></svg>
-                    </div>
-                    <div class="preamble-content">
-                        <span class="preamble-title">Fundamentos da Origem</span>
-                        ${topicoAtivo.fundamentos ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.fundamentos)) : '<span class="preamble-empty">Clique para redigir os fundamentos da sentença...</span>'}
-                    </div>
+                <div class="preamble-card preamble-origem ${!topicoAtivo.fundamentos ? 'is-empty' : ''}" data-action="edit-preamble" data-topico="${escaparHTML(activeTabId)}" data-campo="fundamentos">
+                    <div class="preamble-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 21V7l6-4 6 4v14"></path></svg></div>
+                    <div class="preamble-content"><span class="preamble-title">Fundamentos</span>${topicoAtivo.fundamentos ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.fundamentos)) : '<span class="preamble-empty">Redigir fundamentos...</span>'}</div>
                 </div>
-                <div class="preamble-card preamble-veredito ${!topicoAtivo.veredito ? 'is-empty' : ''}" onclick="abrirEdicaoPreambulo('${activeTabId}', 'veredito')">
-                    <div class="preamble-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
-                    </div>
-                    <div class="preamble-content">
-                        <span class="preamble-title">Veredito / Conclusão</span>
-                        ${topicoAtivo.veredito ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.veredito)) : '<span class="preamble-empty">Clique para definir o veredito final deste tópico...</span>'}
-                    </div>
+                <div class="preamble-card preamble-veredito ${!topicoAtivo.veredito ? 'is-empty' : ''}" data-action="edit-preamble" data-topico="${escaparHTML(activeTabId)}" data-campo="veredito">
+                    <div class="preamble-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg></div>
+                    <div class="preamble-content"><span class="preamble-title">Veredito</span>${topicoAtivo.veredito ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.veredito)) : '<span class="preamble-empty">Definir veredito...</span>'}</div>
                 </div>
             </div>`;
 
@@ -881,7 +857,7 @@ window.TopicsManager = (function () {
                                 <div class="card-header" style="justify-content: space-between; margin-bottom: 0;">
                                     <div class="hierarquia-titulo" style="color: ${corTituloTese}; font-weight: bold;">Tese: ${escaparHTML(teseAtual)}</div>
                                     <div class="card-actions-bar" style="margin-top: 0; padding-top: 0; border-top: none;">
-                                        <button title="Adicionar Diretriz à Tese" onclick="adicionarDiretrizEstrutural('tese', '${activeTabId}', '${escaparHTML(teseAtual).replace(/'/g, "\\'")}', event)">
+                                        <button title="Adicionar Diretriz à Tese" data-action="add-directive" data-dtype="tese" data-topico="${escaparHTML(activeTabId)}" data-tesenome="${escaparHTML(teseAtual)}">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                         </button>
                                     </div>
@@ -943,7 +919,7 @@ window.TopicsManager = (function () {
                             <div class="card-header" style="justify-content: space-between; margin-bottom: 0;">
                                 <div class="hierarquia-titulo">Diretrizes Globais do Tópico</div>
                                 <div class="card-actions-bar" style="margin-top: 0; padding-top: 0; border-top: none;">
-                                    <button title="Adicionar Diretriz Global" onclick="adicionarDiretrizEstrutural('global', '${activeTabId}', null, event)">
+                                    <button title="Adicionar Diretriz Global" data-action="add-directive" data-dtype="global" data-topico="${escaparHTML(activeTabId)}">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                     </button>
                                 </div>
