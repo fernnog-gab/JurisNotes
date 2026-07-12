@@ -914,7 +914,13 @@
                 <button class="chip-btn btn-limpar-ia" onclick="limparFiltroIAAcervo()">✕ Limpar</button>
             </div>
             
-            <div id="lista-acervo-geral" class="doc-list-container" style="max-height: 40vh;"></div>
+            <div id="lista-acervo-geral" class="doc-list-container" style="max-height: 40vh; overflow-y: auto; position: relative;">
+                <!-- WRAPPER: Apenas este elemento sofrerá innerHTML = '' -->
+                <div id="acervo-items-wrapper" style="display: flex; flex-direction: column;"></div>
+                
+                <!-- SENTINELA: Blindada, sempre no final do container de scroll -->
+                <div id="sentinela-scroll-acervo" style="height: 20px; width: 100%; display: none;"></div>
+            </div>
         </div>
 
         <!-- CAMADA 2: VISUALIZAÇÃO DE FOCO (Inicia oculta via CSS) -->
