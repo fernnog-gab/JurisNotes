@@ -890,57 +890,77 @@
     </div>
 
     <div id="modal-acervo-inserir" class="crop-wizard-popup" style="display:none; z-index: 4005;">
-        <div class="wizard-header">Acervo de Modelos</div>
-        <div id="acervo-search-wrapper" style="display: flex; gap: 8px; margin-bottom: 12px; width: 100%;">
-            <input type="text" id="input-pesquisa-acervo" class="topic-select" placeholder="Pesquisar modelo ou tag..." style="flex: 1;" oninput="filtrarListaUIDebounced(this.value, 'lista-acervo-geral')">
-            <button class="acervo-action-btn tag-btn-creme" title="Gerenciar Tags" onclick="abrirModalGerenciarTags()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
-                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line>
-                </svg>
-            </button>
+        <div class="wizard-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Acervo de Modelos</span>
+            <button style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b; padding: 0 4px;" onclick="fecharModalAcervo()" title="Fechar Acervo">✕</button>
         </div>
 
-        <!-- NOVO: Banner de Feedback do Filtro IA (Inicia oculto) -->
-        <div id="banner-filtro-ia" class="banner-ia-filter" style="display:none;">
-            <span class="banner-ia-text">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                </svg>
-                Recomendações da IA para este Vício
-            </span>
-            <button class="chip-btn btn-limpar-ia" onclick="limparFiltroIAAcervo()">✕ Limpar</button>
-        </div>
-        
-        <div id="lista-acervo-geral" class="doc-list-container" style="max-height: 220px;">
-        </div>
+        <!-- CAMADA 1: VISUALIZAÇÃO EM LISTA -->
+        <div id="acervo-list-view">
+            <div id="acervo-search-wrapper" style="display: flex; gap: 8px; margin-bottom: 12px; width: 100%;">
+                <input type="text" id="input-pesquisa-acervo" class="topic-select" placeholder="Pesquisar modelo ou tag..." style="flex: 1;" oninput="filtrarListaUIDebounced(this.value, 'lista-acervo-geral')">
+                <button class="acervo-action-btn tag-btn-creme" title="Gerenciar Tags" onclick="abrirModalGerenciarTags()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line>
+                    </svg>
+                </button>
+            </div>
 
-        <div id="box-preview-acervo" style="display:none; margin-top: 8px; background: #fafafa; padding: 8px; border-radius: 6px; border: 1px dashed #ccc; font-size: 0.8rem; max-height: 110px; overflow-y: auto;"></div>
-
-        <div id="box-destino-dinamico-acervo" style="display:none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color);">
-            <p id="label-destino-acervo" class="popup-label">Destino da Inserção:</p>
+            <div id="banner-filtro-ia" class="banner-ia-filter" style="display:none;">
+                <span class="banner-ia-text">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    Recomendações da IA para este Vício
+                </span>
+                <button class="chip-btn btn-limpar-ia" onclick="limparFiltroIAAcervo()">✕ Limpar</button>
+            </div>
             
-            <!-- Escopo: Card -->
-            <div id="destino-acervo-card" style="display: none; margin-top: 8px;">
-                <input type="number" id="input-destino-acervo-card" class="topic-select" placeholder="Ex: 2 (Nº da Ideia Principal)" min="1">
-            </div>
-
-            <!-- Escopo: Tese (No ED, chamamos de Vício) -->
-            <div id="destino-acervo-tese" style="display: none; margin-top: 8px;">
-                <select id="select-destino-acervo-tese" class="topic-select">
-                    <option value="">Selecione um Vício existente...</option>
-                </select>
-                <p id="aviso-sem-tese" style="display:none; color:#c62828; font-size:0.75rem; margin-top:4px;">Não há vícios agrupados neste tópico. Crie um grupo de vício primeiro.</p>
-            </div>
-
-            <!-- Escopo: Global -->
-            <div id="destino-acervo-global" style="display: none; margin-top: 8px; padding: 8px; background: #e3f2fd; border-radius: 6px; border: 1px solid #90caf9;">
-                <p style="font-size: 0.8rem; color: #0d47a1; margin: 0;">🌐 Este modelo será aplicado diretamente às <strong>Diretrizes Globais</strong> dos Embargos atuais.</p>
-            </div>
+            <div id="lista-acervo-geral" class="doc-list-container" style="max-height: 40vh;"></div>
         </div>
 
-        <div class="wizard-actions">
-            <button class="chip-btn chip-cancelar" onclick="fecharModalAcervo()">✕ Cancelar</button>
-            <button class="chip-btn chip-autora" id="btn-inserir-acervo" style="display:none; background: var(--trt-blue); color: white; border: none;" onclick="confirmarInsercaoAcervo()">✔ Confirmar Inserção</button>
+        <!-- CAMADA 2: VISUALIZAÇÃO DE FOCO -->
+        <div id="acervo-focus-view" style="display: none; flex-direction: column; opacity: 0;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                <button class="chip-btn chip-cancelar" style="width: auto; padding: 4px 10px; font-size: 0.75rem;" onclick="window.desativarModoFocoAcervo()">← Voltar</button>
+                <span id="focus-modelo-titulo" style="font-weight: 700; color: var(--trt-blue); font-size: 0.95rem;"></span>
+            </div>
+
+            <!-- Área de Preview dos Nós -->
+            <div id="box-preview-container" style="background: #fafafa; border: 1px solid var(--border-color); border-radius: 6px; display: flex; flex-direction: column; transition: all 0.3s ease;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: #e8ecef; border-bottom: 1px solid var(--border-color); border-radius: 6px 6px 0 0;">
+                    <span style="font-size: 0.75rem; font-weight: 600; color: #555;">Conteúdo do Modelo</span>
+                    <button class="acervo-action-btn" title="Expandir Tela Cheia" onclick="window.toggleFullscreenAcervo()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px; height:16px;"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+                    </button>
+                </div>
+                <div id="box-preview-acervo" style="padding: 12px; font-size: 0.85rem; overflow-y: auto;"></div>
+            </div>
+
+            <!-- Roteamento Legado do ED: Área de Destino -->
+            <div id="box-destino-dinamico-acervo" style="display:none; margin-top: 16px;">
+                <p id="label-destino-acervo" class="popup-label">Destino da Inserção:</p>
+                
+                <div id="destino-acervo-card" style="display: none; margin-top: 8px;">
+                    <input type="number" id="input-destino-acervo-card" class="topic-select" placeholder="Ex: 2 (Nº da Ideia Principal)" min="1">
+                </div>
+
+                <div id="destino-acervo-tese" style="display: none; margin-top: 8px;">
+                    <select id="select-destino-acervo-tese" class="topic-select">
+                        <option value="">Selecione um Vício existente...</option>
+                    </select>
+                    <p id="aviso-sem-tese" style="display:none; color:#c62828; font-size:0.75rem; margin-top:4px;">Não há vícios agrupados neste tópico. Crie um grupo de vício primeiro.</p>
+                </div>
+
+                <div id="destino-acervo-global" style="display: none; margin-top: 8px; padding: 8px; background: #e3f2fd; border-radius: 6px; border: 1px solid #90caf9;">
+                    <p style="font-size: 0.8rem; color: #0d47a1; margin: 0;">🌐 Este modelo será aplicado diretamente às <strong>Diretrizes Globais</strong> dos Embargos atuais.</p>
+                </div>
+            </div>
+
+            <div class="wizard-actions" style="margin-top: 16px;">
+                <button class="chip-btn chip-cancelar" onclick="fecharModalAcervo()">✕ Fechar Modal</button>
+                <button class="chip-btn chip-autora" id="btn-inserir-acervo" style="display:none; background: var(--trt-blue); color: white; border: none;" onclick="confirmarInsercaoAcervo()">✔ Confirmar Inserção</button>
+            </div>
         </div>
     </div>
 

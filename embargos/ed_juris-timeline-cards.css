@@ -829,3 +829,75 @@ body[data-context="ed"] .topics-content-area {
     background-color: #7a8b9e;
     border-color: #ffffff;
 }
+
+/* ==========================================
+   ACERVO: ARQUITETURA DE VIEW SWAP E FULLSCREEN (ED)
+   ========================================== */
+   
+/* Transições de View (Opacidade e GPU) */
+#acervo-list-view,
+#acervo-focus-view {
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    will-change: opacity, transform;
+}
+
+#acervo-focus-view {
+    transform: translateY(10px);
+}
+#acervo-focus-view.is-active {
+    display: flex !important;
+    opacity: 1 !important;
+    transform: translateY(0);
+}
+
+/* Modificadores do Box de Preview no Modo Normal */
+#box-preview-acervo {
+    max-height: 35vh; /* Altura generosa padrão em modo foco */
+}
+.acervo-node-text.wrap-text {
+    white-space: normal;
+    line-height: 1.5;
+    display: block;
+    margin-top: 2px;
+}
+
+/* --- MODO TELA CHEIA (FULLSCREEN) --- */
+/* 1. Expande o Modal inteiro para ocupar 90% da tela */
+#modal-acervo-inserir.is-fullscreen {
+    width: 90vw !important;
+    height: 90vh !important;
+    max-width: 1400px !important;
+    max-height: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* 2. Força a view de foco a ocupar todo o espaço vertical disponível do modal */
+#modal-acervo-inserir.is-fullscreen #acervo-focus-view {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Evita que o modal ganhe scroll externo */
+}
+
+/* 3. Oculta de forma inteligente tudo que NÃO for a caixa de leitura (ex: botões e rodapé) */
+#modal-acervo-inserir.is-fullscreen #acervo-focus-view > div:not(#box-preview-container) {
+    display: none !important;
+}
+
+/* 4. A caixa de leitura ganha 100% de destaque */
+#modal-acervo-inserir.is-fullscreen #box-preview-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0;
+}
+
+/* 5. A área de texto cresce flexivelmente ocupando o máximo da tela */
+#modal-acervo-inserir.is-fullscreen #box-preview-acervo {
+    flex: 1;
+    max-height: none !important;
+    height: 100%;
+    overflow-y: auto;
+}
