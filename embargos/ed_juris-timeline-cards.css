@@ -447,7 +447,9 @@
 .acervo-node-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #555; font-style: italic; }
 
 #modal-acervo-inserir, #modal-editar-modelo-acervo { width: 80vw; max-width: 900px; }
-#lista-acervo-geral { max-height: 40vh; }
+#acervo-list-view { display: flex; flex-direction: column; }
+#lista-acervo-geral { max-height: 40vh; flex: 1; overflow-y: auto; scroll-behavior: smooth; }
+#acervo-items-wrapper .acervo-item { content-visibility: auto; }
 .acervo-item-header { display: flex; justify-content: space-between; align-items: flex-start; }
 .acervo-action-btn { background: transparent; border: none; color: #999; cursor: pointer; padding: 6px; border-radius: 4px; display: flex; align-items: center; transition: all 0.2s ease; }
 .acervo-action-btn:hover { background: #f0f4f8; color: var(--trt-blue); }

@@ -16,11 +16,21 @@ window.limparFiltroIAAcervo = function() {
     _idsRecomendadosIA = null;
     window.abrirModalAcervo(); 
 };
+// ==========================================
+// ESTADO DO ACERVO (Isolado e Seguro)
+// ==========================================
 let _modeloSelecionadoId = null;
 let _modeloSelecionadoNodes = [];
 let _tagsGlobais = [];
 let _tagsModeloEmEdicao = [];
 let _modeloSelecionadoEscopo = 'card';
+
+let _todosModelosEmMemoria = [];
+let _modelosFiltrados = [];
+let _paginaAtualRenderizacao = 0;
+const TAMANHO_LOTE_RENDERIZACAO = 20;
+let _observerScrollAcervo = null;
+let _eventDelegationAtivo = false;
 
 // HELPER PRIVADO (Defesa de UI)
 function _safeDisplay(id, styleStr) {
@@ -55,20 +65,35 @@ window.atualizarIconeAcervoUI = function(selectElement) {
     }
 };
 
-window.filtrarListaUI = function(termo, listaId) {
+// Filtro totalmente em memória (RAM Speed)
+window.filtrarListaUI = function(termo, listaId) { // listaId mantido para retrocompatibilidade
     const termoMin = termo.toLowerCase().trim();
-    const items = document.querySelectorAll(`#${listaId} .acervo-item`);
     
-    items.forEach(item => {
-        const titulo = item.querySelector('.acervo-item-titulo').textContent.toLowerCase();
-        const tagsData = (item.dataset.tags || '').toLowerCase();
+    if (!termoMin) {
+        _modelosFiltrados = [..._todosModelosEmMemoria];
+    } else {
+        _modelosFiltrados = _todosModelosEmMemoria.filter(mod => {
+            const titulo = mod.nome.toLowerCase();
+            const tagsData = (mod.tags || []).join(' ').toLowerCase();
+            return titulo.includes(termoMin) || tagsData.includes(termoMin);
+        });
+    }
 
-        if (titulo.includes(termoMin) || tagsData.includes(termoMin)) {
-            item.style.display = 'flex';
-        } else {
-            item.style.display = 'none';
-        }
-    });
+    _paginaAtualRenderizacao = 0;
+    
+    // Limpeza SEGURA - Apenas o wrapper!
+    const wrapper = document.getElementById('acervo-items-wrapper');
+    if(wrapper) wrapper.innerHTML = ''; 
+    
+    if (_modelosFiltrados.length === 0) {
+        if(wrapper) wrapper.innerHTML = '<p class="empty-state">Nenhum modelo encontrado para esta pesquisa.</p>';
+        const sentinela = document.getElementById('sentinela-scroll-acervo');
+        if(sentinela) sentinela.style.display = 'none';
+        return;
+    }
+
+    // A renderização real é chamada pelo observer ou pela forçada inicial
+    renderizarProximoLoteAcervo();
 };
 
 window.debounce = function(func, wait) {
@@ -193,6 +218,9 @@ window.confirmarSalvarModelo = async function() {
 // ==========================================
 // MÓDULO 2: INSERIR DO ACERVO
 // ==========================================
+// ==========================================
+// CICLO DE VIDA: ABERTURA DO MODAL E INICIALIZAÇÃO
+// ==========================================
 window.abrirModalAcervo = function() {
     if (!window.AcervoManager) return exibirToast('Conecte-se ao Firebase primeiro.', 'erro');
 
@@ -204,10 +232,11 @@ window.abrirModalAcervo = function() {
     document.getElementById('wizard-backdrop').style.display = 'block';
     document.getElementById('modal-acervo-inserir').style.display = 'flex';
     
-    // GATILHO ARQUITETURAL: Resetar para Modo Lista sempre que abrir
+    // Reset Arquitetural de View
     document.getElementById('modal-acervo-inserir').classList.remove('is-fullscreen');
     document.getElementById('acervo-focus-view').style.display = 'none';
     document.getElementById('acervo-focus-view').classList.remove('is-active');
+    
     const listView = document.getElementById('acervo-list-view');
     if (listView) {
         listView.style.display = 'block';
@@ -226,139 +255,235 @@ window.abrirModalAcervo = function() {
     _safeDisplay('box-destino-dinamico-acervo', 'none');
     _safeDisplay('box-preview-acervo', 'none');
     _safeDisplay('btn-inserir-acervo', 'none');
-    _modeloSelecionadoId = null; _modeloSelecionadoNodes = [];
     
-    const container = document.getElementById('lista-acervo-geral');
-    container.innerHTML = '<div class="acervo-loader"></div>';
+    // Reset do Estado de Seleção
+    _modeloSelecionadoId = null; 
+    _modeloSelecionadoNodes = [];
     
-    AcervoManager.carregarModelos().then(modelos => {
-        container.innerHTML = '';
-        let exibidos = 0;
+    // Inicializar Event Delegation UMA única vez
+    configurarEventDelegation();
 
-        if (modelos.length === 0) {
-            container.innerHTML = '<p class="empty-state">Acervo vazio.</p>';
+    // Reset Visual Seguro (Limpando apenas o Wrapper)
+    const wrapper = document.getElementById('acervo-items-wrapper');
+    wrapper.innerHTML = '<div class="acervo-loader"></div>';
+    
+    // Carregamento de Dados
+    AcervoManager.carregarModelos().then(modelos => {
+        _todosModelosEmMemoria = modelos;
+        
+        // Aplicação de Filtros Base
+        if (_idsRecomendadosIA) {
+            _modelosFiltrados = _todosModelosEmMemoria.filter(mod => _idsRecomendadosIA.includes(mod.id));
+        } else {
+            _modelosFiltrados = [..._todosModelosEmMemoria];
+        }
+
+        wrapper.innerHTML = ''; // Limpa o loader de forma segura
+        
+        if (_modelosFiltrados.length === 0) {
+            const msg = _idsRecomendadosIA ? 'Nenhum modelo compatível encontrado pela IA.' : 'Acervo vazio.';
+            wrapper.innerHTML = `<p class="empty-state">${msg}</p>`;
+            document.getElementById('sentinela-scroll-acervo').style.display = 'none';
             return;
         }
 
-        modelos.forEach(mod => {
-            if (_idsRecomendadosIA && !_idsRecomendadosIA.includes(mod.id)) return;
-            exibidos++;
+        _paginaAtualRenderizacao = 0;
+        iniciarObserverDeRolagem(); // Garante o ciclo do observer
+        renderizarProximoLoteAcervo();
 
-            const item = document.createElement('div');
-            item.className = _idsRecomendadosIA ? 'acervo-item ai-recommended' : 'acervo-item';
-            item.dataset.tags = mod.tags?.filter(Boolean).join(' ').toLowerCase() || '';
-            
-            const htmlTags = (mod.tags && mod.tags.length > 0) 
-                ? `<div class="acervo-item-tags-lista">${mod.tags.map(t => `<span class="acervo-tag-chip">${TopicsManager.escaparHTML(t)}</span>`).join('')}</div>`
-                : '';
-
-            const escopoAtual = mod.escopo || 'card';
-            let escopoSelo = '';
-            
-            // UX ED: Selos informativos
-            if(escopoAtual === 'global') escopoSelo = `<span class="acervo-node-badge" style="background:#e3f2fd; color:#0d47a1; margin-right:6px;">🌐 Global</span>`;
-            if(escopoAtual === 'tese') escopoSelo = `<span class="acervo-node-badge" style="background:#f3e5f5; color:#6a1b9a; margin-right:6px;">⚖️ Vício</span>`;
-
-            item.innerHTML = `
-                <div class="acervo-item-header">
-                    <div style="flex: 1;">
-                        <div class="acervo-item-titulo">${TopicsManager.escaparHTML(mod.nome)}</div>
-                        <div style="font-size:0.7rem; color:#888; margin-top:2px;">${escopoSelo} ${mod.nos.length} nó(s) salvos</div>
-                        ${htmlTags}
-                    </div>
-                    <button class="acervo-action-btn" title="Editar este modelo" onclick="abrirEdicaoModeloAcervo(event, '${mod.id}')">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                    </button>
-                </div>`;
-            
-            item.onclick = (e) => {
-                if (e.target.closest('.acervo-action-btn')) return;
-
-                document.querySelectorAll('#lista-acervo-geral .acervo-item').forEach(el => el.classList.remove('selected'));
-                item.classList.add('selected');
-                
-                _modeloSelecionadoId = mod.id;
-                _modeloSelecionadoNodes = mod.nos;
-                _modeloSelecionadoEscopo = escopoAtual;
-                
-                // MUDANÇA: Quebra de linha no texto para leitura expandida (classe wrap-text)
-                const previewHtml = mod.nos.map(n => `
-                    <div class="acervo-node-preview">
-                        ${getIconeAcervoSVG(n.intencao)}
-                        <span class="acervo-node-text wrap-text">${TopicsManager.escaparHTML(n.texto)}</span>
-                    </div>
-                `).join('');
-                
-                document.getElementById('box-preview-acervo').innerHTML = previewHtml;
-                
-                // CORREÇÃO CRÍTICA: Desoculta a área de leitura que havia sido escondida pela limpeza inicial
-                document.getElementById('box-preview-acervo').style.display = 'block';
-                
-                // Ativa a nova Arquitetura Visual
-                window.ativarModoFocoAcervo(mod.nome);
-                
-                // Roteamento Defensivo (Legado Mantido Intacto)
-                _safeDisplay('box-destino-dinamico-acervo', 'block');
-                _safeDisplay('destino-acervo-card', 'none');
-                _safeDisplay('destino-acervo-tese', 'none');
-                _safeDisplay('destino-acervo-global', 'none');
-                
-                const btnInserir = document.getElementById('btn-inserir-acervo');
-                if(!btnInserir) return;
-                btnInserir.disabled = false;
-
-                const topicoId = typeof TopicsManager !== 'undefined' ? TopicsManager.getActiveTabId() : null;
-                const topico = topicoId ? topicos.find(t => t.id === topicoId) : null;
-
-                if (_modeloSelecionadoEscopo === 'global') {
-                    _safeDisplay('destino-acervo-global', 'block');
-                    btnInserir.textContent = '✔ Inserir Globalmente';
-                } 
-                else if (_modeloSelecionadoEscopo === 'tese') {
-                    _safeDisplay('destino-acervo-tese', 'block');
-                    btnInserir.textContent = '✔ Inserir no Vício';
-                    
-                    const selectTese = document.getElementById('select-destino-acervo-tese');
-                    const aviso = document.getElementById('aviso-sem-tese');
-                    
-                    if(selectTese && aviso && topico) {
-                        selectTese.innerHTML = '<option value="">Selecione um Vício existente...</option>';
-                        const tesesUnicas = [...new Set(topico.anotacoes.filter(a => a.tese && a.tese.trim() !== '').map(a => a.tese))];
-                        
-                        if (tesesUnicas.length === 0) {
-                            selectTese.style.display = 'none';
-                            aviso.style.display = 'block';
-                            btnInserir.disabled = true;
-                        } else {
-                            selectTese.style.display = 'block';
-                            aviso.style.display = 'none';
-                            tesesUnicas.forEach(t => selectTese.appendChild(new Option(t, t)));
-                        }
-                    }
-                } else {
-                    _safeDisplay('destino-acervo-card', 'block');
-                    btnInserir.textContent = '✔ Inserir no Card';
-                }
-
-                _safeDisplay('btn-inserir-acervo', 'block');
-            };
-            container.appendChild(item);
-        });
-
-        if (_idsRecomendadosIA && exibidos === 0) {
-            container.innerHTML = `
-                <div style="text-align:center; padding: 20px; color:#c62828; font-size:0.85rem;">
-                    <strong>Nenhum modelo compatível encontrado.</strong><br>
-                    <span style="color:#777;">A IA não identificou correlação entre o Vício atual e o acervo.</span>
-                </div>`;
-        }
-    }).catch(() => container.innerHTML = '<p style="color:red; text-align:center;">Erro ao conectar.</p>');
+    }).catch(() => wrapper.innerHTML = '<p style="color:red; text-align:center;">Erro ao conectar.</p>');
 };
 
+// ==========================================
+// RENDERIZAÇÃO EM LOTES (CHUNKING / VIRTUALIZAÇÃO)
+// ==========================================
+function renderizarProximoLoteAcervo() {
+    const wrapper = document.getElementById('acervo-items-wrapper');
+    const sentinela = document.getElementById('sentinela-scroll-acervo');
+    if (!wrapper || !sentinela) return;
+    
+    const inicio = _paginaAtualRenderizacao * TAMANHO_LOTE_RENDERIZACAO;
+    const fim = inicio + TAMANHO_LOTE_RENDERIZACAO;
+    const lote = _modelosFiltrados.slice(inicio, fim);
+
+    if (lote.length === 0) return; // Failsafe
+
+    // Injeção de alta performance sem tocar no DOM principal iterativamente
+    const fragment = document.createDocumentFragment();
+
+    lote.forEach(mod => {
+        const item = document.createElement('div');
+        item.className = _idsRecomendadosIA ? 'acervo-item ai-recommended' : 'acervo-item';
+        item.dataset.id = mod.id;
+        
+        const htmlTags = (mod.tags && mod.tags.length > 0) 
+            ? `<div class="acervo-item-tags-lista">${mod.tags.map(t => `<span class="acervo-tag-chip">${TopicsManager.escaparHTML(t)}</span>`).join('')}</div>`
+            : '';
+
+        const escopoAtual = mod.escopo || 'card';
+        let escopoSelo = '';
+        
+        // UX ED: Selos informativos nativos
+        if(escopoAtual === 'global') escopoSelo = `<span class="acervo-node-badge" style="background:#e3f2fd; color:#0d47a1; margin-right:6px;">🌐 Global</span>`;
+        if(escopoAtual === 'tese') escopoSelo = `<span class="acervo-node-badge" style="background:#f3e5f5; color:#6a1b9a; margin-right:6px;">⚖️ Vício</span>`;
+
+        // Remoção completa de eventos inlines (onclick)
+        item.innerHTML = `
+            <div class="acervo-item-header">
+                <div style="flex: 1; pointer-events: none;"> <!-- pointer-events previne falsos alvos no clique -->
+                    <div class="acervo-item-titulo">${TopicsManager.escaparHTML(mod.nome)}</div>
+                    <div style="font-size:0.7rem; color:#888; margin-top:2px;">${escopoSelo} ${mod.nos.length} nó(s) salvos</div>
+                    ${htmlTags}
+                </div>
+                <button class="acervo-action-btn" data-action="edit" data-id="${mod.id}" title="Editar este modelo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events: none;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </button>
+            </div>`;
+        
+        fragment.appendChild(item);
+    });
+
+    wrapper.appendChild(fragment);
+    _paginaAtualRenderizacao++;
+
+    // Gerenciamento dinâmico da Sentinela
+    if (fim >= _modelosFiltrados.length) {
+        sentinela.style.display = 'none';
+    } else {
+        sentinela.style.display = 'block';
+    }
+}
+
+// ==========================================
+// EVENT DELEGATION (Prevenção de Memory Leaks)
+// ==========================================
+function configurarEventDelegation() {
+    if (_eventDelegationAtivo) return; 
+    
+    const wrapper = document.getElementById('acervo-items-wrapper');
+    if (!wrapper) return;
+
+    wrapper.addEventListener('click', (e) => {
+        const btnEdit = e.target.closest('.acervo-action-btn[data-action="edit"]');
+        if (btnEdit) {
+            e.stopPropagation();
+            abrirEdicaoModeloAcervo(e, btnEdit.dataset.id);
+            return;
+        }
+
+        const card = e.target.closest('.acervo-item');
+        if (card) {
+            selecionarEAtivarModelo(card, card.dataset.id);
+        }
+    });
+
+    _eventDelegationAtivo = true;
+}
+
+// Lógica isolada com roteamento nativo do ED
+function selecionarEAtivarModelo(cardElement, modeloId) {
+    document.querySelectorAll('#acervo-items-wrapper .acervo-item').forEach(el => el.classList.remove('selected'));
+    cardElement.classList.add('selected');
+    
+    const mod = _todosModelosEmMemoria.find(m => m.id === modeloId);
+    if (!mod) return;
+
+    _modeloSelecionadoId = mod.id;
+    _modeloSelecionadoNodes = mod.nos;
+    _modeloSelecionadoEscopo = mod.escopo || 'card';
+    
+    const previewHtml = mod.nos.map(n => `
+        <div class="acervo-node-preview">
+            ${getIconeAcervoSVG(n.intencao)}
+            <span class="acervo-node-text wrap-text">${TopicsManager.escaparHTML(n.texto)}</span>
+        </div>
+    `).join('');
+    
+    const previewBox = document.getElementById('box-preview-acervo');
+    previewBox.innerHTML = previewHtml;
+    previewBox.style.display = 'block';
+    
+    window.ativarModoFocoAcervo(mod.nome);
+    
+    // Roteamento Defensivo (Legado do ED)
+    _safeDisplay('box-destino-dinamico-acervo', 'block');
+    _safeDisplay('destino-acervo-card', 'none');
+    _safeDisplay('destino-acervo-tese', 'none');
+    _safeDisplay('destino-acervo-global', 'none');
+    
+    const btnInserir = document.getElementById('btn-inserir-acervo');
+    if(!btnInserir) return;
+    btnInserir.disabled = false;
+
+    const topicoId = typeof TopicsManager !== 'undefined' ? TopicsManager.getActiveTabId() : null;
+    const topico = topicoId ? topicos.find(t => t.id === topicoId) : null;
+
+    if (_modeloSelecionadoEscopo === 'global') {
+        _safeDisplay('destino-acervo-global', 'block');
+        btnInserir.textContent = '✔ Inserir Globalmente';
+    } 
+    else if (_modeloSelecionadoEscopo === 'tese') {
+        _safeDisplay('destino-acervo-tese', 'block');
+        btnInserir.textContent = '✔ Inserir no Vício'; // Nomenclatura ED
+        
+        const selectTese = document.getElementById('select-destino-acervo-tese');
+        const aviso = document.getElementById('aviso-sem-tese');
+        
+        if(selectTese && aviso && topico) {
+            selectTese.innerHTML = '<option value="">Selecione um Vício existente...</option>';
+            const tesesUnicas = [...new Set(topico.anotacoes.filter(a => a.tese && a.tese.trim() !== '').map(a => a.tese))];
+            
+            if (tesesUnicas.length === 0) {
+                selectTese.style.display = 'none';
+                aviso.style.display = 'block';
+                btnInserir.disabled = true;
+            } else {
+                selectTese.style.display = 'block';
+                aviso.style.display = 'none';
+                tesesUnicas.forEach(t => selectTese.appendChild(new Option(t, t)));
+            }
+        }
+    } else {
+        _safeDisplay('destino-acervo-card', 'block');
+        btnInserir.textContent = '✔ Inserir no Card';
+    }
+
+    _safeDisplay('btn-inserir-acervo', 'block');
+}
+
+// ==========================================
+// INTERSECTION OBSERVER
+// ==========================================
+function iniciarObserverDeRolagem() {
+    const sentinela = document.getElementById('sentinela-scroll-acervo');
+    const container = document.getElementById('lista-acervo-geral');
+    if (!sentinela || !container) return;
+
+    if (_observerScrollAcervo) _observerScrollAcervo.disconnect();
+
+    _observerScrollAcervo = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) renderizarProximoLoteAcervo();
+    }, { 
+        root: container, 
+        rootMargin: '100px'
+    });
+
+    _observerScrollAcervo.observe(sentinela);
+}
+
+// ==========================================
+// CICLO DE VIDA: FECHAMENTO DO MODAL
+// ==========================================
 window.fecharModalAcervo = function() {
     document.getElementById('history-container').classList.remove('pdf-foco-ativo');
     document.getElementById('wizard-backdrop').style.display = 'none';
     document.getElementById('modal-acervo-inserir').style.display = 'none';
+    
+    // Prevenção Rigorosa de Memory Leaks
+    if (_observerScrollAcervo) {
+        _observerScrollAcervo.disconnect();
+        _observerScrollAcervo = null;
+    }
 };
 
 window.confirmarInsercaoAcervo = function() {
