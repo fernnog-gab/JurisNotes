@@ -292,6 +292,9 @@ window.abrirModalAcervo = function() {
                 
                 document.getElementById('box-preview-acervo').innerHTML = previewHtml;
                 
+                // CORREÇÃO CRÍTICA: Desoculta a área de leitura que havia sido escondida pela limpeza inicial
+                document.getElementById('box-preview-acervo').style.display = 'block';
+                
                 // Ativa a nova Arquitetura Visual
                 window.ativarModoFocoAcervo(mod.nome);
                 
