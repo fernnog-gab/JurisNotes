@@ -872,7 +872,10 @@
     </div>
 
     <div id="modal-acervo-inserir" class="crop-wizard-popup" style="display:none; z-index: 4005;">
-        <div class="wizard-header">Acervo de Modelos</div>
+        <div class="wizard-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Acervo de Modelos</span>
+            <button style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b; padding: 0 4px;" onclick="fecharModalAcervo()" title="Fechar Acervo">✕</button>
+        </div>
 
         <!-- CAMADA 1: VISUALIZAÇÃO EM LISTA -->
         <div id="acervo-list-view">
