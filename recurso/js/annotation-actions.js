@@ -1134,3 +1134,61 @@ window.copiarDegravacao = function(topicoId, uuidCard) {
 };
 
 // window.SubDnDManager removido na refatoração de limpeza
+
+/* ================================================
+   ROTEADOR CENTRAL DE EVENTOS (DELEGAÇÃO)
+   ================================================ */
+window.TimelineEventDelegator = (function() {
+    function init() {
+        const container = document.getElementById('history-container');
+        if (!container) return;
+
+        // Listener anexado na raiz, aguardando o bubbling
+        container.addEventListener('click', function(e) {
+            const targetEl = e.target.closest('[data-action]');
+            if (!targetEl) return;
+
+            // Bloqueia comportamento padrão caso seja um <button> dentro de formulário invisível
+            e.preventDefault(); 
+            
+            const action = targetEl.dataset.action;
+            const topicoId = targetEl.dataset.topico;
+            const index = parseInt(targetEl.dataset.index, 10);
+            const cIdx = targetEl.dataset.cidx !== undefined ? parseInt(targetEl.dataset.cidx, 10) : null;
+            const viewSource = targetEl.dataset.view;
+            const localIndex = targetEl.dataset.local !== undefined ? parseInt(targetEl.dataset.local, 10) : null;
+
+            // Ponte de Retrocompatibilidade: 
+            // Abastece a variável global legada que as funções antigas esperam encontrar.
+            if (topicoId && !isNaN(index)) {
+                window._menuAnotacaoCtx = { topicoId, index, cIdx };
+            }
+
+            // Roteador de Ações
+            switch (action) {
+                case 'edit-item':
+                    if (cIdx !== null) editarItemCorrelacionado();
+                    else editarAnotacao();
+                    break;
+                case 'add-subnode':
+                    acionarNovoNoIdeia();
+                    break;
+                case 'smart-move':
+                    abrirModalSmartMove(topicoId, index, cIdx);
+                    break;
+                case 'delete-item':
+                    if (cIdx !== null) excluirItemCorrelacionado(topicoId, index, cIdx);
+                    else excluirAnotacao();
+                    break;
+                case 'open-submenu':
+                    // e (event) é repassado para que o menu contextual possa calcular as coordenadas X e Y
+                    abrirMenuSubAnotacao(topicoId, index, viewSource, localIndex, e);
+                    break;
+                default:
+                    console.warn(`[Juris Notes] Ação de delegação não mapeada: ${action}`);
+            }
+        });
+    }
+
+    return { init };
+})();
