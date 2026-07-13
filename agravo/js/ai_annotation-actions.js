@@ -369,12 +369,9 @@ function excluirSubAnotacao() {
     if (!_menuSubAnotacaoCtx) return;
     if (!confirm('Excluir esta ideia secundária?')) return;
     
-    const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
-    const alvo = _resolverSubAlvo(topico, _menuSubAnotacaoCtx.parentIndex, _menuSubAnotacaoCtx.viewSource);
+    window.Store.dispatch({ type: 'DELETE_SUB_ANNOTATION', payload: _menuSubAnotacaoCtx });
     
-    alvo.subAnotacoes.splice(_menuSubAnotacaoCtx.localIndex, 1);
-    
-    renderizarTopicos(); salvarBackupAutomatico();
+    renderizarTopicos(); 
     document.getElementById('sub-annotation-context-menu').style.display = 'none';
 }
 
@@ -629,28 +626,23 @@ function adicionarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
 
 function confirmarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
     const textarea = document.getElementById('sub-input-text');
-    
-    // [NOVO] Higieniza o texto colado/digitado no Nó de Ideia
     let texto = textarea ? textarea.value.trim() : '';
     texto = window.JurisUtils.limparTextoPDF(texto);
     
     if (!texto) return exibirToast('Digite uma observação.', 'aviso');
     
-    const topico = topicos.find(t => t.id === topicoId);
     const viewSource = cIdx !== null ? cIdx : 'main';
-    const alvo = _resolverSubAlvo(topico, anotacaoIndex, viewSource);
-    
-    if (!alvo.subAnotacoes) alvo.subAnotacoes = [];
-    alvo.subAnotacoes.push({ 
-        uuid: 'id-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now().toString(36),
-        texto, 
-        revisada: false,
-        timestamp: Date.now() 
+    const noIdeia = { 
+        uuid: 'id-' + crypto.randomUUID(), texto, revisada: false, timestamp: Date.now() 
+    };
+
+    window.Store.dispatch({
+        type: 'ADD_SUB_ANNOTATION',
+        payload: { topicoId, parentIndex: anotacaoIndex, viewSource, noIdeia }
     });
     
     document.getElementById('sub-input-active').remove();
     renderizarTopicos(); 
-    salvarBackupAutomatico();
     exibirToast('Observação secundária vinculada.', 'sucesso');
 }
 
@@ -991,59 +983,57 @@ window.TimelineEventDelegator = (function() {
         const container = document.getElementById('history-container');
         if (!container) return;
 
-        // Listener anexado na raiz, aguardando o bubbling
         container.addEventListener('click', function(e) {
             const targetEl = e.target.closest('[data-action]');
             if (!targetEl) return;
 
-            // Bloqueia comportamento padrão caso seja um <button> dentro de formulário invisível
             e.preventDefault(); 
             
             const action = targetEl.dataset.action;
             const topicoId = targetEl.dataset.topico;
             
-            // [AI MODULE PARSER]
-            // Diferente do app Padrão, no painel de Agravo de Instrumento o 'index' 
-            // pode ser string ("global", "obice:X") ou numérico (índices padrão de arrays)
+            // [AI MODULE PARSER] - Extração Flexível (Int vs String 'global'/'obice:X')
             let index = targetEl.dataset.index;
-            if (index && !isNaN(index)) {
-                index = parseInt(index, 10);
-            }
+            if (index !== undefined) {
+                if (!isNaN(index) && String(index).trim() !== '') index = parseInt(index, 10);
+            } else { index = null; }
+
+            let parent = targetEl.dataset.parent;
+            if (parent !== undefined) {
+                if (!isNaN(parent) && String(parent).trim() !== '') parent = parseInt(parent, 10);
+            } else { parent = null; }
 
             const cIdx = targetEl.dataset.cidx !== undefined ? parseInt(targetEl.dataset.cidx, 10) : null;
             const viewSource = targetEl.dataset.view;
             const localIndex = targetEl.dataset.local !== undefined ? parseInt(targetEl.dataset.local, 10) : null;
 
-            // Ponte de Retrocompatibilidade (Atualiza a variável legada)
-            if (topicoId && index !== undefined) {
+            if (topicoId && index !== null) {
                 window._menuAnotacaoCtx = { topicoId, index, cIdx };
             }
 
-            // Roteador de Ações
             switch (action) {
-                case 'edit-item':
-                    if (cIdx !== null) editarItemCorrelacionado();
-                    else editarAnotacao();
-                    break;
-                case 'add-subnode':
-                    acionarNovoNoIdeia();
-                    break;
-                case 'smart-move':
-                    abrirModalSmartMove(topicoId, index, cIdx);
-                    break;
-                case 'delete-item':
-                    if (cIdx !== null) excluirItemCorrelacionado(topicoId, index, cIdx);
-                    else excluirAnotacao();
-                    break;
+                case 'edit-item': cIdx !== null ? editarItemCorrelacionado() : editarAnotacao(); break;
+                case 'add-subnode': acionarNovoNoIdeia(); break;
+                case 'smart-move': abrirModalSmartMove(topicoId, index, cIdx); break;
+                case 'delete-item': cIdx !== null ? excluirItemCorrelacionado(topicoId, index, cIdx) : excluirAnotacao(); break;
+                
                 case 'open-submenu':
-                    // e (event) é repassado para cálculo de X e Y do menu pop-up
-                    abrirMenuSubAnotacao(topicoId, index, viewSource, localIndex, e);
+                    e.stopPropagation(); 
+                    abrirMenuSubAnotacao(topicoId, index, viewSource, localIndex, e); 
                     break;
-                default:
-                    console.warn(`[Juris Notes AI] Ação de delegação não mapeada: ${action}`);
+                case 'toggle-revision':
+                    e.stopPropagation();
+                    window.Store.dispatch({ type: 'TOGGLE_REVISION', payload: { topicoId, parentIndex: parent, viewSource, localIndex } });
+                    renderizarTopicos();
+                    break;
+                case 'edit-preamble': window.abrirEdicaoPreambulo(topicoId, targetEl.dataset.campo); break;
+                case 'ai-trigger':
+                    e.stopPropagation();
+                    window.AIRecommendationManager && window.AIRecommendationManager.buscarModelosCompativeis(topicoId, decodeURIComponent(targetEl.dataset.conteudo)); 
+                    break;
+                default: console.warn(`[Juris Notes AI] Ação não mapeada: ${action}`);
             }
         });
     }
-
     return { init };
 })();

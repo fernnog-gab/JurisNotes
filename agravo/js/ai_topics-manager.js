@@ -203,16 +203,13 @@ window.TopicsManager = (function () {
 
     function _gerarBtnRevisaoHtml(topicoId, parentIndex, viewSource, localIndex, intencao, isRevisada) {
         if (intencao !== 'nota') return '';
-        
-        const safeViewSource = String(viewSource).replace(/'/g, "\\'");
-        const safeParentIdx = parentIndex === null ? 'null' : parentIndex;
-        
+        const dataParent = parentIndex !== null ? `data-parent="${escaparHTML(String(parentIndex))}"` : ''; 
         const svgPendente = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
         const svgRevisada = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
         
         return `<button class="btn-revisao-nota ${isRevisada ? 'revisada' : 'pendente'}" 
-                title="${isRevisada ? 'Nota revisada. Clique para desmarcar.' : 'Nota pendente. Clique para marcar como revisada.'}" 
-                onclick="toggleRevisaoNotaOculta('${topicoId}', ${safeParentIdx}, '${safeViewSource}', ${localIndex}, event)">
+                title="${isRevisada ? 'Nota revisada.' : 'Nota pendente.'}" 
+                data-action="toggle-revision" data-topico="${escaparHTML(topicoId)}" ${dataParent} data-view="${escaparHTML(String(viewSource))}" data-local="${localIndex}">
                 ${isRevisada ? svgRevisada : svgPendente}
                 </button>`;
     }
@@ -704,10 +701,8 @@ window.TopicsManager = (function () {
         // NOVO: Painel Preâmbulo Estático gerado incondicionalmente
         const preambleHtml = `
             <div class="topic-preamble-panel">
-                <div class="preamble-card preamble-alegacao ${!topicoAtivo.alegacoes ? 'is-empty' : ''}" onclick="abrirEdicaoPreambulo('${activeTabId}', 'alegacoes')">
-                    <div class="preamble-icon ai-trigger-btn" 
-                         title="✨ Inteligência Artificial: Buscar modelos compatíveis" 
-                         onclick="event.stopPropagation(); window.AIRecommendationManager && AIRecommendationManager.buscarModelosCompativeis('${activeTabId}', decodeURIComponent('${encodeURIComponent(topicoAtivo.alegacoes || '').replace(/'/g, "%27")}'))">
+                <div class="preamble-card preamble-alegacao ${!topicoAtivo.alegacoes ? 'is-empty' : ''}" data-action="edit-preamble" data-topico="${escaparHTML(activeTabId)}" data-campo="alegacoes">
+                    <div class="preamble-icon ai-trigger-btn" title="✨ Inteligência Artificial: Buscar modelos compatíveis" data-action="ai-trigger" data-topico="${escaparHTML(activeTabId)}" data-conteudo="${escaparHTML(encodeURIComponent(topicoAtivo.alegacoes || ''))}">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                             <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" class="ai-sparkle" style="display:none; transform-origin: 12px 12px;"></path>
@@ -718,7 +713,7 @@ window.TopicsManager = (function () {
                         ${topicoAtivo.alegacoes ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.alegacoes)) : `<span class="preamble-empty">${AI_UI_LABELS.alegacao.placeholder}</span>`}
                     </div>
                 </div>
-                <div class="preamble-card preamble-origem" onclick="abrirEdicaoPreambulo('${activeTabId}', 'fundamentos')">
+                <div class="preamble-card preamble-origem ${!topicoAtivo.fundamentos ? 'is-empty' : ''}" data-action="edit-preamble" data-topico="${escaparHTML(activeTabId)}" data-campo="fundamentos">
                     <div class="preamble-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 21V7l6-4 6 4v14"></path></svg>
                     </div>
@@ -727,7 +722,7 @@ window.TopicsManager = (function () {
                         ${topicoAtivo.fundamentos ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.fundamentos)) : `<span class="preamble-empty">${AI_UI_LABELS.origem.placeholder}</span>`}
                     </div>
                 </div>
-                <div class="preamble-card preamble-veredito" onclick="abrirEdicaoPreambulo('${activeTabId}', 'veredito')">
+                <div class="preamble-card preamble-veredito ${!topicoAtivo.veredito ? 'is-empty' : ''}" data-action="edit-preamble" data-topico="${escaparHTML(activeTabId)}" data-campo="veredito">
                     <div class="preamble-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
                     </div>
