@@ -177,17 +177,18 @@ function abrirMenuSubAnotacao(topicoId, parentIndex, viewSource, localIndex, eve
 function definirIntencaoSubAnotacao(intencaoStr) {
     if (!_menuSubAnotacaoCtx) return;
     
-    const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
-    if (!topico) return;
-    
-    const alvo = _resolverSubAlvo(topico, _menuSubAnotacaoCtx.parentIndex, _menuSubAnotacaoCtx.viewSource);
-    const sub = alvo.subAnotacoes[_menuSubAnotacaoCtx.localIndex];
-    
-    // Atualiza o estado
-    sub.intencao = intencaoStr;
-    
-    renderizarTopicos(); 
-    salvarBackupAutomatico();
+    window.Store.dispatch({
+        type: 'UPDATE_ITEM',
+        payload: {
+            topicoId: _menuSubAnotacaoCtx.topicoId,
+            tipo: 'sub',
+            parentIndex: _menuSubAnotacaoCtx.parentIndex,
+            viewSource: _menuSubAnotacaoCtx.viewSource,
+            localIndex: _menuSubAnotacaoCtx.localIndex,
+            campo: 'intencao',
+            novoValor: intencaoStr
+        }
+    });
     
     const rotulos = { 
         'comando': 'Comando Direto', 
@@ -437,58 +438,20 @@ function excluirAnotacao() {
     const topico = topicos.find(t => t.id === topicoId);
     const cardAlvo = topico.anotacoes[index];
 
-    // Validação de impacto estrutural
     const temCorrelacionados = cardAlvo.itensCorrelacionados && cardAlvo.itensCorrelacionados.length > 0;
     const temSub = cardAlvo.subAnotacoes && cardAlvo.subAnotacoes.length > 0;
 
+    let isPromoting = false;
     if (temCorrelacionados) {
-        const msg = '⚠️ ATENÇÃO: Esta prova é um Card Mestre e agrupa outros itens.\n\nDeseja excluir apenas esta prova principal e PROMOVER a próxima do grupo para assumir o seu lugar?';
-        if (!confirm(msg)) return;
-
-        // Clone profundo para evitar mutação cruzada (Garante a integridade do grupo)
-        const cloneProfundo = structuredClone(cardAlvo);
-        const novoMainCard = cloneProfundo.itensCorrelacionados.shift(); 
-        
-        // O herdeiro assume a tese e a tutela dos irmãos restantes
-        novoMainCard.tese = cloneProfundo.tese; 
-        novoMainCard.itensCorrelacionados = cloneProfundo.itensCorrelacionados;
-
-        // 1. Mutação DIRETA na memória global (Garante o funcionamento sem depender do Store)
-        topico.anotacoes[index] = novoMainCard;
-
-        // 2. Despacho secundário (Mantém o log de estado se o Redux/Store estiver ativo)
-        if (window.Store) {
-            window.Store.dispatch({ type: 'UPDATE_ITEM', payload: { topicoId, index, novoItem: novoMainCard } });
-        }
-        
-        exibirToast('Prova principal excluída. Item agrupado promovido a Mestre.', 'sucesso');
-        
+        if (!confirm('⚠️ ATENÇÃO: Esta prova agrupa outros itens.\n\nDeseja excluir apenas esta prova principal e PROMOVER a próxima do grupo para o seu lugar?')) return;
+        isPromoting = true;
     } else {
-        // Deleção Padrão
-        let msg = 'Excluir esta prova? A ação não pode ser desfeita.';
-        if (temSub) {
-            msg = 'Excluir esta prova e todos os seus Nós de Ideia atrelados a ela?';
-        }
-        if (!confirm(msg)) return;
-
-        // 1. Mutação DIRETA na memória global
-        topico.anotacoes.splice(index, 1);
-
-        // 2. Despacho secundário
-        if (window.Store) {
-            window.Store.dispatch({ type: 'DELETE_ITEM', payload: { topicoId, index } });
-        }
-        
-        exibirToast('Anotação excluída com sucesso.', 'sucesso');
+        if (!confirm(temSub ? 'Excluir esta prova e todos os seus Nós de Ideia atrelados?' : 'Excluir esta prova? A ação não pode ser desfeita.')) return;
     }
 
-    // A SOLUÇÃO DO BUG: Execução INCONDICIONAL
-    // Fora de qualquer bloco "if". A tela repinta instantaneamente e reorganiza os números.
-    renderizarTopicos(); 
-    salvarBackupAutomatico();
-    if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
+    window.Store.dispatch({ type: 'DELETE_ITEM', payload: { topicoId, index, isPromoting } });
     
-    // Limpeza rigorosa do menu contextual e ponteiros
+    exibirToast('Anotação excluída com sucesso.', 'sucesso');
     _menuAnotacaoCtx = null;
     const menuCtx = document.getElementById('annotation-context-menu');
     if (menuCtx) menuCtx.style.display = 'none';
@@ -530,12 +493,12 @@ function acionarReordenarSub() {
     
     if (total <= 1) return exibirToast('Apenas uma anotação existente neste grupo.', 'aviso');
     
-    abrirModalReordenar('sub', _menuSubAnotacaoCtx.topicoId, _menuSubAnotacaoCtx.parentIndex, total, _menuSubAnotacaoCtx.localIndex);
+    abrirModalReordenar('sub', _menuSubAnotacaoCtx.topicoId, _menuSubAnotacaoCtx.parentIndex, total, _menuSubAnotacaoCtx.localIndex, _menuSubAnotacaoCtx.viewSource);
     document.getElementById('sub-annotation-context-menu').style.display = 'none';
 }
 
-function abrirModalReordenar(tipo, topicoId, index, total, subIndex = null) {
-    _reordenarCtx = { tipo, topicoId, index, total, subIndex };
+function abrirModalReordenar(tipo, topicoId, index, total, subIndex = null, viewSource = null) {
+    _reordenarCtx = { tipo, topicoId, index, total, subIndex, viewSource };
     const posAtual = tipo === 'main' ? index + 1 : subIndex + 1;
 
     document.getElementById('input-nova-posicao').value = posAtual;
@@ -553,25 +516,24 @@ function fecharModalReordenar() {
 
 function confirmarReordenacaoPosicao() {
     if (!_reordenarCtx) return;
-    const topico = topicos.find(t => t.id === _reordenarCtx.topicoId);
     const novaPos = parseInt(document.getElementById('input-nova-posicao').value, 10);
 
     if (isNaN(novaPos) || novaPos < 1 || novaPos > _reordenarCtx.total) {
         return exibirToast(`Posição inválida. Escolha entre 1 e ${_reordenarCtx.total}.`, 'erro');
     }
 
-    if (_reordenarCtx.tipo === 'main') {
-        const [item] = topico.anotacoes.splice(_reordenarCtx.index, 1);
-        topico.anotacoes.splice(novaPos - 1, 0, item);
-    } else if (_reordenarCtx.tipo === 'sub') {
-        // Novo suporte arquitetural para nós de ideia
-        const alvo = _resolverSubAlvo(topico, _reordenarCtx.index, _menuSubAnotacaoCtx.viewSource);
-        const [item] = alvo.subAnotacoes.splice(_reordenarCtx.subIndex, 1);
-        alvo.subAnotacoes.splice(novaPos - 1, 0, item);
-    }
+    window.Store.dispatch({
+        type: 'REORDER_ITEM',
+        payload: {
+            tipo: _reordenarCtx.tipo, 
+            topicoId: _reordenarCtx.topicoId, 
+            index: _reordenarCtx.index, 
+            subIndex: _reordenarCtx.subIndex, 
+            viewSource: _reordenarCtx.viewSource,
+            novaPos
+        }
+    });
 
-    renderizarTopicos(); salvarBackupAutomatico();
-    if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
     fecharModalReordenar();
     exibirToast('Item reposicionado com sucesso.', 'sucesso');
     _menuAnotacaoCtx = null;
@@ -942,10 +904,9 @@ window.DnDManager = {
     draggedItem: null,
 
     dragStart: function(event, topicoId, parentIndex, cIdx) {
-        event.stopPropagation(); // CRÍTICO: Isola o evento de Bubbling do DOM
+        event.stopPropagation();
         this.draggedItem = { topicoId, parentIndex, cIdx };
         
-        // Aplica o feedback visual no container correspondente
         const wrapper = cIdx === 'main' 
             ? event.currentTarget.closest('.main-card-wrapper')
             : event.currentTarget.closest('.correlated-item-wrapper');
@@ -953,7 +914,7 @@ window.DnDManager = {
         if (wrapper) wrapper.classList.add('dragging'); 
         
         event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('text/plain', ''); // Necessário p/ Firefox
+        event.dataTransfer.setData('text/plain', '');
     },
 
     dragOver: function(event) {
@@ -963,16 +924,15 @@ window.DnDManager = {
 
     dragEnter: function(event) {
         event.preventDefault();
-        event.stopPropagation(); // Bloqueia Bubbling
+        event.stopPropagation();
         const wrapper = event.currentTarget.closest('.correlated-item-wrapper') || event.currentTarget.closest('.main-card-wrapper');
         if (wrapper) wrapper.classList.add('drag-over');
     },
 
     dragLeave: function(event) {
-        event.stopPropagation(); // Bloqueia Bubbling
+        event.stopPropagation();
         const wrapper = event.currentTarget.closest('.correlated-item-wrapper') || event.currentTarget.closest('.main-card-wrapper');
         if (!wrapper) return;
-        // Evita o efeito pisca-pisca caso o mouse passe por elementos internos
         if (!wrapper.contains(event.relatedTarget)) {
             wrapper.classList.remove('drag-over');
         }
@@ -985,64 +945,19 @@ window.DnDManager = {
 
     drop: function(event, targetTopicoId, targetParentIndex, targetCIdx) {
         event.preventDefault();
-        event.stopPropagation(); // CRÍTICO: Bloqueia acionamento de áreas parentais
+        event.stopPropagation();
 
         const wrapper = event.currentTarget.closest('.correlated-item-wrapper') || event.currentTarget.closest('.main-card-wrapper');
         if (wrapper) wrapper.classList.remove('drag-over');
 
         const src = this.draggedItem;
         if (!src || src.topicoId !== targetTopicoId || src.parentIndex !== targetParentIndex) {
-            exibirToast('Só é possível reordenar itens dentro do mesmo agrupamento.', 'aviso');
-            return;
+            return exibirToast('Só é possível reordenar itens dentro do mesmo agrupamento.', 'aviso');
         }
-        if (src.cIdx === targetCIdx) return; // Nenhuma movimentação real
+        if (src.cIdx === targetCIdx) return;
 
-        const topico = topicos.find(t => t.id === targetTopicoId);
-        const cardOriginal = topico.anotacoes[targetParentIndex];
-        
-        if (targetCIdx === 'main' && src.cIdx !== null && src.cIdx !== 'main') {
-            // FLUXO 1: PROMOVER FILHO A MESTRE (Arrastar de baixo para cima)
-            const estadoClonado = structuredClone(cardOriginal);
-            const itemArrastado = estadoClonado.itensCorrelacionados.splice(src.cIdx, 1)[0];
-            
-            const oldMain = structuredClone(estadoClonado);
-            oldMain.itensCorrelacionados = []; oldMain.tese = "";
-            
-            estadoClonado.itensCorrelacionados.unshift(oldMain);
-            
-            itemArrastado.itensCorrelacionados = estadoClonado.itensCorrelacionados;
-            itemArrastado.tese = estadoClonado.tese;
-
-            topico.anotacoes[targetParentIndex] = itemArrastado;
-            exibirToast('Prova promovida a Card Principal!', 'sucesso');
-            
-        } else if (src.cIdx === 'main' && targetCIdx !== 'main' && targetCIdx !== null) {
-            // FLUXO 2: REBAIXAR MESTRE A FILHO (Arrastar mestre para baixo)
-            const estadoClonado = structuredClone(cardOriginal);
-            const novoMestre = estadoClonado.itensCorrelacionados.splice(targetCIdx, 1)[0];
-            
-            const oldMain = structuredClone(estadoClonado);
-            oldMain.itensCorrelacionados = []; oldMain.tese = "";
-            
-            novoMestre.itensCorrelacionados = estadoClonado.itensCorrelacionados;
-            novoMestre.tese = estadoClonado.tese;
-            
-            novoMestre.itensCorrelacionados.splice(targetCIdx, 0, oldMain);
-            
-            topico.anotacoes[targetParentIndex] = novoMestre;
-            exibirToast('Card Mestre substituído!', 'sucesso');
-            
-        } else {
-            // FLUXO 3: REORDENAÇÃO ENTRE FILHOS
-            const grupo = cardOriginal.itensCorrelacionados;
-            const [itemMovido] = grupo.splice(src.cIdx, 1);
-            grupo.splice(targetCIdx, 0, itemMovido);
-            exibirToast('Ordem atualizada!', 'sucesso');
-        }
-
-        renderizarTopicos();
-        salvarBackupAutomatico();
-        if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
+        window.Store.dispatch({ type: 'DND_DROP_ITEM', payload: { targetTopicoId, targetParentIndex, targetCIdx, src } });
+        exibirToast('Card reposicionado!', 'sucesso');
     }
 };
 
