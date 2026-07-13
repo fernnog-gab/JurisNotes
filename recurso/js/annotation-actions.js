@@ -86,10 +86,8 @@ function adicionarDiretrizEstrutural(tipo, topicoId, teseNome, event) {
             </button>
         </div>`;
 
-    // 4. Ancoragem Determinística (DOM Traversal via Event.Target)
-    // CORREÇÃO: Utilizar event.target para subir (closest) a partir do ícone clicado, 
-    // ignorando o currentTarget que na delegação é a barra de rolagem inteira.
-    const mountPoint = event.target.closest('.main-card-wrapper');
+    // 4. Ancoragem Determinística (DOM Traversal via Event)
+    const mountPoint = event.currentTarget.closest('.main-card-wrapper');
     
     if (mountPoint) {
         mountPoint.appendChild(painel);
@@ -101,7 +99,7 @@ function adicionarDiretrizEstrutural(tipo, topicoId, teseNome, event) {
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') confirmarDiretrizEstrutural();
         });
     } else {
-        console.error("Falha ao encontrar mountPoint para adicionar a diretriz. Event Target fora de contexto.");
+        console.error("Falha ao encontrar mountPoint para adicionar a diretriz.");
     }
 }
 
@@ -179,18 +177,17 @@ function abrirMenuSubAnotacao(topicoId, parentIndex, viewSource, localIndex, eve
 function definirIntencaoSubAnotacao(intencaoStr) {
     if (!_menuSubAnotacaoCtx) return;
     
-    window.Store.dispatch({
-        type: 'UPDATE_ITEM',
-        payload: {
-            topicoId: _menuSubAnotacaoCtx.topicoId,
-            tipo: 'sub',
-            parentIndex: _menuSubAnotacaoCtx.parentIndex,
-            viewSource: _menuSubAnotacaoCtx.viewSource,
-            localIndex: _menuSubAnotacaoCtx.localIndex,
-            campo: 'intencao',
-            novoValor: intencaoStr
-        }
-    });
+    const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
+    if (!topico) return;
+    
+    const alvo = _resolverSubAlvo(topico, _menuSubAnotacaoCtx.parentIndex, _menuSubAnotacaoCtx.viewSource);
+    const sub = alvo.subAnotacoes[_menuSubAnotacaoCtx.localIndex];
+    
+    // Atualiza o estado
+    sub.intencao = intencaoStr;
+    
+    renderizarTopicos(); 
+    salvarBackupAutomatico();
     
     const rotulos = { 
         'comando': 'Comando Direto', 
@@ -440,20 +437,58 @@ function excluirAnotacao() {
     const topico = topicos.find(t => t.id === topicoId);
     const cardAlvo = topico.anotacoes[index];
 
+    // Validação de impacto estrutural
     const temCorrelacionados = cardAlvo.itensCorrelacionados && cardAlvo.itensCorrelacionados.length > 0;
     const temSub = cardAlvo.subAnotacoes && cardAlvo.subAnotacoes.length > 0;
 
-    let isPromoting = false;
     if (temCorrelacionados) {
-        if (!confirm('⚠️ ATENÇÃO: Esta prova agrupa outros itens.\n\nDeseja excluir apenas esta prova principal e PROMOVER a próxima do grupo para o seu lugar?')) return;
-        isPromoting = true;
+        const msg = '⚠️ ATENÇÃO: Esta prova é um Card Mestre e agrupa outros itens.\n\nDeseja excluir apenas esta prova principal e PROMOVER a próxima do grupo para assumir o seu lugar?';
+        if (!confirm(msg)) return;
+
+        // Clone profundo para evitar mutação cruzada (Garante a integridade do grupo)
+        const cloneProfundo = structuredClone(cardAlvo);
+        const novoMainCard = cloneProfundo.itensCorrelacionados.shift(); 
+        
+        // O herdeiro assume a tese e a tutela dos irmãos restantes
+        novoMainCard.tese = cloneProfundo.tese; 
+        novoMainCard.itensCorrelacionados = cloneProfundo.itensCorrelacionados;
+
+        // 1. Mutação DIRETA na memória global (Garante o funcionamento sem depender do Store)
+        topico.anotacoes[index] = novoMainCard;
+
+        // 2. Despacho secundário (Mantém o log de estado se o Redux/Store estiver ativo)
+        if (window.Store) {
+            window.Store.dispatch({ type: 'UPDATE_ITEM', payload: { topicoId, index, novoItem: novoMainCard } });
+        }
+        
+        exibirToast('Prova principal excluída. Item agrupado promovido a Mestre.', 'sucesso');
+        
     } else {
-        if (!confirm(temSub ? 'Excluir esta prova e todos os seus Nós de Ideia atrelados?' : 'Excluir esta prova? A ação não pode ser desfeita.')) return;
+        // Deleção Padrão
+        let msg = 'Excluir esta prova? A ação não pode ser desfeita.';
+        if (temSub) {
+            msg = 'Excluir esta prova e todos os seus Nós de Ideia atrelados a ela?';
+        }
+        if (!confirm(msg)) return;
+
+        // 1. Mutação DIRETA na memória global
+        topico.anotacoes.splice(index, 1);
+
+        // 2. Despacho secundário
+        if (window.Store) {
+            window.Store.dispatch({ type: 'DELETE_ITEM', payload: { topicoId, index } });
+        }
+        
+        exibirToast('Anotação excluída com sucesso.', 'sucesso');
     }
 
-    window.Store.dispatch({ type: 'DELETE_ITEM', payload: { topicoId, index, isPromoting } });
+    // A SOLUÇÃO DO BUG: Execução INCONDICIONAL
+    // Fora de qualquer bloco "if". A tela repinta instantaneamente e reorganiza os números.
+    renderizarTopicos(); 
+    salvarBackupAutomatico();
+    if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
     
-    exibirToast('Anotação excluída com sucesso.', 'sucesso');
+    // Limpeza rigorosa do menu contextual e ponteiros
     _menuAnotacaoCtx = null;
     const menuCtx = document.getElementById('annotation-context-menu');
     if (menuCtx) menuCtx.style.display = 'none';
@@ -475,9 +510,12 @@ function excluirSubAnotacao() {
     if (!_menuSubAnotacaoCtx) return;
     if (!confirm('Excluir esta ideia secundária?')) return;
     
-    window.Store.dispatch({ type: 'DELETE_SUB_ANNOTATION', payload: _menuSubAnotacaoCtx });
+    const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
+    const alvo = _resolverSubAlvo(topico, _menuSubAnotacaoCtx.parentIndex, _menuSubAnotacaoCtx.viewSource);
     
-    renderizarTopicos(); 
+    alvo.subAnotacoes.splice(_menuSubAnotacaoCtx.localIndex, 1);
+    
+    renderizarTopicos(); salvarBackupAutomatico();
     document.getElementById('sub-annotation-context-menu').style.display = 'none';
 }
 
@@ -495,12 +533,12 @@ function acionarReordenarSub() {
     
     if (total <= 1) return exibirToast('Apenas uma anotação existente neste grupo.', 'aviso');
     
-    abrirModalReordenar('sub', _menuSubAnotacaoCtx.topicoId, _menuSubAnotacaoCtx.parentIndex, total, _menuSubAnotacaoCtx.localIndex, _menuSubAnotacaoCtx.viewSource);
+    abrirModalReordenar('sub', _menuSubAnotacaoCtx.topicoId, _menuSubAnotacaoCtx.parentIndex, total, _menuSubAnotacaoCtx.localIndex);
     document.getElementById('sub-annotation-context-menu').style.display = 'none';
 }
 
-function abrirModalReordenar(tipo, topicoId, index, total, subIndex = null, viewSource = null) {
-    _reordenarCtx = { tipo, topicoId, index, total, subIndex, viewSource };
+function abrirModalReordenar(tipo, topicoId, index, total, subIndex = null) {
+    _reordenarCtx = { tipo, topicoId, index, total, subIndex };
     const posAtual = tipo === 'main' ? index + 1 : subIndex + 1;
 
     document.getElementById('input-nova-posicao').value = posAtual;
@@ -518,24 +556,25 @@ function fecharModalReordenar() {
 
 function confirmarReordenacaoPosicao() {
     if (!_reordenarCtx) return;
+    const topico = topicos.find(t => t.id === _reordenarCtx.topicoId);
     const novaPos = parseInt(document.getElementById('input-nova-posicao').value, 10);
 
     if (isNaN(novaPos) || novaPos < 1 || novaPos > _reordenarCtx.total) {
         return exibirToast(`Posição inválida. Escolha entre 1 e ${_reordenarCtx.total}.`, 'erro');
     }
 
-    window.Store.dispatch({
-        type: 'REORDER_ITEM',
-        payload: {
-            tipo: _reordenarCtx.tipo, 
-            topicoId: _reordenarCtx.topicoId, 
-            index: _reordenarCtx.index, 
-            subIndex: _reordenarCtx.subIndex, 
-            viewSource: _reordenarCtx.viewSource,
-            novaPos
-        }
-    });
+    if (_reordenarCtx.tipo === 'main') {
+        const [item] = topico.anotacoes.splice(_reordenarCtx.index, 1);
+        topico.anotacoes.splice(novaPos - 1, 0, item);
+    } else if (_reordenarCtx.tipo === 'sub') {
+        // Novo suporte arquitetural para nós de ideia
+        const alvo = _resolverSubAlvo(topico, _reordenarCtx.index, _menuSubAnotacaoCtx.viewSource);
+        const [item] = alvo.subAnotacoes.splice(_reordenarCtx.subIndex, 1);
+        alvo.subAnotacoes.splice(novaPos - 1, 0, item);
+    }
 
+    renderizarTopicos(); salvarBackupAutomatico();
+    if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
     fecharModalReordenar();
     exibirToast('Item reposicionado com sucesso.', 'sucesso');
     _menuAnotacaoCtx = null;
@@ -713,36 +752,28 @@ function adicionarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
 
 function confirmarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
     const textarea = document.getElementById('sub-input-text');
+    
+    // [NOVO] Higieniza o texto colado/digitado no Nó de Ideia
     let texto = textarea ? textarea.value.trim() : '';
     texto = window.JurisUtils.limparTextoPDF(texto);
     
     if (!texto) return exibirToast('Digite uma observação.', 'aviso');
     
+    const topico = topicos.find(t => t.id === topicoId);
     const viewSource = cIdx !== null ? cIdx : 'main';
+    const alvo = _resolverSubAlvo(topico, anotacaoIndex, viewSource);
     
-    // TRANSFORMAÇÃO: Substituição da API restrita crypto.randomUUID() por fallback universal
-    const noIdeia = { 
-        uuid: 'id-' + Math.random().toString(36).substr(2, 9), 
+    if (!alvo.subAnotacoes) alvo.subAnotacoes = [];
+    alvo.subAnotacoes.push({ 
+        uuid: 'id-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now().toString(36),
         texto, 
-        revisada: false, 
+        revisada: false,
         timestamp: Date.now() 
-    };
-
-    window.Store.dispatch({
-        type: 'ADD_SUB_ANNOTATION',
-        payload: { topicoId, parentIndex: anotacaoIndex, viewSource, noIdeia }
     });
     
-    // TRANSFORMAÇÃO: Sincronização forçada da variável de escopo local (topicos)
-    // Garante que o renderizador recupere o array recém mutado pela Store antes de desenhar a tela
-    if (window.Store && typeof window.Store.getState === 'function') {
-        topicos = window.Store.getState().topicos;
-    }
-    
-    const painelAtivo = document.getElementById('sub-input-active');
-    if (painelAtivo) painelAtivo.remove();
-    
+    document.getElementById('sub-input-active').remove();
     renderizarTopicos(); 
+    salvarBackupAutomatico();
     exibirToast('Observação secundária vinculada.', 'sucesso');
 }
 
@@ -919,9 +950,10 @@ window.DnDManager = {
     draggedItem: null,
 
     dragStart: function(event, topicoId, parentIndex, cIdx) {
-        event.stopPropagation();
+        event.stopPropagation(); // CRÍTICO: Isola o evento de Bubbling do DOM
         this.draggedItem = { topicoId, parentIndex, cIdx };
         
+        // Aplica o feedback visual no container correspondente
         const wrapper = cIdx === 'main' 
             ? event.currentTarget.closest('.main-card-wrapper')
             : event.currentTarget.closest('.correlated-item-wrapper');
@@ -929,7 +961,7 @@ window.DnDManager = {
         if (wrapper) wrapper.classList.add('dragging'); 
         
         event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('text/plain', '');
+        event.dataTransfer.setData('text/plain', ''); // Necessário p/ Firefox
     },
 
     dragOver: function(event) {
@@ -939,15 +971,16 @@ window.DnDManager = {
 
     dragEnter: function(event) {
         event.preventDefault();
-        event.stopPropagation();
+        event.stopPropagation(); // Bloqueia Bubbling
         const wrapper = event.currentTarget.closest('.correlated-item-wrapper') || event.currentTarget.closest('.main-card-wrapper');
         if (wrapper) wrapper.classList.add('drag-over');
     },
 
     dragLeave: function(event) {
-        event.stopPropagation();
+        event.stopPropagation(); // Bloqueia Bubbling
         const wrapper = event.currentTarget.closest('.correlated-item-wrapper') || event.currentTarget.closest('.main-card-wrapper');
         if (!wrapper) return;
+        // Evita o efeito pisca-pisca caso o mouse passe por elementos internos
         if (!wrapper.contains(event.relatedTarget)) {
             wrapper.classList.remove('drag-over');
         }
@@ -960,19 +993,64 @@ window.DnDManager = {
 
     drop: function(event, targetTopicoId, targetParentIndex, targetCIdx) {
         event.preventDefault();
-        event.stopPropagation();
+        event.stopPropagation(); // CRÍTICO: Bloqueia acionamento de áreas parentais
 
         const wrapper = event.currentTarget.closest('.correlated-item-wrapper') || event.currentTarget.closest('.main-card-wrapper');
         if (wrapper) wrapper.classList.remove('drag-over');
 
         const src = this.draggedItem;
         if (!src || src.topicoId !== targetTopicoId || src.parentIndex !== targetParentIndex) {
-            return exibirToast('Só é possível reordenar itens dentro do mesmo agrupamento.', 'aviso');
+            exibirToast('Só é possível reordenar itens dentro do mesmo agrupamento.', 'aviso');
+            return;
         }
-        if (src.cIdx === targetCIdx) return;
+        if (src.cIdx === targetCIdx) return; // Nenhuma movimentação real
 
-        window.Store.dispatch({ type: 'DND_DROP_ITEM', payload: { targetTopicoId, targetParentIndex, targetCIdx, src } });
-        exibirToast('Card reposicionado!', 'sucesso');
+        const topico = topicos.find(t => t.id === targetTopicoId);
+        const cardOriginal = topico.anotacoes[targetParentIndex];
+        
+        if (targetCIdx === 'main' && src.cIdx !== null && src.cIdx !== 'main') {
+            // FLUXO 1: PROMOVER FILHO A MESTRE (Arrastar de baixo para cima)
+            const estadoClonado = structuredClone(cardOriginal);
+            const itemArrastado = estadoClonado.itensCorrelacionados.splice(src.cIdx, 1)[0];
+            
+            const oldMain = structuredClone(estadoClonado);
+            oldMain.itensCorrelacionados = []; oldMain.tese = "";
+            
+            estadoClonado.itensCorrelacionados.unshift(oldMain);
+            
+            itemArrastado.itensCorrelacionados = estadoClonado.itensCorrelacionados;
+            itemArrastado.tese = estadoClonado.tese;
+
+            topico.anotacoes[targetParentIndex] = itemArrastado;
+            exibirToast('Prova promovida a Card Principal!', 'sucesso');
+            
+        } else if (src.cIdx === 'main' && targetCIdx !== 'main' && targetCIdx !== null) {
+            // FLUXO 2: REBAIXAR MESTRE A FILHO (Arrastar mestre para baixo)
+            const estadoClonado = structuredClone(cardOriginal);
+            const novoMestre = estadoClonado.itensCorrelacionados.splice(targetCIdx, 1)[0];
+            
+            const oldMain = structuredClone(estadoClonado);
+            oldMain.itensCorrelacionados = []; oldMain.tese = "";
+            
+            novoMestre.itensCorrelacionados = estadoClonado.itensCorrelacionados;
+            novoMestre.tese = estadoClonado.tese;
+            
+            novoMestre.itensCorrelacionados.splice(targetCIdx, 0, oldMain);
+            
+            topico.anotacoes[targetParentIndex] = novoMestre;
+            exibirToast('Card Mestre substituído!', 'sucesso');
+            
+        } else {
+            // FLUXO 3: REORDENAÇÃO ENTRE FILHOS
+            const grupo = cardOriginal.itensCorrelacionados;
+            const [itemMovido] = grupo.splice(src.cIdx, 1);
+            grupo.splice(targetCIdx, 0, itemMovido);
+            exibirToast('Ordem atualizada!', 'sucesso');
+        }
+
+        renderizarTopicos();
+        salvarBackupAutomatico();
+        if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
     }
 };
 
@@ -1056,75 +1134,3 @@ window.copiarDegravacao = function(topicoId, uuidCard) {
 };
 
 // window.SubDnDManager removido na refatoração de limpeza
-
-/* ================================================
-   ROTEADOR CENTRAL DE EVENTOS (DELEGAÇÃO)
-   ================================================ */
-window.TimelineEventDelegator = (function() {
-    function init() {
-        const container = document.getElementById('history-container');
-        if (!container) return;
-
-        container.addEventListener('click', function(e) {
-            const targetEl = e.target.closest('[data-action]');
-            if (!targetEl) return;
-
-            e.preventDefault(); 
-            
-            const action = targetEl.dataset.action;
-            const topicoId = targetEl.dataset.topico;
-            
-            // FASE 1: Data Sanitization Pipeline
-            // Uso de Type Guards para garantir que apenas números reais cheguem ao roteador
-            const rawIndex = targetEl.dataset.index;
-            const index = (rawIndex !== undefined && rawIndex !== "") ? parseInt(rawIndex, 10) : null;
-            
-            const rawParent = targetEl.dataset.parent;
-            const parent = (rawParent !== undefined && rawParent !== "") ? parseInt(rawParent, 10) : null;
-            
-            const rawCidx = targetEl.dataset.cidx;
-            const cIdx = (rawCidx !== undefined && rawCidx !== "") ? parseInt(rawCidx, 10) : null;
-            
-            const rawLocal = targetEl.dataset.local;
-            const localIndex = (rawLocal !== undefined && rawLocal !== "") ? parseInt(rawLocal, 10) : null;
-            
-            const viewSource = targetEl.dataset.view;
-
-            // FASE 2: Lexical Scope Assignment e Blindagem contra NaN
-            if (topicoId && index !== null && !Number.isNaN(index)) {
-                // Removido "window." para respeitar o escopo protegido let do arquivo
-                _menuAnotacaoCtx = { topicoId, index, cIdx };
-            }
-
-            // FASE 3: Dispatcher
-            switch (action) {
-                case 'edit-item': cIdx !== null ? editarItemCorrelacionado() : editarAnotacao(); break;
-                case 'add-subnode': acionarNovoNoIdeia(); break;
-                case 'smart-move': abrirModalSmartMove(topicoId, index, cIdx); break;
-                case 'delete-item': cIdx !== null ? excluirItemCorrelacionado(topicoId, index, cIdx) : excluirAnotacao(); break;
-                
-                case 'open-submenu':
-                    e.stopPropagation(); 
-                    abrirMenuSubAnotacao(topicoId, index, viewSource, localIndex, e); 
-                    break;
-                case 'toggle-revision':
-                    e.stopPropagation();
-                    window.Store.dispatch({ type: 'TOGGLE_REVISION', payload: { topicoId, parentIndex: parent, viewSource, localIndex } });
-                    renderizarTopicos();
-                    break;
-                case 'edit-thesis': abrirModalTese(topicoId, index); break;
-                case 'add-directive':
-                    e.stopPropagation();
-                    adicionarDiretrizEstrutural(targetEl.dataset.dtype, topicoId, targetEl.dataset.tesenome || null, e); 
-                    break;
-                case 'edit-preamble': window.abrirEdicaoPreambulo(topicoId, targetEl.dataset.campo); break;
-                case 'ai-trigger':
-                    e.stopPropagation();
-                    window.AIRecommendationManager.buscarModelosCompativeis(topicoId, decodeURIComponent(targetEl.dataset.conteudo)); 
-                    break;
-                default: console.warn(`[Juris Notes] Ação de delegação não mapeada: ${action}`);
-            }
-        });
-    }
-    return { init };
-})();

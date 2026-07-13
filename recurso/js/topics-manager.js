@@ -205,13 +205,16 @@ window.TopicsManager = (function () {
 
     function _gerarBtnRevisaoHtml(topicoId, parentIndex, viewSource, localIndex, intencao, isRevisada) {
         if (intencao !== 'nota') return '';
-        const dataParent = parentIndex !== null ? `data-parent="${parentIndex}"` : ''; // Trata null corretamente
+        
+        const safeViewSource = String(viewSource).replace(/'/g, "\\'");
+        const safeParentIdx = parentIndex === null ? 'null' : parentIndex;
+        
         const svgPendente = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
         const svgRevisada = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
         
         return `<button class="btn-revisao-nota ${isRevisada ? 'revisada' : 'pendente'}" 
-                title="${isRevisada ? 'Nota revisada.' : 'Nota pendente.'}" 
-                data-action="toggle-revision" data-topico="${escaparHTML(topicoId)}" ${dataParent} data-view="${escaparHTML(String(viewSource))}" data-local="${localIndex}">
+                title="${isRevisada ? 'Nota revisada. Clique para desmarcar.' : 'Nota pendente. Clique para marcar como revisada.'}" 
+                onclick="toggleRevisaoNotaOculta('${topicoId}', ${safeParentIdx}, '${safeViewSource}', ${localIndex}, event)">
                 ${isRevisada ? svgRevisada : svgPendente}
                 </button>`;
     }
@@ -384,23 +387,27 @@ window.TopicsManager = (function () {
         }
 
         function gerarBarraAcoes(isCorrelacionado, cIdx) {
-            // Injeção segura de metadados
-            const ctxCidx = isCorrelacionado && cIdx != null ? `data-cidx="${cIdx}"` : '';
+            // Injeção segura do cIdx no contexto do botão (resolve o bug da falta de índice)
+            const ctxCidx = isCorrelacionado && cIdx != null ? `, cIdx: ${cIdx}` : '';
+            
+            // Verifica o tipo do item na hierarquia correta (principal vs correlacionado)
             const tipoDoItem = isCorrelacionado && cIdx != null ? anotacao.itensCorrelacionados[cIdx].tipo : anotacao.tipo;
             
-            // Proteção contra XSS
-            const safeTopicoId = escaparHTML(activeTabId);
+            // Direciona para a função de edição adequada
+            const acaoEditar = isCorrelacionado ? 'editarItemCorrelacionado()' : 'editarAnotacao()';
             
             const btnEditar = (tipoDoItem === 'texto' || tipoDoItem === 'audio') 
-                ? `<button title="Editar" data-action="edit-item" data-topico="${safeTopicoId}" data-index="${index}" ${ctxCidx}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>` 
+                ? `<button title="Editar" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}${ctxCidx}}; ${acaoEditar}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>` 
                 : '';
+            
+            const paramMove = isCorrelacionado ? `'${activeTabId}', ${index}, ${cIdx}` : `'${activeTabId}', ${index}, null`;
             
             return `
             <div class="card-actions-bar">
                 ${btnEditar}
-                <button title="Adicionar Nó de Ideia" data-action="add-subnode" data-topico="${safeTopicoId}" data-index="${index}" ${ctxCidx}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
-                <button title="Mover / Reordenar" data-action="smart-move" data-topico="${safeTopicoId}" data-index="${index}" ${ctxCidx}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><polyline points="8 7 12 3 16 7"></polyline><line x1="12" y1="12" x2="12" y2="3"></line></svg></button>
-                <button class="delete-btn" title="Excluir" data-action="delete-item" data-topico="${safeTopicoId}" data-index="${index}" ${ctxCidx}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                <button title="Adicionar Nó de Ideia" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}${ctxCidx}}; acionarNovoNoIdeia()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+                <button title="Mover / Reordenar" onclick="abrirModalSmartMove(${paramMove})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><polyline points="8 7 12 3 16 7"></polyline><line x1="12" y1="12" x2="12" y2="3"></line></svg></button>
+                <button class="delete-btn" title="Excluir" onclick="${isCorrelacionado ? `excluirItemCorrelacionado('${activeTabId}', ${index}, ${cIdx})` : `_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}}; excluirAnotacao()`}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
             </div>`;
         }
 
@@ -470,20 +477,13 @@ window.TopicsManager = (function () {
                 const isRevisada = sub.revisada === true;
                 const itemWrapperClass = isNotaInterna ? `sub-annotation-item is-nota-interna ${isRevisada ? 'is-revisada' : 'is-pendente'}` : `sub-annotation-item`;
 
-                const safeTopicoId = escaparHTML(activeTabId);
-                const safeViewSource = escaparHTML(sub.viewSource);
-
                 return `
-                    <div class="${itemWrapperClass}" data-source="${safeViewSource}">
+                    <div class="${itemWrapperClass}" data-source="${sub.viewSource}">
                         <div class="sub-annotation-card ${bordaFaseClass}">
-                            <!-- NOVO CONTRATO AQUI: Delegação de Eventos Segura -->
+                            <!-- NOVO CONTRATO AQUI: Passamos viewSource E localIndex antes do event -->
                             <div class="${badgeClass}"
                                  title="Opções desta ideia secundária"
-                                 data-action="open-submenu"
-                                 data-topico="${safeTopicoId}"
-                                 data-index="${index}"
-                                 data-view="${safeViewSource}"
-                                 data-local="${sub.localIndex}">
+                                 onclick="abrirMenuSubAnotacao('${activeTabId}', ${index}, '${sub.viewSource}', ${sub.localIndex}, event)">
                                 ${label}
                             </div>
                             <div class="sub-text-content">${textoFormatado}</div>
@@ -721,19 +721,40 @@ window.TopicsManager = (function () {
         // NOVO: Painel Preâmbulo Estático gerado incondicionalmente
         const preambleHtml = `
             <div class="topic-preamble-panel">
-                <div class="preamble-card preamble-alegacao ${!topicoAtivo.alegacoes ? 'is-empty' : ''}" data-action="edit-preamble" data-topico="${escaparHTML(activeTabId)}" data-campo="alegacoes">
-                    <div class="preamble-icon ai-trigger-btn" title="IA: Modelos" data-action="ai-trigger" data-topico="${escaparHTML(activeTabId)}" data-conteudo="${escaparHTML(encodeURIComponent(topicoAtivo.alegacoes || ''))}">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                <div class="preamble-card preamble-alegacao ${!topicoAtivo.alegacoes ? 'is-empty' : ''}" onclick="abrirEdicaoPreambulo('${activeTabId}', 'alegacoes')">
+                    
+                    <!-- NOVO: Gatilho da IA (Tratamento robusto contra quebras de linha e aspas no HTML) -->
+                    <div class="preamble-icon ai-trigger-btn" 
+                         title="✨ Inteligência Artificial: Buscar modelos compatíveis" 
+                         onclick="event.stopPropagation(); AIRecommendationManager.buscarModelosCompativeis('${activeTabId}', decodeURIComponent('${encodeURIComponent(topicoAtivo.alegacoes || '').replace(/'/g, "%27")}'))">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" class="ai-sparkle" style="display:none; transform-origin: 12px 12px;"></path>
+                        </svg>
                     </div>
-                    <div class="preamble-content"><span class="preamble-title">Razões Recursais</span>${topicoAtivo.alegacoes ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.alegacoes)) : '<span class="preamble-empty">Redigir alegações...</span>'}</div>
+
+                    <div class="preamble-content">
+                        <span class="preamble-title">Razões Recursais</span>
+                        ${topicoAtivo.alegacoes ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.alegacoes)) : '<span class="preamble-empty">Clique para redigir as alegações recursais...</span>'}
+                    </div>
                 </div>
-                <div class="preamble-card preamble-origem ${!topicoAtivo.fundamentos ? 'is-empty' : ''}" data-action="edit-preamble" data-topico="${escaparHTML(activeTabId)}" data-campo="fundamentos">
-                    <div class="preamble-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 21V7l6-4 6 4v14"></path></svg></div>
-                    <div class="preamble-content"><span class="preamble-title">Fundamentos</span>${topicoAtivo.fundamentos ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.fundamentos)) : '<span class="preamble-empty">Redigir fundamentos...</span>'}</div>
+                <div class="preamble-card preamble-origem ${!topicoAtivo.fundamentos ? 'is-empty' : ''}" onclick="abrirEdicaoPreambulo('${activeTabId}', 'fundamentos')">
+                    <div class="preamble-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 21V7l6-4 6 4v14"></path></svg>
+                    </div>
+                    <div class="preamble-content">
+                        <span class="preamble-title">Fundamentos da Origem</span>
+                        ${topicoAtivo.fundamentos ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.fundamentos)) : '<span class="preamble-empty">Clique para redigir os fundamentos da sentença...</span>'}
+                    </div>
                 </div>
-                <div class="preamble-card preamble-veredito ${!topicoAtivo.veredito ? 'is-empty' : ''}" data-action="edit-preamble" data-topico="${escaparHTML(activeTabId)}" data-campo="veredito">
-                    <div class="preamble-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg></div>
-                    <div class="preamble-content"><span class="preamble-title">Veredito</span>${topicoAtivo.veredito ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.veredito)) : '<span class="preamble-empty">Definir veredito...</span>'}</div>
+                <div class="preamble-card preamble-veredito ${!topicoAtivo.veredito ? 'is-empty' : ''}" onclick="abrirEdicaoPreambulo('${activeTabId}', 'veredito')">
+                    <div class="preamble-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+                    </div>
+                    <div class="preamble-content">
+                        <span class="preamble-title">Veredito / Conclusão</span>
+                        ${topicoAtivo.veredito ? renderizarMarkdownSeguro(escaparHTML(topicoAtivo.veredito)) : '<span class="preamble-empty">Clique para definir o veredito final deste tópico...</span>'}
+                    </div>
                 </div>
             </div>`;
 
@@ -857,7 +878,7 @@ window.TopicsManager = (function () {
                                 <div class="card-header" style="justify-content: space-between; margin-bottom: 0;">
                                     <div class="hierarquia-titulo" style="color: ${corTituloTese}; font-weight: bold;">Tese: ${escaparHTML(teseAtual)}</div>
                                     <div class="card-actions-bar" style="margin-top: 0; padding-top: 0; border-top: none;">
-                                        <button title="Adicionar Diretriz à Tese" data-action="add-directive" data-dtype="tese" data-topico="${escaparHTML(activeTabId)}" data-tesenome="${escaparHTML(teseAtual)}">
+                                        <button title="Adicionar Diretriz à Tese" onclick="adicionarDiretrizEstrutural('tese', '${activeTabId}', '${escaparHTML(teseAtual).replace(/'/g, "\\'")}', event)">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                         </button>
                                     </div>
@@ -919,7 +940,7 @@ window.TopicsManager = (function () {
                             <div class="card-header" style="justify-content: space-between; margin-bottom: 0;">
                                 <div class="hierarquia-titulo">Diretrizes Globais do Tópico</div>
                                 <div class="card-actions-bar" style="margin-top: 0; padding-top: 0; border-top: none;">
-                                    <button title="Adicionar Diretriz Global" data-action="add-directive" data-dtype="global" data-topico="${escaparHTML(activeTabId)}">
+                                    <button title="Adicionar Diretriz Global" onclick="adicionarDiretrizEstrutural('global', '${activeTabId}', null, event)">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                     </button>
                                 </div>

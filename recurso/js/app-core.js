@@ -209,11 +209,6 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.dataset.activeTab = 'leitura';
     SplashScreenManager.init();
     
-    // [NOVA INJEÇÃO]: Inicializa o motor de Delegação de Eventos da Timeline de renderização
-    if (window.TimelineEventDelegator) {
-        TimelineEventDelegator.init();
-    }
-    
     if (window.TimeTrackerManager) {
         TimeTrackerManager.init({ getTopicos: () => topicos });
     }
