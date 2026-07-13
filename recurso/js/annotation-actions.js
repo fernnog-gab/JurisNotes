@@ -719,8 +719,13 @@ function confirmarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
     if (!texto) return exibirToast('Digite uma observação.', 'aviso');
     
     const viewSource = cIdx !== null ? cIdx : 'main';
+    
+    // TRANSFORMAÇÃO: Substituição da API restrita crypto.randomUUID() por fallback universal
     const noIdeia = { 
-        uuid: 'id-' + crypto.randomUUID(), texto, revisada: false, timestamp: Date.now() 
+        uuid: 'id-' + Math.random().toString(36).substr(2, 9), 
+        texto, 
+        revisada: false, 
+        timestamp: Date.now() 
     };
 
     window.Store.dispatch({
@@ -728,7 +733,15 @@ function confirmarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
         payload: { topicoId, parentIndex: anotacaoIndex, viewSource, noIdeia }
     });
     
-    document.getElementById('sub-input-active').remove();
+    // TRANSFORMAÇÃO: Sincronização forçada da variável de escopo local (topicos)
+    // Garante que o renderizador recupere o array recém mutado pela Store antes de desenhar a tela
+    if (window.Store && typeof window.Store.getState === 'function') {
+        topicos = window.Store.getState().topicos;
+    }
+    
+    const painelAtivo = document.getElementById('sub-input-active');
+    if (painelAtivo) painelAtivo.remove();
+    
     renderizarTopicos(); 
     exibirToast('Observação secundária vinculada.', 'sucesso');
 }
