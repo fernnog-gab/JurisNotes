@@ -86,8 +86,10 @@ function adicionarDiretrizEstrutural(tipo, topicoId, teseNome, event) {
             </button>
         </div>`;
 
-    // 4. Ancoragem Determinística (DOM Traversal via Event)
-    const mountPoint = event.currentTarget.closest('.main-card-wrapper');
+    // 4. Ancoragem Determinística (DOM Traversal via Event.Target)
+    // CORREÇÃO: Utilizar event.target para subir (closest) a partir do ícone clicado, 
+    // ignorando o currentTarget que na delegação é a barra de rolagem inteira.
+    const mountPoint = event.target.closest('.main-card-wrapper');
     
     if (mountPoint) {
         mountPoint.appendChild(painel);
@@ -99,7 +101,7 @@ function adicionarDiretrizEstrutural(tipo, topicoId, teseNome, event) {
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') confirmarDiretrizEstrutural();
         });
     } else {
-        console.error("Falha ao encontrar mountPoint para adicionar a diretriz.");
+        console.error("Falha ao encontrar mountPoint para adicionar a diretriz. Event Target fora de contexto.");
     }
 }
 
@@ -1054,22 +1056,34 @@ window.TimelineEventDelegator = (function() {
             const targetEl = e.target.closest('[data-action]');
             if (!targetEl) return;
 
-            // Removido e.stopPropagation() global. Deixamos apenas preventDefault.
             e.preventDefault(); 
             
             const action = targetEl.dataset.action;
             const topicoId = targetEl.dataset.topico;
-            // Padronização rigorosa via undefined
-            const index = targetEl.dataset.index !== undefined ? parseInt(targetEl.dataset.index, 10) : null;
-            const parent = targetEl.dataset.parent !== undefined ? parseInt(targetEl.dataset.parent, 10) : null;
-            const cIdx = targetEl.dataset.cidx !== undefined ? parseInt(targetEl.dataset.cidx, 10) : null;
-            const localIndex = targetEl.dataset.local !== undefined ? parseInt(targetEl.dataset.local, 10) : null;
+            
+            // FASE 1: Data Sanitization Pipeline
+            // Uso de Type Guards para garantir que apenas números reais cheguem ao roteador
+            const rawIndex = targetEl.dataset.index;
+            const index = (rawIndex !== undefined && rawIndex !== "") ? parseInt(rawIndex, 10) : null;
+            
+            const rawParent = targetEl.dataset.parent;
+            const parent = (rawParent !== undefined && rawParent !== "") ? parseInt(rawParent, 10) : null;
+            
+            const rawCidx = targetEl.dataset.cidx;
+            const cIdx = (rawCidx !== undefined && rawCidx !== "") ? parseInt(rawCidx, 10) : null;
+            
+            const rawLocal = targetEl.dataset.local;
+            const localIndex = (rawLocal !== undefined && rawLocal !== "") ? parseInt(rawLocal, 10) : null;
+            
             const viewSource = targetEl.dataset.view;
 
-            if (topicoId && index !== null && !isNaN(index)) {
-                window._menuAnotacaoCtx = { topicoId, index, cIdx };
+            // FASE 2: Lexical Scope Assignment e Blindagem contra NaN
+            if (topicoId && index !== null && !Number.isNaN(index)) {
+                // Removido "window." para respeitar o escopo protegido let do arquivo
+                _menuAnotacaoCtx = { topicoId, index, cIdx };
             }
 
+            // FASE 3: Dispatcher
             switch (action) {
                 case 'edit-item': cIdx !== null ? editarItemCorrelacionado() : editarAnotacao(); break;
                 case 'add-subnode': acionarNovoNoIdeia(); break;
@@ -1077,11 +1091,11 @@ window.TimelineEventDelegator = (function() {
                 case 'delete-item': cIdx !== null ? excluirItemCorrelacionado(topicoId, index, cIdx) : excluirAnotacao(); break;
                 
                 case 'open-submenu':
-                    e.stopPropagation(); // Requerido apenas aqui para menu de contexto não fechar prematuramente
+                    e.stopPropagation(); 
                     abrirMenuSubAnotacao(topicoId, index, viewSource, localIndex, e); 
                     break;
                 case 'toggle-revision':
-                    e.stopPropagation(); // Evita ativar trigger de leitura "Zen Mode"
+                    e.stopPropagation();
                     window.Store.dispatch({ type: 'TOGGLE_REVISION', payload: { topicoId, parentIndex: parent, viewSource, localIndex } });
                     renderizarTopicos();
                     break;
