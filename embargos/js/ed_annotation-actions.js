@@ -450,12 +450,9 @@ function excluirSubAnotacao() {
     if (!_menuSubAnotacaoCtx) return;
     if (!confirm('Excluir esta ideia secundária?')) return;
     
-    const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
-    const alvo = _resolverSubAlvo(topico, _menuSubAnotacaoCtx.parentIndex, _menuSubAnotacaoCtx.viewSource);
+    window.Store.dispatch({ type: 'DELETE_SUB_ANNOTATION', payload: _menuSubAnotacaoCtx });
     
-    alvo.subAnotacoes.splice(_menuSubAnotacaoCtx.localIndex, 1);
-    
-    renderizarTopicos(); salvarBackupAutomatico();
+    renderizarTopicos(); 
     document.getElementById('sub-annotation-context-menu').style.display = 'none';
 }
 
@@ -692,28 +689,23 @@ function adicionarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
 
 function confirmarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
     const textarea = document.getElementById('sub-input-text');
-    
-    // [NOVO] Higieniza o texto colado/digitado no Nó de Ideia
     let texto = textarea ? textarea.value.trim() : '';
     texto = window.JurisUtils.limparTextoPDF(texto);
     
     if (!texto) return exibirToast('Digite uma observação.', 'aviso');
     
-    const topico = topicos.find(t => t.id === topicoId);
     const viewSource = cIdx !== null ? cIdx : 'main';
-    const alvo = _resolverSubAlvo(topico, anotacaoIndex, viewSource);
-    
-    if (!alvo.subAnotacoes) alvo.subAnotacoes = [];
-    alvo.subAnotacoes.push({ 
-        uuid: 'id-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now().toString(36),
-        texto, 
-        revisada: false,
-        timestamp: Date.now() 
+    const noIdeia = { 
+        uuid: 'id-' + crypto.randomUUID(), texto, revisada: false, timestamp: Date.now() 
+    };
+
+    window.Store.dispatch({
+        type: 'ADD_SUB_ANNOTATION',
+        payload: { topicoId, parentIndex: anotacaoIndex, viewSource, noIdeia }
     });
     
     document.getElementById('sub-input-active').remove();
     renderizarTopicos(); 
-    salvarBackupAutomatico();
     exibirToast('Observação secundária vinculada.', 'sucesso');
 }
 
@@ -1063,10 +1055,10 @@ window.TimelineEventDelegator = (function() {
             const action = targetEl.dataset.action;
             const topicoId = targetEl.dataset.topico;
             
-            // Lógica robusta para tratar índices hierárquicos nulos (Diretrizes/Vícios)
+            // Lógica robusta para tratar índices hierárquicos nulos e padronização undefined
             const rawIndex = targetEl.dataset.index;
             const index = (rawIndex === 'null' || rawIndex === undefined) ? null : parseInt(rawIndex, 10);
-            
+            const parent = targetEl.dataset.parent !== undefined ? parseInt(targetEl.dataset.parent, 10) : null;
             const cIdx = targetEl.dataset.cidx !== undefined ? parseInt(targetEl.dataset.cidx, 10) : null;
             const viewSource = targetEl.dataset.view;
             const localIndex = targetEl.dataset.local !== undefined ? parseInt(targetEl.dataset.local, 10) : null;
@@ -1077,22 +1069,28 @@ window.TimelineEventDelegator = (function() {
             }
 
             switch (action) {
-                case 'edit-item':
-                    if (cIdx !== null) editarItemCorrelacionado();
-                    else editarAnotacao();
-                    break;
-                case 'add-subnode':
-                    acionarNovoNoIdeia();
-                    break;
-                case 'smart-move':
-                    abrirModalSmartMove(topicoId, index, cIdx);
-                    break;
-                case 'delete-item':
-                    if (cIdx !== null) excluirItemCorrelacionado(topicoId, index, cIdx);
-                    else excluirAnotacao();
-                    break;
+                case 'edit-item': cIdx !== null ? editarItemCorrelacionado() : editarAnotacao(); break;
+                case 'add-subnode': acionarNovoNoIdeia(); break;
+                case 'smart-move': abrirModalSmartMove(topicoId, index, cIdx); break;
+                case 'delete-item': cIdx !== null ? excluirItemCorrelacionado(topicoId, index, cIdx) : excluirAnotacao(); break;
+                
                 case 'open-submenu':
+                    e.stopPropagation(); // Requerido apenas aqui para menu não fechar prematuramente
                     abrirMenuSubAnotacao(topicoId, index, viewSource, localIndex, e);
+                    break;
+                case 'toggle-revision':
+                    e.stopPropagation(); // Evita ativar trigger de leitura "Zen Mode"
+                    window.Store.dispatch({ type: 'TOGGLE_REVISION', payload: { topicoId, parentIndex: parent, viewSource, localIndex } });
+                    renderizarTopicos();
+                    break;
+                case 'add-directive':
+                    e.stopPropagation();
+                    window.adicionarDiretrizEstrutural(targetEl.dataset.dtype, topicoId, targetEl.dataset.grupo || null, e); 
+                    break;
+                case 'edit-preamble': window.abrirEdicaoPreambulo(topicoId, targetEl.dataset.campo); break;
+                case 'ai-trigger':
+                    e.stopPropagation();
+                    window.AIRecommendationManager.buscarModelosCompativeis(topicoId, decodeURIComponent(targetEl.dataset.conteudo)); 
                     break;
                 default:
                     console.warn(`[Juris Notes] Ação de delegação não mapeada: ${action}`);
