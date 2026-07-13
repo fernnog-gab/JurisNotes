@@ -1,24 +1,20 @@
 /* ================================================
-   ed_store.js
-   Gerenciamento de Estado Centralizado (Redux-Pattern) - ED
+   store.js
+   Gerenciamento de Estado Centralizado (Redux-Pattern)
+   Prepara a base para remoção das mutações do array global.
    ================================================ */
 window.Store = (function() {
     'use strict';
     
-    let state = { topicos: window.topicos || [], activeTabId: null };
+    let state = { topicos: [], activeTabId: null };
     const subscribers = [];
     
+    // Middleware Central para Side Effects Impuros
     function applyMiddlewares(action, oldState, newState) {
-        const mutatingActions = [
-            'ADD_SUB_ANNOTATION', 'DELETE_SUB_ANNOTATION', 'TOGGLE_REVISION',
-            'DELETE_ITEM'
-        ];
+        const mutatingActions = ['ADD_ITEM', 'DELETE_ITEM', 'UPDATE_ITEM', 'REORDER_ITEM', 'LOAD_BACKUP'];
         
         if (mutatingActions.includes(action.type)) {
-            // PONTE LEGADA: Atualiza a variável global APENAS se houve mutação real
-            window.topicos = newState.topicos;
-
-            // Desacopla o I/O da thread principal da UI
+            // Emissão segura assíncrona (não bloqueia a renderização e o Diffing)
             setTimeout(() => {
                 if (window.salvarBackupAutomatico) window.salvarBackupAutomatico();
                 if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
@@ -26,73 +22,46 @@ window.Store = (function() {
         }
     }
 
-    function _resolveTargetNode(topico, parentIndex, viewSource) {
-        if (parentIndex === null) {
-            if (viewSource === 'global') return { subAnotacoes: topico.diretrizesGlobais };
-            if (viewSource.startsWith('vicio:')) {
-                const nomeVicio = viewSource.replace('vicio:', '');
-                return { subAnotacoes: topico.diretrizesPorVicio[nomeVicio] };
-            }
-        }
-        const cardMestre = topico.anotacoes[parentIndex];
-        if (viewSource === 'main') return cardMestre;
-        return cardMestre.itensCorrelacionados[parseInt(viewSource, 10)];
-    }
-
     function dispatch(action) {
         const oldState = state;
-        const newState = structuredClone(state); // Imutabilidade via V8 Clone
+        const newState = structuredClone(state); // Imutabilidade Robusta via v8
 
         switch (action.type) {
-            case 'LOAD_BACKUP': {
+            case 'LOAD_BACKUP':
                 newState.topicos = action.payload;
                 break;
-            }
-            case 'SET_TAB': {
+                
+            case 'SET_TAB':
                 newState.activeTabId = action.payload;
                 break;
-            }
-            case 'ADD_SUB_ANNOTATION': {
-                const { topicoId, parentIndex, viewSource, noIdeia } = action.payload;
-                const topico = newState.topicos.find(t => t.id === topicoId);
-                if (topico) {
-                    const alvo = _resolveTargetNode(topico, parentIndex, viewSource);
-                    if (!alvo.subAnotacoes) alvo.subAnotacoes = [];
-                    alvo.subAnotacoes.push(noIdeia);
-                }
-                break;
-            }
-            case 'DELETE_SUB_ANNOTATION': {
-                const { topicoId, parentIndex, viewSource, localIndex } = action.payload;
-                const topico = newState.topicos.find(t => t.id === topicoId);
-                if (topico) {
-                    const alvo = _resolveTargetNode(topico, parentIndex, viewSource);
-                    if (alvo && alvo.subAnotacoes) alvo.subAnotacoes.splice(localIndex, 1);
-                }
-                break;
-            }
-            case 'TOGGLE_REVISION': {
-                const { topicoId, parentIndex, viewSource, localIndex } = action.payload;
-                const topico = newState.topicos.find(t => t.id === topicoId);
-                if (topico) {
-                    const alvo = _resolveTargetNode(topico, parentIndex, viewSource);
-                    const sub = alvo.subAnotacoes[localIndex];
-                    if (sub) sub.revisada = !sub.revisada;
-                }
-                break;
-            }
-            case 'DELETE_ITEM': {
+                
+            case 'DELETE_ITEM':
+                // Transição: Quando a App usar o Store ativamente, a deleção será via UUID.
+                // Exemplo: t.anotacoes = t.anotacoes.filter(a => a.uuid !== action.payload.uuid);
                 const { topicoId, index } = action.payload;
                 const topico = newState.topicos.find(t => t.id === topicoId);
-                if (topico) topico.anotacoes.splice(index, 1);
+                if (topico) {
+                    topico.anotacoes.splice(index, 1);
+                }
+                
+                // Mapeamento transitório para refletir no array global antigo
+                if (window.topicos) {
+                    const topGlobal = window.topicos.find(t => t.id === topicoId);
+                    if (topGlobal) topGlobal.anotacoes.splice(index, 1);
+                }
                 break;
-            }
         }
 
         state = newState;
         applyMiddlewares(action, oldState, newState);
+        
+        // Notifica views inscritas
         subscribers.forEach(sub => sub(state));
     }
 
-    return { getState: () => state, dispatch, subscribe: (fn) => subscribers.push(fn) };
+    return { 
+        getState: () => state, 
+        dispatch, 
+        subscribe: (fn) => subscribers.push(fn) 
+    };
 })();
