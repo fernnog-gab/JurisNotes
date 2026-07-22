@@ -613,7 +613,7 @@ window.TopicsManager = (function () {
     /**
      * Renderiza o bloco de diretrizes visuais para a IA (Global ou Por Vício)
      */
-    function renderizarNivelHierarquico(tipo, titulo, subanotacoes, topicoId) {
+    function renderizarNivelHierarquico(tipo, titulo, subanotacoes, topicoId, tesesConsolidadas = []) {
         const listaSegura = subanotacoes || [];
         const isGlobal = tipo === 'global';
         
@@ -678,6 +678,17 @@ window.TopicsManager = (function () {
         const hierarquiaTitulo = isGlobal ? 'Diretrizes Globais (Auditoria)' : `Vício Alegado: ${escaparHTML(titulo)}`;
         const wrapperClass = isGlobal ? 'nivel-global' : 'nivel-vicio';
 
+        // NOVO: Renderização segura e elegante das teses compiladas
+        let htmlTesesMapeadas = '';
+        if (!isGlobal && tesesConsolidadas.length > 0) {
+            // Escapa os dados para evitar injeção de HTML malicioso (XSS)
+            const tesesSeguras = tesesConsolidadas.map(t => escaparHTML(t)).join(' <span style="color:#ccc;">|</span> ');
+            htmlTesesMapeadas = `
+                <div style="font-size: 0.8rem; color: #555; margin-top: 4px; font-weight: normal; line-height: 1.4;">
+                    <strong style="color: var(--trt-blue-mid);">Teses Mapeadas:</strong> ${tesesSeguras}
+                </div>`;
+        }
+
         return `
             <div class="timeline-item-master align-left nivel-hierarquico ${wrapperClass}">
                 <div class="main-card-wrapper">
@@ -687,8 +698,11 @@ window.TopicsManager = (function () {
                         </div>
                     </div>
                     <div class="annotation-card" style="${styleCard}">
-                        <div class="card-header" style="justify-content: space-between; margin-bottom: 0;">
-                            <div class="hierarquia-titulo" style="${styleTitle}">${hierarquiaTitulo}</div>
+                        <div class="card-header" style="justify-content: space-between; margin-bottom: 0; align-items: flex-start;">
+                            <div>
+                                <div class="hierarquia-titulo" style="${styleTitle}">${hierarquiaTitulo}</div>
+                                ${htmlTesesMapeadas}
+                            </div>
                             <div class="card-actions-bar" style="margin-top: 0; padding-top: 0; border-top: none;">
                                 <button title="Adicionar Diretriz" onclick="adicionarDiretrizEstrutural('${isGlobal ? 'global' : 'vicio'}', '${topicoId}', '${isGlobal ? '' : escaparHTML(titulo)}', event)">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -985,7 +999,15 @@ window.TopicsManager = (function () {
                                       ? topicoAtivo.diretrizesPorVicio[vicioAtual] 
                                       : [];
             
-            htmlDiretrizes += renderizarNivelHierarquico('vicio', vicioAtual, diretrizesDoVicio, activeTabId);
+            // NOVO: Cálculo centralizado (SSOT) das teses exclusivas deste vício
+            const tesesDesteVicio = [...new Set(
+                topicoAtivo.anotacoes
+                    .filter(an => (an.vicio || topicoAtivo.vicio) === vicioAtual && an.tese && an.tese.trim() !== '')
+                    .map(an => an.tese.trim())
+            )];
+            
+            // Passamos o novo array como 5º argumento
+            htmlDiretrizes += renderizarNivelHierarquico('vicio', vicioAtual, diretrizesDoVicio, activeTabId, tesesDesteVicio);
 
             // MONTAGEM FINAL DA TIMELINE
             conteudoCentralHtml = sumarioHtml + `

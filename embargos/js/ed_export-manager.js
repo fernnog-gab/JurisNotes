@@ -132,8 +132,19 @@ window.ExportManager = (function () {
                 if (diretrizes && diretrizes.length > 0) {
                     const diretrizesValidas = diretrizes.filter(dir => dir.intencao !== 'nota');
                     if (diretrizesValidas.length > 0) {
+                        
+                        // [NOVO] MAPEAMENTO ESTRUTURAL PARA A IA: Sincronia perfeita com a UI
+                        const tesesVinculadas = topico.anotacoes
+                            .filter(an => (an.vicio || topico.vicio) === nomeVicio && an.tese && an.tese.trim() !== '')
+                            .map(an => an.tese.trim());
+                        
+                        const tesesUnicas = [...new Set(tesesVinculadas)];
+                        const stringTeses = tesesUnicas.length > 0 ? tesesUnicas.join(' | ') : 'Aguardando definição do usuário na Matriz.';
+
                         bufferVicios += `<vicio_alvo>\n`;
                         bufferVicios += `[NOME DO VÍCIO]: ${_escapeXmlAttr(nomeVicio)}\n`;
+                        bufferVicios += `[TESES RECURSAIS ENVOLVIDAS]: ${_escapeXmlAttr(stringTeses)}\n`;
+                        
                         diretrizesValidas.forEach(dir => {
                              bufferVicios += `[INSTRUÇÃO DE ANÁLISE]: ${_safeMD(dir.texto, '\n')}\n`;
                         });
