@@ -878,7 +878,7 @@
 
         <div id="box-modelo-existente" style="display: none;">
             <p class="popup-label">Buscar modelo existente:</p>
-            <input type="text" id="input-busca-modelo" class="topic-select" placeholder="Digite para buscar..." autocomplete="off" oninput="filtrarListaUIDebounced(this.value, 'lista-modelos-salvar')">
+            <input type="text" id="input-busca-modelo" class="topic-select" placeholder="Aguarde o carregamento..." autocomplete="off" disabled oninput="filtrarListaSalvarDebounced(this.value)">
             <div id="lista-modelos-salvar" class="doc-list-container" style="margin-top: 8px; max-height: 120px;">
             </div>
         </div>
@@ -898,7 +898,7 @@
         <!-- CAMADA 1: VISUALIZAÇÃO EM LISTA -->
         <div id="acervo-list-view">
             <div id="acervo-search-wrapper" style="display: flex; gap: 8px; margin-bottom: 12px; width: 100%;">
-                <input type="text" id="input-pesquisa-acervo" class="topic-select" placeholder="Pesquisar modelo ou tag..." style="flex: 1;" oninput="filtrarListaUIDebounced(this.value, 'lista-acervo-geral')">
+                <input type="text" id="input-pesquisa-acervo" class="topic-select" placeholder="Pesquisar modelo ou tag..." style="flex: 1;" oninput="filtrarAcervoPrincipalDebounced(this.value)">
                 <button class="acervo-action-btn tag-btn-creme" title="Gerenciar Tags" onclick="abrirModalGerenciarTags()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
                         <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line>

@@ -17,8 +17,9 @@ window.limparFiltroIAAcervo = function() {
     window.abrirModalAcervo(); 
 };
 // ==========================================
-// ESTADO DO ACERVO (Isolado e Seguro)
+// ESTADO DO ACERVO E MODAL SALVAR
 // ==========================================
+let _cacheModelosSalvar = [];
 let _modeloSelecionadoId = null;
 let _modeloSelecionadoNodes = [];
 let _tagsGlobais = [];
@@ -65,8 +66,16 @@ window.atualizarIconeAcervoUI = function(selectElement) {
     }
 };
 
-// Filtro totalmente em memória (RAM Speed)
-window.filtrarListaUI = function(termo, listaId) { // listaId mantido para retrocompatibilidade
+window.debounce = function(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+};
+
+// Renomeada e refatorada: O parâmetro inútil 'listaId' foi removido.
+window.filtrarAcervoPrincipal = function(termo) { 
     const termoMin = termo.toLowerCase().trim();
     
     if (!termoMin) {
@@ -81,7 +90,6 @@ window.filtrarListaUI = function(termo, listaId) { // listaId mantido para retro
 
     _paginaAtualRenderizacao = 0;
     
-    // Limpeza SEGURA - Apenas o wrapper!
     const wrapper = document.getElementById('acervo-items-wrapper');
     if(wrapper) wrapper.innerHTML = ''; 
     
@@ -92,18 +100,10 @@ window.filtrarListaUI = function(termo, listaId) { // listaId mantido para retro
         return;
     }
 
-    // A renderização real é chamada pelo observer ou pela forçada inicial
     renderizarProximoLoteAcervo();
 };
 
-window.debounce = function(func, wait) {
-    let timeout;
-    return function(...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), wait);
-    };
-};
-window.filtrarListaUIDebounced = window.debounce(window.filtrarListaUI, 300);
+window.filtrarAcervoPrincipalDebounced = window.debounce(window.filtrarAcervoPrincipal, 300);
 
 // ==========================================
 // MÓDULO 1: SALVAR NO ACERVO
@@ -142,26 +142,97 @@ window.toggleModoSalvarModelo = function() {
     
     if (!isNovo) {
         const container = document.getElementById('lista-modelos-salvar');
-        container.innerHTML = '<div class="acervo-loader"></div>';
+        const inputBusca = document.getElementById('input-busca-modelo');
         
-        AcervoManager.carregarModelos().then(modelos => {
-            container.innerHTML = modelos.length === 0 ? '<p style="text-align:center; font-size:0.8rem;">Nenhum modelo encontrado.</p>' : '';
-            modelos.forEach(mod => {
-                const item = document.createElement('div');
-                item.className = 'acervo-item';
-                item.innerHTML = `<div class="acervo-item-titulo">${TopicsManager.escaparHTML(mod.nome)}</div><div style="font-size:0.7rem; color:#888;">${mod.nos.length} nó(s) salvos</div>`;
-                item.onclick = () => {
-                    document.querySelectorAll('#lista-modelos-salvar .acervo-item').forEach(el => el.classList.remove('selected'));
-                    item.classList.add('selected');
-                    _modeloSelecionadoId = mod.id;
-                };
-                container.appendChild(item);
-            });
-        }).catch(() => {
-            container.innerHTML = '<p style="color:red; font-size:0.8rem;">Erro ao conectar. Faça login.</p>';
+        // 1. Blindagem de UX (Race Condition Protection)
+        container.innerHTML = '<div class="acervo-loader"></div>';
+        inputBusca.disabled = true;
+        inputBusca.placeholder = '⌛ Carregando modelos...';
+        inputBusca.value = ''; // Limpa buscas anteriores
+        
+        // 2. Fetch com reaproveitamento de Cache global se existir
+        const promessaCarregamento = (_todosModelosEmMemoria && _todosModelosEmMemoria.length > 0)
+            ? Promise.resolve(_todosModelosEmMemoria)
+            : AcervoManager.carregarModelos();
+
+        promessaCarregamento.then(modelos => {
+            // 3. Atualiza Estado Local Isolado (Mapeamento Leve)
+            _cacheModelosSalvar = modelos.map(mod => ({
+                id: mod.id,
+                nome: mod.nome,
+                qtdNos: mod.nos ? mod.nos.length : 0
+            }));
+
+            // 4. Libera UI e aplica Auto-focus
+            inputBusca.disabled = false;
+            inputBusca.placeholder = 'Digite para buscar...';
+            inputBusca.focus();
+
+            // 5. Renderiza Estado Base
+            _renderizarListaSalvar(_cacheModelosSalvar);
+
+        }).catch((e) => {
+            console.error("[Acervo] Erro ao carregar modelos para salvamento:", e);
+            container.innerHTML = '<p style="color:#c62828; font-size:0.8rem; text-align:center;">Erro ao conectar. Tente novamente.</p>';
+            inputBusca.placeholder = 'Falha na conexão.';
         });
     }
 };
+
+// Nova Função de Filtro Puramente Lógica (Array IN -> Array OUT)
+window.filtrarListaSalvar = function(termo) {
+    const termoMin = termo.toLowerCase().trim();
+    
+    if (!termoMin) {
+        _renderizarListaSalvar(_cacheModelosSalvar);
+        return;
+    }
+
+    const modelosFiltrados = _cacheModelosSalvar.filter(mod => 
+        mod.nome.toLowerCase().includes(termoMin)
+    );
+
+    _renderizarListaSalvar(modelosFiltrados);
+};
+
+window.filtrarListaSalvarDebounced = window.debounce(window.filtrarListaSalvar, 300);
+
+// Nova Função de Renderização Pura e Segura
+function _renderizarListaSalvar(arrayDados) {
+    const container = document.getElementById('lista-modelos-salvar');
+    container.innerHTML = ''; // Limpa de forma segura
+    
+    if (arrayDados.length === 0) {
+        container.innerHTML = '<p style="text-align:center; font-size:0.8rem; color:#888; margin-top:10px;">Nenhum modelo compatível encontrado.</p>';
+        return;
+    }
+
+    // Uso de DocumentFragment para evitar Reflows pesados iterativos
+    const fragment = document.createDocumentFragment();
+
+    arrayDados.forEach(mod => {
+        const item = document.createElement('div');
+        item.className = 'acervo-item';
+        // Lógica visual mantida
+        if (_modeloSelecionadoId === mod.id) item.classList.add('selected');
+
+        item.innerHTML = `
+            <div class="acervo-item-titulo">${typeof TopicsManager !== 'undefined' ? TopicsManager.escaparHTML(mod.nome) : mod.nome}</div>
+            <div style="font-size:0.7rem; color:#888;">${mod.qtdNos} nó(s) salvos</div>
+        `;
+        
+        // Event Listener limpo (sem poluição inline no HTML)
+        item.addEventListener('click', () => {
+            document.querySelectorAll('#lista-modelos-salvar .acervo-item').forEach(el => el.classList.remove('selected'));
+            item.classList.add('selected');
+            _modeloSelecionadoId = mod.id;
+        });
+
+        fragment.appendChild(item);
+    });
+
+    container.appendChild(fragment);
+}
 
 window.fecharModalSalvarModelo = function() {
     document.getElementById('wizard-backdrop').style.display = 'none';
