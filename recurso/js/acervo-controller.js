@@ -32,6 +32,11 @@ const TAMANHO_LOTE_RENDERIZACAO = 20;
 let _observerScrollAcervo = null;
 let _eventDelegationAtivo = false;
 
+// ==========================================
+// TRAVA DE ESTADO ARQUITETURAL (State Lock)
+// ==========================================
+let _isViewTransitioning = false;
+
 // HELPER PRIVADO: Manipulação segura de DOM
 function _safeDisplay(id, styleStr) {
     const el = document.getElementById(id);
@@ -66,6 +71,15 @@ window.atualizarIconeAcervoUI = function(selectElement) {
 
 // Filtro totalmente em memória (RAM Speed)
 window.filtrarListaUI = function(termo, listaId) { // listaId mantido para retrocompatibilidade
+    // GUARD CLAUSE: Impede mutação do DOM durante transições ou modo foco ativo
+    const focusView = document.getElementById('acervo-focus-view');
+    const isFocoAtivo = focusView && focusView.classList.contains('is-active');
+    
+    if (_isViewTransitioning || isFocoAtivo) {
+        console.warn("[Acervo] Mutação de lista bloqueada: UI travada pelo modo foco.");
+        return; 
+    }
+
     const termoMin = termo.toLowerCase().trim();
     
     if (!termoMin) {
@@ -97,10 +111,12 @@ window.filtrarListaUI = function(termo, listaId) { // listaId mantido para retro
 
 window.debounce = function(func, wait) {
     let timeout;
-    return function(...args) {
+    const debounced = function(...args) {
         clearTimeout(timeout);
         timeout = setTimeout(() => func.apply(this, args), wait);
     };
+    debounced.cancel = () => clearTimeout(timeout);
+    return debounced;
 };
 window.filtrarListaUIDebounced = window.debounce(window.filtrarListaUI, 300);
 
@@ -424,6 +440,8 @@ function configurarEventDelegation() {
         // 2. Verifica se clicou no Card do Modelo (para ativar o Foco)
         const card = e.target.closest('.acervo-item');
         if (card) {
+            e.preventDefault();
+            e.stopPropagation(); // Isola o evento
             selecionarEAtivarModelo(card, card.dataset.id);
         }
     });
@@ -433,13 +451,23 @@ function configurarEventDelegation() {
 
 // Lógica isolada chamada pelo Event Delegation
 function selecionarEAtivarModelo(cardElement, modeloId) {
-    document.querySelectorAll('#acervo-items-wrapper .acervo-item').forEach(el => el.classList.remove('selected'));
-    cardElement.classList.add('selected');
-    
-    const mod = _todosModelosEmMemoria.find(m => m.id === modeloId);
-    if (!mod) return;
+    // 1. Aborta execuções pendentes e ativa a trava arquitetural
+    if (window.filtrarListaUIDebounced && window.filtrarListaUIDebounced.cancel) {
+        window.filtrarListaUIDebounced.cancel();
+    }
+    _isViewTransitioning = true; // Trava o estado
 
-    _modeloSelecionadoId = mod.id;
+    try {
+        document.querySelectorAll('#acervo-items-wrapper .acervo-item').forEach(el => el.classList.remove('selected'));
+        cardElement.classList.add('selected');
+        
+        const mod = _todosModelosEmMemoria.find(m => m.id === modeloId);
+        if (!mod) {
+            _isViewTransitioning = false; // Libera trava em caso de falha
+            return;
+        }
+
+        _modeloSelecionadoId = mod.id;
     _modeloSelecionadoNodes = mod.nos;
     _modeloSelecionadoEscopo = mod.escopo || 'card';
     
@@ -498,6 +526,11 @@ function selecionarEAtivarModelo(cardElement, modeloId) {
     }
 
     _safeDisplay('btn-inserir-acervo', 'block');
+    
+    } catch (error) {
+        _isViewTransitioning = false; // Libera trava em caso de erro crítico
+        console.error("[AcervoController] Erro ao selecionar modelo:", error);
+    }
 }
 
 // ==========================================
@@ -1063,7 +1096,8 @@ window.copiarPromptNotebookLM = function() {
 // ==========================================
 
 window.ativarModoFocoAcervo = function(tituloModelo) {
-    document.getElementById('focus-modelo-titulo').textContent = TopicsManager.escaparHTML(tituloModelo);
+    const tituloEl = document.getElementById('focus-modelo-titulo');
+    if (tituloEl) tituloEl.textContent = TopicsManager.escaparHTML(tituloModelo);
     
     const listView = document.getElementById('acervo-list-view');
     const focusView = document.getElementById('acervo-focus-view');
@@ -1074,13 +1108,19 @@ window.ativarModoFocoAcervo = function(tituloModelo) {
         listView.style.display = 'none';
         // Prepara e anima entrada do foco
         focusView.style.display = 'flex';
-        // Força reflow mínimo para garantir a animação de entrada
+        // Força reflow para o motor do navegador entender a mudança de display antes de animar
         void focusView.offsetWidth; 
-        focusView.classList.add('is-active');
-    }, 250); // Sincronizado com CSS
+        
+        focusView.classList.add('is-active'); // CSS assume controle total da opacidade e transição
+        
+        // Libera a trava de estado com folga de segurança após a animação
+        setTimeout(() => { _isViewTransitioning = false; }, 50); 
+    }, 250); // Tempo sincronizado com a transition do CSS
 };
 
 window.desativarModoFocoAcervo = function() {
+    _isViewTransitioning = true; // Trava a UI durante o retorno
+    
     const listView = document.getElementById('acervo-list-view');
     const focusView = document.getElementById('acervo-focus-view');
     
@@ -1088,16 +1128,20 @@ window.desativarModoFocoAcervo = function() {
     document.getElementById('modal-acervo-inserir').classList.remove('is-fullscreen');
     
     focusView.classList.remove('is-active');
-    focusView.style.opacity = '0';
+    
     setTimeout(() => {
         focusView.style.display = 'none';
+        
         listView.style.display = 'block';
-        void listView.offsetWidth;
+        void listView.offsetWidth; // Força reflow
         listView.style.opacity = '1';
         
         // Limpa estado selecionado (legado)
         document.querySelectorAll('#lista-acervo-geral .acervo-item').forEach(el => el.classList.remove('selected'));
         _modeloSelecionadoId = null;
+        
+        // Libera a trava após o painel voltar à tela
+        setTimeout(() => { _isViewTransitioning = false; }, 50);
     }, 250);
 };
 
