@@ -860,7 +860,7 @@
 
         <div id="box-modelo-existente" style="display: none;">
             <p class="popup-label">Buscar modelo existente:</p>
-            <input type="text" id="input-busca-modelo" class="topic-select" placeholder="Digite para buscar..." autocomplete="off" oninput="filtrarListaUIDebounced(this.value, 'lista-modelos-salvar')">
+            <input type="text" id="input-busca-modelo" class="topic-select" placeholder="Digite para buscar..." autocomplete="off" oninput="filtrarModelosSalvarDebounced(this.value)">
             <div id="lista-modelos-salvar" class="doc-list-container" style="margin-top: 8px; max-height: 120px;">
             </div>
         </div>
