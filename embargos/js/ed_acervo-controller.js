@@ -127,13 +127,17 @@ window.abrirModalSalvarModelo = function() {
     _noAlvoParaSalvar.escopoOriginal = escopoDetectado;
 
     document.getElementById('sub-annotation-context-menu').style.display = 'none';
-    document.querySelector('input[name="modo_salvar_modelo"][value="novo"]').checked = true;
-    document.getElementById('input-nome-modelo').value = '';
-    
-    document.getElementById('wizard-backdrop').style.display = 'block';
-    document.getElementById('modal-salvar-modelo').style.display = 'flex';
-    window.toggleModoSalvarModelo(); 
-};
+        document.querySelector('input[name="modo_salvar_modelo"][value="novo"]').checked = true;
+        document.getElementById('input-nome-modelo').value = '';
+        
+        // Limpeza de segurança na abertura
+        const inputBusca = document.getElementById('input-busca-modelo');
+        if (inputBusca) inputBusca.value = '';
+        
+        document.getElementById('wizard-backdrop').style.display = 'block';
+        document.getElementById('modal-salvar-modelo').style.display = 'flex';
+        window.toggleModoSalvarModelo(); 
+    };
 
 window.toggleModoSalvarModelo = function() {
     const isNovo = document.querySelector('input[name="modo_salvar_modelo"]:checked').value === 'novo';
@@ -237,7 +241,14 @@ function _renderizarListaSalvar(arrayDados) {
 window.fecharModalSalvarModelo = function() {
     document.getElementById('wizard-backdrop').style.display = 'none';
     document.getElementById('modal-salvar-modelo').style.display = 'none';
+    
+    // Limpeza de Estado Nativo
     _noAlvoParaSalvar = null;
+    
+    // NOVA LIMPEZA (Stale State Prevention)
+    _cacheModelosSalvar = []; // Esvazia a memória do modal
+    const inputBusca = document.getElementById('input-busca-modelo');
+    if (inputBusca) inputBusca.value = ''; // Limpa o front-end
 };
 
 window.confirmarSalvarModelo = async function() {
