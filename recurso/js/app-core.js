@@ -67,27 +67,39 @@ window.sincronizarHighlightsGerais = function() {
 /* ================================================
    MOTOR DE HIGIENIZAÇÃO DE TEXTO (JURIS UTILS)
    ================================================ */
-window.JurisUtils = window.JurisUtils || {};
+window.JurisUtils = (function() {
+    // 1. HOISTING: Constantes compiladas apenas uma vez (Otimização de Memória V8)
+    const REGEX_INVISIVEIS = /[\u200B-\u200D\uFEFF]/g;
+    
+    // Expressão Regular Multilinha Segura: 
+    // Captura os gatilhos e usa [\s\S]*? para devorar até uma quebra dupla de parágrafo ou fim da string
+    const REGEX_ASSINATURAS_BLOCO = /(?:Documento\s+assinado\s+eletronicamente\s+por|Assinado\s+(?:digitalmente|eletronicamente)\s+por|Signatário(?:\(a\))?[:\s])[\s\S]*?(?=\n\s*\n|$)/gi;
+    
+    const REGEX_HIFEN_QUEBRA = /([\p{L}])-\r?\n\s*([\p{L}])/gu;
+    const REGEX_QUEBRA_SIMPLES = /([^\n\r])\r?\n([^\n\r])/g;
+    const REGEX_ESPACOS_DUPLOS = / {2,}/g;
 
-window.JurisUtils.limparTextoPDF = function(texto) {
-    if (!texto || typeof texto !== 'string') return '';
-    return texto
-        // 1. [NOVO] FILTRO LGPD (Execução Primária)
-        // Busca a âncora padrão do PJe e captura até o final da quebra de linha.
-        // A flag 'm' garante que o '$' identifique o final da linha isolada.
-        // É substituído por um espaço ' ' para garantir que as palavras vizinhas não colem.
-        .replace(/Documento\s+assinado\s+eletronicamente\s+por.*$/gim, ' ')
-        // 2. Normalização Linguística: Remove hifens de divisão silábica
-        // Protege listas e nomenclaturas mistas (ex: art. 10-A)
-        .replace(/([\p{L}])-\r?\n\s*([\p{L}])/gu, '$1$2')
-        // 3. Reconstrução Estrutural: Emenda linhas quebradas simples. 
-        // Protege parágrafos reais (preserva \n\n ou \r\n\r\n)
-        .replace(/([^\n\r])\r?\n([^\n\r])/g, '$1 $2')
-        // 4. Polimento Final: Colapsa espaços duplos criados pela junção
-        // e pelo apagamento da assinatura no passo 1.
-        .replace(/ {2,}/g, ' ')
-        .trim();
-};
+    return {
+        limparTextoPDF: function(texto) {
+            if (!texto || typeof texto !== 'string') return '';
+            
+            return texto
+                // Fase 1: Limpeza de artefatos do DOM/PDF.js
+                .replace(REGEX_INVISIVEIS, '')
+                
+                // Fase 2: Filtro Estrutural LGPD / PJe (Remove o bloco completo multilinha)
+                .replace(REGEX_ASSINATURAS_BLOCO, ' ')
+                
+                // Fase 3: Reconstrução Semântica
+                .replace(REGEX_HIFEN_QUEBRA, '$1$2') // Junta palavras hifenizadas separadas por quebra de página
+                .replace(REGEX_QUEBRA_SIMPLES, '$1 $2') // Emenda parágrafos quebrados pelo PDF
+                
+                // Fase 4: Polimento final
+                .replace(REGEX_ESPACOS_DUPLOS, ' ')
+                .trim();
+        }
+    };
+})();
 
 /* ================================================
    CONTROLE DE INTERFACE DE AUTENTICAÇÃO
