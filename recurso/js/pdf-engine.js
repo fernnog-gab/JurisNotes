@@ -490,85 +490,97 @@ window.PdfEngine = (function () {
                 itens.forEach((item, idx) => {
                     const numIdeia = (parentIndex !== undefined ? parentIndex : idx) + 1;
 
-                    if ((item.tipo === 'texto' || item.tipo === 'imagem') && item.paginaFisica === pageNum && item.highlightRects && item.highlightRects.length > 0) {
-                        const firstRect = item.highlightRects[0];
-                        const badge = document.createElement('div');
-                        badge.className = 'pdf-annotation-badge';
-                        badge.style.backgroundColor = topico.cor;
-                        if (window.TopicsManager && typeof window.TopicsManager.obterCorContraste === 'function') {
-                            badge.style.color = window.TopicsManager.obterCorContraste(topico.cor);
-                        }
-                        badge.innerText = numIdeia;
+                    if (item.tipo === 'texto' || item.tipo === 'imagem') {
+                        
+                        // [ARQUITETURA] Filtro flexível para Cross-page e Graceful Degradation (Legado)
+                        const rectsNestaPagina = (item.highlightRects || []).filter(r => 
+                            (r.page === pageNum) || (r.page === undefined && item.paginaFisica === pageNum)
+                        );
 
-                        if (item.tipo === 'texto') {
-                            item.highlightRects.forEach(rect => {
-                                const marker = document.createElement('div');
-                                marker.className = 'pdf-highlight-rect';
-                                marker.style.top = rect.top + 'px';
-                                marker.style.left = rect.left + 'px';
-                                marker.style.width = rect.width + 'px';
-                                marker.style.height = rect.height + 'px';
-                                marker.style.borderBottom = `2.5px solid ${borderCor}`;
-                                highlightLayerDiv.appendChild(marker);
-                            });
-                            badge.style.top = (firstRect.top + (firstRect.height / 2)) + 'px';
-                            badge.style.transform = 'translateY(-50%)'; 
-                        } else if (item.tipo === 'imagem') {
-                            item.highlightRects.forEach(rect => {
-                                const marker = document.createElement('div');
-                                marker.className = 'pdf-highlight-rect';
-                                marker.style.top = rect.top + 'px';
-                                marker.style.left = rect.left + 'px';
-                                marker.style.width = rect.width + 'px';
-                                marker.style.height = rect.height + 'px';
-                                marker.style.border = `1.5px dashed ${borderCor}`;
-                                highlightLayerDiv.appendChild(marker);
-                            });
-                            badge.style.top = firstRect.top + 'px';
-                            badge.style.right = 'auto';
-                            badge.style.left = Math.max(4, firstRect.left - 28) + 'px';
-                        }
-                        
-                        badge.addEventListener('mouseenter', (e) => {
-                            const tooltip = document.getElementById('quick-intent-tooltip');
-                        if (!tooltip) return;
-                        tooltip.innerHTML = `<strong>Tópico Vinculado</strong>${topico.nome}<br><span style="font-size:0.75rem; color:#aab; display:block; margin-top:4px;">(Ctrl + Clique para acessar a anotação)</span>`;
-                        tooltip.style.display = 'block';
-                        tooltip.classList.remove('visible');
-                        
-                        let x = e.clientX + 15;
-                        let y = e.clientY + 15;
-                        const rect = tooltip.getBoundingClientRect();
-                        if (x + rect.width > window.innerWidth) x = e.clientX - rect.width - 15;
-                        if (y + rect.height > window.innerHeight) y = e.clientY - rect.height - 15;
-                        
-                        tooltip.style.left = `${x}px`;
-                        tooltip.style.top = `${y}px`;
-                        requestAnimationFrame(() => tooltip.classList.add('visible'));
-                    });
-                    
-                    badge.addEventListener('mouseleave', () => {
-                        const tooltip = document.getElementById('quick-intent-tooltip');
-                        if (tooltip) {
-                            tooltip.classList.remove('visible');
-                            setTimeout(() => { tooltip.style.display = 'none'; }, 200);
-                        }
-                    });
-
-                    // Gatilho de Viagem (Navegação Reversa)
-                    badge.addEventListener('click', (e) => {
-                        if (e.ctrlKey && !e.shiftKey) {
-                            e.preventDefault();
-                            e.stopPropagation(); // Bloqueia propagação p/ o container e popups indesejados
+                        if (rectsNestaPagina.length > 0) {
+                            const firstRect = rectsNestaPagina[0];
+                            const badge = document.createElement('div');
+                            badge.className = 'pdf-annotation-badge';
+                            badge.style.backgroundColor = topico.cor;
                             
-                            if (window.navegarParaAnotacao) {
-                                const indiceDestino = parentIndex !== undefined ? parentIndex : idx;
-                                window.navegarParaAnotacao(topico.id, indiceDestino);
+                            if (window.TopicsManager && typeof window.TopicsManager.obterCorContraste === 'function') {
+                                badge.style.color = window.TopicsManager.obterCorContraste(topico.cor);
+                            }
+                            badge.innerText = numIdeia;
+
+                            if (item.tipo === 'texto') {
+                                rectsNestaPagina.forEach(rect => {
+                                    const marker = document.createElement('div');
+                                    marker.className = 'pdf-highlight-rect';
+                                    marker.style.top = rect.top + 'px';
+                                    marker.style.left = rect.left + 'px';
+                                    marker.style.width = rect.width + 'px';
+                                    marker.style.height = rect.height + 'px';
+                                    marker.style.borderBottom = `2.5px solid ${borderCor}`;
+                                    highlightLayerDiv.appendChild(marker);
+                                });
+                                badge.style.top = (firstRect.top + (firstRect.height / 2)) + 'px';
+                                badge.style.transform = 'translateY(-50%)'; 
+                            } else if (item.tipo === 'imagem') {
+                                rectsNestaPagina.forEach(rect => {
+                                    const marker = document.createElement('div');
+                                    marker.className = 'pdf-highlight-rect';
+                                    marker.style.top = rect.top + 'px';
+                                    marker.style.left = rect.left + 'px';
+                                    marker.style.width = rect.width + 'px';
+                                    marker.style.height = rect.height + 'px';
+                                    marker.style.border = `1.5px dashed ${borderCor}`;
+                                    highlightLayerDiv.appendChild(marker);
+                                });
+                                badge.style.top = firstRect.top + 'px';
+                                badge.style.right = 'auto';
+                                badge.style.left = Math.max(4, firstRect.left - 28) + 'px';
+                            }
+
+                            // Renderiza a Badge de interação estritamente na página Âncora para não duplicar eventos
+                            const ehPaginaAncora = (item.paginaFisica === pageNum) || (item.paginaFisica === undefined);
+                            
+                            if (ehPaginaAncora) {
+                                badge.addEventListener('mouseenter', (e) => {
+                                    const tooltip = document.getElementById('quick-intent-tooltip');
+                                    if (!tooltip) return;
+                                    tooltip.innerHTML = `<strong>Tópico Vinculado</strong>${topico.nome}<br><span style="font-size:0.75rem; color:#aab; display:block; margin-top:4px;">(Ctrl + Clique para acessar a anotação)</span>`;
+                                    tooltip.style.display = 'block';
+                                    tooltip.classList.remove('visible');
+                                    
+                                    let x = e.clientX + 15;
+                                    let y = e.clientY + 15;
+                                    const rect = tooltip.getBoundingClientRect();
+                                    if (x + rect.width > window.innerWidth) x = e.clientX - rect.width - 15;
+                                    if (y + rect.height > window.innerHeight) y = e.clientY - rect.height - 15;
+                                    
+                                    tooltip.style.left = `${x}px`;
+                                    tooltip.style.top = `${y}px`;
+                                    requestAnimationFrame(() => tooltip.classList.add('visible'));
+                                });
+                                
+                                badge.addEventListener('mouseleave', () => {
+                                    const tooltip = document.getElementById('quick-intent-tooltip');
+                                    if (tooltip) {
+                                        tooltip.classList.remove('visible');
+                                        setTimeout(() => { tooltip.style.display = 'none'; }, 200);
+                                    }
+                                });
+
+                                badge.addEventListener('click', (e) => {
+                                    if (e.ctrlKey && !e.shiftKey) {
+                                        e.preventDefault();
+                                        e.stopPropagation(); 
+                                        if (window.navegarParaAnotacao) {
+                                            const indiceDestino = parentIndex !== undefined ? parentIndex : idx;
+                                            window.navegarParaAnotacao(topico.id, indiceDestino);
+                                        }
+                                    }
+                                });
+
+                                highlightLayerDiv.appendChild(badge);
                             }
                         }
-                    });
-
-                    highlightLayerDiv.appendChild(badge);
                     }
                     if (item.itensCorrelacionados) {
                         desenharMarcacoes(item.itensCorrelacionados, parentIndex !== undefined ? parentIndex : idx);

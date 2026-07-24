@@ -744,7 +744,7 @@ function renderizarTopicos() {
 function capturarTrechoSelecionado() {
     const selection = window.getSelection();
     
-    // [NOVO] Executa o Data Sanitization Pipeline antes de validar o length
+    // 1. Pipeline de Higienização de Texto
     let selecaoTexto = selection.toString().trim();
     selecaoTexto = window.JurisUtils.limparTextoPDF(selecaoTexto);
 
@@ -753,32 +753,71 @@ function capturarTrechoSelecionado() {
         return;
     }
 
-    const node = selection.anchorNode;
-    if (!node) return;
+    const anchorNode = selection.anchorNode;
+    const focusNode = selection.focusNode;
+    if (!anchorNode || !focusNode) return;
 
-    const element = node.nodeType === 3 ? node.parentNode : node;
-    const pageContainer = element.closest('.pdf-page-container');
+    const anchorContainer = (anchorNode.nodeType === 3 ? anchorNode.parentNode : anchorNode).closest('.pdf-page-container');
+    const focusContainer = (focusNode.nodeType === 3 ? focusNode.parentNode : focusNode).closest('.pdf-page-container');
 
-    if (!pageContainer) {
+    if (!anchorContainer || !focusContainer) {
         exibirToast('A seleção deve estar dentro do PDF.', 'aviso');
         return;
     }
 
-    const anchorPage = parseInt(pageContainer.dataset.pageNumber, 10);
+    const anchorPageNum = parseInt(anchorContainer.dataset.pageNumber, 10);
+    const focusPageNum = parseInt(focusContainer.dataset.pageNumber, 10);
+    
+    // Otimização: Delimita o Range geográfico (ex: da Pág 3 até a Pág 4)
+    const minPage = Math.min(anchorPageNum, focusPageNum);
+    const maxPage = Math.max(anchorPageNum, focusPageNum);
+
+    // 2. DOM Read Phase (Prevenção de Layout Thrashing)
+    // Lê as dimensões apenas das páginas englobadas na seleção, em lote.
+    const cachedPages = [];
+    for (let i = minPage; i <= maxPage; i++) {
+        const pageEl = document.querySelector(`.pdf-page-container[data-page-number="${i}"]`);
+        if (pageEl) {
+            cachedPages.push({
+                page: i,
+                rect: pageEl.getBoundingClientRect()
+            });
+        }
+    }
+
     const range = selection.getRangeAt(0);
-    const rects = Array.from(range.getClientRects());
-    const containerRect = pageContainer.getBoundingClientRect();
+    const rawRects = Array.from(range.getClientRects());
+    const mappedRects = [];
 
-    _tempHighlightState.rects = rects.map(r => ({
-        top: r.top - containerRect.top,
-        left: r.left - containerRect.left,
-        width: r.width,
-        height: r.height
-    }));
-    _tempHighlightState.paginaFisica = anchorPage;
+    // 3. Compute Phase (Pura Matemática em Memória - Custo O(1))
+    rawRects.forEach(rect => {
+        const midY = rect.top + (rect.height / 2);
+        
+        // Busca na memória (cachedPages tem, no máximo, 2 ou 3 itens)
+        const matchedPage = cachedPages.find(p => midY >= p.rect.top && midY <= p.rect.bottom);
+        
+        if (matchedPage) {
+            mappedRects.push({
+                page: matchedPage.page,
+                top: rect.top - matchedPage.rect.top,
+                left: rect.left - matchedPage.rect.left,
+                width: rect.width,
+                height: rect.height
+            });
+        }
+    });
 
+    if (mappedRects.length === 0) return;
+
+    // 4. Update de Estado
+    _tempHighlightState.rects = mappedRects;
+    _tempHighlightState.paginaFisica = anchorPageNum; // Referência mãe mantida
+
+    // 5. Restauração de UX (Posicionamento espacial do Popup preservado)
     if (typeof exibirPopupClassificacao === 'function') {
-        exibirPopupClassificacao('texto', selecaoTexto, rects[0].left, rects[0].bottom + 10, anchorPage);
+        const popupAnchorX = rawRects[rawRects.length - 1].left;
+        const popupAnchorY = rawRects[rawRects.length - 1].bottom + 10;
+        exibirPopupClassificacao('texto', selecaoTexto, popupAnchorX, popupAnchorY, anchorPageNum);
     }
 }
 
