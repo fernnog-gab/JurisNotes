@@ -72,13 +72,19 @@ window.JurisUtils = window.JurisUtils || {};
 window.JurisUtils.limparTextoPDF = function(texto) {
     if (!texto || typeof texto !== 'string') return '';
     return texto
-        // 1. Remove APENAS hifens de divisão silábica (entre letras Unicode).
-        // Protege listas (- item) e nomenclaturas mistas (art. 10-A)
+        // 1. [NOVO] FILTRO LGPD (Execução Primária)
+        // Busca a âncora padrão do PJe e captura até o final da quebra de linha.
+        // A flag 'm' garante que o '$' identifique o final da linha isolada.
+        // É substituído por um espaço ' ' para garantir que as palavras vizinhas não colem.
+        .replace(/Documento\s+assinado\s+eletronicamente\s+por.*$/gim, ' ')
+        // 2. Normalização Linguística: Remove hifens de divisão silábica
+        // Protege listas e nomenclaturas mistas (ex: art. 10-A)
         .replace(/([\p{L}])-\r?\n\s*([\p{L}])/gu, '$1$2')
-        // 2. Emenda linhas quebradas simples. 
+        // 3. Reconstrução Estrutural: Emenda linhas quebradas simples. 
         // Protege parágrafos reais (preserva \n\n ou \r\n\r\n)
         .replace(/([^\n\r])\r?\n([^\n\r])/g, '$1 $2')
-        // 3. Colapsa espaços duplos ou múltiplos criados durante a junção
+        // 4. Polimento Final: Colapsa espaços duplos criados pela junção
+        // e pelo apagamento da assinatura no passo 1.
         .replace(/ {2,}/g, ' ')
         .trim();
 };
