@@ -82,21 +82,36 @@ window.JurisUtils = (function() {
     return {
         criarRegexDeRepeticao: function(textoExemplo) {
             if (!textoExemplo || typeof textoExemplo !== 'string') return null;
-            let snippet = textoExemplo.trim();
-            
-            // GUARDRAIL: Previne over-matching de trechos curtos que destruam o documento
-            if (snippet.length < 30) return null;
 
-            // Escapa caracteres sensíveis de Regex para tratar a string do usuário como literal
+            // 1. PRÉ-LIMPEZA ESTRATÉGICA
+            // Aplica a mesma faxina no texto do usuário que será aplicada no PDF.
+            // Isso garante que estamos comparando as coisas com o mesmo padrão.
+            let snippet = (typeof this.limparTextoPDF === 'function') 
+                ? this.limparTextoPDF(textoExemplo) 
+                : textoExemplo.trim();
+            
+            // Tolerância levemente ajustada para 20 caracteres para facilitar o uso
+            if (snippet.length < 20) return null; 
+
+            // 2. Escapa caracteres sensíveis de Regex (., /, (, ), etc)
             let pattern = snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             
-            // INTELIGÊNCIA: Troca os literais numéricos fornecidos no exemplo por curingas dinâmicos
-            pattern = pattern.replace(/\d+/g, '\\d+');
+            // 3. TOLERÂNCIA NUMÉRICA (Fuzzy Digits)
+            // Resolve o problema do "7860 3". Onde o usuário colou números, 
+            // a regra aceitará números misturados com espaços e quebras de linha.
+            pattern = pattern.replace(/\d+/g, '[\\d\\s]+');
+
+            // 4. TOLERÂNCIA DE PONTUAÇÃO (Fuzzy Punctuation)
+            // PDFs misturam hífens (-), traços (–) e travessões (—). 
+            // Essa linha torna todos eles equivalentes e opcionais.
+            pattern = pattern.replace(/[-–—_]/g, '[-–—_\\s]*');
             
-            // INTELIGÊNCIA: Absorve inconsistências de extração do PDF (quebras de linha estranhas, múltiplos espaços)
+            // 5. TOLERÂNCIA DE ESPAÇAMENTO 
+            // Qualquer espaço vira um curinga gigante que engole espaços extras e quebras de página.
             pattern = pattern.replace(/\s+/g, '\\s+');
             
-            return new RegExp(pattern, 'gi');
+            // 6. Retorna a regra com uma "gordura" nas bordas (\s*) para absorver lixos de quebra de linha
+            return new RegExp('\\s*' + pattern + '\\s*', 'gi');
         },
 
         limparTextoPDF: function(texto) {
