@@ -34,6 +34,27 @@ window.ExportManager = (function () {
     'use strict';
 
     let _deps = {};
+    let _regrasDeLimpezaCache = null;
+
+    function _obterChaveStorageFiltro() {
+        const tagDom = document.getElementById('tag-numero-processo');
+        const numProcesso = tagDom && tagDom.textContent.trim() ? tagDom.textContent.trim() : 'padrao';
+        return `juris_filtros_${numProcesso}`;
+    }
+
+    function _carregarRegrasFiltro() {
+        if (_regrasDeLimpezaCache) return _regrasDeLimpezaCache;
+        try {
+            const salvo = sessionStorage.getItem(_obterChaveStorageFiltro());
+            _regrasDeLimpezaCache = salvo ? JSON.parse(salvo) : {};
+        } catch { _regrasDeLimpezaCache = {}; }
+        return _regrasDeLimpezaCache;
+    }
+
+    function _salvarRegrasFiltro() {
+        if (!_regrasDeLimpezaCache) return;
+        sessionStorage.setItem(_obterChaveStorageFiltro(), JSON.stringify(_regrasDeLimpezaCache));
+    }
 
     // ─── INICIALIZAÇÃO ────────────────────────────────────────────────────────
 
@@ -621,6 +642,12 @@ window.ExportManager = (function () {
                 
                 const nomeF = docNomes[docTipo] || docTipo.toUpperCase();
                 
+                const regras = _carregarRegrasFiltro();
+                const hasRegra = !!regras[docTipo];
+                
+                const svgEraser = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>`;
+                const btnBorracha = `<button type="button" class="pin-eraser-btn trigger-borracha ${hasRegra ? 'is-active' : ''}" data-doc-tipo="${docTipo}" data-doc-nome="${_escapeXmlAttr(nomeF)}" title="Borracha Mágica">${svgEraser}</button>`;
+                
                 // Renderização dos botões de ação isolados (com preventDefault para não engatilhar o checkbox)
                 const btnInicio = hasInicio 
                     ? `<button type="button" class="pin-action-btn pin-start-active" onclick="event.preventDefault(); event.stopPropagation(); excluirMarcadorExtracao('${topico.id}', '${docTipo}', 'inicio');" title="Excluir Início (Fl. ${limites.inicio.pagina})">${svgPin}</button>`
@@ -642,6 +669,7 @@ window.ExportManager = (function () {
                             <span class="export-option-subtitle">${statusTexto}</span>
                         </div>
                         <div class="export-pin-controls">
+                            ${btnBorracha}
                             ${btnInicio}
                             ${btnFim}
                         </div>
@@ -652,6 +680,16 @@ window.ExportManager = (function () {
 
         // Injeção Única no DOM (Alta Performance)
         container.innerHTML = htmlBuffer.join('');
+
+        container.addEventListener('click', function(e) {
+            const btnBorrachaTarget = e.target.closest('.trigger-borracha');
+            if (btnBorrachaTarget) {
+                e.preventDefault();
+                const docTipo = btnBorrachaTarget.getAttribute('data-doc-tipo');
+                const docNome = btnBorrachaTarget.getAttribute('data-doc-nome');
+                abrirModalFiltro(docTipo, docNome);
+            }
+        });
 
         document.getElementById('export-avancado-backdrop').style.display = 'block';
         document.getElementById('modal-exportacao-avancada').style.display = 'block';
@@ -679,6 +717,62 @@ window.ExportManager = (function () {
     function fecharPainelExportacao() {
         document.getElementById('export-avancado-backdrop').style.display = 'none';
         document.getElementById('modal-exportacao-avancada').style.display = 'none';
+    }
+
+    function abrirModalFiltro(docTipo, nomeDocAmigavel) {
+        const regras = _carregarRegrasFiltro();
+        document.getElementById('hidden-doc-tipo-filtro').value = docTipo;
+        document.getElementById('label-doc-filtro').textContent = nomeDocAmigavel;
+        document.getElementById('textarea-filtro-repeticao').value = regras[docTipo] || '';
+        validarTamanhoFiltro();
+        
+        document.getElementById('filtro-repeticao-backdrop').style.display = 'block';
+        document.getElementById('modal-filtro-repeticao').style.display = 'block';
+    }
+
+    function fecharModalFiltro() {
+        document.getElementById('filtro-repeticao-backdrop').style.display = 'none';
+        document.getElementById('modal-filtro-repeticao').style.display = 'none';
+    }
+
+    function validarTamanhoFiltro() {
+        const texto = document.getElementById('textarea-filtro-repeticao').value.trim();
+        const btnSalvar = document.getElementById('btn-salvar-filtro');
+        const aviso = document.getElementById('aviso-tamanho-filtro');
+        
+        if (texto.length > 0 && texto.length < 30) {
+            btnSalvar.disabled = true;
+            btnSalvar.style.opacity = '0.5';
+            aviso.style.display = 'block';
+        } else {
+            btnSalvar.disabled = false;
+            btnSalvar.style.opacity = '1';
+            aviso.style.display = 'none';
+        }
+    }
+
+    function salvarFiltro() {
+        const docTipo = document.getElementById('hidden-doc-tipo-filtro').value;
+        const texto = document.getElementById('textarea-filtro-repeticao').value.trim();
+        const regras = _carregarRegrasFiltro();
+        
+        if (texto.length >= 30) {
+            regras[docTipo] = texto;
+            _salvarRegrasFiltro();
+            _deps.exibirToast('Regra de limpeza salva para esta peça!', 'sucesso');
+        } else if (texto.length === 0) {
+            delete regras[docTipo];
+            _salvarRegrasFiltro();
+            _deps.exibirToast('Regra desativada.', 'info');
+        }
+        
+        fecharModalFiltro();
+        abrirPainelExportacao();
+    }
+
+    function limparFiltro() {
+        document.getElementById('textarea-filtro-repeticao').value = '';
+        salvarFiltro();
     }
 
     async function gerarExportacaoPersonalizada() {
@@ -736,8 +830,17 @@ window.ExportManager = (function () {
                             }
                         );
                         
-                        const textoLimpo = (window.JurisUtils && window.JurisUtils.limparTextoPDF) 
+                        let textoLimpo = (window.JurisUtils && window.JurisUtils.limparTextoPDF) 
                             ? window.JurisUtils.limparTextoPDF(textoBruto) : textoBruto;
+                        
+                        const regras = _carregarRegrasFiltro();
+                        if (regras[docTipo] && window.JurisUtils && window.JurisUtils.criarRegexDeRepeticao) {
+                            const regex = window.JurisUtils.criarRegexDeRepeticao(regras[docTipo]);
+                            if (regex) {
+                                textoLimpo = textoLimpo.replace(regex, '\n'); 
+                            }
+                        }
+
                         conteudoFinal += `<${tagName}>\n${textoLimpo}\n</${tagName}>\n\n`;
                         
                     } catch (extraError) {
@@ -795,6 +898,18 @@ window.ExportManager = (function () {
         }
     }
 
-    return { init, exportarTopicoAtivo, obterDadosDoTopicoAtivo, abrirPainelExportacao, fecharPainelExportacao, gerarExportacaoPersonalizada };
+    return { 
+        init, 
+        exportarTopicoAtivo, 
+        obterDadosDoTopicoAtivo, 
+        abrirPainelExportacao, 
+        fecharPainelExportacao, 
+        gerarExportacaoPersonalizada,
+        abrirModalFiltro,
+        fecharModalFiltro,
+        validarTamanhoFiltro,
+        salvarFiltro,
+        limparFiltro
+    };
 
 })();

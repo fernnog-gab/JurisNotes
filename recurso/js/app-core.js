@@ -80,6 +80,25 @@ window.JurisUtils = (function() {
     const REGEX_ESPACOS_DUPLOS = / {2,}/g;
 
     return {
+        criarRegexDeRepeticao: function(textoExemplo) {
+            if (!textoExemplo || typeof textoExemplo !== 'string') return null;
+            let snippet = textoExemplo.trim();
+            
+            // GUARDRAIL: Previne over-matching de trechos curtos que destruam o documento
+            if (snippet.length < 30) return null;
+
+            // Escapa caracteres sensíveis de Regex para tratar a string do usuário como literal
+            let pattern = snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            
+            // INTELIGÊNCIA: Troca os literais numéricos fornecidos no exemplo por curingas dinâmicos
+            pattern = pattern.replace(/\d+/g, '\\d+');
+            
+            // INTELIGÊNCIA: Absorve inconsistências de extração do PDF (quebras de linha estranhas, múltiplos espaços)
+            pattern = pattern.replace(/\s+/g, '\\s+');
+            
+            return new RegExp(pattern, 'gi');
+        },
+
         limparTextoPDF: function(texto) {
             if (!texto || typeof texto !== 'string') return '';
             
