@@ -834,14 +834,11 @@ window.ExportManager = (function () {
                             ? window.JurisUtils.limparTextoPDF(textoBruto) : textoBruto;
                         
                         const regras = _carregarRegrasFiltro();
-                        if (regras[docTipo] && window.JurisUtils && window.JurisUtils.criarRegexDeRepeticao) {
-                            const regex = window.JurisUtils.criarRegexDeRepeticao(regras[docTipo]);
-                            if (regex) {
-                                // Aplica a Borracha Mágica e injeta o marcador semântico para a IA.
-                                // Usamos \n\n para criar parágrafos limpos isolando o aviso.
-                                const marcadorLGPD = '\n\n[AVISO DE SISTEMA: Dados sensíveis ou estruturais (cabeçalho/rodapé) ocultados pelo assessor em adequação à LGPD.]\n\n';
-                                textoLimpo = textoLimpo.replace(regex, marcadorLGPD); 
-                            }
+                        if (regras[docTipo] && window.JurisUtils && window.JurisUtils.removerTrechoFuzzy) {
+                            const MARCADOR_OFICIAL_LGPD = '\n\n[AVISO DE SISTEMA: Dados sensíveis (ex: endereços) ou estruturais (cabeçalhos) foram ocultados pela Borracha Mágica para adequação à LGPD.]\n\n';
+                            
+                            // Execução com delegação de responsabilidade correta
+                            textoLimpo = window.JurisUtils.removerTrechoFuzzy(textoLimpo, regras[docTipo], MARCADOR_OFICIAL_LGPD);
                         }
 
                         conteudoFinal += `<${tagName}>\n${textoLimpo}\n</${tagName}>\n\n`;
