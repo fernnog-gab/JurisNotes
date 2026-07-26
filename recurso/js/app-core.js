@@ -83,32 +83,22 @@ window.JurisUtils = (function() {
         criarRegexDeRepeticao: function(textoExemplo) {
             if (!textoExemplo || typeof textoExemplo !== 'string') return null;
 
-            // 1. PRÉ-LIMPEZA ESTRATÉGICA
             let snippet = (typeof this.limparTextoPDF === 'function') 
                 ? this.limparTextoPDF(textoExemplo) 
                 : textoExemplo.trim();
             
-            // Tolerância: Exige mínimo de 30 caracteres para segurança do mérito
             if (snippet.length < 30) return null; 
 
-            // 2. ESCAPE DE SEGURANÇA (Blindagem contra Regex Injection)
+            // Padronização absoluta de espaços antes do escape
+            snippet = snippet.replace(/\s+/g, ' ');
             let pattern = snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             
-            // 3. MÁSCARA NUMÉRICA SEGURA (Bounded Quantifier)
-            // Substitui números da amostra por uma classe estrita limitada a 20 caracteres.
-            // Permite absorver: "fls. 12", "Página 1 de 10", "15/03/2023"
-            pattern = pattern.replace(/\d+/g, '[\\d\\s.,/\\-–_]{1,20}');
-
-            // 4. MÁSCARA DE PONTUAÇÃO (Bounded Quantifier)
-            // Torna pontuações flexíveis para absorver erros leves de OCR, sem elasticidade infinita.
-            pattern = pattern.replace(/[-–—_.,;:]+/g, '[-–—_.,;:\\s]{0,5}');
+            pattern = pattern.replace(/\d+/g, '[\\d\\s.,/\\-–_]{1,25}');
+            pattern = pattern.replace(/[-–—_.,;:]+/g, '[-–—_.,;:\\s]{0,8}');
             
-            // 5. MÁSCARA DE ESPAÇOS EXPANDIDA (DOM + PDF Artifacts)
-            // Lida com espaços duplos, quebras de página (\n) e caracteres invisíveis do PDF.js
-            pattern = pattern.replace(/\s+/g, '[\\s\\u200B-\\u200D\\uFEFF]+');
+            // Injeção de tolerância universal para espaços e quebras na malha do texto
+            pattern = pattern.replace(/ /g, '[\\s\\u200B-\\u200D\\uFEFF]{1,10}');
             
-            // 6. RETORNO SEGURO (Bordas restritas a espaços)
-            // Absorve apenas lixo estrutural nas pontas, protegendo o mérito adjacente.
             return new RegExp('\\s*' + pattern + '\\s*', 'gi');
         },
 
