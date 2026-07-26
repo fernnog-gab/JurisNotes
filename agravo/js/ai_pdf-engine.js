@@ -169,38 +169,101 @@ window.PdfEngine = (function () {
     /* ================================================
        EXTRAÇÃO MATEMÁTICA DE TEXTO POR REGIÃO (ALFINETE)
        ================================================ */
-    async function extrairTextoPorRegiao(marcoInicio, marcoFim) {
+    
+    // Função utilitária para liberar a Main Thread (macro-task)
+    const _yieldToMain = () => new Promise(resolve => setTimeout(resolve, 0));
+
+    async function extrairTextoPorRegiao(marcoInicio, marcoFim, onProgress = null) {
         if (!_pdfDoc) return "";
         
+        // LOCK DE INTEGRIDADE: Previne que o usuário troque de PDF no meio da extração
+        const targetPdfInstance = _pdfDoc;
         let textoExtraido = "";
+        
+        // CONFIGURAÇÕES ARQUITETURAIS (Evitando Magic Numbers)
+        // OBS: Se o sistema ganhar zoom dinâmico no futuro, alterar para ler o data-scale do DOM
+        const ESCALA_RENDERIZACAO_UI = 1.5; 
+        const PADDING_SEGURANCA_PTS = 4; // Margem para blindar fontes grandes/cliques limítrofes
+        const TIME_BUDGET_MS = 40; // Limiar para ceder a Thread Principal
+        
         const pInicio = Math.min(marcoInicio.pagina, marcoFim.pagina);
         const pFim = Math.max(marcoInicio.pagina, marcoFim.pagina);
         
-        // Garante que o Y Inicial corresponde à página inicial correta (caso o usuário inverta a ordem de marcação)
+        // Garante que o offset Y corresponde à página correta, mesmo se marcados fora de ordem
         const yInicioDOM = (pInicio === marcoInicio.pagina) ? marcoInicio.offsetY : marcoFim.offsetY;
         const yFimDOM = (pFim === marcoFim.pagina) ? marcoFim.offsetY : marcoInicio.offsetY;
+        
+        const totalPaginas = (pFim - pInicio) + 1;
+        let lastYieldTime = performance.now();
 
         for (let i = pInicio; i <= pFim; i++) {
+            if (_pdfDoc !== targetPdfInstance) {
+                throw new Error("CONCURRENCY_VIOLATION: O documento original foi alterado durante a extração.");
+            }
+
             const page = await _pdfDoc.getPage(i);
-            const viewport = page.getViewport({ scale: 1.5 }); // Mesma escala do renderizador visual
+            
+            // Renderiza o viewport nativo (Scale 1.0) para cruzar com a geometria do texto puro
+            const viewportNative = page.getViewport({ scale: 1.0 }); 
             const textContent = await page.getTextContent();
             
-            // CONVERSÃO CIENTÍFICA: PDF.js 'y' cresce de baixo pra cima. 
-            // Transformamos a coordenada Y do DOM (pixels relativos à div) para o Y nativo do PDF.
-            const pdfTopBound = (i === pInicio) ? (viewport.height - yInicioDOM) : viewport.height;
-            const pdfBottomBound = (i === pFim) ? (viewport.height - yFimDOM) : 0;
+            // 1. CONVERSÃO DE ESCALA (DOM -> PDF Nativo)
+            const yInicioNativo = yInicioDOM / ESCALA_RENDERIZACAO_UI;
+            const yFimNativo = yFimDOM / ESCALA_RENDERIZACAO_UI;
 
+            // 2. INVERSÃO DE EIXO Y (No PDF, 0 é o rodapé e cresce para cima)
+            // O limite "Superior" matemático é o maior número (topo visual)
+            let limiteYSuperiorPDF = (i === pInicio) ? (viewportNative.height - yInicioNativo) : viewportNative.height;
+            let limiteYInferiorPDF = (i === pFim) ? (viewportNative.height - yFimNativo) : 0;
+
+            // 3. PADDING E CLAMPING (Sanity Check)
+            if (i === pInicio) {
+                limiteYSuperiorPDF = Math.min(viewportNative.height, limiteYSuperiorPDF - PADDING_SEGURANCA_PTS);
+            }
+            if (i === pFim) {
+                limiteYInferiorPDF = Math.max(0, limiteYInferiorPDF + PADDING_SEGURANCA_PTS);
+            }
+
+            // 4. TRAVA ANTI-INVERSÃO LÓGICA (Caso o Fim seja marcado fisicamente acima do Início)
+            if (pInicio === pFim && limiteYInferiorPDF > limiteYSuperiorPDF) {
+                const temp = limiteYSuperiorPDF;
+                limiteYSuperiorPDF = limiteYInferiorPDF;
+                limiteYInferiorPDF = temp;
+            }
+
+            // 5. EXTRAÇÃO
             let textoPagina = textContent.items
                 .filter(item => {
-                    const textY = item.transform[5];
-                    // Aceita texto que está ABAIXO do limite superior e ACIMA do limite inferior
-                    return textY <= pdfTopBound && textY >= pdfBottomBound;
+                    const baseTextoY = item.transform[5];
+                    return baseTextoY <= limiteYSuperiorPDF && baseTextoY >= limiteYInferiorPDF;
                 })
                 .map(item => item.str)
                 .join(' ');
                 
             textoExtraido += textoPagina + " \n\n ";
+
+            // 6. ATUALIZAÇÃO DA UI
+            if (onProgress) {
+                try {
+                    const atual = (i - pInicio) + 1;
+                    onProgress(atual, totalPaginas);
+                } catch (e) {
+                    console.warn("[PdfEngine AI] Aviso não-bloqueante no callback de UI.", e);
+                }
+            }
+
+            // 7. PROTEÇÃO DA MAIN THREAD
+            if (performance.now() - lastYieldTime > TIME_BUDGET_MS) {
+                await _yieldToMain();
+                lastYieldTime = performance.now(); 
+            }
         }
+        
+        // 8. TRATAMENTO UX PARA DOCUMENTOS SEM OCR
+        if (textoExtraido.trim().length === 0) {
+            _deps.exibirToast("Não foi possível extrair texto. O documento pode ser uma imagem digitalizada (sem OCR).", "aviso");
+        }
+        
         return textoExtraido;
     }
 
