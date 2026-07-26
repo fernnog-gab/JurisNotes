@@ -70,6 +70,49 @@ window.sincronizarHighlightsGerais = function() {
    ================================================ */
 window.JurisUtils = window.JurisUtils || {};
 
+window.JurisUtils.removerTrechoFuzzy = function(textoBruto, amostraTarget, marcadorLGPD) {
+    if (!textoBruto || !amostraTarget) return textoBruto;
+    const fallbackMarcador = '\n\n[AVISO DE SISTEMA: Dados estruturais ou sensíveis ocultados.]\n\n';
+    const tagFinal = marcadorLGPD !== undefined ? marcadorLGPD : fallbackMarcador;
+
+    // Fase 1: Análise atômica da agulha usando iterador nativo (Surrogate Pairs Safe)
+    const agulhaMatches = [...amostraTarget.toLowerCase().matchAll(/[\p{L}]/gu)];
+    if (agulhaMatches.length < 15) return textoBruto; // Trava de Segurança
+    const esqueletoAgulha = agulhaMatches.map(m => m[0]).join('');
+
+    // Fase 2: Mapeamento indexado em O(N) do Palheiro
+    const palheiroMatches = [...textoBruto.toLowerCase().matchAll(/[\p{L}]/gu)];
+    if (palheiroMatches.length === 0) return textoBruto;
+    const esqueletoPalheiro = palheiroMatches.map(m => m[0]).join('');
+
+    // Fase 3: Detecção Vetorial
+    const rangesParaSubstituir = [];
+    let startIndex = 0;
+
+    while (true) {
+        const pos = esqueletoPalheiro.indexOf(esqueletoAgulha, startIndex);
+        if (pos === -1) break;
+
+        const inicioReal = palheiroMatches[pos].index;
+        const fimRealObj = palheiroMatches[pos + esqueletoAgulha.length - 1];
+        const fimReal = fimRealObj.index + fimRealObj[0].length; // Absorção completa do Code Unit
+
+        rangesParaSubstituir.push({ start: inicioReal, end: fimReal });
+        startIndex = pos + esqueletoAgulha.length;
+    }
+
+    if (rangesParaSubstituir.length === 0) return textoBruto;
+
+    // Fase 4: Mutação Inversa (Zero-shift)
+    let resultadoFinal = textoBruto;
+    for (let i = rangesParaSubstituir.length - 1; i >= 0; i--) {
+        const { start, end } = rangesParaSubstituir[i];
+        resultadoFinal = resultadoFinal.substring(0, start) + tagFinal + resultadoFinal.substring(end);
+    }
+
+    return resultadoFinal;
+};
+
 window.JurisUtils.limparTextoPDF = function(texto) {
     if (!texto || typeof texto !== 'string') return '';
     return texto

@@ -505,9 +505,27 @@ window.ExportManager = (function () {
                     
                     try {
                         const textoBruto = await window.PdfEngine.extrairTextoPorRegiao(limites.inicio, limites.fim);
-                        const textoLimpo = (window.JurisUtils && window.JurisUtils.limparTextoPDF) 
+                        let textoLimpo = (window.JurisUtils && window.JurisUtils.limparTextoPDF) 
                             ? window.JurisUtils.limparTextoPDF(textoBruto) 
                             : textoBruto;
+                        
+                        // Execução da Borracha Mágica LGPD (O(N) Vector Search) - Adaptado para o AI
+                        try {
+                            const tagDom = document.getElementById('tag-numero-processo');
+                            const numProcesso = tagDom && tagDom.textContent.trim() ? tagDom.textContent.trim() : 'padrao';
+                            const regrasSalvas = sessionStorage.getItem(`juris_filtros_${numProcesso}`);
+                            
+                            if (regrasSalvas && window.JurisUtils && window.JurisUtils.removerTrechoFuzzy) {
+                                const regras = JSON.parse(regrasSalvas);
+                                if (regras[docTipo]) {
+                                    const MARCADOR_OFICIAL_LGPD = '\n\n[AVISO DE SISTEMA: Dados sensíveis (ex: endereços) ou estruturais (cabeçalhos) foram ocultados pela Borracha Mágica para adequação à LGPD.]\n\n';
+                                    textoLimpo = window.JurisUtils.removerTrechoFuzzy(textoLimpo, regras[docTipo], MARCADOR_OFICIAL_LGPD);
+                                }
+                            }
+                        } catch (e) {
+                            console.warn("[ExportManager AI] Erro ao aplicar filtro LGPD:", e);
+                        }
+
                         conteudoFinal += `<${tagName}>\n${textoLimpo}\n</${tagName}>\n\n`;
                     } catch (extraError) {
                         console.warn(`[ExportManager AI] Falha ao extrair ${docTipo}:`, extraError);
