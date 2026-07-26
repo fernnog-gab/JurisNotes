@@ -837,7 +837,10 @@ window.ExportManager = (function () {
                         if (regras[docTipo] && window.JurisUtils && window.JurisUtils.criarRegexDeRepeticao) {
                             const regex = window.JurisUtils.criarRegexDeRepeticao(regras[docTipo]);
                             if (regex) {
-                                textoLimpo = textoLimpo.replace(regex, '\n'); 
+                                // Aplica a Borracha Mágica e injeta o marcador semântico para a IA.
+                                // Usamos \n\n para criar parágrafos limpos isolando o aviso.
+                                const marcadorLGPD = '\n\n[AVISO DE SISTEMA: Dados sensíveis ou estruturais (cabeçalho/rodapé) ocultados pelo assessor em adequação à LGPD.]\n\n';
+                                textoLimpo = textoLimpo.replace(regex, marcadorLGPD); 
                             }
                         }
 

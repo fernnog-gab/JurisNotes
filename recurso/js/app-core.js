@@ -84,33 +84,31 @@ window.JurisUtils = (function() {
             if (!textoExemplo || typeof textoExemplo !== 'string') return null;
 
             // 1. PRÉ-LIMPEZA ESTRATÉGICA
-            // Aplica a mesma faxina no texto do usuário que será aplicada no PDF.
-            // Isso garante que estamos comparando as coisas com o mesmo padrão.
             let snippet = (typeof this.limparTextoPDF === 'function') 
                 ? this.limparTextoPDF(textoExemplo) 
                 : textoExemplo.trim();
             
-            // Tolerância levemente ajustada para 20 caracteres para facilitar o uso
-            if (snippet.length < 20) return null; 
+            // Tolerância: Exige mínimo de 30 caracteres para segurança do mérito
+            if (snippet.length < 30) return null; 
 
-            // 2. Escapa caracteres sensíveis de Regex (., /, (, ), etc)
+            // 2. ESCAPE DE SEGURANÇA (Blindagem contra Regex Injection)
             let pattern = snippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             
-            // 3. TOLERÂNCIA NUMÉRICA (Fuzzy Digits)
-            // Resolve o problema do "7860 3". Onde o usuário colou números, 
-            // a regra aceitará números misturados com espaços e quebras de linha.
-            pattern = pattern.replace(/\d+/g, '[\\d\\s]+');
+            // 3. MÁSCARA NUMÉRICA SEGURA (Bounded Quantifier)
+            // Substitui números da amostra por uma classe estrita limitada a 20 caracteres.
+            // Permite absorver: "fls. 12", "Página 1 de 10", "15/03/2023"
+            pattern = pattern.replace(/\d+/g, '[\\d\\s.,/\\-–_]{1,20}');
 
-            // 4. TOLERÂNCIA DE PONTUAÇÃO (Fuzzy Punctuation)
-            // PDFs misturam hífens (-), traços (–) e travessões (—). 
-            // Essa linha torna todos eles equivalentes e opcionais.
-            pattern = pattern.replace(/[-–—_]/g, '[-–—_\\s]*');
+            // 4. MÁSCARA DE PONTUAÇÃO (Bounded Quantifier)
+            // Torna pontuações flexíveis para absorver erros leves de OCR, sem elasticidade infinita.
+            pattern = pattern.replace(/[-–—_.,;:]+/g, '[-–—_.,;:\\s]{0,5}');
             
-            // 5. TOLERÂNCIA DE ESPAÇAMENTO 
-            // Qualquer espaço vira um curinga gigante que engole espaços extras e quebras de página.
-            pattern = pattern.replace(/\s+/g, '\\s+');
+            // 5. MÁSCARA DE ESPAÇOS EXPANDIDA (DOM + PDF Artifacts)
+            // Lida com espaços duplos, quebras de página (\n) e caracteres invisíveis do PDF.js
+            pattern = pattern.replace(/\s+/g, '[\\s\\u200B-\\u200D\\uFEFF]+');
             
-            // 6. Retorna a regra com uma "gordura" nas bordas (\s*) para absorver lixos de quebra de linha
+            // 6. RETORNO SEGURO (Bordas restritas a espaços)
+            // Absorve apenas lixo estrutural nas pontas, protegendo o mérito adjacente.
             return new RegExp('\\s*' + pattern + '\\s*', 'gi');
         },
 
