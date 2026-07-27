@@ -1077,8 +1077,10 @@ window.TopicsManager = (function () {
         const containerRect = container.getBoundingClientRect();
         let svgContent = '';
 
-        // 1. LINHA VERMELHA: Conecta apenas de Grupo a Grupo (Master items fáticos)
-        const masterItemsForSpine = Array.from(container.querySelectorAll('.timeline-item-master:not(.nivel-hierarquico)'));
+        // 1. LINHA VERMELHA (ESPINHA DORSAL): Conecta Grupo a Grupo (incluindo Teses)
+        // CORREÇÃO TOPOLÓGICA: Alterado de :not(.nivel-hierarquico) para :not(.nivel-global) 
+        // para que a linha ancore corretamente nos cards de Tese.
+        const masterItemsForSpine = Array.from(container.querySelectorAll('.timeline-item-master:not(.nivel-global)'));
 
         for (let i = 0; i < masterItemsForSpine.length - 1; i++) {
             const currentGroup = masterItemsForSpine[i];
@@ -1099,7 +1101,19 @@ window.TopicsManager = (function () {
             const endY = rectProx.top - containerRect.top;
             const ctrlY = (startY + endY) / 2;
 
-            svgContent += `<path d="M ${startX},${startY} C ${startX},${ctrlY} ${endX},${ctrlY} ${endX},${endY}" stroke="rgba(26, 58, 92, 0.25)" stroke-width="2" fill="none" stroke-linecap="round" />`;
+            // Constante geométrica para a haste horizontal nas pontas (8px para cada lado)
+            const tick = 8; 
+
+            // Montagem consolidada do Path:
+            // 1. Haste Superior (Move, Line)
+            // 2. Curva Sinuosa (Move, Curve)
+            // 3. Haste Inferior (Move, Line)
+            const pathD = `M ${startX - tick},${startY} L ${startX + tick},${startY} ` +
+                          `M ${startX},${startY} C ${startX},${ctrlY} ${endX},${ctrlY} ${endX},${endY} ` +
+                          `M ${endX - tick},${endY} L ${endX + tick},${endY}`;
+
+            // Injeção puramente geométrica e semântica
+            svgContent += `<path class="spine-connection" d="${pathD}" />`;
         }
 
         // 2. LINHAS TRACEJADAS: Conecta Master aos Sub-itens (Nós de Ideia)
