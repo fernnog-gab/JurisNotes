@@ -377,9 +377,10 @@ window.PdfEngine = (function () {
                         const ano = match[3];
 
                         // Monta o formato ultra-curto (Ex: 0541-68.2025)
-                        const numeroUltraCurto = `${sequencialLimpo}-${digito}.${ano}`; 
-                        
-                        _deps.onProcessoIdentificado(numeroUltraCurto);
+                            const numeroUltraCurto = `${sequencialLimpo}-${digito}.${ano}`; 
+                            
+                            _deps.onProcessoIdentificado(numeroUltraCurto);
+                        } 
                     } catch (err) {
                         console.warn("[Juris Notes ED] Falha ao tentar capturar o número do processo na capa.", err);
                     }
