@@ -43,6 +43,9 @@
     --z-abas-modal-backdrop: 4004;
     --z-abas-modal: 4005;
     --z-splash: 9999;
+    
+    /* Variável da Espinha Dorsal (Vermelho sólido primário) */
+    --theme-spine-line: #d32f2f;
 }
 
 *, *::before, *::after {
@@ -78,6 +81,7 @@ body.theme-anotacoes-white {
 body.theme-anotacoes-jasmine {
     --notes-bg-color: var(--theme-bg-jasmine);
     --notes-marker-border: var(--theme-border-white);
+    --theme-spine-line: #b71c1c; /* Vermelho sutilmente mais escuro para contraste no creme */
 }
 
 @media (min-width: 768px) {

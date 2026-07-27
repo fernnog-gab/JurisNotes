@@ -1129,8 +1129,10 @@ window.TopicsManager = (function () {
         const containerRect = container.getBoundingClientRect();
         let svgContent = '';
 
-        // 1. LINHA VERMELHA: Conecta apenas de Grupo a Grupo (Master items)
-        const masterItemsForSpine = Array.from(container.querySelectorAll('.timeline-item-master'));
+        // 1. LINHA VERMELHA (ESPINHA DORSAL): Conecta Grupo a Grupo (incluindo Vícios)
+        // CORREÇÃO TOPOLÓGICA: Exclui a diretriz global (.nivel-global) 
+        // para que a linha ancore corretamente nos cards de Vício Alegado.
+        const masterItemsForSpine = Array.from(container.querySelectorAll('.timeline-item-master:not(.nivel-global)'));
 
         for (let i = 0; i < masterItemsForSpine.length - 1; i++) {
             const currentGroup = masterItemsForSpine[i];
@@ -1151,7 +1153,19 @@ window.TopicsManager = (function () {
             const endY = rectProx.top - containerRect.top;
             const ctrlY = (startY + endY) / 2;
 
-            svgContent += `<path d="M ${startX},${startY} C ${startX},${ctrlY} ${endX},${ctrlY} ${endX},${endY}" stroke="#d32f2f" stroke-width="2.5" fill="none" stroke-linecap="round" />`;
+            // Constante geométrica para a haste horizontal nas pontas (8px para cada lado)
+            const tick = 8; 
+
+            // Montagem consolidada do Path:
+            // 1. Haste Superior (Move, Line)
+            // 2. Curva Sinuosa (Move, Curve)
+            // 3. Haste Inferior (Move, Line)
+            const pathD = `M ${startX - tick},${startY} L ${startX + tick},${startY} ` +
+                          `M ${startX},${startY} C ${startX},${ctrlY} ${endX},${ctrlY} ${endX},${endY} ` +
+                          `M ${endX - tick},${endY} L ${endX + tick},${endY}`;
+
+            // Injeção puramente geométrica e semântica
+            svgContent += `<path class="spine-connection" d="${pathD}" />`;
         }
 
         const masterItems = container.querySelectorAll('.timeline-item-master');
