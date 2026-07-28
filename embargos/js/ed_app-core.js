@@ -72,21 +72,86 @@ window.JurisUtils = window.JurisUtils || {};
 window.JurisUtils.limparTextoPDF = function(texto) {
     if (!texto || typeof texto !== 'string') return '';
     return texto
-        // 1. [NOVO] FILTRO LGPD (Execução Primária)
-        // Busca a âncora padrão do PJe e captura até o final da quebra de linha.
-        // A flag 'm' garante que o '$' identifique o final da linha isolada.
-        // É substituído por um espaço ' ' para garantir que as palavras vizinhas não colem.
         .replace(/Documento\s+assinado\s+eletronicamente\s+por.*$/gim, ' ')
-        // 2. Normalização Linguística: Remove hifens de divisão silábica
-        // Protege listas e nomenclaturas mistas (ex: art. 10-A)
         .replace(/([\p{L}])-\r?\n\s*([\p{L}])/gu, '$1$2')
-        // 3. Reconstrução Estrutural: Emenda linhas quebradas simples. 
-        // Protege parágrafos reais (preserva \n\n ou \r\n\r\n)
         .replace(/([^\n\r])\r?\n([^\n\r])/g, '$1 $2')
-        // 4. Polimento Final: Colapsa espaços duplos criados pela junção
-        // e pelo apagamento da assinatura no passo 1.
         .replace(/ {2,}/g, ' ')
         .trim();
+};
+
+const _encontrarMaiorSubstringComum = (s1, s2) => {
+    if (!s1 || !s2) return "";
+    let maxLen = 0, endIdx = 0;
+    const prev = new Uint16Array(s2.length + 1);
+    const curr = new Uint16Array(s2.length + 1);
+    for (let i = 1; i <= s1.length; i++) {
+        for (let j = 1; j <= s2.length; j++) {
+            if (s1[i - 1] === s2[j - 1]) {
+                curr[j] = prev[j - 1] + 1;
+                if (curr[j] > maxLen) { maxLen = curr[j]; endIdx = i; }
+            } else { curr[j] = 0; }
+        }
+        prev.set(curr);
+    }
+    return s1.substring(endIdx - maxLen, endIdx);
+};
+
+window.JurisUtils.removerTrechoFuzzy = function(textoBruto, amostraTarget, marcadorLGPD, isAgulhaEsqueleto = false) {
+    if (!textoBruto || !amostraTarget) return textoBruto;
+    const fallbackMarcador = '\n\n[AVISO DE SISTEMA: Dados estruturais ou sensíveis ocultados.]\n\n';
+    const tagFinal = marcadorLGPD !== undefined ? marcadorLGPD : fallbackMarcador;
+
+    let esqueletoAgulha = amostraTarget;
+    
+    if (!isAgulhaEsqueleto) {
+        const agulhaMatches = [...amostraTarget.toLowerCase().matchAll(/[\p{L}]/gu)];
+        if (agulhaMatches.length < 15) return textoBruto; 
+        esqueletoAgulha = agulhaMatches.map(m => m[0]).join('');
+    }
+
+    const palheiroMatches = [...textoBruto.toLowerCase().matchAll(/[\p{L}]/gu)];
+    if (palheiroMatches.length === 0) return textoBruto;
+    const esqueletoPalheiro = palheiroMatches.map(m => m[0]).join('');
+
+    const rangesParaSubstituir = [];
+    let startIndex = 0;
+
+    while (true) {
+        const pos = esqueletoPalheiro.indexOf(esqueletoAgulha, startIndex);
+        if (pos === -1) break;
+
+        const inicioReal = palheiroMatches[pos].index;
+        const fimRealObj = palheiroMatches[pos + esqueletoAgulha.length - 1];
+        const fimReal = fimRealObj.index + fimRealObj[0].length; 
+
+        rangesParaSubstituir.push({ start: inicioReal, end: fimReal });
+        startIndex = pos + esqueletoAgulha.length;
+    }
+
+    if (rangesParaSubstituir.length === 0) return textoBruto;
+
+    let resultadoFinal = textoBruto;
+    for (let i = rangesParaSubstituir.length - 1; i >= 0; i--) {
+        const { start, end } = rangesParaSubstituir[i];
+        resultadoFinal = resultadoFinal.substring(0, start) + tagFinal + resultadoFinal.substring(end);
+    }
+
+    return resultadoFinal;
+};
+
+window.JurisUtils.descobrirRuidosEstruturais = function(textoPagA, textoPagB) {
+    const esqA = [...textoPagA.toLowerCase().matchAll(/[\p{L}]/gu)].map(m => m[0]).join('');
+    const esqB = [...textoPagB.toLowerCase().matchAll(/[\p{L}]/gu)].map(m => m[0]).join('');
+    if (esqA.length < 50 || esqB.length < 50) return [];
+    
+    const ruidos = [];
+    const lcsTopo = _encontrarMaiorSubstringComum(esqA.substring(0, 300), esqB.substring(0, 300));
+    if (lcsTopo.length >= 15) ruidos.push(lcsTopo);
+    
+    const lcsBase = _encontrarMaiorSubstringComum(esqA.substring(Math.max(0, esqA.length - 300)), esqB.substring(Math.max(0, esqB.length - 300)));
+    if (lcsBase.length >= 15 && lcsBase !== lcsTopo) ruidos.push(lcsBase);
+    
+    return ruidos;
 };
 
 window.JurisUtils.formatarVicioED = function(vicioRaw) {
