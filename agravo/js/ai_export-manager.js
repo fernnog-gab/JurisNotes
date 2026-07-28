@@ -504,10 +504,41 @@ window.ExportManager = (function () {
                     const tagName = docTipo.toUpperCase();
                     
                     try {
-                        const textoBruto = await window.PdfEngine.extrairTextoPorRegiao(limites.inicio, limites.fim);
+                        const pInicio = Math.min(limites.inicio.pagina, limites.fim.pagina);
+                        const pFim = Math.max(limites.inicio.pagina, limites.fim.pagina);
+                        const amostrasMap = new Map();
+
+                        const textoBruto = await window.PdfEngine.extrairTextoPorRegiao(
+                            limites.inicio, 
+                            limites.fim,
+                            null, // Callback de progress UI não era passado aqui no original
+                            (pageNum, rawText) => {
+                                if (pageNum === pInicio + 1 || pageNum === pInicio + 2 || pageNum === pFim - 1) {
+                                    amostrasMap.set(pageNum, rawText);
+                                }
+                            }
+                        );
+                        
                         let textoLimpo = (window.JurisUtils && window.JurisUtils.limparTextoPDF) 
                             ? window.JurisUtils.limparTextoPDF(textoBruto) 
                             : textoBruto;
+
+                        const MARCADOR_RUIDOS = '\n\n[AVISO DE SISTEMA: Dados estruturais ocultados.]\n\n';
+
+                        if (window.JurisUtils && window.JurisUtils.descobrirRuidosEstruturais) {
+                            let textoA = amostrasMap.get(pInicio + 1) || "";
+                            let textoB = amostrasMap.get(pInicio + 2) || amostrasMap.get(pFim - 1) || "";
+
+                            if (textoA && textoB) {
+                                textoA = window.JurisUtils.limparTextoPDF(textoA);
+                                textoB = window.JurisUtils.limparTextoPDF(textoB);
+                                const esqueletosAutonomos = window.JurisUtils.descobrirRuidosEstruturais(textoA, textoB);
+                                
+                                esqueletosAutonomos.forEach(esqueleto => {
+                                    textoLimpo = window.JurisUtils.removerTrechoFuzzy(textoLimpo, esqueleto, MARCADOR_RUIDOS, true);
+                                });
+                            }
+                        }
                         
                         // Execução da Borracha Mágica LGPD (O(N) Vector Search) - Adaptado para o AI
                         try {
@@ -519,7 +550,7 @@ window.ExportManager = (function () {
                                 const regras = JSON.parse(regrasSalvas);
                                 if (regras[docTipo]) {
                                     const MARCADOR_OFICIAL_LGPD = '\n\n[AVISO DE SISTEMA: Dados sensíveis (ex: endereços) ou estruturais (cabeçalhos) foram ocultados pela Borracha Mágica para adequação à LGPD.]\n\n';
-                                    textoLimpo = window.JurisUtils.removerTrechoFuzzy(textoLimpo, regras[docTipo], MARCADOR_OFICIAL_LGPD);
+                                    textoLimpo = window.JurisUtils.removerTrechoFuzzy(textoLimpo, regras[docTipo], MARCADOR_OFICIAL_LGPD, false);
                                 }
                             }
                         } catch (e) {

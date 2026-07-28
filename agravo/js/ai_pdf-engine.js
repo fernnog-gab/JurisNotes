@@ -173,97 +173,75 @@ window.PdfEngine = (function () {
     // Função utilitária para liberar a Main Thread (macro-task)
     const _yieldToMain = () => new Promise(resolve => setTimeout(resolve, 0));
 
-    async function extrairTextoPorRegiao(marcoInicio, marcoFim, onProgress = null) {
+    async function extrairTextoPorRegiao(marcoInicio, marcoFim, onProgress = null, onPageRawText = null) {
         if (!_pdfDoc) return "";
-        
-        // LOCK DE INTEGRIDADE: Previne que o usuário troque de PDF no meio da extração
         const targetPdfInstance = _pdfDoc;
         let textoExtraido = "";
         
-        // CONFIGURAÇÕES ARQUITETURAIS (Evitando Magic Numbers)
-        // OBS: Se o sistema ganhar zoom dinâmico no futuro, alterar para ler o data-scale do DOM
         const ESCALA_RENDERIZACAO_UI = 1.5; 
-        const PADDING_SEGURANCA_PTS = 4; // Margem para blindar fontes grandes/cliques limítrofes
-        const TIME_BUDGET_MS = 40; // Limiar para ceder a Thread Principal
+        const PADDING_SEGURANCA_PTS = 4;
+        const TIME_BUDGET_MS = 40; 
         
         const pInicio = Math.min(marcoInicio.pagina, marcoFim.pagina);
         const pFim = Math.max(marcoInicio.pagina, marcoFim.pagina);
-        
-        // Garante que o offset Y corresponde à página correta, mesmo se marcados fora de ordem
         const yInicioDOM = (pInicio === marcoInicio.pagina) ? marcoInicio.offsetY : marcoFim.offsetY;
         const yFimDOM = (pFim === marcoFim.pagina) ? marcoFim.offsetY : marcoInicio.offsetY;
-        
         const totalPaginas = (pFim - pInicio) + 1;
         let lastYieldTime = performance.now();
 
         for (let i = pInicio; i <= pFim; i++) {
-            if (_pdfDoc !== targetPdfInstance) {
-                throw new Error("CONCURRENCY_VIOLATION: O documento original foi alterado durante a extração.");
-            }
-
-            const page = await _pdfDoc.getPage(i);
+            if (_pdfDoc !== targetPdfInstance) throw new Error("CONCURRENCY_VIOLATION: O documento original foi alterado durante a extração.");
             
-            // Renderiza o viewport nativo (Scale 1.0) para cruzar com a geometria do texto puro
-            const viewportNative = page.getViewport({ scale: 1.0 }); 
-            const textContent = await page.getTextContent();
-            
-            // 1. CONVERSÃO DE ESCALA (DOM -> PDF Nativo)
-            const yInicioNativo = yInicioDOM / ESCALA_RENDERIZACAO_UI;
-            const yFimNativo = yFimDOM / ESCALA_RENDERIZACAO_UI;
-
-            // 2. INVERSÃO DE EIXO Y (No PDF, 0 é o rodapé e cresce para cima)
-            // O limite "Superior" matemático é o maior número (topo visual)
-            let limiteYSuperiorPDF = (i === pInicio) ? (viewportNative.height - yInicioNativo) : viewportNative.height;
-            let limiteYInferiorPDF = (i === pFim) ? (viewportNative.height - yFimNativo) : 0;
-
-            // 3. PADDING E CLAMPING (Sanity Check)
-            if (i === pInicio) {
-                limiteYSuperiorPDF = Math.min(viewportNative.height, limiteYSuperiorPDF - PADDING_SEGURANCA_PTS);
-            }
-            if (i === pFim) {
-                limiteYInferiorPDF = Math.max(0, limiteYInferiorPDF + PADDING_SEGURANCA_PTS);
-            }
-
-            // 4. TRAVA ANTI-INVERSÃO LÓGICA (Caso o Fim seja marcado fisicamente acima do Início)
-            if (pInicio === pFim && limiteYInferiorPDF > limiteYSuperiorPDF) {
-                const temp = limiteYSuperiorPDF;
-                limiteYSuperiorPDF = limiteYInferiorPDF;
-                limiteYInferiorPDF = temp;
-            }
-
-            // 5. EXTRAÇÃO
-            let textoPagina = textContent.items
-                .filter(item => {
-                    const baseTextoY = item.transform[5];
-                    return baseTextoY <= limiteYSuperiorPDF && baseTextoY >= limiteYInferiorPDF;
-                })
-                .map(item => item.str)
-                .join(' ');
+            let page = null;
+            try {
+                page = await _pdfDoc.getPage(i);
+                const viewportNative = page.getViewport({ scale: 1.0 }); 
+                const textContent = await page.getTextContent();
                 
-            textoExtraido += textoPagina + " \n\n ";
+                // Hook de Amostragem (Single-Pass)
+                if (onPageRawText) {
+                    onPageRawText(i, textContent.items.map(item => item.str).join(' '));
+                }
+                
+                const yInicioNativo = yInicioDOM / ESCALA_RENDERIZACAO_UI;
+                const yFimNativo = yFimDOM / ESCALA_RENDERIZACAO_UI;
+                let limiteYSuperiorPDF = (i === pInicio) ? (viewportNative.height - yInicioNativo) : viewportNative.height;
+                let limiteYInferiorPDF = (i === pFim) ? (viewportNative.height - yFimNativo) : 0;
 
-            // 6. ATUALIZAÇÃO DA UI
-            if (onProgress) {
-                try {
-                    const atual = (i - pInicio) + 1;
-                    onProgress(atual, totalPaginas);
-                } catch (e) {
-                    console.warn("[PdfEngine AI] Aviso não-bloqueante no callback de UI.", e);
+                if (i === pInicio) limiteYSuperiorPDF = Math.min(viewportNative.height, limiteYSuperiorPDF - PADDING_SEGURANCA_PTS);
+                if (i === pFim) limiteYInferiorPDF = Math.max(0, limiteYInferiorPDF + PADDING_SEGURANCA_PTS);
+                if (pInicio === pFim && limiteYInferiorPDF > limiteYSuperiorPDF) {
+                    const temp = limiteYSuperiorPDF;
+                    limiteYSuperiorPDF = limiteYInferiorPDF;
+                    limiteYInferiorPDF = temp;
+                }
+
+                let textoPagina = textContent.items
+                    .filter(item => item.transform[5] <= limiteYSuperiorPDF && item.transform[5] >= limiteYInferiorPDF)
+                    .map(item => item.str)
+                    .join(' ');
+                    
+                textoExtraido += textoPagina + " \n\n ";
+
+                if (onProgress) {
+                    try { onProgress((i - pInicio) + 1, totalPaginas); } catch (e) {
+                        console.warn("[PdfEngine AI] Aviso não-bloqueante no callback de UI.", e);
+                    }
+                }
+            } finally {
+                // Descarte O(1) nativo do V8 / Canvas
+                if (page && typeof page.cleanup === 'function') {
+                    try { page.cleanup(); } catch(e){}
                 }
             }
 
-            // 7. PROTEÇÃO DA MAIN THREAD
             if (performance.now() - lastYieldTime > TIME_BUDGET_MS) {
                 await _yieldToMain();
                 lastYieldTime = performance.now(); 
             }
         }
         
-        // 8. TRATAMENTO UX PARA DOCUMENTOS SEM OCR
-        if (textoExtraido.trim().length === 0) {
-            _deps.exibirToast("Não foi possível extrair texto. O documento pode ser uma imagem digitalizada (sem OCR).", "aviso");
-        }
-        
+        if (textoExtraido.trim().length === 0) _deps.exibirToast("Não foi possível extrair texto. O documento pode ser uma imagem digitalizada (sem OCR).", "aviso");
         return textoExtraido;
     }
 

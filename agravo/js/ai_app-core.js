@@ -70,22 +70,40 @@ window.sincronizarHighlightsGerais = function() {
    ================================================ */
 window.JurisUtils = window.JurisUtils || {};
 
-window.JurisUtils.removerTrechoFuzzy = function(textoBruto, amostraTarget, marcadorLGPD) {
+const _encontrarMaiorSubstringComum = (s1, s2) => {
+    if (!s1 || !s2) return "";
+    let maxLen = 0, endIdx = 0;
+    const prev = new Uint16Array(s2.length + 1);
+    const curr = new Uint16Array(s2.length + 1);
+    for (let i = 1; i <= s1.length; i++) {
+        for (let j = 1; j <= s2.length; j++) {
+            if (s1[i - 1] === s2[j - 1]) {
+                curr[j] = prev[j - 1] + 1;
+                if (curr[j] > maxLen) { maxLen = curr[j]; endIdx = i; }
+            } else { curr[j] = 0; }
+        }
+        prev.set(curr);
+    }
+    return s1.substring(endIdx - maxLen, endIdx);
+};
+
+window.JurisUtils.removerTrechoFuzzy = function(textoBruto, amostraTarget, marcadorLGPD, isAgulhaEsqueleto = false) {
     if (!textoBruto || !amostraTarget) return textoBruto;
     const fallbackMarcador = '\n\n[AVISO DE SISTEMA: Dados estruturais ou sensíveis ocultados.]\n\n';
     const tagFinal = marcadorLGPD !== undefined ? marcadorLGPD : fallbackMarcador;
 
-    // Fase 1: Análise atômica da agulha usando iterador nativo (Surrogate Pairs Safe)
-    const agulhaMatches = [...amostraTarget.toLowerCase().matchAll(/[\p{L}]/gu)];
-    if (agulhaMatches.length < 15) return textoBruto; // Trava de Segurança
-    const esqueletoAgulha = agulhaMatches.map(m => m[0]).join('');
+    let esqueletoAgulha = amostraTarget;
+    
+    if (!isAgulhaEsqueleto) {
+        const agulhaMatches = [...amostraTarget.toLowerCase().matchAll(/[\p{L}]/gu)];
+        if (agulhaMatches.length < 15) return textoBruto; 
+        esqueletoAgulha = agulhaMatches.map(m => m[0]).join('');
+    }
 
-    // Fase 2: Mapeamento indexado em O(N) do Palheiro
     const palheiroMatches = [...textoBruto.toLowerCase().matchAll(/[\p{L}]/gu)];
     if (palheiroMatches.length === 0) return textoBruto;
     const esqueletoPalheiro = palheiroMatches.map(m => m[0]).join('');
 
-    // Fase 3: Detecção Vetorial
     const rangesParaSubstituir = [];
     let startIndex = 0;
 
@@ -95,7 +113,7 @@ window.JurisUtils.removerTrechoFuzzy = function(textoBruto, amostraTarget, marca
 
         const inicioReal = palheiroMatches[pos].index;
         const fimRealObj = palheiroMatches[pos + esqueletoAgulha.length - 1];
-        const fimReal = fimRealObj.index + fimRealObj[0].length; // Absorção completa do Code Unit
+        const fimReal = fimRealObj.index + fimRealObj[0].length; 
 
         rangesParaSubstituir.push({ start: inicioReal, end: fimReal });
         startIndex = pos + esqueletoAgulha.length;
@@ -103,7 +121,6 @@ window.JurisUtils.removerTrechoFuzzy = function(textoBruto, amostraTarget, marca
 
     if (rangesParaSubstituir.length === 0) return textoBruto;
 
-    // Fase 4: Mutação Inversa (Zero-shift)
     let resultadoFinal = textoBruto;
     for (let i = rangesParaSubstituir.length - 1; i >= 0; i--) {
         const { start, end } = rangesParaSubstituir[i];
@@ -111,6 +128,21 @@ window.JurisUtils.removerTrechoFuzzy = function(textoBruto, amostraTarget, marca
     }
 
     return resultadoFinal;
+};
+
+window.JurisUtils.descobrirRuidosEstruturais = function(textoPagA, textoPagB) {
+    const esqA = [...textoPagA.toLowerCase().matchAll(/[\p{L}]/gu)].map(m => m[0]).join('');
+    const esqB = [...textoPagB.toLowerCase().matchAll(/[\p{L}]/gu)].map(m => m[0]).join('');
+    if (esqA.length < 50 || esqB.length < 50) return [];
+    
+    const ruidos = [];
+    const lcsTopo = _encontrarMaiorSubstringComum(esqA.substring(0, 300), esqB.substring(0, 300));
+    if (lcsTopo.length >= 15) ruidos.push(lcsTopo);
+    
+    const lcsBase = _encontrarMaiorSubstringComum(esqA.substring(Math.max(0, esqA.length - 300)), esqB.substring(Math.max(0, esqB.length - 300)));
+    if (lcsBase.length >= 15 && lcsBase !== lcsTopo) ruidos.push(lcsBase);
+    
+    return ruidos;
 };
 
 window.JurisUtils.limparTextoPDF = function(texto) {
