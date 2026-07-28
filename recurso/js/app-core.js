@@ -72,8 +72,8 @@ window.JurisUtils = (function() {
     const REGEX_INVISIVEIS = /[\u200B-\u200D\uFEFF]/g;
     
     // Expressão Regular Multilinha Segura (Revisada): 
-    // Captura o gatilho inicial e, de forma não-gulosa, no máximo as próximas 3 linhas (evitando vazamento para a página seguinte).
-    const REGEX_ASSINATURAS_BLOCO = /(?:Documento\s+assinado\s+eletronicamente\s+por|Assinado\s+(?:digitalmente|eletronicamente)\s+por|Signatário(?:\(a\))?[:\s])[^\n]*(?:\n[^\n]*){0,3}/gi;
+    // Limita a captura à própria linha do rodapé, evitando vazamento para a página seguinte.
+    const REGEX_ASSINATURAS_BLOCO = /(?:Documento\s+assinado\s+eletronicamente\s+por|Assinado\s+(?:digitalmente|eletronicamente)\s+por|Signatário(?:\(a\))?[:\s])[^\n]*(?=\n|$)/gi;
     const REGEX_CABECHALHO_PJE = /\bfls\.?\s*:\s*\d+\b/gi;
     
     const REGEX_HIFEN_QUEBRA = /([\p{L}])-\r?\n\s*([\p{L}])/gu;
@@ -837,132 +837,94 @@ function renderizarTopicos() {
     }
 }
 
-function capturarTrechoSelecionado() {
+async function capturarTrechoSelecionado() {
     const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-        exibirToast('Nenhum texto selecionado.', 'aviso');
+
+    // 1. Pipeline de Higienização de Texto
+    let selecaoTexto = selection.toString().trim();
+    selecaoTexto = window.JurisUtils.limparTextoPDF(selecaoTexto);
+
+    if (selecaoTexto.length <= 5) {
+        exibirToast('Selecione um trecho válido no documento.', 'aviso');
         return;
+    }
+
+    const anchorNode = selection.anchorNode;
+    const focusNode = selection.focusNode;
+    if (!anchorNode || !focusNode) return;
+
+    const anchorContainer = (anchorNode.nodeType === 3 ? anchorNode.parentNode : anchorNode).closest('.pdf-page-container');
+    const focusContainer = (focusNode.nodeType === 3 ? focusNode.parentNode : focusNode).closest('.pdf-page-container');
+
+    if (!anchorContainer || !focusContainer) {
+        exibirToast('A seleção deve estar dentro do PDF.', 'aviso');
+        return;
+    }
+
+    const anchorPageNum = parseInt(anchorContainer.dataset.pageNumber, 10);
+    const focusPageNum = parseInt(focusContainer.dataset.pageNumber, 10);
+
+    const minPage = Math.min(anchorPageNum, focusPageNum);
+    const maxPage = Math.max(anchorPageNum, focusPageNum);
+
+    // 2. DOM Read Phase
+    const cachedPages = [];
+    for (let i = minPage; i <= maxPage; i++) {
+        const pageEl = document.querySelector(`.pdf-page-container[data-page-number="${i}"]`);
+        if (pageEl) {
+            cachedPages.push({ page: i, rect: pageEl.getBoundingClientRect() });
+        }
+    }
+
+    // [NOVO] Busca o limite de rodapé por conteúdo (não percentual fixo) para cada página envolvida
+    if (window.PdfEngine && typeof window.PdfEngine.obterLimiteRodape === 'function') {
+        await Promise.all(cachedPages.map(async (p) => {
+            p.limiteRodape = await window.PdfEngine.obterLimiteRodape(p.page);
+        }));
     }
 
     const range = selection.getRangeAt(0);
-    const containerAnchor = range.startContainer.parentElement ? range.startContainer.parentElement.closest('.pdf-page-container') : null;
-    const containerFocus = range.endContainer.parentElement ? range.endContainer.parentElement.closest('.pdf-page-container') : null;
-
-    if (!containerAnchor || !containerFocus) {
-        exibirToast('A seleção deve estar dentro do documento.', 'aviso');
-        return;
-    }
-
-    const startPage = parseInt(containerAnchor.dataset.pageNumber, 10);
-    
-    // Passo 1: Construção do Mapa String -> Rect
-    let textoBruto = "";
-    const rectMap = [];
-    let charIndex = 0;
-
-    // Utilizamos TreeWalker RESTRITO apenas aos nós do Range selecionado para capturar a geometria exata
-    const walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_TEXT, {
-        acceptNode: function(node) {
-            return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-        }
-    });
-
-    let node = walker.nextNode();
-    while (node) {
-        const pageContainer = node.parentElement.closest('.pdf-page-container');
-        if (pageContainer) {
-            const pageNum = parseInt(pageContainer.dataset.pageNumber, 10);
-            const pageRect = pageContainer.getBoundingClientRect();
-            
-            // Cria um sub-range instantâneo para capturar o offset exato se for nó inicial/final
-            const tempRange = document.createRange();
-            tempRange.selectNodeContents(node);
-            if (node === range.startContainer) tempRange.setStart(node, range.startOffset);
-            if (node === range.endContainer) tempRange.setEnd(node, range.endOffset);
-
-            const text = tempRange.toString();
-            if (text.trim()) {
-                const nodeRects = Array.from(tempRange.getClientRects());
-                
-                // Adiciona espaço na troca de páginas para evitar colagem de palavras (ex: pág1pág2)
-                if (textoBruto.length > 0 && !textoBruto.endsWith(" ") && !text.startsWith(" ")) {
-                    textoBruto += " ";
-                    charIndex += 1;
-                }
-
-                // Mapeia o index inicial e final desse fragmento de texto
-                const startIdx = charIndex;
-                const endIdx = charIndex + text.length;
-                
-                textoBruto += text;
-                charIndex += text.length;
-
-                // Transforma as coordenadas da tela para as coordenadas relativas da página do PDF
-                nodeRects.forEach(rect => {
-                    rectMap.push({
-                        charStart: startIdx,
-                        charEnd: endIdx,
-                        page: pageNum,
-                        top: rect.top - pageRect.top,
-                        left: rect.left - pageRect.left,
-                        width: rect.width,
-                        height: rect.height
-                    });
-                });
-            }
-        }
-        node = walker.nextNode();
-    }
-
-    // Passo 2: O Brain (Sanitização)
-    // Passamos a string montada para o utilitário achar onde estão as assinaturas e remover
-    const { textoLimpo, indicesExcluidos } = window.JurisUtils.processarTextoParaExtracao(textoBruto);
-
-    if (textoLimpo.length <= 5) {
-        exibirToast('A seleção contém apenas dados irrelevantes (assinaturas/cabeçalhos).', 'aviso');
-        window.getSelection().removeAllRanges();
-        return;
-    }
-
-    // Passo 3: O Sync (Filtragem dos Grifos Visuais)
+    const rawRects = Array.from(range.getClientRects());
     const mappedRects = [];
-    rectMap.forEach(rectData => {
-        // Verifica se este retângulo cai dentro de uma área que a Regex identificou como assinatura
-        const isRuido = indicesExcluidos.some(excluido => {
-            // Há sobreposição se o início do rect é menor que o fim da sujeira, e o fim do rect é maior que o início da sujeira
-            return Math.max(rectData.charStart, excluido.start) < Math.min(rectData.charEnd, excluido.end);
-        });
 
-        if (!isRuido) {
+    // 3. Compute Phase — descarta rects que caem na zona de assinatura
+    rawRects.forEach(rect => {
+        const midY = rect.top + (rect.height / 2);
+        const matchedPage = cachedPages.find(p => midY >= p.rect.top && midY <= p.rect.bottom);
+
+        if (matchedPage) {
+            const localTop = rect.top - matchedPage.rect.top;
+
+            // [NOVO] Se a linha estiver na zona de assinatura desta página específica, ignora o grifo
+            if (matchedPage.limiteRodape != null && localTop >= matchedPage.limiteRodape) {
+                return;
+            }
+
             mappedRects.push({
-                page: rectData.page,
-                top: rectData.top,
-                left: rectData.left,
-                width: rectData.width,
-                height: rectData.height
+                page: matchedPage.page,
+                top: localTop,
+                left: rect.left - matchedPage.rect.left,
+                width: rect.width,
+                height: rect.height
             });
         }
     });
 
-    if (mappedRects.length === 0) return;
+    if (mappedRects.length === 0) {
+        exibirToast('Seleção restrita à área de assinatura do documento.', 'aviso');
+        window.getSelection().removeAllRanges();
+        return;
+    }
 
-    // Passo 4: Atualização de Estado Global
+    // 4. Update de Estado
     _tempHighlightState.rects = mappedRects;
-    _tempHighlightState.paginaFisica = startPage;
+    _tempHighlightState.paginaFisica = anchorPageNum;
 
-    // Passo 5: Aciona a Interface
+    // 5. Restauração de UX
     if (typeof exibirPopupClassificacao === 'function') {
-        const lastRect = mappedRects[mappedRects.length - 1];
-        const pageEl = document.querySelector(`.pdf-page-container[data-page-number="${lastRect.page}"]`);
-        let popupAnchorX = 0, popupAnchorY = 0;
-        
-        if (pageEl) {
-            const pRect = pageEl.getBoundingClientRect();
-            popupAnchorX = lastRect.left + pRect.left + 20;
-            popupAnchorY = lastRect.top + lastRect.height + pRect.top + 15;
-        }
-        
-        exibirPopupClassificacao('texto', textoLimpo, popupAnchorX, popupAnchorY, startPage);
+        const popupAnchorX = rawRects[rawRects.length - 1].left;
+        const popupAnchorY = rawRects[rawRects.length - 1].bottom + 10;
+        exibirPopupClassificacao('texto', selecaoTexto, popupAnchorX, popupAnchorY, anchorPageNum);
     }
 }
 
