@@ -820,25 +820,48 @@ window.ExportManager = (function () {
                     const tagName = docTipo.toUpperCase();
                     
                     try {
+                        const pInicio = Math.min(limites.inicio.pagina, limites.fim.pagina);
+                        const pFim = Math.max(limites.inicio.pagina, limites.fim.pagina);
+                        const amostrasMap = new Map();
+
                         const textoBruto = await window.PdfEngine.extrairTextoPorRegiao(
                             limites.inicio, 
                             limites.fim,
-                            // Progress Tracking interpolado pelo orquestrador
                             (atual, totalPagsDoc) => {
                                 const docNumber = idx + 1;
                                 _deps.exibirToast(`⏳ Processando Peça ${docNumber}/${checkboxesDocsExtra.length} (Pág ${atual} de ${totalPagsDoc})...`, 'info');
+                            },
+                            (pageNum, rawText) => {
+                                if (pageNum === pInicio + 1 || pageNum === pInicio + 2 || pageNum === pFim - 1) {
+                                    amostrasMap.set(pageNum, rawText);
+                                }
                             }
                         );
                         
                         let textoLimpo = (window.JurisUtils && window.JurisUtils.limparTextoPDF) 
                             ? window.JurisUtils.limparTextoPDF(textoBruto) : textoBruto;
                         
+                        const MARCADOR_OFICIAL_LGPD = '\n\n[AVISO DE SISTEMA: Dados sensíveis (ex: endereços) ou estruturais (cabeçalhos) foram ocultados pela Borracha Mágica para adequação à LGPD.]\n\n';
+                        const MARCADOR_RUIDOS = '\n\n[AVISO DE SISTEMA: Dados estruturais ocultados.]\n\n';
+
+                        if (window.JurisUtils && window.JurisUtils.descobrirRuidosEstruturais) {
+                            let textoA = amostrasMap.get(pInicio + 1) || "";
+                            let textoB = amostrasMap.get(pInicio + 2) || amostrasMap.get(pFim - 1) || "";
+
+                            if (textoA && textoB) {
+                                textoA = window.JurisUtils.limparTextoPDF(textoA);
+                                textoB = window.JurisUtils.limparTextoPDF(textoB);
+                                const esqueletosAutonomos = window.JurisUtils.descobrirRuidosEstruturais(textoA, textoB);
+                                
+                                esqueletosAutonomos.forEach(esqueleto => {
+                                    textoLimpo = window.JurisUtils.removerTrechoFuzzy(textoLimpo, esqueleto, MARCADOR_RUIDOS, true);
+                                });
+                            }
+                        }
+
                         const regras = _carregarRegrasFiltro();
                         if (regras[docTipo] && window.JurisUtils && window.JurisUtils.removerTrechoFuzzy) {
-                            const MARCADOR_OFICIAL_LGPD = '\n\n[AVISO DE SISTEMA: Dados sensíveis (ex: endereços) ou estruturais (cabeçalhos) foram ocultados pela Borracha Mágica para adequação à LGPD.]\n\n';
-                            
-                            // Execução com delegação de responsabilidade correta
-                            textoLimpo = window.JurisUtils.removerTrechoFuzzy(textoLimpo, regras[docTipo], MARCADOR_OFICIAL_LGPD);
+                            textoLimpo = window.JurisUtils.removerTrechoFuzzy(textoLimpo, regras[docTipo], MARCADOR_OFICIAL_LGPD, false);
                         }
 
                         conteudoFinal += `<${tagName}>\n${textoLimpo}\n</${tagName}>\n\n`;
