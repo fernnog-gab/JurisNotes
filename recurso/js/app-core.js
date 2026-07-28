@@ -71,9 +71,9 @@ window.JurisUtils = (function() {
     // 1. HOISTING: Constantes compiladas apenas uma vez (Otimização de Memória V8)
     const REGEX_INVISIVEIS = /[\u200B-\u200D\uFEFF]/g;
     
-    // Expressão Regular Multilinha Segura: 
-    // Captura os gatilhos e usa [\s\S]*? para devorar até uma quebra dupla de parágrafo ou fim da string
-    const REGEX_ASSINATURAS_BLOCO = /(?:Documento\s+assinado\s+eletronicamente\s+por|Assinado\s+(?:digitalmente|eletronicamente)\s+por|Signatário(?:\(a\))?[:\s])[\s\S]*?(?=\n\s*\n|$)/gi;
+    // Expressão Regular Multilinha Segura (Revisada): 
+    // Captura o gatilho inicial e, de forma não-gulosa, no máximo as próximas 3 linhas (evitando vazamento para a página seguinte).
+    const REGEX_ASSINATURAS_BLOCO = /(?:Documento\s+assinado\s+eletronicamente\s+por|Assinado\s+(?:digitalmente|eletronicamente)\s+por|Signatário(?:\(a\))?[:\s])[^\n]*(?:\n[^\n]*){0,3}/gi;
     const REGEX_CABECHALHO_PJE = /\bfls\.?\s*:\s*\d+\b/gi;
     
     const REGEX_HIFEN_QUEBRA = /([\p{L}])-\r?\n\s*([\p{L}])/gu;
