@@ -294,7 +294,7 @@ window.PdfEngine = (function () {
                     if (_pdfDestroyObserver) _pdfDestroyObserver.disconnect();
                     _activePages.clear();
 
-                    // Observer 1: Renderiza cedo (800px)
+                    // Observer 1: Renderiza cedo (1200px)
                     _pdfRenderObserver = new IntersectionObserver((entries) => {
                         entries.forEach(entry => {
                             if (entry.isIntersecting && entry.target.dataset.loaded === 'false') {
@@ -303,7 +303,7 @@ window.PdfEngine = (function () {
                                 entry.target.dataset.loaded = 'true';
                             }
                         });
-                    }, { root: document.getElementById('pdf-container'), rootMargin: '800px 0px', threshold: 0 });
+                    }, { root: document.getElementById('pdf-container'), rootMargin: '1200px 0px', threshold: 0 });
 
                     // Observer 2: Destrói tarde (Histerese de 3000px)
                     _pdfDestroyObserver = new IntersectionObserver((entries) => {
