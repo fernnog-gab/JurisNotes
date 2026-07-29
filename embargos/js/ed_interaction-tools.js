@@ -836,13 +836,33 @@ window.abrirModalGeradorContexto = async function() {
 
             for (const [docTipo, limites] of Object.entries(agrupados)) {
                 if (limites.inicio && limites.fim) {
-                    const textoBruto = await window.PdfEngine.extrairTextoPorRegiao(limites.inicio, limites.fim);
-                    const textoLimpo = window.JurisUtils.limparTextoPDF(textoBruto);
-                    
+                    const pInicio = Math.min(limites.inicio.pagina, limites.fim.pagina);
+                    const pFim = Math.max(limites.inicio.pagina, limites.fim.pagina);
+                    const amostrasMap = new Map();
+
+                    // EXTRAÇÃO COM COLETA DE AMOSTRAGEM (necessária para a camada automática de ruído)
+                    const textoBruto = await window.PdfEngine.extrairTextoPorRegiao(
+                        limites.inicio,
+                        limites.fim,
+                        null, // onProgress — não usado neste fluxo
+                        (pageNum, rawText) => {
+                            if (pageNum === pInicio + 1 || pageNum === pInicio + 2 || pageNum === pFim - 1) {
+                                amostrasMap.set(pageNum, rawText);
+                            }
+                        }
+                    );
+
+                    let textoLimpo = window.JurisUtils.limparTextoPDF(textoBruto);
+
+                    // DELEGAÇÃO INTEGRAL DA SANITIZAÇÃO (mesma função usada na exportação TXT)
+                    if (typeof window.ExportManager?.aplicarFiltrosAvancados === 'function') {
+                        textoLimpo = window.ExportManager.aplicarFiltrosAvancados(textoLimpo, docTipo, amostrasMap, pInicio, pFim);
+                    }
+
                     // GERAÇÃO DE XML PROFUNDO PARA A IA
                     const tagName = docTipo.toUpperCase();
                     const xml = `\n<${tagName}>\n${textoLimpo}\n</${tagName}>\n`;
-                    
+
                     if (docTipo === 'decisao') decisaoXML += xml;
                     else embargosXML += xml;
                 }
