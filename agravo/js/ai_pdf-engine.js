@@ -166,6 +166,42 @@ window.PdfEngine = (function () {
         }
     }
 
+    const _footerBoundaryCache = new Map();
+
+    /**
+     * Detecta, para uma página específica, a coordenada Y (em pixels de viewport,
+     * escala 1.5 — a mesma usada na renderização) a partir da qual o conteúdo
+     * é bloco de assinatura eletrônica. Usa reconhecimento de padrão textual,
+     * não percentuais fixos, para se adaptar a rodapés de tamanhos diferentes.
+     */
+    async function obterLimiteRodape(pageNum) {
+        if (_footerBoundaryCache.has(pageNum)) return _footerBoundaryCache.get(pageNum);
+
+        const REGEX_RODAPE_ASSINATURA = /(Documento\s+assinado\s+eletronicamente\s+por|Assinado\s+(?:digitalmente|eletronicamente)\s+por|Signatário(?:\(a\))?\s*:)/i;
+
+        try {
+            const page = await _pdfDoc.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 1.5 });
+            const textContent = await page.getTextContent();
+
+            let limiteY = null;
+            for (const item of textContent.items) {
+                if (REGEX_RODAPE_ASSINATURA.test(item.str)) {
+                    const [, vy] = viewport.convertToViewportPoint(item.transform[4], item.transform[5]);
+                    // Pequena margem de segurança para não cortar a última linha de conteúdo legítimo
+                    const topoDoItem = vy - 4;
+                    if (limiteY === null || topoDoItem < limiteY) limiteY = topoDoItem;
+                }
+            }
+
+            _footerBoundaryCache.set(pageNum, limiteY);
+            return limiteY;
+        } catch (err) {
+            console.warn('Falha ao calcular limite de rodapé da página', pageNum, err);
+            return null;
+        }
+    }
+
     /* ================================================
        EXTRAÇÃO MATEMÁTICA DE TEXTO POR REGIÃO (ALFINETE)
        ================================================ */
@@ -682,6 +718,7 @@ window.PdfEngine = (function () {
         getDisplayLabel,
         extrairMetadadosDaPagina,
         extrairTextoPorRegiao,
+        obterLimiteRodape,
         resolverPagina,
         goToPage: jurisLinkService.goTo,
         getPdfDoc: () => _pdfDoc,

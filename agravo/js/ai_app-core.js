@@ -146,14 +146,12 @@ window.JurisUtils.descobrirRuidosEstruturais = function(textoPagA, textoPagB) {
 };
 
 window.JurisUtils.limparTextoPDF = function(texto) {
-    if (!texto || typeof texto !== 'string') return '';
-    return texto
-        // 1. [NOVO] FILTRO LGPD (Execução Primária)
-        // Busca a âncora padrão do PJe e captura até o final da quebra de linha.
-        // A flag 'm' garante que o '$' identifique o final da linha isolada.
-        // É substituído por um espaço ' ' para garantir que as palavras vizinhas não colem.
-        .replace(/Documento\s+assinado\s+eletronicamente\s+por.*$/gim, ' ')
-        // 2. Normalização Linguística: Remove hifens de divisão silábica
+        if (!texto || typeof texto !== 'string') return '';
+        return texto
+            // 1. [NOVO] FILTRO LGPD (Execução Primária)
+            // Limita a captura à própria linha do rodapé, evitando vazamento para a página seguinte.
+            .replace(/(?:Documento\s+assinado\s+eletronicamente\s+por|Assinado\s+(?:digitalmente|eletronicamente)\s+por|Signatário(?:\(a\))?[:\s])[^\n]*(?=\n|$)/gi, ' ')
+            // 2. Normalização Linguística: Remove hifens de divisão silábica
         // Protege listas e nomenclaturas mistas (ex: art. 10-A)
         .replace(/([\p{L}])-\r?\n\s*([\p{L}])/gu, '$1$2')
         // 3. Reconstrução Estrutural: Emenda linhas quebradas simples. 
@@ -848,10 +846,10 @@ function renderizarTopicos() {
     }
 }
 
-function capturarTrechoSelecionado() {
+async function capturarTrechoSelecionado() {
     const selection = window.getSelection();
-    
-    // [NOVO] Executa o Data Sanitization Pipeline antes de validar o length
+
+    // 1. Pipeline de Higienização de Texto
     let selecaoTexto = selection.toString().trim();
     selecaoTexto = window.JurisUtils.limparTextoPDF(selecaoTexto);
 
@@ -860,32 +858,82 @@ function capturarTrechoSelecionado() {
         return;
     }
 
-    const node = selection.anchorNode;
-    if (!node) return;
+    const anchorNode = selection.anchorNode;
+    const focusNode = selection.focusNode;
+    if (!anchorNode || !focusNode) return;
 
-    const element = node.nodeType === 3 ? node.parentNode : node;
-    const pageContainer = element.closest('.pdf-page-container');
+    const anchorContainer = (anchorNode.nodeType === 3 ? anchorNode.parentNode : anchorNode).closest('.pdf-page-container');
+    const focusContainer = (focusNode.nodeType === 3 ? focusNode.parentNode : focusNode).closest('.pdf-page-container');
 
-    if (!pageContainer) {
+    if (!anchorContainer || !focusContainer) {
         exibirToast('A seleção deve estar dentro do PDF.', 'aviso');
         return;
     }
 
-    const anchorPage = parseInt(pageContainer.dataset.pageNumber, 10);
+    const anchorPageNum = parseInt(anchorContainer.dataset.pageNumber, 10);
+    const focusPageNum = parseInt(focusContainer.dataset.pageNumber, 10);
+
+    const minPage = Math.min(anchorPageNum, focusPageNum);
+    const maxPage = Math.max(anchorPageNum, focusPageNum);
+
+    // 2. DOM Read Phase
+    const cachedPages = [];
+    for (let i = minPage; i <= maxPage; i++) {
+        const pageEl = document.querySelector(`.pdf-page-container[data-page-number="${i}"]`);
+        if (pageEl) {
+            cachedPages.push({ page: i, rect: pageEl.getBoundingClientRect() });
+        }
+    }
+
+    // [NOVO] Busca o limite de rodapé por conteúdo (não percentual fixo) para cada página envolvida
+    if (window.PdfEngine && typeof window.PdfEngine.obterLimiteRodape === 'function') {
+        await Promise.all(cachedPages.map(async (p) => {
+            p.limiteRodape = await window.PdfEngine.obterLimiteRodape(p.page);
+        }));
+    }
+
     const range = selection.getRangeAt(0);
-    const rects = Array.from(range.getClientRects());
-    const containerRect = pageContainer.getBoundingClientRect();
+    const rawRects = Array.from(range.getClientRects());
+    const mappedRects = [];
 
-    _tempHighlightState.rects = rects.map(r => ({
-        top: r.top - containerRect.top,
-        left: r.left - containerRect.left,
-        width: r.width,
-        height: r.height
-    }));
-    _tempHighlightState.paginaFisica = anchorPage;
+    // 3. Compute Phase — descarta rects que caem na zona de assinatura
+    rawRects.forEach(rect => {
+        const midY = rect.top + (rect.height / 2);
+        const matchedPage = cachedPages.find(p => midY >= p.rect.top && midY <= p.rect.bottom);
 
+        if (matchedPage) {
+            const localTop = rect.top - matchedPage.rect.top;
+
+            // [NOVO] Se a linha estiver na zona de assinatura desta página específica, ignora o grifo
+            if (matchedPage.limiteRodape != null && localTop >= matchedPage.limiteRodape) {
+                return;
+            }
+
+            mappedRects.push({
+                page: matchedPage.page,
+                top: localTop,
+                left: rect.left - matchedPage.rect.left,
+                width: rect.width,
+                height: rect.height
+            });
+        }
+    });
+
+    if (mappedRects.length === 0) {
+        exibirToast('Seleção restrita à área de assinatura do documento.', 'aviso');
+        window.getSelection().removeAllRanges();
+        return;
+    }
+
+    // 4. Update de Estado
+    _tempHighlightState.rects = mappedRects;
+    _tempHighlightState.paginaFisica = anchorPageNum;
+
+    // 5. Restauração de UX
     if (typeof exibirPopupClassificacao === 'function') {
-        exibirPopupClassificacao('texto', selecaoTexto, rects[0].left, rects[0].bottom + 10, anchorPage);
+        const popupAnchorX = rawRects[rawRects.length - 1].left;
+        const popupAnchorY = rawRects[rawRects.length - 1].bottom + 10;
+        exibirPopupClassificacao('texto', selecaoTexto, popupAnchorX, popupAnchorY, anchorPageNum);
     }
 }
 
