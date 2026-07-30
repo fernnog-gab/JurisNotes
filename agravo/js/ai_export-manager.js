@@ -14,6 +14,19 @@ window.ExportManager = (function () {
         getActiveTabId: () => null
     };
 
+    // SINGLE SOURCE OF TRUTH — marcadores de sanitização (LGPD)
+    const MARCADOR_OFICIAL_LGPD = '\n\n[AVISO DE SISTEMA: Dados sensíveis (ex: endereços) ou estruturais (cabeçalhos) foram ocultados pela Borracha Mágica para adequação à LGPD.]\n\n';
+    const MARCADOR_RUIDOS = '\n\n[AVISO DE SISTEMA: Dados estruturais ocultados.]\n\n';
+
+    function _carregarRegrasFiltro() {
+        try {
+            const tagDom = document.getElementById('tag-numero-processo');
+            const numProcesso = tagDom && tagDom.textContent.trim() ? tagDom.textContent.trim() : 'padrao';
+            const salvo = sessionStorage.getItem(`juris_filtros_${numProcesso}`);
+            return salvo ? JSON.parse(salvo) : {};
+        } catch { return {}; }
+    }
+
     // CONFIGURAÇÃO CENTRALIZADA DE CONTEXTOS PROCESSUAIS (Arquitetura Base-2)
     const ESQUEMAS_CONTEXTO = {
         'RO': {
@@ -520,42 +533,10 @@ window.ExportManager = (function () {
                         );
                         
                         let textoLimpo = (window.JurisUtils && window.JurisUtils.limparTextoPDF) 
-                            ? window.JurisUtils.limparTextoPDF(textoBruto) 
-                            : textoBruto;
+                            ? window.JurisUtils.limparTextoPDF(textoBruto) : textoBruto;
 
-                        const MARCADOR_RUIDOS = '\n\n[AVISO DE SISTEMA: Dados estruturais ocultados.]\n\n';
-
-                        if (window.JurisUtils && window.JurisUtils.descobrirRuidosEstruturais) {
-                            let textoA = amostrasMap.get(pInicio + 1) || "";
-                            let textoB = amostrasMap.get(pInicio + 2) || amostrasMap.get(pFim - 1) || "";
-
-                            if (textoA && textoB) {
-                                textoA = window.JurisUtils.limparTextoPDF(textoA);
-                                textoB = window.JurisUtils.limparTextoPDF(textoB);
-                                const esqueletosAutonomos = window.JurisUtils.descobrirRuidosEstruturais(textoA, textoB);
-                                
-                                esqueletosAutonomos.forEach(esqueleto => {
-                                    textoLimpo = window.JurisUtils.removerTrechoFuzzy(textoLimpo, esqueleto, MARCADOR_RUIDOS, true);
-                                });
-                            }
-                        }
-                        
-                        // Execução da Borracha Mágica LGPD (O(N) Vector Search) - Adaptado para o AI
-                        try {
-                            const tagDom = document.getElementById('tag-numero-processo');
-                            const numProcesso = tagDom && tagDom.textContent.trim() ? tagDom.textContent.trim() : 'padrao';
-                            const regrasSalvas = sessionStorage.getItem(`juris_filtros_${numProcesso}`);
-                            
-                            if (regrasSalvas && window.JurisUtils && window.JurisUtils.removerTrechoFuzzy) {
-                                const regras = JSON.parse(regrasSalvas);
-                                if (regras[docTipo]) {
-                                    const MARCADOR_OFICIAL_LGPD = '\n\n[AVISO DE SISTEMA: Dados sensíveis (ex: endereços) ou estruturais (cabeçalhos) foram ocultados pela Borracha Mágica para adequação à LGPD.]\n\n';
-                                    textoLimpo = window.JurisUtils.removerTrechoFuzzy(textoLimpo, regras[docTipo], MARCADOR_OFICIAL_LGPD, false);
-                                }
-                            }
-                        } catch (e) {
-                            console.warn("[ExportManager AI] Erro ao aplicar filtro LGPD:", e);
-                        }
+                        // SANITIZAÇÃO DELEGADA — fonte única, compartilhada com o Gerador de Contexto IA
+                        textoLimpo = aplicarFiltrosAvancados(textoLimpo, docTipo, amostrasMap, pInicio, pFim);
 
                         conteudoFinal += `<${tagName}>\n${textoLimpo}\n</${tagName}>\n\n`;
                     } catch (extraError) {
@@ -634,11 +615,45 @@ window.ExportManager = (function () {
         };
     }
 
+    /**
+     * Aplica as duas camadas de sanitização (LGPD) sobre um texto extraído do PDF:
+     *   1. Automática — remove ruído estrutural repetido entre páginas (cabeçalhos/rodapés).
+     *   2. Manual — aplica a regra fuzzy cadastrada pelo usuário na Borracha Mágica.
+     */
+    function aplicarFiltrosAvancados(textoLimpo, docTipo, amostrasMap, pInicio, pFim) {
+        let textoProcessado = textoLimpo;
+
+        // 1. CAMADA AUTOMÁTICA (Ruído Estrutural)
+        if (window.JurisUtils && window.JurisUtils.descobrirRuidosEstruturais && amostrasMap && amostrasMap.size > 0) {
+            let textoA = amostrasMap.get(pInicio + 1) || "";
+            let textoB = amostrasMap.get(pInicio + 2) || amostrasMap.get(pFim - 1) || "";
+
+            if (textoA && textoB) {
+                textoA = window.JurisUtils.limparTextoPDF(textoA);
+                textoB = window.JurisUtils.limparTextoPDF(textoB);
+                const esqueletosAutonomos = window.JurisUtils.descobrirRuidosEstruturais(textoA, textoB);
+
+                esqueletosAutonomos.forEach(esqueleto => {
+                    textoProcessado = window.JurisUtils.removerTrechoFuzzy(textoProcessado, esqueleto, MARCADOR_RUIDOS, true);
+                });
+            }
+        }
+
+        // 2. CAMADA MANUAL (Regras da Borracha Mágica — LGPD)
+        const regras = _carregarRegrasFiltro();
+        if (regras[docTipo] && window.JurisUtils && window.JurisUtils.removerTrechoFuzzy) {
+            textoProcessado = window.JurisUtils.removerTrechoFuzzy(textoProcessado, regras[docTipo], MARCADOR_OFICIAL_LGPD, false);
+        }
+
+        return textoProcessado;
+    }
+
     return {
         obterDadosDoTopicoAtivo,
         abrirPainelExportacao,
         fecharPainelExportacao,
         gerarExportacaoPersonalizada,
+        aplicarFiltrosAvancados,
         
         init: function (dependencies) {
             _deps = { ..._deps, ...dependencies };
