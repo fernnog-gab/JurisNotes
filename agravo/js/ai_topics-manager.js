@@ -634,6 +634,82 @@ window.TopicsManager = (function () {
         listContainer.appendChild(fragment);
     }
 
+    function obterIconeIntencao(intencao) {
+        if (intencao === 'comando') return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>`;
+        if (intencao === 'texto') return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`;
+        if (intencao === 'nota') return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
+        if (intencao === 'fundamentacao') return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>`;
+        if (intencao === 'refutacao') return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>`;
+        if (intencao === 'preliminar') return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
+        return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>`; // premissa
+    }
+
+    /**
+     * Componente Dinâmico: Gera o Card de Óbice hierárquico.
+     * Alinha-se automaticamente à paridade do índice global acumulado
+     * de anotações — não a um número fixo de grupo. Se o Óbice anterior
+     * acumulou um número ímpar de cards, este nasce à direita, e vice-versa.
+     */
+    function _gerarHtmlObiceGroup(teseAtual, diretrizes, tabId, corTema, indexGlobal) {
+        const rgbaTeseFundo = hexToRgba(corTema, 0.15);
+        const rgbaTeseBorda = hexToRgba(corTema, 0.4);
+        const corTituloTese = escurecerCor(corTema, 0.6);
+        const corTextoTese = obterCorContraste(corTema);
+
+        const isLeft = (indexGlobal % 2 === 0);
+        const alignClass = isLeft ? 'align-left' : 'align-right';
+        const teseViewSource = `obice:${teseAtual}`;
+        const idObiceSeguro = teseAtual.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '_');
+
+        const tesesHtml = diretrizes.map((d, sIdx) => {
+            const intencao = d.intencao || 'premissa';
+            const iconSVG = obterIconeIntencao(intencao);
+            const isRevisada = d.revisada === true;
+            const itemWrapperClass = intencao === 'nota' ? `sub-annotation-item is-nota-interna ${isRevisada ? 'is-revisada' : 'is-pendente'}` : 'sub-annotation-item';
+            return `
+            <div class="${itemWrapperClass}" data-source="${teseViewSource}">
+                <div class="sub-annotation-card" style="border-left: 5px solid ${corTema}; border-color: ${rgbaTeseBorda};">
+                    <div class="sub-badge has-intent intencao-${intencao}" 
+                         title="Opções desta diretriz"
+                         onclick="abrirMenuSubAnotacao('${tabId}', '${teseViewSource.replace(/'/g, "\\'")}', '${teseViewSource.replace(/'/g, "\\'")}', ${sIdx}, event)">
+                         ${iconSVG} D.${sIdx + 1}
+                    </div>
+                    <div class="sub-text-content">${renderizarMarkdownSeguro(escaparHTML(d.texto))}</div>
+                    <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">
+                        Ler texto completo ▾
+                    </button>
+                    <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(d.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto para a área de transferência">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        Copiar Trecho
+                    </button>
+                    ${_gerarBtnRevisaoHtml(tabId, null, teseViewSource, sIdx, intencao, isRevisada)}
+                </div>
+            </div>`;
+        }).join('');
+
+        return `
+        <div class="timeline-item-master ${alignClass} nivel-hierarquico nivel-tese" id="timeline-wrapper-obice-${idObiceSeguro}">
+            <div class="main-card-wrapper" data-cidx="main">
+                <div class="annotation-number-area">
+                    <div class="timeline-icon-box" style="background-color: ${corTema}; color: ${corTextoTese};" title="Óbice de Admissibilidade">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle></svg>
+                    </div>
+                </div>
+                <div class="annotation-card" style="border-left: 4px solid ${corTema}; background-color: #ffffff; background-image: linear-gradient(${rgbaTeseFundo}, ${rgbaTeseFundo});">
+                    <div class="card-header" style="justify-content: space-between; margin-bottom: 0;">
+                        <div class="hierarquia-titulo" style="color: ${corTituloTese};">Óbice: ${escaparHTML(teseAtual)}</div>
+                        <div class="card-actions-bar" style="margin-top: 0; padding-top: 0; border-top: none;">
+                            <button title="Adicionar Diretriz ao Óbice" onclick="_menuAnotacaoCtx={topicoId:'${tabId}', index:'${teseViewSource.replace(/'/g, "\\'")}'}; acionarNovoNoIdeia()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="sub-annotations-wrapper">${tesesHtml}</div>
+        </div>`;
+    }
+
     /**
      * Re-renderiza o fichário inteiro.
      */
@@ -739,16 +815,6 @@ window.TopicsManager = (function () {
         // RENDERIZAÇÃO LIMPA: DIRETRIZES E CARDS (Padrão RO adaptado para AI)
         // =========================================================
 
-        function obterIconeIntencao(intencao) {
-            if (intencao === 'comando') return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>`;
-            if (intencao === 'texto') return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`;
-            if (intencao === 'nota') return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
-            if (intencao === 'fundamentacao') return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>`;
-            if (intencao === 'refutacao') return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>`;
-            if (intencao === 'preliminar') return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
-            return `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>`; // premissa
-        }
-
         let conteudoCentralHtml = '';
 
         if (topicoAtivo.anotacoes.length === 0) {
@@ -834,64 +900,9 @@ window.TopicsManager = (function () {
                 
                 if (teseAtual !== ultimaTeseRenderizada && teseAtual !== "Óbice Não Nomeado") {
                     const diretrizes = (topicoAtivo.diretrizesPorObice && topicoAtivo.diretrizesPorObice[teseAtual]) ? topicoAtivo.diretrizesPorObice[teseAtual] : [];
-                    const teseViewSource = `obice:${teseAtual}`;
-                    const idObiceSeguro = teseAtual.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '_');
                     
-                    // --- ARQUITETURA DINÂMICA DE CORES (Igual RO/ED) ---
-                    const rgbaTeseFundo = hexToRgba(_activeTopicoCor, 0.15);
-                    const rgbaTeseBorda = hexToRgba(_activeTopicoCor, 0.4);
-                    const corTituloTese = escurecerCor(_activeTopicoCor, 0.6);
-                    
-                    const tesesHtml = diretrizes.map((d, sIdx) => {
-                        const intencao = d.intencao || 'premissa';
-                        const iconSVG = obterIconeIntencao(intencao);
-                        const isRevisada = d.revisada === true;
-                        const itemWrapperClass = intencao === 'nota' ? `sub-annotation-item is-nota-interna ${isRevisada ? 'is-revisada' : 'is-pendente'}` : 'sub-annotation-item';
-                        return `
-                        <div class="${itemWrapperClass}" data-source="${teseViewSource}">
-                            <!-- NÓ DINÂMICO COM A COR DA ABA -->
-                            <div class="sub-annotation-card" style="border-left: 5px solid ${_activeTopicoCor}; border-color: ${rgbaTeseBorda};">
-                                <div class="sub-badge has-intent intencao-${intencao}" 
-                                     title="Opções desta diretriz"
-                                     onclick="abrirMenuSubAnotacao('${activeTabId}', '${teseViewSource.replace(/'/g, "\\'")}', '${teseViewSource.replace(/'/g, "\\'")}', ${sIdx}, event)">
-                                     ${iconSVG} D.${sIdx + 1}
-                                </div>
-                                <div class="sub-text-content">${renderizarMarkdownSeguro(escaparHTML(d.texto))}</div>
-                                <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">
-                                    Ler texto completo ▾
-                                </button>
-                                <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(d.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto para a área de transferência">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                                    Copiar Trecho
-                                </button>
-                                ${_gerarBtnRevisaoHtml(activeTabId, null, teseViewSource, sIdx, intencao, isRevisada)}
-                            </div>
-                        </div>`;
-                    }).join('');
-
-                    cardsHTML += `
-                    <div class="timeline-item-master align-left nivel-hierarquico nivel-tese" id="timeline-wrapper-obice-${idObiceSeguro}">
-                        <div class="main-card-wrapper" data-cidx="main">
-                            <div class="annotation-number-area">
-                                <!-- ÍCONE DINÂMICO -->
-                                <div class="timeline-icon-box" style="background-color: ${_activeTopicoCor}; color: ${corTextoTese};" title="Óbice de Admissibilidade">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle></svg>
-                                </div>
-                            </div>
-                            <!-- CARD DINÂMICO COM TRUQUE DE FUNDO SÓLIDO -->
-                            <div class="annotation-card" style="border-left: 4px solid ${_activeTopicoCor}; background-color: #ffffff; background-image: linear-gradient(${rgbaTeseFundo}, ${rgbaTeseFundo});">
-                                <div class="card-header" style="justify-content: space-between; margin-bottom: 0;">
-                                    <div class="hierarquia-titulo" style="color: ${corTituloTese};">Óbice: ${escaparHTML(teseAtual)}</div>
-                                    <div class="card-actions-bar" style="margin-top: 0; padding-top: 0; border-top: none;">
-                                        <button title="Adicionar Diretriz ao Óbice" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:'${teseViewSource.replace(/'/g, "\\'")}'}; acionarNovoNoIdeia()">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="sub-annotations-wrapper">${tesesHtml}</div>
-                    </div>`;
+                    // DELEGAÇÃO: Componente puro injeta o card sincronizado ao índice global
+                    cardsHTML += _gerarHtmlObiceGroup(teseAtual, diretrizes, activeTabId, _activeTopicoCor, index);
                     
                     ultimaTeseRenderizada = teseAtual;
                 }
