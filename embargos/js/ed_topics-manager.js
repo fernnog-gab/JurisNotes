@@ -613,10 +613,14 @@ window.TopicsManager = (function () {
     /**
      * Renderiza o bloco de diretrizes visuais para a IA (Global ou Por Vício)
      */
-    function renderizarNivelHierarquico(tipo, titulo, subanotacoes, topicoId, tesesConsolidadas = []) {
+    function renderizarNivelHierarquico(tipo, titulo, subanotacoes, topicoId, tesesConsolidadas = [], indexGlobal = 0) {
         const listaSegura = subanotacoes || [];
         const isGlobal = tipo === 'global';
         
+        // NÚCLEO DA CORREÇÃO: paridade dinâmica baseada no índice global
+        const isLeft = (indexGlobal % 2 === 0);
+        const alignClass = isLeft ? 'align-left' : 'align-right';
+
         const iconSvg = isGlobal 
             ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`
             : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle></svg>`;
@@ -690,7 +694,7 @@ window.TopicsManager = (function () {
         }
 
         return `
-            <div class="timeline-item-master align-left nivel-hierarquico ${wrapperClass}">
+            <div class="timeline-item-master ${alignClass} nivel-hierarquico ${wrapperClass}">
                 <div class="main-card-wrapper">
                     <div class="annotation-number-area">
                         <div class="timeline-icon-box" title="${hierarquiaTitulo}" style="${styleIconBox}">
@@ -1006,8 +1010,8 @@ window.TopicsManager = (function () {
                     .map(an => an.tese.trim())
             )];
             
-            // Passamos o novo array como 5º argumento
-            htmlDiretrizes += renderizarNivelHierarquico('vicio', vicioAtual, diretrizesDoVicio, activeTabId, tesesDesteVicio);
+            // Passamos o novo array como 5º argumento e o indexGlobal como 6º para alinhamento dinâmico
+            htmlDiretrizes += renderizarNivelHierarquico('vicio', vicioAtual, diretrizesDoVicio, activeTabId, tesesDesteVicio, 0);
 
             // MONTAGEM FINAL DA TIMELINE
             conteudoCentralHtml = sumarioHtml + `
