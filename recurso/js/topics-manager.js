@@ -655,6 +655,77 @@ window.TopicsManager = (function () {
     }
 
     /**
+     * Componente Dinâmico: Gera o Card de Tese hierárquica.
+     * Alinha-se automaticamente à paridade do índice global acumulado
+     * de anotações — não a um número fixo de grupo. Se a Tese anterior
+     * acumulou um número ímpar de cards, esta Tese nasce à direita, e
+     * vice-versa. A regra é sempre recalculada a partir do dado real.
+     */
+    function _gerarHtmlTeseGroup(teseAtual, diretrizes, tabId, corTema, indexGlobal) {
+        const rgbaTeseFundo = hexToRgba(corTema, 0.15);
+        const rgbaTeseBorda = hexToRgba(corTema, 0.4);
+        const corTituloTese = escurecerCor(corTema, 0.6);
+        const corTextoTese = obterCorContraste(corTema);
+
+        // NÚCLEO DA CORREÇÃO: paridade dinâmica baseada no índice global,
+        // não em um número fixo de "grupo".
+        const isLeft = (indexGlobal % 2 === 0);
+        const alignClass = isLeft ? 'align-left' : 'align-right';
+        const teseViewSource = `tese:${teseAtual}`;
+
+        const tesesHtml = diretrizes.map((d, sIdx) => {
+            const intencao = d.intencao || 'premissa';
+            const iconSVG = obterIconeIntencao(intencao);
+            const isRevisada = d.revisada === true;
+            const itemWrapperClass = intencao === 'nota'
+                ? `sub-annotation-item is-nota-interna ${isRevisada ? 'is-revisada' : 'is-pendente'}`
+                : 'sub-annotation-item';
+
+            return `
+            <div class="${itemWrapperClass}" data-source="${teseViewSource}">
+                <div class="sub-annotation-card" style="border-left: 5px solid ${corTema}; border-color: ${rgbaTeseBorda};">
+                    <div class="sub-badge has-intent intencao-${intencao}"
+                         title="Opções desta diretriz"
+                         onclick="abrirMenuSubAnotacao('${tabId}', null, '${teseViewSource.replace(/'/g, "\\'")}', ${sIdx}, event)">
+                         ${iconSVG} T.${sIdx + 1}
+                    </div>
+                    <div class="sub-text-content">${renderizarMarkdownSeguro(escaparHTML(d.texto))}</div>
+                    <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">
+                        Ler texto completo ▾
+                    </button>
+                    <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(d.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto para a área de transferência">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        Copiar Trecho
+                    </button>
+                    ${_gerarBtnRevisaoHtml(tabId, null, teseViewSource, sIdx, intencao, isRevisada)}
+                </div>
+            </div>`;
+        }).join('');
+
+        return `
+        <div class="timeline-item-master ${alignClass} nivel-hierarquico">
+            <div class="main-card-wrapper">
+                <div class="annotation-number-area">
+                    <div class="timeline-icon-box" title="Tese" style="background-color: ${corTema}; color: ${corTextoTese};">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle></svg>
+                    </div>
+                </div>
+                <div class="annotation-card" style="border-left: 4px solid ${corTema}; background-color: #ffffff; background-image: linear-gradient(${rgbaTeseFundo}, ${rgbaTeseFundo});">
+                    <div class="card-header" style="justify-content: space-between; margin-bottom: 0;">
+                        <div class="hierarquia-titulo" style="color: ${corTituloTese}; font-weight: bold;">Tese: ${escaparHTML(teseAtual)}</div>
+                        <div class="card-actions-bar" style="margin-top: 0; padding-top: 0; border-top: none;">
+                            <button title="Adicionar Diretriz à Tese" onclick="adicionarDiretrizEstrutural('tese', '${tabId}', '${escaparHTML(teseAtual).replace(/'/g, "\\'")}', event)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="sub-annotations-wrapper">${tesesHtml}</div>
+        </div>`;
+    }
+
+    /**
      * Re-renderiza o fichário inteiro.
      */
     function renderizarFichario(topicosArray) {
@@ -827,66 +898,10 @@ window.TopicsManager = (function () {
                 
                 if (teseAtual !== ultimaTeseRenderizada) {
                     const diretrizes = (topicoAtivo.diretrizesPorTese && topicoAtivo.diretrizesPorTese[teseAtual]) ? topicoAtivo.diretrizesPorTese[teseAtual] : [];
-                    const teseViewSource = `tese:${teseAtual}`;
                     
-                    // --- ARQUITETURA DINÂMICA DE CORES DA TESE ---
-                    // 1. Aumentamos a intensidade da cor para 15% para ficar mais vivo
-                    const rgbaTeseFundo = hexToRgba(_activeTopicoCor, 0.15); 
-                    // Usa a cor da aba para a borda
-                    const rgbaTeseBorda = hexToRgba(_activeTopicoCor, 0.4);
-                    // Cor escura para o título ler bem
-                    const corTituloTese = escurecerCor(_activeTopicoCor, 0.6);
-                    
-                    const tesesHtml = diretrizes.map((d, sIdx) => {
-                            const intencao = d.intencao || 'premissa';
-                            const iconSVG = obterIconeIntencao(intencao);
-                            const isRevisada = d.revisada === true;
-                            const itemWrapperClass = intencao === 'nota' ? `sub-annotation-item is-nota-interna ${isRevisada ? 'is-revisada' : 'is-pendente'}` : 'sub-annotation-item';
-                            return `
-                            <div class="${itemWrapperClass}" data-source="${teseViewSource}">
-                                <!-- AQUI O NÓ RECEBE A COR DINÂMICA DA ABA -->
-                            <div class="sub-annotation-card" style="border-left: 5px solid ${_activeTopicoCor}; border-color: ${rgbaTeseBorda};">
-                                <div class="sub-badge has-intent intencao-${intencao}" 
-                                     title="Opções desta diretriz"
-                                     onclick="abrirMenuSubAnotacao('${activeTabId}', null, '${teseViewSource.replace(/'/g, "\\'")}', ${sIdx}, event)">
-                                     ${iconSVG} T.${sIdx + 1}
-                                </div>
-                                <div class="sub-text-content">${renderizarMarkdownSeguro(escaparHTML(d.texto))}</div>
-                                <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">
-                                    Ler texto completo ▾
-                                </button>
-                                <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(d.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto para a área de transferência">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                                    Copiar Trecho
-                                </button>
-                                ${_gerarBtnRevisaoHtml(activeTabId, null, teseViewSource, sIdx, intencao, isRevisada)}
-                            </div>
-                        </div>`;
-                    }).join('');
-
-                    cardsHTML += `
-                    <div class="timeline-item-master align-left nivel-hierarquico">
-                        <div class="main-card-wrapper">
-                            <div class="annotation-number-area">
-                                <!-- ÍCONE COM A COR DA ABA -->
-                                <div class="timeline-icon-box" title="Tese" style="background-color: ${_activeTopicoCor}; color: ${corTextoTese};">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle></svg>
-                                </div>
-                            </div>
-                            <!-- CARD COM FUNDO SUAVE DA COR DA ABA -->
-                            <div class="annotation-card" style="border-left: 4px solid ${_activeTopicoCor}; background-color: #ffffff; background-image: linear-gradient(${rgbaTeseFundo}, ${rgbaTeseFundo});">
-                                <div class="card-header" style="justify-content: space-between; margin-bottom: 0;">
-                                    <div class="hierarquia-titulo" style="color: ${corTituloTese}; font-weight: bold;">Tese: ${escaparHTML(teseAtual)}</div>
-                                    <div class="card-actions-bar" style="margin-top: 0; padding-top: 0; border-top: none;">
-                                        <button title="Adicionar Diretriz à Tese" onclick="adicionarDiretrizEstrutural('tese', '${activeTabId}', '${escaparHTML(teseAtual).replace(/'/g, "\\'")}', event)">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="sub-annotations-wrapper">${tesesHtml}</div>
-                    </div>`;
+                    // DELEGAÇÃO: componente puro injeta o card já com o alinhamento
+                    // sincronizado ao índice global acumulado (não a um grupo fixo).
+                    cardsHTML += _gerarHtmlTeseGroup(teseAtual, diretrizes, activeTabId, _activeTopicoCor, index);
                     
                     ultimaTeseRenderizada = teseAtual;
                 }
