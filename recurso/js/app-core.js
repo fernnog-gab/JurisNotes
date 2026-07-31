@@ -257,10 +257,10 @@ window.ShortcutManager = (function() {
             // Single Source of Truth para Tooltips (UX dinâmica)
             if (state[type] === null) {
                 btn.classList.add('is-empty');
-                btn.title = `Marcar página: ${rotulos[type]}\n[Alt + Clique] p/ capturar a página atual`;
+                btn.title = `Marcar página: ${rotulos[type]}\n[Ctrl + Alt + Clique] p/ capturar a página atual`;
             } else {
                 btn.classList.add(colors[type]);
-                btn.title = `${rotulos[type]} (Pág. ${state[type]})\n[Shift + Clique] p/ editar\n[Alt + Clique] p/ capturar a página atual`;
+                btn.title = `${rotulos[type]} (Pág. ${state[type]})\n[Shift + Clique] p/ editar\n[Ctrl + Alt + Clique] p/ capturar a página atual`;
             }
         });
     }
@@ -271,7 +271,8 @@ window.ShortcutManager = (function() {
         }
 
         // FLUXO DE CAPTURA RÁPIDA (Early Return com Isolamento de Evento)
-        if (event.altKey) {
+        // Utilizando Ctrl + Alt para evitar bloqueios nativos do navegador
+        if (event.ctrlKey && event.altKey) {
             event.preventDefault();
             event.stopPropagation(); // Impede o "Event Bubbling" que fecha modais
             
