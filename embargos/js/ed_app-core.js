@@ -233,6 +233,22 @@ window.ShortcutManager = (function() {
         acordao: 'Acórdão Embargado' 
     };
 
+    // NOVA ARQUITETURA: Centralizador de Mutação de Estado e Persistência
+    async function _commitShortcut(type, pageNum) {
+        state[type] = pageNum;
+        updateUI();
+        
+        // Mensagem semântica dependendo se é inclusão ou exclusão
+        if (pageNum === null) {
+            exibirToast('Atalho removido.', 'sucesso');
+        } else {
+            exibirToast(`${rotulos[type]} atualizado para fl. ${pageNum}!`, 'sucesso');
+        }
+
+        // Desacoplamento seguro (Call by string check)
+        if (typeof salvarBackupAutomatico === 'function') await salvarBackupAutomatico();
+    }
+
     function updateUI() {
         Object.keys(state).forEach(type => {
             const btn = document.getElementById(getFabId(type));
@@ -241,20 +257,40 @@ window.ShortcutManager = (function() {
             // Limpa classes antigas do botão
             btn.className = 'fab-btn fab-shortcut';
             
+            // Single Source of Truth para Tooltips (UX dinâmica)
             if (state[type] === null) {
                 btn.classList.add('is-empty');
-                btn.title = `Marcar página: ${rotulos[type]}`;
+                btn.title = `Marcar página: ${rotulos[type]}\n[Ctrl + Clique] p/ capturar a página atual`;
             } else {
                 btn.classList.add(colors[type]);
-                btn.title = `${rotulos[type]} (Pág. ${state[type]})\n[Shift + Clique] para editar`;
+                btn.title = `${rotulos[type]} (Pág. ${state[type]})\n[Shift + Clique] p/ editar\n[Ctrl + Clique] p/ capturar a página atual`;
             }
         });
     }
 
-    function handleClick(type, event) {
+    async function handleClick(type, event) {
         if (!window.PdfEngine || !PdfEngine.getPdfDoc()) {
             exibirToast('Carregue um documento primeiro.', 'aviso'); return;
         }
+
+        // FLUXO DE CAPTURA RÁPIDA (Early Return com Isolamento de Evento)
+        // Utilizando apenas Ctrl estrito (evitando falsos positivos com AltGr/Shift)
+        if (event.ctrlKey && !event.shiftKey && !event.altKey) {
+            event.preventDefault();
+            event.stopPropagation(); // Impede o "Event Bubbling" que fecha modais
+            
+            const currentPage = PdfEngine.getCurrentPage();
+            
+            // Validação defensiva rápida
+            if (currentPage > 0) {
+                await _commitShortcut(type, currentPage);
+            } else {
+                exibirToast('Não foi possível identificar a página atual.', 'erro');
+            }
+            return; 
+        }
+
+        // FLUXO ORIGINAL (Modal de Edição ou Navegação)
         if (state[type] === null || event.shiftKey) {
             abrirModal(type);
         } else {
@@ -284,20 +320,17 @@ window.ShortcutManager = (function() {
         const val = document.getElementById('shortcut-page-input').value.trim();
         const parsed = parseInt(val, 10);
         
+        // Delegação de mutação para o orquestrador
         if (val === '') {
-            state[currentEditingType] = null;
-            exibirToast('Atalho removido.', 'sucesso');
+            await _commitShortcut(currentEditingType, null);
         } else if (!isNaN(parsed) && parsed > 0) {
-            state[currentEditingType] = parsed;
-            exibirToast('Atalho salvo com sucesso!', 'sucesso');
+            await _commitShortcut(currentEditingType, parsed);
         } else {
             exibirToast('Número de página inválido.', 'erro');
             return;
         }
         
         fecharModal();
-        updateUI();
-        if (typeof salvarBackupAutomatico === 'function') await salvarBackupAutomatico();
     }
 
     function getFabId(type) {
