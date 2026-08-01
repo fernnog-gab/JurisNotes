@@ -286,7 +286,7 @@ window.abrirModalAcervo = function() {
     
     const listView = document.getElementById('acervo-list-view');
     if (listView) {
-        listView.style.display = 'block';
+        listView.style.display = 'flex';
         listView.style.opacity = '1';
     }
     
@@ -1086,7 +1086,7 @@ window.desativarModoFocoAcervo = function() {
     focusView.style.opacity = '0';
     setTimeout(() => {
         focusView.style.display = 'none';
-        listView.style.display = 'block';
+        listView.style.display = 'flex';
         void listView.offsetWidth;
         listView.style.opacity = '1';
         
