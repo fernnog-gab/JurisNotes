@@ -470,3 +470,19 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
     0%, 100% { box-shadow: 0 4px 10px rgba(26, 58, 92, 0.25); }
     50% { box-shadow: 0 4px 14px rgba(255, 82, 82, 0.55); }
 }
+
+/* Versão compacta para alinhamento harmonioso com o Cronômetro */
+.floating-pill-dark.floating-pill-compact {
+    padding: 4px 10px 4px 4px;
+    font-size: 0.72rem;
+    border-radius: 16px;
+}
+.floating-pill-dark.floating-pill-compact .pill-icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 6px;
+}
+.floating-pill-dark.floating-pill-compact svg {
+    width: 11px;
+    height: 11px;
+}
