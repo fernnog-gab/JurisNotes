@@ -555,22 +555,45 @@
 /* ================================================
    CRONÔMETRO DE EFICIÊNCIA (TIME TRACKER)
    ================================================ */
-#efficiency-tracker-container {
+/* --- NOVA ARQUITETURA DO HUB DE FERRAMENTAS --- */
+.floating-tools-hub {
     position: sticky;
     top: 18px;
     z-index: 1000;
-    height: 0;         /* Impede impacto no layout dos cards abaixo */
-    overflow: visible; /* Permite que a pílula apareça mesmo com height 0 */
+    height: 0; /* Resolve o "buraco" de layout puxando o conteúdo para cima */
+    overflow: visible;
     display: flex;
+    gap: 12px;
     justify-content: flex-end;
-    align-items: flex-start; /* ← A SOLUÇÃO: Impede que a pílula seja esmagada */
-    margin-right: 24px;
-    pointer-events: none; /* Deixa cliques atravessarem o container fantasma */
+    align-items: flex-start;
+    padding-right: 24px;
+    pointer-events: none; /* ESCUDO DE EVENTOS: O container inteiro é "atravessável" */
+}
+
+/* Agrupador visual interno (não deve bloquear cliques) */
+.tracker-group {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    pointer-events: none; 
+}
+
+/* ISOLAMENTO ESTRITO: Reativa cliques APENAS nos botões finais */
+#btn-contrato-trabalho,
+#hidden-notes-tracker,
+#efficiency-tracker-pill {
+    pointer-events: auto;
+}
+
+/* MELHORIA DE UX: Glassmorphism (Aplica o desfoque sobre o texto lido) */
+.floating-pill-dark {
+    background: rgba(26, 58, 92, 0.85); /* Torna o azul levemente translúcido */
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
 }
 
 #efficiency-tracker-pill {
     position: relative;
-    pointer-events: auto; /* Reativa cliques apenas no botão */
     border-radius: 20px;
     padding: 2px;
     cursor: pointer;

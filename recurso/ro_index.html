@@ -240,11 +240,12 @@
         <div id="history-container">
             <div id="topics-tabs-header" class="topics-tab-bar"></div>
             
-            <!-- NOVO: Wrapper relativo que encapsula o cronômetro e o conteúdo -->
+            <!-- Wrapper relativo mantido para preservar o 'Containing Block' do Sticky -->
             <div style="position: relative;">
-                <div style="display: flex; gap: 10px; align-items: center; justify-content: flex-end;">
+                
+                <!-- HUB FLUTUANTE: Centralizador invisível no fluxo -->
+                <div id="floating-tools-hub" class="floating-tools-hub">
                     
-                    <!-- Badge do Contrato — agora compacto, à esquerda do cronômetro -->
                     <div id="btn-contrato-trabalho" class="floating-pill-dark floating-pill-compact" style="display:none;" onclick="ContratoManager.abrirModal()" title="Adicionar Parâmetros do Contrato">
                         <div class="pill-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -255,22 +256,18 @@
                         <span id="contrato-status-text">Contrato</span>
                     </div>
 
-                    <!-- Cronômetro e Lâmpada (Tracker Flutuante) ancorados no scroll -->
-                    <div id="efficiency-tracker-container" style="display: flex; gap: 12px; align-items: flex-start; display: none;">
+                    <!-- Container do Tracker (apenas agrupa, sem bloquear cliques) -->
+                    <div id="efficiency-tracker-container" class="tracker-group" style="display: none;">
                         
-                        <!-- NOVO: Rastreador de Notas Ocultas (A Lâmpada) -->
                         <div id="hidden-notes-tracker" class="floating-lamp-tracker" style="display: none;" onclick="TopicsManager.rolarParaProximaNotaOculta()" title="Você tem notas ocultas neste tópico. Clique para navegar.">
                             <div class="lamp-icon">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M9 18h6"></path>
-                                    <path d="M10 22h4"></path>
-                                    <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"></path>
+                                    <path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"></path>
                                 </svg>
                             </div>
                             <span id="hidden-notes-badge" class="task-badge">0</span>
                         </div>
 
-                        <!-- MANTIDO: Pílula do Cronômetro original -->
                         <div id="efficiency-tracker-pill" onclick="TimeTrackerManager.handleClick()">
                             <div id="tracker-bg-mask"></div>
                             <div class="tracker-content">
@@ -279,7 +276,6 @@
                             </div>
                         </div>
                     </div>
-
                 </div>
                 
                 <!-- Área onde os cards são injetados pelo sistema -->
