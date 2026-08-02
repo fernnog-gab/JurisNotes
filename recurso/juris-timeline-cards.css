@@ -972,3 +972,28 @@
     height: 100%;
     overflow-y: auto;
 }
+
+/* ================================================
+   SINCRONIZAÇÃO GEOMÉTRICA DE BOTÕES (UI/UX)
+   Alinhamento perfeito entre Contrato e Cronômetro
+   ================================================ */
+#btn-contrato-trabalho,
+#efficiency-tracker-container #efficiency-tracker-pill {
+    height: 34px; 
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+}
+
+#btn-contrato-trabalho {
+    padding: 0 14px;
+    gap: 8px;
+}
+
+/* Garante que o conteúdo dentro da pílula do cronômetro ocupe a altura exata definida acima */
+#efficiency-tracker-container #efficiency-tracker-pill .tracker-content {
+    height: 100%;
+    padding: 0 14px;
+    display: inline-flex;
+    align-items: center;
+}

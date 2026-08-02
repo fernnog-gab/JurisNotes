@@ -67,11 +67,17 @@ window.ContratoManager = (function () {
         document.getElementById('input-contrato-funcao').value = p.funcao || '';
         document.getElementById('modal-contrato-backdrop').style.display = 'block';
         document.getElementById('modal-contrato-config').style.display = 'block';
+        
+        // Ativa o desfoque global para imersão cognitiva
+        if (typeof window.toggleModoFoco === 'function') window.toggleModoFoco(true);
     }
 
     function fecharModal() {
         document.getElementById('modal-contrato-backdrop').style.display = 'none';
         document.getElementById('modal-contrato-config').style.display = 'none';
+        
+        // Remove o desfoque ao encerrar a interação
+        if (typeof window.toggleModoFoco === 'function') window.toggleModoFoco(false);
     }
 
     function salvar() {
