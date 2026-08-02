@@ -1144,27 +1144,8 @@ document.getElementById('goto-page-input')?.addEventListener('keypress', functio
 
 document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
-        // Fechamentos Originais
         if (typeof fecharPopupClassificacao === 'function') fecharPopupClassificacao();
         if (typeof cancelarRecorteWizard === 'function') cancelarRecorteWizard();
-        
-        // FECHAMENTOS NOVOS COM SAFETY CHECK (Previne anulação indevida do toggleModoFoco de outros modais)
-        
-        // Verifica se o modal de Contrato está visível
-        const modalContrato = document.getElementById('modal-contrato-config');
-        if (modalContrato && modalContrato.style.display === 'block') {
-            if (window.ContratoManager && typeof ContratoManager.fecharModal === 'function') {
-                ContratoManager.fecharModal();
-            }
-        }
-
-        // Verifica se o modal do Tracker está visível
-        const modalTracker = document.getElementById('modal-tracker-config');
-        if (modalTracker && modalTracker.style.display === 'block') {
-            if (window.TimeTrackerManager && typeof TimeTrackerManager.fecharModal === 'function') {
-                TimeTrackerManager.fecharModal();
-            }
-        }
     }
 });
 
@@ -1528,9 +1509,6 @@ window.TimeTrackerManager = (function() {
         document.getElementById('modal-tracker-backdrop').style.display = 'block';
         document.getElementById('modal-tracker-config').style.display = 'block';
         
-        // Ativa o desfoque global
-        if (typeof window.toggleModoFoco === 'function') window.toggleModoFoco(true);
-        
         const svgIcon = isRodando 
             ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; margin-right:6px; vertical-align:middle;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>'
             : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; margin-right:6px; vertical-align:middle;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
@@ -1543,9 +1521,6 @@ window.TimeTrackerManager = (function() {
     function fecharModal() {
         document.getElementById('modal-tracker-backdrop').style.display = 'none';
         document.getElementById('modal-tracker-config').style.display = 'none';
-        
-        // Remove o desfoque ao fechar
-        if (typeof window.toggleModoFoco === 'function') window.toggleModoFoco(false);
     }
 
     function iniciar() {
