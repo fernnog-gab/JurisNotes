@@ -462,7 +462,33 @@ window.ExportManager = (function () {
             mdDiretrizesGlobais += `</diretrizes_globais_do_topico>\n\n`;
         }
 
-        return mdCabecalho + mdTags + mdVeredito + mdDiretrizesGlobais + mdDiretrizesTeses + mdMatriz;
+        // INTEGRAÇÃO DE AUDITORIA DE PRESCRIÇÃO
+        const dadosContrato = window.ContratoManager ? window.ContratoManager.getDados() : null;
+        let mdContrato = '';
+        if (dadosContrato && (dadosContrato.inicio || dadosContrato.fim)) {
+            const formatarData = (d) => d ? d.split('-').reverse().join('/') : 'Não informado';
+            const temAjuizamento = !!dadosContrato.ajuizamento;
+
+            mdContrato += `<parametros_contratuais>\n`;
+            mdContrato += `[ALERTA DE SISTEMA - MARCO PRESCRICIONAL]:\n`;
+            mdContrato += `O Assessor definiu os seguintes parâmetros incontroversos de vínculo:\n`;
+            mdContrato += `- Início do contrato: ${formatarData(dadosContrato.inicio)}\n`;
+            mdContrato += `- Término do contrato: ${formatarData(dadosContrato.fim)}\n`;
+            mdContrato += `- Data de ajuizamento da ação: ${formatarData(dadosContrato.ajuizamento)}\n`;
+            mdContrato += `- Função(ões): ${_safeMD(dadosContrato.funcao || 'Não informada', ' ')}\n\n`;
+
+            mdContrato += `INSTRUÇÃO ESTRITA: Durante a análise do mérito e das parcelas deferidas, avalie a prescrição:\n`;
+            mdContrato += `- PRESCRIÇÃO BIENAL: verifique se a "Data de ajuizamento" está a mais de 2 anos do "Término do contrato". Se estiver, TODO o direito de ação está prescrito.\n`;
+            if (temAjuizamento) {
+                mdContrato += `- PRESCRIÇÃO QUINQUENAL: são inexigíveis parcelas vencidas há mais de 5 anos contados retroativamente da "Data de ajuizamento" informada acima.\n`;
+            } else {
+                mdContrato += `- PRESCRIÇÃO QUINQUENAL: a "Data de ajuizamento" não foi informada — NÃO calcule o marco quinquenal; apenas sinalize [DADO INSUFICIENTE PARA PRESCRIÇÃO QUINQUENAL] caso essa análise seja relevante ao tópico.\n`;
+            }
+            mdContrato += `Se identificar parcela deferida fora de qualquer um destes limites, emita um destaque explícito [ERRO PRESCRICIONAL IDENTIFICADO], explicando o motivo.\n`;
+            mdContrato += `</parametros_contratuais>\n\n`;
+        }
+
+        return mdCabecalho + mdTags + mdContrato + mdVeredito + mdDiretrizesGlobais + mdDiretrizesTeses + mdMatriz;
     }
 
     // ─── DOWNLOAD DE ARQUIVO MARKDOWN ─────────────────────────────────────────

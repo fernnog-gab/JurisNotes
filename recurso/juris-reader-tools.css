@@ -422,3 +422,58 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
     box-shadow: 0 2px 4px rgba(76, 175, 80, 0.25);
 }
 .pin-eraser-btn.is-active svg { stroke: #2e7d32; }
+
+/* ================================================
+   Badge Global do Contrato (barra .tabs)
+   ================================================ */
+#btn-contrato-trabalho {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    z-index: 10;
+}
+
+.floating-pill-dark {
+    display: flex;
+    align-items: center;
+    background: var(--trt-blue);
+    color: white;
+    border-radius: 20px;
+    padding: 6px 12px 6px 6px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(26, 58, 92, 0.25);
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.2s ease;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+.floating-pill-dark:hover {
+    background: var(--trt-blue-mid);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(26, 58, 92, 0.35);
+}
+.floating-pill-dark .pill-icon {
+    background: rgba(255,255,255,0.15);
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 8px;
+}
+.floating-pill-dark svg {
+    width: 14px;
+    height: 14px;
+}
+.floating-pill-dark.has-data {
+    border-color: #39FF14;
+}
+.floating-pill-dark.alerta-prescricao {
+    border-color: #ff5252;
+    animation: pulse-alerta 1.8s infinite;
+}
+@keyframes pulse-alerta {
+    0%, 100% { box-shadow: 0 4px 10px rgba(26, 58, 92, 0.25); }
+    50% { box-shadow: 0 4px 14px rgba(255, 82, 82, 0.55); }
+}

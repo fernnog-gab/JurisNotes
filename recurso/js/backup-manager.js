@@ -65,9 +65,10 @@ window.BackupManager = (function () {
                 pdfHash:           _pdfHash,
                 possuiAudio:       possuiAudio,
                 balancaHtml:       window.BalancaManager ? window.BalancaManager.getHtmlState() : null,
-                versaoApp:         '7.0', // MARCO DA NOVA ARQUITETURA E LIMPEZA DE VEREDITO
+                versaoApp:         '7.1', // Adição de Parâmetros Contratuais Globais
                 ultimaAtualizacao: Date.now(),
-                atalhosPdf:        atalhosCapturados
+                atalhosPdf:        atalhosCapturados,
+                contrato:          window.ContratoManager ? window.ContratoManager.getDados() : null
             },
             dados: topicos
         }, null, 2);
@@ -255,6 +256,10 @@ window.BackupManager = (function () {
             window.BalancaManager.restoreHtmlState(pacote.metadata.balancaHtml || null);
         }
 
+        if (window.ContratoManager) {
+            window.ContratoManager.setDados(pacote.metadata.contrato || null);
+        }
+
         return pacote;
     }
 
@@ -299,6 +304,7 @@ window.BackupManager = (function () {
         _processoId = null;
         _pdfHash    = null;
         _fileHandle = null;
+        if (window.ContratoManager) window.ContratoManager.setDados(null);
     }
 
     /* ── Getters e Setter ────────────────────────────── */
