@@ -509,6 +509,13 @@ window.toggleModoFoco = function(ativar) {
     else pdfWrapper.classList.remove('pdf-foco-ativo');
 };
 
+window.toggleFocoModal = function(ativar) {
+    const alvo = document.querySelector('.main-content');
+    if (!alvo) return;
+    if (ativar) alvo.classList.add('pdf-foco-ativo');
+    else alvo.classList.remove('pdf-foco-ativo');
+};
+
 function trocarAba(aba) {
     document.body.dataset.activeTab = aba;
 
@@ -1508,6 +1515,9 @@ window.TimeTrackerManager = (function() {
     function handleClick() {
         document.getElementById('modal-tracker-backdrop').style.display = 'block';
         document.getElementById('modal-tracker-config').style.display = 'block';
+
+        // Ativa o desfoque de fundo
+        if (typeof window.toggleFocoModal === 'function') window.toggleFocoModal(true);
         
         const svgIcon = isRodando 
             ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; margin-right:6px; vertical-align:middle;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>'
@@ -1521,6 +1531,9 @@ window.TimeTrackerManager = (function() {
     function fecharModal() {
         document.getElementById('modal-tracker-backdrop').style.display = 'none';
         document.getElementById('modal-tracker-config').style.display = 'none';
+
+        // Desativa o desfoque de fundo
+        if (typeof window.toggleFocoModal === 'function') window.toggleFocoModal(false);
     }
 
     function iniciar() {

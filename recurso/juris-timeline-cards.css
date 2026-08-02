@@ -972,3 +972,27 @@
     height: 100%;
     overflow-y: auto;
 }
+
+/* ================================================
+   SINCRONIZAÇÃO GEOMÉTRICA DE BOTÕES (CONTRATO E CRONÔMETRO)
+   ================================================ */
+#btn-contrato-trabalho,
+#efficiency-tracker-pill {
+    height: 34px;
+    box-sizing: border-box;
+}
+
+#btn-contrato-trabalho {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 8px;
+}
+
+#efficiency-tracker-pill .tracker-content {
+    height: 100%;
+    padding: 0 14px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+}
