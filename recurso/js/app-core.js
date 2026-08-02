@@ -523,6 +523,9 @@ function trocarAba(aba) {
     const btnExportar = document.getElementById('btn-exportar-topico');
     if (btnExportar) btnExportar.style.display = isAnotacoes ? 'flex' : 'none';
 
+    const btnContrato = document.getElementById('btn-contrato-trabalho');
+    if (btnContrato) btnContrato.style.display = isAnotacoes ? 'flex' : 'none';
+
     // GERENCIAMENTO DA VISIBILIDADE DO GERADOR DE CONTEXTO
     const btnGerador = document.getElementById('btn-gerador-contexto');
     if (btnGerador) btnGerador.style.display = isAnotacoes ? 'flex' : 'none';

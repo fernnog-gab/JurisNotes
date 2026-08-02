@@ -424,15 +424,8 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
 .pin-eraser-btn.is-active svg { stroke: #2e7d32; }
 
 /* ================================================
-   Badge Global do Contrato (barra .tabs)
+   Badge do Contrato (Painel de Anotações)
    ================================================ */
-#btn-contrato-trabalho {
-    position: absolute;
-    top: 10px;
-    right: 12px;
-    z-index: 10;
-}
-
 .floating-pill-dark {
     display: flex;
     align-items: center;
