@@ -174,11 +174,17 @@ function editarItemCorrelacionado() {
 
 function abrirModalEdicao(contexto, textoAtual) {
     _editContext = contexto;
-    const textarea = document.getElementById('edit-text-input');
-    textarea.value = textoAtual;
+    const editor = document.getElementById('edit-text-input');
+    
+    // Converte o Markdown salvo em formatação visual real
+    editor.innerHTML = window.JurisEditor.markdownParaHtml(textoAtual || '');
+    editor.dataset.placeholder = 'Selecione um trecho e aplique formatação...';
+    
+    editor.dispatchEvent(new Event('input')); // reavalia o estado vazio/placeholder
+
     document.getElementById('text-edit-backdrop').style.display = 'block';
     document.getElementById('text-edit-modal').style.display = 'flex';
-    setTimeout(() => textarea.focus(), 50);
+    setTimeout(() => editor.focus(), 50);
 }
 
 function fecharModalEdicao() {
@@ -211,7 +217,8 @@ document.getElementById('edit-text-input').addEventListener('keydown', function(
 });
 
 function salvarEdicaoTexto() {
-    let novoTexto = document.getElementById('edit-text-input').value.trim();
+    const editor = document.getElementById('edit-text-input');
+    let novoTexto = window.JurisEditor.htmlParaMarkdown(editor.innerHTML);
     const topico = topicos.find(t => t.id === _editContext.topicoId);
     
     if (_editContext.tipo === 'preambulo') {
@@ -244,40 +251,7 @@ window.abrirEdicaoPreambulo = function(topicoId, campo) {
     abrirModalEdicao({ tipo: 'preambulo', topicoId: topicoId, campo: campo }, textoAtual);
 };
 
-function aplicarAumentoFonte(nivel) {
-    const textarea = document.getElementById('edit-text-input');
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const texto = textarea.value;
 
-    if (start === end) {
-        return exibirToast('Selecione um trecho para modificar a fonte.', 'aviso');
-    }
-
-    const prefixo = `[[size:${nivel}]]`;
-    const sufixo = `[[/size]]`;
-
-    // VERIFICAÇÃO DE TOGGLE (Idempotência)
-    const trechoAnterior = texto.substring(start - prefixo.length, start);
-    const trechoPosterior = texto.substring(end, end + sufixo.length);
-
-    if (trechoAnterior === prefixo && trechoPosterior === sufixo) {
-        // UNWRAP: Remove as tags existentes no entorno
-        textarea.value = texto.substring(0, start - prefixo.length) + 
-                         texto.substring(start, end) + 
-                         texto.substring(end + sufixo.length);
-        textarea.setSelectionRange(start - prefixo.length, end - prefixo.length);
-    } else {
-        // WRAP: Sanitiza sujeira interna antes de envelopar
-        let trechoSelecionado = texto.substring(start, end);
-        // Expurga tags de tamanho antigas de dentro da nova seleção para evitar aninhamento
-        trechoSelecionado = trechoSelecionado.replace(/\[\[size:\d\]\]/g, '').replace(/\[\[\/size\]\]/g, '');
-
-        textarea.value = texto.substring(0, start) + prefixo + trechoSelecionado + sufixo + texto.substring(end);
-        textarea.setSelectionRange(start + prefixo.length, start + prefixo.length + trechoSelecionado.length);
-    }
-    textarea.focus();
-}
 
 /* --- FUNÇÕES INTEGRAIS MIGRADAS DO APP.JS --- */
 function acionarNovoNoIdeia() {

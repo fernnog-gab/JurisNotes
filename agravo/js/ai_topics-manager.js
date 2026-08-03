@@ -55,6 +55,8 @@ window.TopicsManager = (function () {
         let processado = strEscapada;
 
         processado = processado.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
+        processado = processado.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
+        processado = processado.replace(/\[\[u\]\]([\s\S]*?)\[\[\/u\]\]/g, '<u>$1</u>');
 
         // Estilo inline embutido junto da classe: a classe cuida da tela,
         // o "style" garante que o Google Docs (que não enxerga seu CSS)
