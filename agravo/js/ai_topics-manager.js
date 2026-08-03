@@ -53,14 +53,17 @@ window.TopicsManager = (function () {
     function renderizarMarkdownSeguro(strEscapada) {
         if (!strEscapada) return '';
         let processado = strEscapada;
-        
-        // FIX: [\s\S]*? engloba quebras de linha (\n)
+
         processado = processado.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
-        
-        // NOVA SINTAXE: Renderização de Tipografia
-        processado = processado.replace(/\[\[size:1\]\]([\s\S]*?)\[\[\/size\]\]/g, '<span class="txt-largo-1">$1</span>');
-        processado = processado.replace(/\[\[size:2\]\]([\s\S]*?)\[\[\/size\]\]/g, '<span class="txt-largo-2">$1</span>');
-        
+
+        // Estilo inline embutido junto da classe: a classe cuida da tela,
+        // o "style" garante que o Google Docs (que não enxerga seu CSS)
+        // preserve o tamanho ao colar.
+        processado = processado.replace(/\[\[size:1\]\]([\s\S]*?)\[\[\/size\]\]/g,
+            '<span class="txt-largo-1" style="font-size:1.15em;">$1</span>');
+        processado = processado.replace(/\[\[size:2\]\]([\s\S]*?)\[\[\/size\]\]/g,
+            '<span class="txt-largo-2" style="font-size:1.3em;">$1</span>');
+
         return processado;
     }
 
@@ -136,70 +139,68 @@ window.TopicsManager = (function () {
         }, 16); 
     });
 
-    // Funções Privadas do Zen Mode
-    function _ativarZenMode(card) {
-        const item = card.closest('.sub-annotation-item') || card.closest('.main-card-wrapper');
-        const contentArea = document.getElementById('topics-tab-content');
-        if (!contentArea || !item) return;
+    // Funções Privadas do Modo de Leitura Centralizado
+    let _textoLeituraAtualMarkdown = "";
+    let _textoLeituraAtualHTML = "";
 
-        contentArea.classList.add('zen-mode-ativo');
-        item.classList.add('is-zen-focused');
-        card.classList.add('zen-focused');
+    function abrirModoLeitura(btn) {
+        const textoOriginal = btn.dataset.rawText || '';
+        const tituloOriginal = btn.dataset.rawTitle || 'Anotação';
 
-        // Scroll seguro baseado no `#history-container` nativo
-        const scrollContainer = document.getElementById('history-container');
-        if (scrollContainer) {
-            setTimeout(() => {
-                const containerRect = scrollContainer.getBoundingClientRect();
-                const cardRect = card.getBoundingClientRect();
-                const offset = (cardRect.top - containerRect.top) + scrollContainer.scrollTop 
-                               - (scrollContainer.clientHeight / 2) + (cardRect.height / 2);
-                scrollContainer.scrollTo({ top: offset, behavior: 'smooth' });
-            }, 100);
-        }
+        const modal = document.getElementById('reading-mode-modal');
+        const backdrop = document.getElementById('reading-mode-backdrop');
+        const tituloEl = document.getElementById('reading-mode-title-text');
+        const conteudoEl = document.getElementById('reading-mode-content');
+        if (!modal || !backdrop || !tituloEl || !conteudoEl) return;
+
+        _textoLeituraAtualMarkdown = textoOriginal;
+        _textoLeituraAtualHTML = renderizarMarkdownSeguro(escaparHTML(textoOriginal));
+
+        tituloEl.textContent = tituloOriginal;
+        conteudoEl.innerHTML = _textoLeituraAtualHTML.replace(/\n/g, '<br>');
+
+        backdrop.style.display = 'block';
+        modal.style.display = 'flex';
     }
 
-    function _fecharZenModeAtivo() {
-        const contentArea = document.getElementById('topics-tab-content');
-        if (!contentArea) return;
-
-        contentArea.classList.remove('zen-mode-ativo');
-        document.querySelectorAll('.is-zen-focused').forEach(el => el.classList.remove('is-zen-focused'));
-        document.querySelectorAll('.zen-focused').forEach(el => {
-            el.classList.remove('zen-focused');
-            const btn = el.querySelector('.btn-expand-text');
-            const txt = el.querySelector('.sub-text-content, .card-texto');
-            if (txt && txt.classList.contains('expanded')) {
-                txt.classList.remove('expanded');
-                if (btn) btn.innerHTML = 'Ler texto completo ▾';
-            }
-        });
+    function fecharModoLeitura() {
+        const modal = document.getElementById('reading-mode-modal');
+        const backdrop = document.getElementById('reading-mode-backdrop');
+        if (modal) modal.style.display = 'none';
+        if (backdrop) backdrop.style.display = 'none';
     }
 
-    // Heurística de Saída Rápida (Teclado)
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && document.querySelector('.zen-focused')) {
-            _fecharZenModeAtivo();
-            requestAnimationFrame(() => {
-                const container = document.getElementById('timeline-container');
-                if (container) requestAnimationFrame(() => _sincronizarConexoesComAnimacao(container));
-            });
+        const modal = document.getElementById('reading-mode-modal');
+        if (e.key === 'Escape' && modal && modal.style.display === 'flex') {
+            fecharModoLeitura();
         }
     });
 
-    document.addEventListener('click', (e) => {
-        const contentArea = document.getElementById('topics-tab-content');
-        if (contentArea && contentArea.classList.contains('zen-mode-ativo')) {
-            // Se o clique não foi dentro de NENHUM container em foco, nem no botão que aciona o foco
-            if (!e.target.closest('.is-zen-focused') && !e.target.closest('.btn-expand-text')) {
-                _fecharZenModeAtivo();
-                requestAnimationFrame(() => {
-                    const container = document.getElementById('timeline-container');
-                    if (container) _sincronizarConexoesComAnimacao(container);
-                });
+    async function copiarTextoModoLeitura() {
+        const paragrafosHtml = _textoLeituraAtualHTML
+            .split('\n')
+            .filter(linha => linha.trim() !== '')
+            .map(linha => `<p>${linha}</p>`)
+            .join('');
+
+        try {
+            const clipboardItem = new ClipboardItem({
+                'text/plain': new Blob([_textoLeituraAtualMarkdown], { type: 'text/plain' }),
+                'text/html': new Blob([paragrafosHtml], { type: 'text/html' })
+            });
+            await navigator.clipboard.write([clipboardItem]);
+            exibirToast('Texto copiado com formatação inteligente!', 'sucesso');
+        } catch (err) {
+            console.warn('Fallback de cópia acionado:', err);
+            try {
+                await navigator.clipboard.writeText(_textoLeituraAtualMarkdown);
+                exibirToast('Texto copiado (Modo Básico).', 'info');
+            } catch (err2) {
+                exibirToast('Não foi possível copiar automaticamente.', 'erro');
             }
         }
-    });
+    }
 
     function _gerarBtnRevisaoHtml(topicoId, parentIndex, viewSource, localIndex, intencao, isRevisada) {
         if (intencao !== 'nota') return '';
@@ -363,8 +364,12 @@ window.TopicsManager = (function () {
                             ${label}
                         </div>
                         <div class="sub-text-content">${textoFormatado}</div>
-                        <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">
-                            Ler texto completo ▾
+                        <button class="btn-expand-text" data-raw-text="${escaparHTML(sub.texto)}" data-raw-title="Nó de Ideia" onclick="TopicsManager.abrirModoLeitura(this)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                            </svg>
+                            Modo Leitura
                         </button>
                         <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(sub.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto para a área de transferência">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
@@ -397,8 +402,12 @@ window.TopicsManager = (function () {
             htmlConteudo = `
             <div style="position: relative;">
                 <p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(anotacao.conteudo))}"</p>
-                <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">
-                    Ler texto completo ▾
+                <button class="btn-expand-text" data-raw-text="${escaparHTML(anotacao.conteudo)}" data-raw-title="${escaparHTML(anotacao.documento || anotacao.polo || 'Anotação')}" onclick="TopicsManager.abrirModoLeitura(this)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                    </svg>
+                    Modo Leitura
                 </button>
             </div>`;
             if (anotacao.comentario) htmlComentario = `<div class="card-comentario"><strong>Observação:</strong> ${escaparHTML(anotacao.comentario)}</div>`;
@@ -496,8 +505,12 @@ window.TopicsManager = (function () {
                     cConteudo = `
                     <div style="position: relative;">
                         <p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(item.conteudo))}"</p>
-                        <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">
-                            Ler texto completo ▾
+                        <button class="btn-expand-text" data-raw-text="${escaparHTML(item.conteudo)}" data-raw-title="${escaparHTML(item.documento || item.polo || 'Agrupamento')}" onclick="TopicsManager.abrirModoLeitura(this)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                            </svg>
+                            Modo Leitura
                         </button>
                     </div>`;
                     if (item.comentario) cComent = `<div class="card-comentario"><strong>Observação:</strong> ${escaparHTML(item.comentario)}</div>`;
@@ -675,8 +688,12 @@ window.TopicsManager = (function () {
                          ${iconSVG} D.${sIdx + 1}
                     </div>
                     <div class="sub-text-content">${renderizarMarkdownSeguro(escaparHTML(d.texto))}</div>
-                    <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">
-                        Ler texto completo ▾
+                    <button class="btn-expand-text" data-raw-text="${escaparHTML(d.texto)}" data-raw-title="Diretriz de Óbice" onclick="TopicsManager.abrirModoLeitura(this)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                        </svg>
+                        Modo Leitura
                     </button>
                     <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(d.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto para a área de transferência">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
@@ -930,8 +947,12 @@ window.TopicsManager = (function () {
                                  ${iconSVG} G.${sIdx + 1}
                             </div>
                             <div class="sub-text-content">${renderizarMarkdownSeguro(escaparHTML(d.texto))}</div>
-                            <button class="btn-expand-text" style="display:none;" onclick="TopicsManager.toggleTextExpansion(this)">
-                                Ler texto completo ▾
+                            <button class="btn-expand-text" data-raw-text="${escaparHTML(d.texto)}" data-raw-title="Diretriz Global" onclick="TopicsManager.abrirModoLeitura(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                                </svg>
+                                Modo Leitura
                             </button>
                             <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(d.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto para a área de transferência">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
@@ -1215,37 +1236,7 @@ window.TopicsManager = (function () {
         requestAnimationFrame(step);
     }
 
-    /**
-     * Alterna a expansão do texto longo e re-desenha as linhas dinamicamente
-     */
-    function toggleTextExpansion(btn) {
-        const itemContainer = btn.closest('.sub-annotation-item, .main-card-wrapper');
-        const card = itemContainer.querySelector('.sub-annotation-card, .annotation-card');
-        const content = card.querySelector('.sub-text-content, .card-texto');
-        if (!content) return;
-
-        const esteCardEstavaFocado = card.classList.contains('zen-focused');
-        
-        _fecharZenModeAtivo();
-
-        if (esteCardEstavaFocado) {
-            requestAnimationFrame(() => {
-                const container = document.getElementById('timeline-container');
-                if (container) requestAnimationFrame(() => _sincronizarConexoesComAnimacao(container));
-            });
-            return;
-        }
-
-        const isExpanded = content.classList.toggle('expanded');
-        btn.innerHTML = isExpanded ? 'Ocultar detalhes ▴' : 'Ler texto completo ▾';
-        
-        if (isExpanded) _ativarZenMode(card);
-
-        requestAnimationFrame(() => {
-            const container = document.getElementById('timeline-container');
-            if (container) requestAnimationFrame(() => _sincronizarConexoesComAnimacao(container));
-        });
-    }
+    // A função toggleTextExpansion foi removida. O sistema agora utiliza o Modo de Leitura Centralizado.
 
     let notaOcultaIndexAtual = -1;
 
@@ -1310,7 +1301,10 @@ window.TopicsManager = (function () {
         getActiveTabId: () => activeTabId,
         setActiveTabId: (id) => { activeTabId = id; },
         escaparHTML,
-        toggleTextExpansion,
+        renderizarMarkdownSeguro,
+        abrirModoLeitura,
+        fecharModoLeitura,
+        copiarTextoModoLeitura,
         hexToRgba,
         rolarParaProximaNotaOculta
     };
