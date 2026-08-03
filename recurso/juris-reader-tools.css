@@ -486,3 +486,34 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
     width: 11px;
     height: 11px;
 }
+
+/* ================================================
+   EDITOR RICO (WYSIWYG) - contenteditable
+   ================================================ */
+.edit-textarea.rich-editor {
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    outline: none;
+}
+
+/* Placeholder controlado por classe JS, não por :empty (mais robusto contra <br> residual do Chrome) */
+.edit-textarea.rich-editor.is-empty::before {
+    content: attr(data-placeholder);
+    color: #999;
+    pointer-events: none;
+    display: block;
+}
+
+.edit-textarea.rich-editor b,
+.edit-textarea.rich-editor strong { font-weight: 800; color: var(--trt-blue); }
+.edit-textarea.rich-editor i,
+.edit-textarea.rich-editor em { font-style: italic; }
+.edit-textarea.rich-editor u { text-decoration: underline; text-underline-offset: 3px; }
+
+.toolbar-divider {
+    width: 1px;
+    align-self: stretch;
+    background-color: var(--border-color);
+    margin: 0 4px;
+}

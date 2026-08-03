@@ -442,24 +442,33 @@
     <!-- MODAL DE EDIÇÃO DE TEXTO -->
     <div id="text-edit-modal" class="text-edit-modal" style="display:none;">
         <div class="edit-header" id="edit-modal-title">✏️ Editar Texto</div>
-        
+    
         <div class="edit-toolbar" id="edit-toolbar">
-            <button type="button" class="edit-tool-btn" onclick="aplicarNegritoTextarea()" title="Negrito (Ctrl+B)">
-                <b>B</b> Negrito
-            </button>
-            <button type="button" class="edit-tool-btn" onclick="aplicarAumentoFonte(1)" title="Aumentar Fonte - 15%">
-                <span class="font-btn-label">A+</span>
-            </button>
-            <button type="button" class="edit-tool-btn" onclick="aplicarAumentoFonte(2)" title="Aumentar Fonte - 35%">
-                <span class="font-btn-label-lg">A++</span>
-            </button>
+            <button type="button" class="edit-tool-btn" onclick="JurisEditor.formatar('bold')" title="Negrito (Ctrl+B)"><b>B</b></button>
+            <button type="button" class="edit-tool-btn" onclick="JurisEditor.formatar('italic')" title="Itálico (Ctrl+I)"><i>I</i></button>
+            <button type="button" class="edit-tool-btn" onclick="JurisEditor.formatar('underline')" title="Sublinhado (Ctrl+U)"><u>U</u></button>
+    
+            <div class="toolbar-divider"></div>
+    
+            <button type="button" class="edit-tool-btn" onclick="JurisEditor.aplicarTamanho('txt-largo-1')" title="Aumentar Fonte - 15%"><span class="font-btn-label">A+</span></button>
+            <button type="button" class="edit-tool-btn" onclick="JurisEditor.aplicarTamanho('txt-largo-2')" title="Aumentar Fonte - 35%"><span class="font-btn-label-lg">A++</span></button>
+    
+            <div class="toolbar-divider"></div>
+    
+            <button type="button" class="edit-tool-btn" onclick="JurisEditor.copiarComo('html')" title="Copiar formatado (Word/Docs)">📋 Formatado</button>
+            <button type="button" class="edit-tool-btn" onclick="JurisEditor.copiarComo('markdown')" title="Copiar para Inteligência Artificial">🤖 Markdown (IA)</button>
         </div>
-        
-        <textarea id="edit-text-input" class="edit-textarea" placeholder="Selecione um trecho..."></textarea>
-        
-        <!-- NOVO: Textarea para Observações de Áudio -->
+    
+        <div id="edit-text-input"
+             class="edit-textarea rich-editor is-empty"
+             contenteditable="true"
+             role="textbox"
+             aria-multiline="true"
+             data-placeholder="Selecione um trecho e aplique formatação...">
+        </div>
+    
         <textarea id="edit-comentario-input" class="edit-textarea" placeholder="Observação / Contexto do Assessor..." style="display:none; margin-top: 8px; min-height: 60px; background: #fafafa; border-top: 2px dashed #eee;"></textarea>
-        
+    
         <div class="edit-actions">
             <button class="chip-btn chip-cancelar" onclick="fecharModalEdicao()">✕ Cancelar</button>
             <button class="chip-btn chip-autora edit-save-btn" onclick="salvarEdicaoTexto()">✔ Salvar</button>
@@ -804,6 +813,7 @@
     <script src="js/balanca-manager.js"></script>
     <script src="js/interaction-tools.js"></script>
     <script src="js/audio-manager.js"></script>
+    <script src="js/juris-editor.js"></script>
     <script src="js/annotation-actions.js"></script>
     <script src="js/export-manager.js"></script>
     <script src="js/pdf-engine.js"></script>
