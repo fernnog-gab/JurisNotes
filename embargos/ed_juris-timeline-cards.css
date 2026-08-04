@@ -162,7 +162,43 @@
 .sub-annotation-item { position: relative; display: flex; align-items: center; }
 .timeline-item-master.align-right .sub-annotation-item { flex-direction: row-reverse; }
 
-.sub-annotation-card { background-color: #fffdf2; border: 1px solid #e8e2c8; border-radius: 8px; padding: 14px 16px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04); font-size: 0.85rem; color: #3a3520; line-height: 1.6; position: relative; width: 100%; }
+.sub-annotation-card { background-color: #fffdf2; border: 1px solid #e8e2c8; border-radius: 8px; padding: 14px 16px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04); font-size: 0.85rem; color: #3a3520; line-height: 1.6; position: relative; width: 100%; margin-bottom: 16px; }
+
+/* --- BOTÃO FLUTUANTE DE LEITURA (FAB - NÓS DE IDEIA) --- */
+.btn-leitura-flutuante {
+    position: absolute;
+    bottom: -14px;
+    left: -14px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: var(--trt-blue, #1a3a5c);
+    color: #ffffff;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+    z-index: 10;
+}
+
+.btn-leitura-flutuante:hover {
+    transform: scale(1.1);
+    background-color: var(--trt-blue-mid, #25527f);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.25);
+}
+
+.btn-leitura-flutuante:active {
+    transform: scale(0.95);
+}
+
+.btn-leitura-flutuante svg {
+    width: 16px;
+    height: 16px;
+    stroke-width: 2.5px;
+}
 
 .sub-badge { position: absolute; top: -10px; right: -10px; width: 28px; height: 28px; background-color: #1a1a1a; color: #ffffff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; z-index: 3; box-shadow: var(--shadow-sm); cursor: pointer; transition: transform 0.15s ease, background-color 0.2s, box-shadow 0.2s; }
 .sub-badge:hover { transform: scale(1.15); background-color: #333; box-shadow: var(--shadow-md); }

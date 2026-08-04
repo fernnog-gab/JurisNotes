@@ -361,13 +361,6 @@ window.TopicsManager = (function () {
             htmlConteudo = `
             <div style="position: relative;">
                 <p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(anotacao.conteudo))}"</p>
-                <button class="btn-expand-text" data-raw-text="${escaparHTML(anotacao.conteudo)}" data-raw-title="${escaparHTML(anotacao.documento || anotacao.polo || 'Anotação')}" onclick="TopicsManager.abrirModoLeitura(this)">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                    </svg>
-                    Modo Leitura
-                </button>
             </div>`;
             if (anotacao.comentario) htmlComentario = `<div class="card-comentario"><strong>Observação:</strong> ${escaparHTML(anotacao.comentario)}</div>`;
         } else if (anotacao.tipo === 'imagem') {
@@ -404,21 +397,25 @@ window.TopicsManager = (function () {
         }
 
         function gerarBarraAcoes(isCorrelacionado, cIdx) {
-            // Injeção segura do cIdx no contexto do botão (resolve o bug da falta de índice)
+            // Utiliza o escopo léxico para obter o item real de forma segura
+            const itemReal = isCorrelacionado && cIdx != null ? anotacao.itensCorrelacionados[cIdx] : anotacao;
             const ctxCidx = isCorrelacionado && cIdx != null ? `, cIdx: ${cIdx}` : '';
+            const tipoDoItem = itemReal.tipo;
             
-            // Verifica o tipo do item na hierarquia correta (principal vs correlacionado)
-            const tipoDoItem = isCorrelacionado && cIdx != null ? anotacao.itensCorrelacionados[cIdx].tipo : anotacao.tipo;
-            
-            // Direciona para a função de edição adequada
             const acaoEditar = isCorrelacionado ? 'editarItemCorrelacionado()' : 'editarAnotacao()';
+            const paramMove = isCorrelacionado ? `'${activeTabId}', ${index}, ${cIdx}` : `'${activeTabId}', ${index}, null`;
             
             const btnEditar = (tipoDoItem === 'texto' || tipoDoItem === 'audio') ? `<button title="Editar" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}${ctxCidx}}; ${acaoEditar}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>` : '';
             
-            const paramMove = isCorrelacionado ? `'${activeTabId}', ${index}, ${cIdx}` : `'${activeTabId}', ${index}, null`;
-            
+            // NOVO: Renderiza botão apenas se for tipo texto. Variáveis tratadas para não quebrar o DOM.
+            const btnLeitura = tipoDoItem === 'texto' ? `
+                <button title="Modo Leitura" onclick="TopicsManager.abrirModoLeitura(this)" data-raw-text="${escaparHTML(itemReal.conteudo)}" data-raw-title="${escaparHTML(itemReal.documento || itemReal.polo || 'Anotação')}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+                </button>` : '';
+
             return `
             <div class="card-actions-bar">
+                ${btnLeitura}
                 ${btnEditar}
                 <button title="Adicionar Nó de Ideia" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}${ctxCidx}}; acionarNovoNoIdeia()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
                 <button title="Mover / Reordenar" onclick="abrirModalSmartMove(${paramMove})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><polyline points="8 7 12 3 16 7"></polyline><line x1="12" y1="12" x2="12" y2="3"></line></svg></button>
@@ -501,12 +498,12 @@ window.TopicsManager = (function () {
                                 ${label}
                             </div>
                             <div class="sub-text-content">${textoFormatado}</div>
-                            <button class="btn-expand-text" data-raw-text="${escaparHTML(sub.texto)}" data-raw-title="Nó de Ideia" onclick="TopicsManager.abrirModoLeitura(this)">
+                            
+                            <button class="btn-leitura-flutuante" data-raw-text="${escaparHTML(sub.texto)}" data-raw-title="Nó de Ideia" onclick="TopicsManager.abrirModoLeitura(this)" title="Abrir no Modo Leitura (Tela Cheia)">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
                                     <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
                                 </svg>
-                                Modo Leitura
                             </button>
                             <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(sub.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto para a área de transferência">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
@@ -534,13 +531,6 @@ window.TopicsManager = (function () {
                     cConteudo = `
                     <div style="position: relative;">
                         <p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(item.conteudo))}"</p>
-                        <button class="btn-expand-text" data-raw-text="${escaparHTML(item.conteudo)}" data-raw-title="${escaparHTML(item.documento || item.polo || 'Agrupamento')}" onclick="TopicsManager.abrirModoLeitura(this)">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                            </svg>
-                            Modo Leitura
-                        </button>
                     </div>`;
                     if (item.comentario) cComent = `<div class="card-comentario"><strong>Observação:</strong> ${escaparHTML(item.comentario)}</div>`;
                 } else if (item.tipo === 'imagem') {
