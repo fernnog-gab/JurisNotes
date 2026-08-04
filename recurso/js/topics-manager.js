@@ -346,14 +346,7 @@ window.TopicsManager = (function () {
         if (anotacao.tipo === 'texto') {
             htmlConteudo = `
             <div style="position: relative;">
-                <p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(anotacao.conteudo))}"</p>
-                <button class="btn-expand-text" data-raw-text="${escaparHTML(anotacao.conteudo)}" data-raw-title="${escaparHTML(anotacao.documento || anotacao.polo || 'Anotação')}" onclick="TopicsManager.abrirModoLeitura(this)">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                    </svg>
-                    Modo Leitura
-                </button>
+                <p class="card-texto" data-raw-text="${escaparHTML(anotacao.conteudo)}" data-raw-title="${escaparHTML(anotacao.documento || anotacao.polo || 'Anotação')}" ondblclick="TopicsManager.abrirModoLeitura(this)">"${renderizarMarkdownSeguro(escaparHTML(anotacao.conteudo))}"</p>
             </div>`;
             if (anotacao.comentario) htmlComentario = `<div class="card-comentario"><strong>Observação:</strong> ${escaparHTML(anotacao.comentario)}</div>`;
         } else if (anotacao.tipo === 'imagem') {
@@ -399,6 +392,20 @@ window.TopicsManager = (function () {
             // Direciona para a função de edição adequada
             const acaoEditar = isCorrelacionado ? 'editarItemCorrelacionado()' : 'editarAnotacao()';
             
+            let rawText = '';
+            let rawTitle = '';
+            if (isCorrelacionado && cIdx != null) {
+                rawText = escaparHTML(anotacao.itensCorrelacionados[cIdx].conteudo || '');
+                rawTitle = escaparHTML(anotacao.itensCorrelacionados[cIdx].documento || anotacao.itensCorrelacionados[cIdx].polo || 'Agrupamento');
+            } else {
+                rawText = escaparHTML(anotacao.conteudo || '');
+                rawTitle = escaparHTML(anotacao.documento || anotacao.polo || 'Anotação');
+            }
+
+            const btnLeitura = (tipoDoItem === 'texto') 
+                ? `<button class="btn-read-mode-trigger card-action-read" title="Modo Leitura" data-raw-text="${rawText}" data-raw-title="${rawTitle}" onclick="TopicsManager.abrirModoLeitura(this)"><svg><use href="#icon-book-open"></use></svg></button>` 
+                : '';
+
             const btnEditar = (tipoDoItem === 'texto' || tipoDoItem === 'audio') 
                 ? `<button title="Editar" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}${ctxCidx}}; ${acaoEditar}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>` 
                 : '';
@@ -407,6 +414,7 @@ window.TopicsManager = (function () {
             
             return `
             <div class="card-actions-bar">
+                ${btnLeitura}
                 ${btnEditar}
                 <button title="Adicionar Nó de Ideia" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}${ctxCidx}}; acionarNovoNoIdeia()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
                 <button title="Mover / Reordenar" onclick="abrirModalSmartMove(${paramMove})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><polyline points="8 7 12 3 16 7"></polyline><line x1="12" y1="12" x2="12" y2="3"></line></svg></button>
@@ -489,14 +497,10 @@ window.TopicsManager = (function () {
                                  onclick="abrirMenuSubAnotacao('${activeTabId}', ${index}, '${sub.viewSource}', ${sub.localIndex}, event)">
                                 ${label}
                             </div>
-                            <div class="sub-text-content">${textoFormatado}</div>
-                            <button class="btn-expand-text" data-raw-text="${escaparHTML(sub.texto)}" data-raw-title="Nó de Ideia" onclick="TopicsManager.abrirModoLeitura(this)">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                                </svg>
-                                Modo Leitura
-                            </button>
+                            <div class="sub-text-content" data-raw-text="${escaparHTML(sub.texto)}" data-raw-title="Nó de Ideia" ondblclick="TopicsManager.abrirModoLeitura(this)">${textoFormatado}</div>
+                            <div class="btn-read-mode-trigger sub-read-badge" title="Modo Leitura" data-raw-text="${escaparHTML(sub.texto)}" data-raw-title="Nó de Ideia" onclick="TopicsManager.abrirModoLeitura(this)">
+                                <svg><use href="#icon-book-open"></use></svg>
+                            </div>
                             <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(sub.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto para a área de transferência">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                                 Copiar Trecho
@@ -522,14 +526,7 @@ window.TopicsManager = (function () {
                 if (item.tipo === 'texto') {
                     cConteudo = `
                     <div style="position: relative;">
-                        <p class="card-texto">"${renderizarMarkdownSeguro(escaparHTML(item.conteudo))}"</p>
-                        <button class="btn-expand-text" data-raw-text="${escaparHTML(item.conteudo)}" data-raw-title="${escaparHTML(item.documento || item.polo || 'Agrupamento')}" onclick="TopicsManager.abrirModoLeitura(this)">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                            </svg>
-                            Modo Leitura
-                        </button>
+                        <p class="card-texto" data-raw-text="${escaparHTML(item.conteudo)}" data-raw-title="${escaparHTML(item.documento || item.polo || 'Agrupamento')}" ondblclick="TopicsManager.abrirModoLeitura(this)">"${renderizarMarkdownSeguro(escaparHTML(item.conteudo))}"</p>
                     </div>`;
                     if (item.comentario) cComent = `<div class="card-comentario"><strong>Observação:</strong> ${escaparHTML(item.comentario)}</div>`;
                 } else if (item.tipo === 'imagem') {
@@ -700,14 +697,10 @@ window.TopicsManager = (function () {
                          onclick="abrirMenuSubAnotacao('${tabId}', null, '${teseViewSource.replace(/'/g, "\\'")}', ${sIdx}, event)">
                          ${iconSVG} T.${sIdx + 1}
                     </div>
-                    <div class="sub-text-content">${renderizarMarkdownSeguro(escaparHTML(d.texto))}</div>
-                    <button class="btn-expand-text" data-raw-text="${escaparHTML(d.texto)}" data-raw-title="Diretriz de Tese" onclick="TopicsManager.abrirModoLeitura(this)">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                        </svg>
-                        Modo Leitura
-                    </button>
+                    <div class="sub-text-content" data-raw-text="${escaparHTML(d.texto)}" data-raw-title="Diretriz de Tese" ondblclick="TopicsManager.abrirModoLeitura(this)">${renderizarMarkdownSeguro(escaparHTML(d.texto))}</div>
+                    <div class="btn-read-mode-trigger sub-read-badge" title="Modo Leitura" data-raw-text="${escaparHTML(d.texto)}" data-raw-title="Diretriz de Tese" onclick="TopicsManager.abrirModoLeitura(this)">
+                        <svg><use href="#icon-book-open"></use></svg>
+                    </div>
                     <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(d.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto para a área de transferência">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                         Copiar Trecho
@@ -943,14 +936,10 @@ window.TopicsManager = (function () {
                                  onclick="abrirMenuSubAnotacao('${activeTabId}', null, 'global', ${sIdx}, event)">
                                  ${iconSVG} G.${sIdx + 1}
                             </div>
-                            <div class="sub-text-content">${renderizarMarkdownSeguro(escaparHTML(d.texto))}</div>
-                            <button class="btn-expand-text" data-raw-text="${escaparHTML(d.texto)}" data-raw-title="Diretriz Global" onclick="TopicsManager.abrirModoLeitura(this)">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                                </svg>
-                                Modo Leitura
-                            </button>
+                            <div class="sub-text-content" data-raw-text="${escaparHTML(d.texto)}" data-raw-title="Diretriz Global" ondblclick="TopicsManager.abrirModoLeitura(this)">${renderizarMarkdownSeguro(escaparHTML(d.texto))}</div>
+                            <div class="btn-read-mode-trigger sub-read-badge" title="Modo Leitura" data-raw-text="${escaparHTML(d.texto)}" data-raw-title="Diretriz Global" onclick="TopicsManager.abrirModoLeitura(this)">
+                                <svg><use href="#icon-book-open"></use></svg>
+                            </div>
                             <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(d.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto para a área de transferência">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                                     Copiar Trecho
@@ -1012,19 +1001,22 @@ window.TopicsManager = (function () {
         }
             
         requestAnimationFrame(() => {
-                // 1. Observer unificado: vigia as mudanças dimensionais de ambos os tipos de cards
-                document.querySelectorAll('.sub-text-content, .card-texto').forEach(el => {
-                    if (typeof resizeObserver !== 'undefined') resizeObserver.observe(el);
-                    
-                    // 2. Loop lógico de Truncamento: Ativa o botão apenas se o texto for maior que o limite visual
-                    const btn = el.parentElement.querySelector('.btn-expand-text');
-                    if (btn && el.scrollHeight > el.clientHeight) {
-                        btn.style.display = 'inline-flex';
-                        el.classList.add('is-truncated');
-                    }
-                });
+            // 1. Observer unificado: vigia as mudanças dimensionais de ambos os tipos de cards
+            document.querySelectorAll('.sub-text-content, .card-texto').forEach(el => {
+                if (typeof resizeObserver !== 'undefined') resizeObserver.observe(el);
+                
+                if (el.scrollHeight > el.clientHeight) {
+                    el.classList.add('is-truncated');
+                    const parentCard = el.closest('.annotation-card, .sub-annotation-card');
+                    if (parentCard) parentCard.classList.add('has-truncated-text');
+                } else {
+                    el.classList.remove('is-truncated');
+                    const parentCard = el.closest('.annotation-card, .sub-annotation-card');
+                    if (parentCard) parentCard.classList.remove('has-truncated-text');
+                }
+            });
 
-                const historyContainer = document.getElementById('history-container');
+            const historyContainer = document.getElementById('history-container');
                 if (historyContainer && typeof resizeObserver !== 'undefined') resizeObserver.observe(historyContainer);
             
             document.querySelectorAll('.image-resize-wrapper').forEach(wrapper => {

@@ -197,25 +197,65 @@
 .sub-text-content.expanded::-webkit-scrollbar-track { background: transparent; }
 .sub-text-content.expanded::-webkit-scrollbar-thumb { background: #d0cabc; border-radius: 4px; }
 
-.btn-expand-text {
-    background: rgba(26, 58, 92, 0.05);
-    border: 1px solid rgba(26, 58, 92, 0.1);
+/* --- ESTADO BASE: Botões de Leitura Ocultos por Padrão --- */
+.btn-read-mode-trigger { display: none; }
+
+/* O CSS revela o botão APENAS se o card parente recebeu a classe de truncamento do JS */
+.has-truncated-text .btn-read-mode-trigger.card-action-read { display: flex; }
+.has-truncated-text .btn-read-mode-trigger.sub-read-badge { display: flex; }
+
+/* --- AÇÃO DA BARRA (CARD PRINCIPAL) --- */
+.card-action-read {
     color: var(--trt-blue-mid);
-    font-size: 0.75rem;
-    font-weight: 700;
-    cursor: pointer;
-    margin-top: 12px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border-radius: 6px;
-    transition: background 0.2s, color 0.2s;
 }
-.btn-expand-text svg { width: 14px; height: 14px; stroke: currentColor; }
-.btn-expand-text:hover {
-    background: var(--trt-blue);
-    color: white;
+.card-action-read svg {
+    width: 15px;
+    height: 15px;
+}
+
+/* --- BADGE DE VIDRO FLUTUANTE (NÓ DE IDEIA) --- */
+.sub-read-badge {
+    position: absolute;
+    bottom: -10px;
+    left: -10px;
+    width: 28px;
+    height: 28px;
+    background: rgba(26, 58, 92, 0.85); /* Glassmorphism Elegante */
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    color: #ffffff;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.2s, box-shadow 0.2s;
+}
+
+.sub-read-badge:hover {
+    transform: scale(1.15);
+    background-color: var(--trt-blue);
+    box-shadow: var(--shadow-md);
+}
+
+.sub-read-badge:active {
+    transform: scale(0.95);
+}
+
+.sub-read-badge svg {
+    width: 13px;
+    height: 13px;
+    pointer-events: none;
+}
+
+/* Acessibilidade visual em Notas Internas (Modo Escuro / Post-it) */
+.sub-annotation-item.is-nota-interna .sub-read-badge {
+    background: #4a5568; 
+    border: 1px solid #718096;
+}
+.sub-annotation-item.is-nota-interna .sub-read-badge:hover {
+    background: #2b6cb0;
 }
 
 /* Tipografia do conteúdo dentro do Modo Leitura */
@@ -763,7 +803,6 @@
 }
 
 /* Ajuste de Contraste para os botões no fundo escuro */
-.sub-annotation-item.is-nota-interna .btn-expand-text,
 .sub-annotation-item.is-nota-interna .btn-copiar-zen {
     color: #90cdf4; /* Azul claro pastel para leitura no escuro */
 }
