@@ -197,12 +197,14 @@
 .sub-text-content.expanded::-webkit-scrollbar-track { background: transparent; }
 .sub-text-content.expanded::-webkit-scrollbar-thumb { background: #d0cabc; border-radius: 4px; }
 
-/* --- ESTADO BASE: Botões de Leitura Ocultos por Padrão --- */
+/* --- ESTADO BASE --- */
 .btn-read-mode-trigger { display: none; }
 
-/* O CSS revela o botão APENAS se o card parente recebeu a classe de truncamento do JS */
-.has-truncated-text .btn-read-mode-trigger.card-action-read { display: flex; }
-.has-truncated-text .btn-read-mode-trigger.sub-read-badge { display: flex; }
+/* Nos Cards Principais, o botão só aparece se o texto for muito longo (truncado) */
+.has-truncated-text .btn-read-mode-trigger.card-action-read { display: inline-flex; }
+
+/* Nos Nós de Ideias, o botão flutuante inferior esquerdo ficará SEMPRE visível */
+.btn-read-mode-trigger.sub-read-badge { display: flex !important; }
 
 /* --- AÇÃO DA BARRA (CARD PRINCIPAL) --- */
 .card-action-read {
