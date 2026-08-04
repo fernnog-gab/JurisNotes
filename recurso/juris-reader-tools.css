@@ -157,8 +157,9 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
 .text-edit-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; box-shadow: 0 12px 48px rgba(0,0,0,0.28); z-index: var(--z-text-edit-modal); min-width: 400px; max-width: 90vw; display: flex; flex-direction: column; gap: 12px; }
 .edit-header { font-size: 1.05rem; font-weight: 800; color: var(--trt-blue); border-bottom: 2px solid var(--trt-light-bg); padding-bottom: 8px; }
 .edit-toolbar { display: flex; gap: 8px; margin-bottom: 4px; }
-.edit-tool-btn { background: #fff; border: 1px solid #bbb; border-radius: 6px; padding: 6px 12px; cursor: pointer; color: var(--trt-blue); font-size: 0.9rem; transition: background 0.2s; }
-.edit-tool-btn:hover { background: #f0f4f8; }
+.edit-tool-btn { background: #fff; border: 1px solid #bbb; border-radius: 6px; cursor: pointer; color: var(--trt-blue); transition: all 0.2s ease; width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center; }
+.edit-tool-btn svg { width: 18px; height: 18px; pointer-events: none; }
+.edit-tool-btn:hover { background: #f0f4f8; border-color: var(--trt-blue-mid); color: var(--trt-blue-mid); }
 .edit-textarea { width: 100%; min-height: 140px; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; font-size: 0.9rem; line-height: 1.5; outline: none; resize: vertical; }
 .edit-textarea:focus { border-color: var(--trt-blue-mid); }
 .edit-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; padding-top: 12px; border-top: 1px solid #eee; }
@@ -171,8 +172,6 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
 /* Tipografia Extra no Modal Markdown */
 .txt-largo-1 { font-size: 1.15em; line-height: 1.6; display: inline; }
 .txt-largo-2 { font-size: 1.35em; line-height: 1.6; display: inline; }
-.font-btn-label { font-size: 1.1em; font-weight: bold; }
-.font-btn-label-lg { font-size: 1.25em; font-weight: 900; }
 
 /* Correção Backup Header */
 .wizard-header.backup-header { background: var(--trt-blue); color: white; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 14px; margin: -20px -20px 16px -20px; border-radius: 12px 12px 0 0; border-bottom: none; }
