@@ -467,14 +467,35 @@
         <div class="edit-header" id="edit-modal-title">✏️ Editar Texto</div>
         
         <div class="edit-toolbar" id="edit-toolbar">
-            <button type="button" class="edit-tool-btn" onclick="aplicarNegritoTextarea()" title="Negrito (Ctrl+B)">
+            <!-- Formatação de Texto -->
+            <button type="button" class="edit-tool-btn" onclick="JurisEditor.formatar('bold')" title="Negrito (Ctrl+B)">
                 <svg><use href="#icon-bold"></use></svg>
             </button>
-            <button type="button" class="edit-tool-btn" onclick="aplicarAumentoFonte(1)" title="Aumentar Fonte (Suave)">
+            <button type="button" class="edit-tool-btn" onclick="JurisEditor.formatar('italic')" title="Itálico (Ctrl+I)">
+                <svg><use href="#icon-italic"></use></svg>
+            </button>
+            <button type="button" class="edit-tool-btn" onclick="JurisEditor.formatar('underline')" title="Sublinhado (Ctrl+U)">
+                <svg><use href="#icon-underline"></use></svg>
+            </button>
+            
+            <div class="toolbar-divider"></div>
+            
+            <!-- Tamanho da Fonte -->
+            <button type="button" class="edit-tool-btn" onclick="JurisEditor.aplicarTamanho('txt-largo-1')" title="Aumentar Fonte (Suave)">
                 <svg><use href="#icon-font-up"></use></svg>
             </button>
-            <button type="button" class="edit-tool-btn" onclick="aplicarAumentoFonte(2)" title="Aumentar Fonte (Máximo)">
+            <button type="button" class="edit-tool-btn" onclick="JurisEditor.aplicarTamanho('txt-largo-2')" title="Aumentar Fonte (Máximo)">
                 <svg><use href="#icon-font-up-lg"></use></svg>
+            </button>
+            
+            <div class="toolbar-divider"></div>
+            
+            <!-- Copiar -->
+            <button type="button" class="edit-tool-btn" onclick="JurisEditor.copiarComo('html')" title="Copiar Formatado (Word)">
+                <svg><use href="#icon-copy-html"></use></svg>
+            </button>
+            <button type="button" class="edit-tool-btn" onclick="JurisEditor.copiarComo('markdown')" title="Copiar para IA (Markdown)">
+                <svg><use href="#icon-copy-md"></use></svg>
             </button>
         </div>
         
@@ -836,6 +857,10 @@
     <script src="js/ed_interaction-tools.js"></script>
     <script src="js/ed_audio-manager.js"></script>
     <script src="js/ed_annotation-actions.js"></script>
+    
+    <!-- Integração do Motor de Edição (JurisEditor) -->
+    <script src="js/juris-editor.js"></script>
+    
     <script src="js/ed_export-manager.js"></script>
     <script src="js/ed_pdf-engine.js"></script>
     
