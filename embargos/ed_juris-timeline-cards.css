@@ -974,3 +974,60 @@ body[data-context="ed"] .topics-content-area {
     height: 100%;
     overflow-y: auto;
 }
+
+/* ================================================
+   VISÃO ESTRUTURADA (OUTLINE MODE - ED)
+   ================================================ */
+.outline-view-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.28);
+    z-index: var(--z-outline-modal);
+    width: 90vw;
+    max-width: 900px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.outline-section { margin-bottom: 24px; }
+.outline-title { font-size: 1.4rem; color: var(--trt-blue); border-bottom: 2px solid var(--border-color); padding-bottom: 8px; margin-bottom: 16px; font-weight: 800; }
+.outline-h2 { font-size: 1.15rem; color: var(--trt-blue-mid); margin-top: 24px; margin-bottom: 12px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.outline-meta-tag { background: #e8ecef; color: #455a64; font-size: 0.7rem; padding: 3px 8px; border-radius: 12px; font-weight: bold; text-transform: uppercase; border: 1px solid #cfd8dc; }
+
+.outline-card { 
+    background: #fdfdfd; 
+    border-left: 4px solid var(--trt-blue); 
+    padding: 12px 16px; 
+    margin-bottom: 12px; 
+    border-radius: 0 6px 6px 0; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.outline-card.correlacionado { 
+    margin-left: 20px; 
+    border-left: 4px solid #90caf9; 
+    background: #f4f7f9;
+}
+
+.outline-img-preview { max-width: 100%; max-height: 250px; border-radius: 6px; border: 1px solid var(--border-color); margin-top: 8px; }
+.outline-audio-box { background: #fff8e1; border: 1px solid #ffe082; padding: 10px; border-radius: 6px; margin-top: 8px; font-size: 0.9rem; }
+
+.outline-sub-item { 
+    margin-left: 32px; 
+    padding: 8px 12px; 
+    border-left: 2px dashed #cbd5e1; 
+    margin-bottom: 8px; 
+    font-size: 0.95rem;
+    position: relative;
+}
+.outline-sub-item::before { content: ''; position: absolute; left: 0; top: 18px; width: 8px; height: 2px; background: #cbd5e1; }
+.outline-intent-badge { font-weight: 800; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 6px; }
+
+.outline-content-text p { margin-bottom: 0.5em; }
+.outline-content-text b, .outline-content-text strong { color: var(--trt-blue); }
