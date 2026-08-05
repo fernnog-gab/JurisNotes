@@ -624,7 +624,7 @@ function atualizarStatusBackup(texto, ativa = false) {
 }
 
 function habilitarFerramentasDeTrabalho() {
-    ['btn-ferramenta-recorte', 'btn-ferramenta-texto', 'btn-novo-topico', 'btn-encerrar-sessao', 'btn-ferramenta-audio', 'btn-balanca-justica', 'btn-ferramenta-extrator']
+    ['btn-ferramenta-recorte', 'btn-ferramenta-texto', 'btn-novo-topico', 'btn-encerrar-sessao', 'btn-ferramenta-audio', 'btn-balanca-justica', 'btn-ferramenta-extrator', 'btn-visao-estruturada']
         .forEach(id => {
             const btn = document.getElementById(id);
             if (btn) btn.disabled = false;
@@ -690,7 +690,7 @@ function encerrarSessao() {
     }
     window._nomeArquivoSugerido = null;
 
-    ['btn-ferramenta-recorte', 'btn-ferramenta-texto', 'btn-novo-topico', 'btn-encerrar-sessao', 'btn-ferramenta-audio', 'btn-ferramenta-extrator']
+    ['btn-ferramenta-recorte', 'btn-ferramenta-texto', 'btn-novo-topico', 'btn-encerrar-sessao', 'btn-ferramenta-audio', 'btn-ferramenta-extrator', 'btn-visao-estruturada']
         .forEach(id => {
             const el = document.getElementById(id);
             if (el) {
@@ -1153,6 +1153,15 @@ document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
         if (typeof fecharPopupClassificacao === 'function') fecharPopupClassificacao();
         if (typeof cancelarRecorteWizard === 'function') cancelarRecorteWizard();
+        
+        // NOVO: Delegação genérica para fechamento de modais
+        const modaisFechaveis = document.querySelectorAll('.fechavel-por-esc');
+        modaisFechaveis.forEach(modal => {
+            if (modal.style.display === 'flex' || modal.style.display === 'block') {
+                // Infere o manager correto baseado no ID (Hardcoded seguro temporário para modais conhecidos)
+                if (modal.id === 'outline-view-modal' && window.OutlineViewManager) OutlineViewManager.fechar();
+            }
+        });
     }
 });
 
