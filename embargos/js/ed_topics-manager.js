@@ -132,11 +132,16 @@ window.TopicsManager = (function () {
         if (!strEscapada) return '';
         let processado = strEscapada;
 
+        // 1. Negrito (**texto**) - Processado primeiro para evitar conflito com Itálico
         processado = processado.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
 
-        // Estilo inline embutido junto da classe: a classe cuida da tela,
-        // o "style" garante que o Google Docs (que não enxerga seu CSS)
-        // preserve o tamanho ao colar.
+        // 2. Itálico (*texto*)
+        processado = processado.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
+
+        // 3. Sublinhado (O motor de escape converteu '<' para '&lt;', então buscamos a versão segura)
+        processado = processado.replace(/&lt;u&gt;([\s\S]*?)&lt;\/u&gt;/g, '<u>$1</u>');
+
+        // 4. Tamanhos de Fonte
         processado = processado.replace(/\[\[size:1\]\]([\s\S]*?)\[\[\/size\]\]/g,
             '<span class="txt-largo-1" style="font-size:1.15em;">$1</span>');
         processado = processado.replace(/\[\[size:2\]\]([\s\S]*?)\[\[\/size\]\]/g,
