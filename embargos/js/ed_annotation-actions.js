@@ -203,30 +203,35 @@ function editarItemCorrelacionado() {
 
 function abrirModalEdicao(contexto, textoAtual, comentarioAtual = '') {
     _editContext = contexto;
-    const textarea = document.getElementById('edit-text-input');
+    const editor = document.getElementById('edit-text-input');
     const commentArea = document.getElementById('edit-comentario-input');
     const toolbar = document.getElementById('edit-toolbar');
     const title = document.getElementById('edit-modal-title');
+    const isAudio = contexto.tipoAnotacao === 'audio';
 
-    textarea.value = textoAtual;
-
-    if (_editContext.tipoAnotacao === 'audio') {
-        textarea.placeholder = "Degravação literal do áudio...";
+    if (isAudio) {
+        // Transcrição de áudio permanece em texto puro, sem WYSIWYG
+        editor.innerText = textoAtual || '';
+        editor.dataset.placeholder = 'Degravação literal do áudio...';
         commentArea.value = comentarioAtual || '';
         commentArea.style.display = 'block';
-        if(toolbar) toolbar.style.display = 'none'; // Esconde barra de formatação
+        if (toolbar) toolbar.style.display = 'none';
         title.innerHTML = '🎙️ Editar Áudio e Observação';
     } else {
-        textarea.placeholder = "Selecione um trecho e aplique formatação...";
+        // Converte o Markdown salvo no banco em formatação visual (HTML)
+        editor.innerHTML = window.JurisEditor.markdownParaHtml(textoAtual || '');
+        editor.dataset.placeholder = 'Selecione um trecho e aplique formatação...';
         commentArea.value = '';
         commentArea.style.display = 'none';
-        if(toolbar) toolbar.style.display = 'flex'; // Exibe barra
+        if (toolbar) toolbar.style.display = 'flex';
         title.innerHTML = '✏️ Editar Texto';
     }
 
+    editor.dispatchEvent(new Event('input')); // reavalia o estado vazio/placeholder
+
     document.getElementById('text-edit-backdrop').style.display = 'block';
     document.getElementById('text-edit-modal').style.display = 'flex';
-    setTimeout(() => textarea.focus(), 50);
+    setTimeout(() => editor.focus(), 50);
 }
 
 function fecharModalEdicao() {
@@ -235,36 +240,19 @@ function fecharModalEdicao() {
     document.getElementById('text-edit-modal').style.display = 'none';
 }
 
-function aplicarNegritoTextarea() {
-    const textarea = document.getElementById('edit-text-input');
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const texto = textarea.value;
-
-    if (start === end) return exibirToast('Selecione um trecho para aplicar o negrito.', 'aviso');
-    
-    // Envolve o texto com asteriscos duplos (Padrão Markdown seguro)
-    const novoTexto = texto.substring(0, start) + '**' + texto.substring(start, end) + '**' + texto.substring(end);
-    textarea.value = novoTexto;
-    textarea.focus();
-    textarea.setSelectionRange(start + 2, end + 2);
-}
-
-// Suporte ao Atalho Ctrl+B
-document.getElementById('edit-text-input').addEventListener('keydown', function(e) {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
-        e.preventDefault();
-        aplicarNegritoTextarea();
-    }
-});
-
 function salvarEdicaoTexto() {
     if (!_editContext) return;
 
     const topico = topicos.find(t => t.id === _editContext.topicoId);
     if (!topico) return;
 
-    let novoTexto = document.getElementById('edit-text-input').value.trim();
+    const editor = document.getElementById('edit-text-input');
+    const isAudio = _editContext.tipoAnotacao === 'audio';
+
+    // Extrai o conteúdo: texto puro para áudio, conversão HTML->Markdown para o restante
+    let novoTexto = isAudio
+        ? editor.innerText.trim()
+        : window.JurisEditor.htmlParaMarkdown(editor.innerHTML);
 
     // LÓGICA DO PREÂMBULO (Isolada e Segura)
     if (_editContext.tipo === 'preambulo') {
@@ -277,7 +265,7 @@ function salvarEdicaoTexto() {
 
     // [NOVO] Pipeline de Higienização Restrito para Edição
     const tiposPermitidosParaLimpeza = ['texto', 'sub', 'correlated'];
-    if (tiposPermitidosParaLimpeza.includes(_editContext.tipo) || _editContext.tipoAnotacao === 'texto') {
+    if (!isAudio && (tiposPermitidosParaLimpeza.includes(_editContext.tipo) || _editContext.tipoAnotacao === 'texto')) {
         novoTexto = window.JurisUtils.limparTextoPDF(novoTexto);
     }
 
@@ -301,7 +289,7 @@ function salvarEdicaoTexto() {
     // GRAVAÇÃO DE ESTADO
     if (_editContext.tipo === 'sub') {
         alvo.texto = novoTexto;
-    } else if (_editContext.tipoAnotacao === 'audio') {
+    } else if (isAudio) {
         const novoComentario = document.getElementById('edit-comentario-input').value.trim();
         try {
             const d = JSON.parse(alvo.conteudo);
@@ -1170,16 +1158,34 @@ window.JurisEditor = {
     }
 };
 
-// Extensão dos Atalhos de Teclado (Ctrl+I e Ctrl+U)
-document.getElementById('edit-text-input').addEventListener('keydown', function(e) {
-    if (e.ctrlKey || e.metaKey) {
-        const key = e.key.toLowerCase();
-        if (key === 'i') {
-            e.preventDefault();
-            window.JurisEditor.formatar('italic');
-        } else if (key === 'u') {
-            e.preventDefault();
-            window.JurisEditor.formatar('underline');
+// Controle dinâmico do Placeholder (WYSIWYG) e Atalhos
+const editorEl = document.getElementById('edit-text-input');
+if (editorEl) {
+    editorEl.addEventListener('input', function() {
+        this.classList.toggle('is-empty', this.innerText.trim() === '');
+    });
+
+    // Higienização no Paste (Colar Limpo)
+    editorEl.addEventListener('paste', function(e) {
+        e.preventDefault();
+        const text = (e.originalEvent || e).clipboardData.getData('text/plain');
+        document.execCommand('insertText', false, text);
+    });
+
+    // Extensão dos Atalhos de Teclado (Ctrl+B, Ctrl+I e Ctrl+U)
+    editorEl.addEventListener('keydown', function(e) {
+        if (e.ctrlKey || e.metaKey) {
+            const key = e.key.toLowerCase();
+            if (key === 'b') {
+                e.preventDefault();
+                window.JurisEditor.formatar('bold');
+            } else if (key === 'i') {
+                e.preventDefault();
+                window.JurisEditor.formatar('italic');
+            } else if (key === 'u') {
+                e.preventDefault();
+                window.JurisEditor.formatar('underline');
+            }
         }
-    }
-});
+    });
+}

@@ -165,6 +165,31 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
 .edit-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; padding-top: 12px; border-top: 1px solid #eee; }
 .edit-save-btn { background: var(--trt-blue); color: white; border-color: var(--trt-blue); }
 
+/* ================================================
+   EDITOR RICO (WYSIWYG) - contenteditable
+   ================================================ */
+.edit-textarea.rich-editor {
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    outline: none;
+}
+
+/* Placeholder controlado por classe JS, evita bugs do Chrome com <br> residuais */
+.edit-textarea.rich-editor.is-empty::before {
+    content: attr(data-placeholder);
+    color: #999;
+    pointer-events: none;
+    display: block;
+}
+
+/* Estilização nativa do texto visual */
+.edit-textarea.rich-editor b,
+.edit-textarea.rich-editor strong { font-weight: 800; color: var(--trt-blue); }
+.edit-textarea.rich-editor i,
+.edit-textarea.rich-editor em { font-style: italic; }
+.edit-textarea.rich-editor u { text-decoration: underline; text-underline-offset: 3px; }
+
 .aba-manager-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; background: #fafafa; margin-bottom: 6px; }
 .aba-manager-nome { font-weight: 600; color: var(--trt-blue); font-size: 0.88rem; }
 .aba-manager-actions { display: flex; gap: 8px; }
