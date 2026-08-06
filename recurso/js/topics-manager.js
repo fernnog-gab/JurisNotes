@@ -1321,7 +1321,7 @@ window.OutlineViewManager = (function() {
         const contentEl = document.getElementById('outline-view-content');
         if (contentEl) {
             contentEl.innerHTML = _construirHTML(topico);
-            _atualizarEstatisticas(topico); // Corrigido: Sem acento
+            _atualizarEstatisticas(topico); 
         }
 
         document.getElementById('outline-view-backdrop').style.display = 'block';
@@ -1341,13 +1341,9 @@ window.OutlineViewManager = (function() {
 
     function _obterRotuloIntencao(intencao) {
         const mapa = {
-            'comando': 'Comando IA',
-            'texto': 'Texto Fixo',
-            'premissa': 'Premissa',
-            'fundamentacao': 'Base Legal',
-            'refutacao': 'Refutação',
-            'preliminar': 'Prejudicial',
-            'veredito': 'Veredito'
+            'comando': 'Comando IA', 'texto': 'Texto Fixo', 'premissa': 'Premissa',
+            'fundamentacao': 'Base Legal', 'refutacao': 'Refutação', 
+            'preliminar': 'Prejudicial', 'veredito': 'Veredito'
         };
         return mapa[intencao] || 'Diretriz';
     }
@@ -1356,12 +1352,9 @@ window.OutlineViewManager = (function() {
         if (!subAnotacoes || subAnotacoes.length === 0) return '';
         let html = '';
         subAnotacoes.forEach(sub => {
-            // Regra de Ocultação: Notas internas nunca vazam para a minuta
-            if (sub.intencao === 'nota') return;
-
+            if (sub.intencao === 'nota') return; // Segurança LGPD
             const intencaoKey = sub.intencao || 'premissa';
             const rotulo = _obterRotuloIntencao(intencaoKey);
-
             html += `
             <div class="outline-sub-item" style="margin-left: ${margemLeft};">
                 <span class="outline-intent-chip intent-${intencaoKey}">${rotulo}</span>
@@ -1372,9 +1365,7 @@ window.OutlineViewManager = (function() {
     }
 
     function _gerarBlocoConteudo(item) {
-        if (item.tipo === 'imagem') {
-            return `<img src="${item.conteudo}" class="outline-img-preview" alt="Prova Visual">`;
-        }
+        if (item.tipo === 'imagem') return `<img src="${item.conteudo}" class="outline-img-preview" alt="Prova Visual">`;
         if (item.tipo === 'audio') {
             try {
                 const ad = JSON.parse(item.conteudo);
@@ -1382,12 +1373,7 @@ window.OutlineViewManager = (function() {
                 const safeFormatTime = (sec) => window.AudioManager?.formatTime ? window.AudioManager.formatTime(sec) : `${Math.floor(sec/60)}' ${Math.floor(sec%60)}''`;
                 const tempoStr = `${safeFormatTime(ad.inicio)} a ${safeFormatTime(ad.fim)}`;
                 const transcricao = ad.transcricao ? `<strong>Degravação:</strong> "${_render(ad.transcricao)}"` : '<em>Sem degravação cadastrada.</em>';
-
-                return `
-                <div class="outline-audio-box">
-                    <div>🎙️ <strong>Oitiva de Audiência:</strong> ${role} (⏱️ ${tempoStr})</div>
-                    <div style="margin-top:4px;">${transcricao}</div>
-                </div>`;
+                return `<div class="outline-audio-box"><div>🎙️ <strong>Oitiva de Audiência:</strong> ${role} (⏱️ ${tempoStr})</div><div style="margin-top:4px;">${transcricao}</div></div>`;
             } catch (e) {
                 return `<div class="outline-audio-box" style="color:#d32f2f;">Erro na leitura do áudio.</div>`;
             }
@@ -1402,91 +1388,51 @@ window.OutlineViewManager = (function() {
             <p style="font-size: 0.8rem; color: #64748b;">Visão linear compilada para estruturação de minutas e prompts de IA.</p>
         </div>`;
 
-        // 1. Seção: Preâmbulo
         if (topico.alegacoes || topico.fundamentos || topico.veredito) {
             html += `<div class="outline-section-block" id="sec-preambulo">
                 <div class="outline-h2-bar no-copy">
                     <span class="outline-h2-title">📋 Relatório e Posições do Processo</span>
                     <button class="btn-copy-section no-copy" onclick="OutlineViewManager.copiarTrechoElemento('sec-preambulo')">📋 Copiar Seção</button>
-                </div>
-                <div class="outline-section-body">`;
-
-            if (topico.alegacoes) {
-                html += `<div style="margin-bottom: 12px;">
-                    <div style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: #f57c00; margin-bottom: 2px;">Razões Recursais (Recorrente)</div>
-                    <div class="outline-content-text">${_render(topico.alegacoes)}</div>
-                </div>`;
-            }
-            if (topico.fundamentos) {
-                html += `<div style="margin-bottom: 12px;">
-                    <div style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: #3949ab; margin-bottom: 2px;">Fundamentos da Sentença (Origem)</div>
-                    <div class="outline-content-text">${_render(topico.fundamentos)}</div>
-                </div>`;
-            }
-            if (topico.veredito) {
-                html += `<div>
-                    <div style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: #e65100; margin-bottom: 2px;">Veredito Pretendido / Conclusão</div>
-                    <div class="outline-content-text">${_render(topico.veredito)}</div>
-                </div>`;
-            }
+                </div><div class="outline-section-body">`;
+            if (topico.alegacoes) html += `<div style="margin-bottom: 12px;"><div style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: #f57c00; margin-bottom: 2px;">Razões Recursais (Recorrente)</div><div class="outline-content-text">${_render(topico.alegacoes)}</div></div>`;
+            if (topico.fundamentos) html += `<div style="margin-bottom: 12px;"><div style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: #3949ab; margin-bottom: 2px;">Fundamentos da Sentença (Origem)</div><div class="outline-content-text">${_render(topico.fundamentos)}</div></div>`;
+            if (topico.veredito) html += `<div><div style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: #e65100; margin-bottom: 2px;">Veredito Pretendido / Conclusão</div><div class="outline-content-text">${_render(topico.veredito)}</div></div>`;
             html += `</div></div>`;
         }
 
-        // 2. Seção: Diretrizes Globais
         if (topico.diretrizesGlobais && topico.diretrizesGlobais.length > 0) {
-            const diretrizesVisiveis = topico.diretrizesGlobais.filter(d => d.intencao !== 'nota');
-            if (diretrizesVisiveis.length > 0) {
+            const dirVisiveis = topico.diretrizesGlobais.filter(d => d.intencao !== 'nota');
+            if (dirVisiveis.length > 0) {
                 html += `<div class="outline-section-block" id="sec-globais">
                     <div class="outline-h2-bar no-copy">
                         <span class="outline-h2-title">🌐 Diretrizes Globais do Tópico</span>
                         <button class="btn-copy-section no-copy" onclick="OutlineViewManager.copiarTrechoElemento('sec-globais')">📋 Copiar Seção</button>
-                    </div>
-                    <div class="outline-section-body">`;
-
-                diretrizesVisiveis.forEach(dir => {
+                    </div><div class="outline-section-body">`;
+                dirVisiveis.forEach(dir => {
                     const intencaoKey = dir.intencao || 'premissa';
-                    const rotulo = _obterRotuloIntencao(intencaoKey);
-                    html += `
-                    <div class="outline-sub-item" style="margin-left:0; margin-bottom:8px;">
-                        <span class="outline-intent-chip intent-${intencaoKey}">${rotulo}</span>
-                        <span class="outline-content-text">${_render(dir.texto)}</span>
-                    </div>`;
+                    html += `<div class="outline-sub-item" style="margin-left:0; margin-bottom:8px;"><span class="outline-intent-chip intent-${intencaoKey}">${_obterRotuloIntencao(intencaoKey)}</span><span class="outline-content-text">${_render(dir.texto)}</span></div>`;
                 });
                 html += `</div></div>`;
             }
         }
 
-        // 3. Seção: Matriz Probatória e Teses
         html += `<div class="outline-section-block" id="sec-matriz">
             <div class="outline-h2-bar no-copy">
                 <span class="outline-h2-title">📑 Matriz Probatória e Teses Jurídicas</span>
                 <button class="btn-copy-section no-copy" onclick="OutlineViewManager.copiarTrechoElemento('sec-matriz')">📋 Copiar Seção</button>
-            </div>
-            <div class="outline-section-body">`;
+            </div><div class="outline-section-body">`;
 
-        if (topico.anotacoes.length === 0) {
-            html += `<p style="color: #94a3b8; font-style: italic; font-size: 0.85rem;">Nenhuma prova cadastrada na matriz deste tópico.</p>`;
-        }
+        if (topico.anotacoes.length === 0) html += `<p style="color: #94a3b8; font-style: italic; font-size: 0.85rem;">Nenhuma prova cadastrada.</p>`;
 
         let ultimaTese = null;
-
         topico.anotacoes.forEach(an => {
-            const teseAtual = an.tese || "Provas sem agrupamento de tese";
+            const teseAtual = an.tese || "Provas sem agrupamento";
             if (teseAtual !== ultimaTese) {
-                html += `<div style="margin-top: 20px; margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px dashed #cbd5e1;">
-                    <span style="font-weight: 800; color: #6a1b9a; font-size: 0.95rem;">⚖️ Tese: ${TopicsManager.escaparHTML(teseAtual)}</span>
-                </div>`;
-
+                html += `<div style="margin-top: 20px; margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px dashed #cbd5e1;"><span style="font-weight: 800; color: #6a1b9a; font-size: 0.95rem;">⚖️ Tese: ${TopicsManager.escaparHTML(teseAtual)}</span></div>`;
                 if (topico.diretrizesPorTese && topico.diretrizesPorTese[teseAtual]) {
-                    const dirTeseVisiveis = topico.diretrizesPorTese[teseAtual].filter(d => d.intencao !== 'nota');
-                    dirTeseVisiveis.forEach(dir => {
-                        const intencaoKey = dir.intencao || 'premissa';
-                        const rotulo = _obterRotuloIntencao(intencaoKey);
-                        html += `
-                        <div class="outline-sub-item" style="margin-left: 12px; margin-bottom: 6px;">
-                            <span class="outline-intent-chip intent-${intencaoKey}">${rotulo}</span>
-                            <span class="outline-content-text">${_render(dir.texto)}</span>
-                        </div>`;
+                    topico.diretrizesPorTese[teseAtual].filter(d => d.intencao !== 'nota').forEach(dir => {
+                        const intKey = dir.intencao || 'premissa';
+                        html += `<div class="outline-sub-item" style="margin-left: 12px; margin-bottom: 6px;"><span class="outline-intent-chip intent-${intKey}">${_obterRotuloIntencao(intKey)}</span><span class="outline-content-text">${_render(dir.texto)}</span></div>`;
                     });
                 }
                 ultimaTese = teseAtual;
@@ -1495,43 +1441,22 @@ window.OutlineViewManager = (function() {
             const docSeguro = TopicsManager.escaparHTML(an.documento || an.polo || 'Documento');
             const refMeta = an.pagina ? ` (fl. ${TopicsManager.escaparHTML(String(an.pagina))})` : '';
 
-            html += `
-            <div class="outline-card">
-                <div style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
-                    <span class="outline-meta-tag">${docSeguro}</span>
-                    <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">${refMeta}</span>
-                </div>
-                ${_gerarBlocoConteudo(an)}
-                ${an.comentario ? `<div style="margin-top: 6px; font-size: 0.82rem; color: #475569;"><strong>Obs:</strong> ${_render(an.comentario)}</div>` : ''}
-            </div>`;
-
+            html += `<div class="outline-card"><div style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;"><span class="outline-meta-tag">${docSeguro}</span><span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">${refMeta}</span></div>${_gerarBlocoConteudo(an)}${an.comentario ? `<div style="margin-top: 6px; font-size: 0.82rem; color: #475569;"><strong>Obs:</strong> ${_render(an.comentario)}</div>` : ''}</div>`;
             html += _processarSubNos(an.subAnotacoes, '24px');
 
             if (an.itensCorrelacionados && an.itensCorrelacionados.length > 0) {
                 an.itensCorrelacionados.forEach(corr => {
                     const cDocSeguro = TopicsManager.escaparHTML(corr.documento || corr.polo || 'Documento');
                     const cRefMeta = corr.pagina ? ` (fl. ${TopicsManager.escaparHTML(String(corr.pagina))})` : '';
-
-                    html += `
-                    <div class="outline-card correlacionado">
-                        <div style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
-                            <span class="outline-meta-tag" style="background: #e2e8f0;">${cDocSeguro}</span>
-                            <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">${cRefMeta}</span>
-                        </div>
-                        ${_gerarBlocoConteudo(corr)}
-                        ${corr.comentario ? `<div style="margin-top: 6px; font-size: 0.82rem; color: #475569;"><strong>Obs:</strong> ${_render(corr.comentario)}</div>` : ''}
-                    </div>`;
-
+                    html += `<div class="outline-card correlacionado"><div style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;"><span class="outline-meta-tag" style="background: #e2e8f0;">${cDocSeguro}</span><span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">${cRefMeta}</span></div>${_gerarBlocoConteudo(corr)}${corr.comentario ? `<div style="margin-top: 6px; font-size: 0.82rem; color: #475569;"><strong>Obs:</strong> ${_render(corr.comentario)}</div>` : ''}</div>`;
                     html += _processarSubNos(corr.subAnotacoes, '40px');
                 });
             }
         });
-
         html += `</div></div>`;
         return html;
     }
 
-    // Função renomeada conforme recomendação técnica (sem acento)
     function _atualizarEstatisticas(topico) {
         const statsEl = document.getElementById('outline-stats-badge');
         if (!statsEl) return;
@@ -1539,99 +1464,65 @@ window.OutlineViewManager = (function() {
         let totalNos = 0;
         topico.anotacoes.forEach(a => {
             if (a.subAnotacoes) totalNos += a.subAnotacoes.filter(s => s.intencao !== 'nota').length;
-            if (a.itensCorrelacionados) {
-                a.itensCorrelacionados.forEach(c => {
-                    if (c.subAnotacoes) totalNos += c.subAnotacoes.filter(s => s.intencao !== 'nota').length;
-                });
-            }
+            if (a.itensCorrelacionados) a.itensCorrelacionados.forEach(c => {
+                if (c.subAnotacoes) totalNos += c.subAnotacoes.filter(s => s.intencao !== 'nota').length;
+            });
         });
         statsEl.textContent = `${totalProvas} prova(s) | ${totalNos} nó(s) de ideia`;
     }
 
-    // Cópia Segura (Word/PJe): Sanitização por clonagem de nó DOM em memória
     async function copiarTudo() {
         const contentEl = document.getElementById('outline-view-content');
         if (!contentEl) return;
-
-        // Clone defensivo para purgar qualquer botão ou elemento com classe .no-copy
         const clone = contentEl.cloneNode(true);
         clone.querySelectorAll('.no-copy, .btn-copy-section').forEach(el => el.remove());
-
         try {
             const clipboardItem = new ClipboardItem({
                 'text/plain': new Blob([clone.innerText.trim()], { type: 'text/plain' }),
                 'text/html': new Blob([clone.innerHTML], { type: 'text/html' })
             });
             await navigator.clipboard.write([clipboardItem]);
-            exibirToast('Documento completo copiado para o Word/PJe (sem controles visuais)!', 'sucesso');
+            exibirToast('Documento completo copiado para o Word/PJe!', 'sucesso');
         } catch (err) {
-            navigator.clipboard.writeText(clone.innerText.trim()).then(() => {
-                exibirToast('Texto simples copiado com sucesso.', 'info');
-            });
+            navigator.clipboard.writeText(clone.innerText.trim()).then(() => exibirToast('Texto simples copiado.', 'info'));
         }
     }
 
-    // Cópia para IA (Markdown Nativo)
     function copiarComoMarkdown() {
-        const activeId = TopicsManager.getActiveTabId();
-        const topico = topicos.find(t => t.id === activeId);
+        const topico = topicos.find(t => t.id === TopicsManager.getActiveTabId());
         if (!topico) return;
-
         let md = `# TÓPICO: ${topico.nome.toUpperCase()}\n\n`;
-
         if (topico.alegacoes) md += `## RAZÕES RECURSAIS\n${topico.alegacoes}\n\n`;
         if (topico.fundamentos) md += `## FUNDAMENTOS DA SENTENÇA\n${topico.fundamentos}\n\n`;
         if (topico.veredito) md += `## VEREDITO PRETENDIDO\n${topico.veredito}\n\n`;
-
         if (topico.diretrizesGlobais?.length > 0) {
             const globaisVisiveis = topico.diretrizesGlobais.filter(d => d.intencao !== 'nota');
             if (globaisVisiveis.length > 0) {
                 md += `## DIRETRIZES GLOBAIS\n`;
-                globaisVisiveis.forEach(d => {
-                    md += `- [${(d.intencao || 'diretriz').toUpperCase()}]: ${d.texto}\n`;
-                });
+                globaisVisiveis.forEach(d => md += `- [${(d.intencao || 'diretriz').toUpperCase()}]: ${d.texto}\n`);
                 md += `\n`;
             }
         }
-
         md += `## MATRIZ PROBATÓRIA E TESES\n`;
         let ultimaTese = null;
-
         topico.anotacoes.forEach((an, i) => {
             const tese = an.tese || "Geral";
-            if (tese !== ultimaTese) {
-                md += `\n### TESE: ${tese}\n`;
-                ultimaTese = tese;
-            }
-
-            const fl = an.pagina ? ` (fl. ${an.pagina})` : '';
-            md += `\n* PROVA ${i + 1}: ${an.documento || an.polo || 'Elemento'}${fl}\n`;
+            if (tese !== ultimaTese) { md += `\n### TESE: ${tese}\n`; ultimaTese = tese; }
+            md += `\n* PROVA ${i + 1}: ${an.documento || an.polo || 'Elemento'}${an.pagina ? ` (fl. ${an.pagina})` : ''}\n`;
             if (an.tipo === 'texto') md += `  > "${an.conteudo}"\n`;
-
-            if (an.subAnotacoes) {
-                an.subAnotacoes.forEach(sub => {
-                    if (sub.intencao !== 'nota') md += `  - [${(sub.intencao || 'nó').toUpperCase()}]: ${sub.texto}\n`;
-                });
-            }
+            if (an.subAnotacoes) an.subAnotacoes.forEach(sub => {
+                if (sub.intencao !== 'nota') md += `  - [${(sub.intencao || 'nó').toUpperCase()}]: ${sub.texto}\n`;
+            });
         });
-
-        navigator.clipboard.writeText(md.trim()).then(() => {
-            exibirToast('Estrutura Markdown copiada para IA (sem controles visuais)!', 'sucesso');
-        });
+        navigator.clipboard.writeText(md.trim()).then(() => exibirToast('Markdown copiado para IA!', 'sucesso'));
     }
 
-    // Cópia Parcial Segura de Seção
     function copiarTrechoElemento(idElemento) {
         const el = document.getElementById(idElemento);
         if (!el) return;
-
-        // Clone defensivo da seção específica
         const clone = el.cloneNode(true);
         clone.querySelectorAll('.no-copy, .btn-copy-section').forEach(b => b.remove());
-
-        navigator.clipboard.writeText(clone.innerText.trim()).then(() => {
-            exibirToast('Seção copiada sem controles visuais!', 'sucesso');
-        });
+        navigator.clipboard.writeText(clone.innerText.trim()).then(() => exibirToast('Seção copiada!', 'sucesso'));
     }
 
     return { abrir, fechar, copiarTudo, copiarComoMarkdown, copiarTrechoElemento };
