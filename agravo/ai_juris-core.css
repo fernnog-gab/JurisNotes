@@ -42,6 +42,9 @@
     --z-text-edit-modal: 4001;
     --z-abas-modal-backdrop: 4004;
     --z-abas-modal: 4005;
+    /* NOVAS VARIÁVEIS - OUTLINE */
+    --z-outline-backdrop: 4050;
+    --z-outline-modal: 4051;
     --z-splash: 9999;
     
     /* Variável da Espinha Dorsal (Vermelho sólido primário) */

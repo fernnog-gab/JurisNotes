@@ -149,6 +149,14 @@
                     </svg>
                 </button>
 
+                <!-- NOVO BOTÃO: Visão Estruturada (Nasce desabilitado) -->
+                <button class="icon-btn" id="btn-visao-estruturada" onclick="OutlineViewManager.abrir()" title="Visão Estruturada (Documento)" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line>
+                        <line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line>
+                    </svg>
+                </button>
+
                  <!-- NOVO: Botão da Balança da Justiça -->
                 <button class="icon-btn" id="btn-balanca-justica" onclick="BalancaManager.abrirPainel(event)" title="Dossiê Recursal&#10;[Alt + B] para abrir/substituir" disabled>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1396,6 +1404,29 @@ Crie um sumário hierárquico enxuto com as Grandes Categorias e Subcategorias q
             <button class="chip-btn chip-autora" style="background: var(--trt-blue); color: white; border: none; padding: 10px 20px; font-weight: bold; display: flex; gap: 8px; align-items: center;" onclick="TopicsManager.copiarTextoModoLeitura()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                 Copiar Inteligente (Docs / IA)
+            </button>
+        </div>
+    </div>
+
+    <!-- BACKDROP E MODAL: VISÃO ESTRUTURADA -->
+    <div id="outline-view-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(15, 37, 61, 0.85); backdrop-filter: blur(4px); z-index: var(--z-outline-backdrop);" onclick="OutlineViewManager.fechar()"></div>
+    
+    <div id="outline-view-modal" class="outline-view-popup fechavel-por-esc" style="display:none;">
+        <div class="wizard-header" style="display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: #fdfdfd; border-bottom: 1px solid var(--border-color);">
+            <span style="font-weight: 700; color: var(--trt-blue); font-size: 1.1rem; display: flex; align-items: center; gap: 10px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px; height:20px;"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                Visão Estruturada (Documento Linear)
+            </span>
+            <button style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b;" onclick="OutlineViewManager.fechar()">✕</button>
+        </div>
+        
+        <div id="outline-view-content" style="flex: 1; overflow-y: auto; padding: 32px 40px; background: #ffffff; color: #2c2c2c; font-size: 1.05rem; line-height: 1.7;"></div>
+
+        <div class="wizard-actions" style="padding: 16px 24px; background: #f8f9fa; border-top: 1px solid var(--border-color); justify-content: space-between; margin-top: 0;">
+            <button class="chip-btn chip-cancelar" onclick="OutlineViewManager.fechar()">Fechar</button>
+            <button class="chip-btn chip-autora" style="background: var(--trt-blue); color: white; border: none; padding: 10px 20px; font-weight: bold; display: flex; gap: 8px; align-items: center;" onclick="OutlineViewManager.copiarTudo()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                Copiar Documento Completo
             </button>
         </div>
     </div>
