@@ -42,7 +42,7 @@
 <link rel="stylesheet" href="ed_juris-reader-tools.css?v=3.0.0">
 
 <!-- 3. Fichário, Timeline, Fases Metodológicas e Acervo (Síntese e Saída) -->
-<link rel="stylesheet" href="ed_juris-timeline-cards.css?v=3.0.0">
+<link rel="stylesheet" href="ed_juris-timeline-cards.css?v=3.1.0">
 </head>
 <body>
     
@@ -1393,12 +1393,22 @@ Crie um sumário hierárquico enxuto com as Grandes Categorias e Subcategorias q
         
         <div id="outline-view-content" style="flex: 1; overflow-y: auto; padding: 32px 40px; background: #ffffff; color: #2c2c2c; font-size: 1.05rem; line-height: 1.7;"></div>
 
-        <div class="wizard-actions" style="padding: 16px 24px; background: #f8f9fa; border-top: 1px solid var(--border-color); justify-content: space-between; margin-top: 0;">
-            <button class="chip-btn chip-cancelar" onclick="OutlineViewManager.fechar()">Fechar</button>
-            <button class="chip-btn chip-autora" style="background: var(--trt-blue); color: white; border: none; padding: 10px 20px; font-weight: bold; display: flex; gap: 8px; align-items: center;" onclick="OutlineViewManager.copiarTudo()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                Copiar Documento Completo
-            </button>
+        <div class="wizard-actions" style="padding: 16px 24px; background: #f8f9fa; border-top: 1px solid var(--border-color); justify-content: space-between; margin-top: 0; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <button class="chip-btn chip-cancelar" onclick="OutlineViewManager.fechar()">Fechar (Esc)</button>
+                <span id="outline-stats-badge" style="font-size: 0.75rem; color: #64748b; font-weight: 600; background: #e2e8f0; padding: 4px 10px; border-radius: 12px;"></span>
+            </div>
+            
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button class="chip-btn" style="background: #ffffff; border: 1px solid var(--border-color); color: var(--trt-blue); font-weight: 600; padding: 8px 14px; font-size: 0.8rem; display: flex; gap: 6px; align-items: center;" onclick="OutlineViewManager.copiarComoMarkdown()" title="Copiar em formato Markdown limpo para ChatJT / Claude / ChatGPT">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 15px; height: 15px;"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path></svg>
+                    Copiar p/ IA (Markdown)
+                </button>
+                <button class="chip-btn chip-autora" style="background: var(--trt-blue); color: white; border: none; padding: 10px 18px; font-weight: bold; display: flex; gap: 8px; align-items: center;" onclick="OutlineViewManager.copiarTudo()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    Copiar Formatado (Word / PJe)
+                </button>
+            </div>
         </div>
     </div>
 
