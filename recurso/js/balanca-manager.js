@@ -46,57 +46,49 @@ window.BalancaManager = (function() {
         }
     });
 
-    /**
-     * Ponto de Entrada Único (Single Point of Entry) para abertura do Dossiê.
-     * @param {Event} event - Objeto de evento do clique (opcional)
-     * @param {string} targetContext - Contexto alvo ('TRILHA' ou 'TASKS')
-     */
     function abrirPainel(event, targetContext = 'TRILHA') {
-        if(event && event.stopPropagation) event.stopPropagation();
-        
         document.getElementById('balanca-modal-backdrop').style.display = 'block';
         document.getElementById('balanca-painel').style.display = 'flex';
 
         const iframe = document.getElementById('balanca-iframe');
-        const isLoaded = !!htmlState;
-
-        // Trava para evitar disparos múltiplos de postMessage na mesma carga
+        const isLoaded = !!htmlState; // só dispara comando se já houver dossiê carregado
         let actionDispatched = false;
 
+        // Listener seguro que se auto-destrói para evitar memory leak
         const handleIframeReady = () => {
             sincronizarContextoDossie(typeof topicos !== 'undefined' ? topicos : []);
-            
+
             if (isLoaded && !actionDispatched && iframe.contentWindow) {
                 actionDispatched = true;
-                
-                // Despacha a mensagem correta baseada no contexto exigido
-                const messageType = targetContext === 'TASKS' ? 'SCROLL_TO_TASKS' : 'SCROLL_TO_TRILHA';
-                iframe.contentWindow.postMessage({ type: messageType }, '*');
+                if (targetContext === 'TRILHA') {
+                    iframe.contentWindow.postMessage({ type: 'SCROLL_TO_TRILHA' }, window.location.origin);
+                } else if (targetContext === 'TASKS') {
+                    iframe.contentWindow.postMessage({ type: 'SCROLL_TO_TASKS' }, window.location.origin);
+                }
             }
-
-            // CORREÇÃO DE MEMORY LEAK: Previne o acúmulo de listeners
             iframe.removeEventListener('load', handleIframeReady);
         };
-
         iframe.addEventListener('load', handleIframeReady);
 
         if (htmlState) {
+            // Força o navegador a tratar como nova navegação, garantindo
+            // que o evento 'load' dispare mesmo com conteúdo idêntico ao anterior.
             iframe.removeAttribute('srcdoc');
             iframe.removeAttribute('src');
-            void iframe.offsetWidth; // Reflow síncrono para reinicialização do DOM
+            void iframe.offsetWidth; // reflow síncrono necessário antes de reatribuir o mesmo srcdoc
             iframe.srcdoc = htmlState;
-
-            // Fallback de segurança para Safari/Webkit
-            setTimeout(() => { if (!actionDispatched) handleIframeReady(); }, 400);
+            // Fallback para navegadores que pulam o load event ao reinjetar srcdoc
+            setTimeout(handleIframeReady, 400);
         } else {
             iframe.removeAttribute('srcdoc');
-            iframe.src = '../dossie/index.html'; 
+            iframe.src = '../dossie/index.html';
         }
     }
 
-    // Wrapper elegante para reaproveitar a infraestrutura do abrirPainel
+    // Ponto de entrada exclusivo para Lembretes — reaproveita a mesma inteligência do abrirPainel
     function abrirLembretes(event) {
-        abrirPainel(event, 'TASKS'); 
+        if (event) event.stopPropagation();
+        abrirPainel(event, 'TASKS');
     }
 
     function sincronizarContextoDossie(topicosInjetados) {
