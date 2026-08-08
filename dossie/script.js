@@ -258,8 +258,12 @@ function renderContent(data) {
 
 let windowAvailableTopics = [];
 
-// 1. OUVINTE DE MENSAGENS GLOBAL
+// 1. OUVINTE DE MENSAGENS GLOBAL BLINDADO
 window.addEventListener('message', function(event) {
+    // CORREÇÃO DE SEGURANÇA: Previne Cross-Origin Communication indesejada
+    const allowedOrigins = [window.location.origin, 'http://localhost', 'http://127.0.0.1'];
+    if (!allowedOrigins.some(origin => event.origin.startsWith(origin))) return;
+
     if (event.data && event.data.type === 'SYNC_TOPICS') {
         windowAvailableTopics = event.data.topicos || [];
         hydrateReminders(); // Hidrata lembretes antigos garantindo a nova UI
@@ -294,19 +298,41 @@ window.addEventListener('message', function(event) {
         });
     }
     
+    // NAVEGAÇÃO PARA TAREFAS
     if (event.data && event.data.type === 'SCROLL_TO_TASKS') {
-        // Busca resiliente pelo título da seção
         const headers = Array.from(document.querySelectorAll('.section-title'));
         const obsTitle = headers.find(el => el.textContent.toLowerCase().includes('observações gerais'));
         
         if (obsTitle) {
             obsTitle.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            // Feedback visual sutil (pisca o bloco para guiar o olhar)
             const obsContainer = document.getElementById('obs-list');
             if (obsContainer) {
                 obsContainer.style.transition = 'box-shadow 0.3s ease';
                 obsContainer.style.boxShadow = '0 0 0 2px #3b82f6'; // Azul destaque
                 setTimeout(() => obsContainer.style.boxShadow = 'none', 1000);
+            }
+        }
+    }
+
+    // NOVA NAVEGAÇÃO INTELIGENTE PARA A TRILHA DE JULGAMENTO
+    if (event.data && event.data.type === 'SCROLL_TO_TRILHA') {
+        // Estratégia principal: ID Fixo. Fallback: Busca textual em headers
+        let alvo = document.getElementById('secao-trilha-julgamento');
+        if (!alvo) {
+            const candidatos = Array.from(document.querySelectorAll('h1, h2, h3, h4, div.section-title'));
+            alvo = candidatos.find(el => 
+                el.textContent.trim().toLowerCase().startsWith('trilha de julgamento')
+            );
+        }
+
+        if (alvo) {
+            alvo.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // CORREÇÃO DE BUG VISUAL: box-shadow inline substitui a falha do card-flash-focus
+            const trilhaContainer = document.getElementById('sortable-list');
+            if (trilhaContainer) {
+                trilhaContainer.style.transition = 'box-shadow 0.3s ease';
+                trilhaContainer.style.boxShadow = '0 0 0 2px #f97316'; // Laranja destaque
+                setTimeout(() => trilhaContainer.style.boxShadow = 'none', 1000);
             }
         }
     }
