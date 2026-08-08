@@ -1066,7 +1066,8 @@
 }
 
 /* ================================================
-   VISÃO ESTRUTURADA (OUTLINE MODE) - REFINADO v3.1.0
+   VISÃO ESTRUTURADA (OUTLINE MODE) - REFINADO v3.2.0
+   Dimensões espelhando o Dossiê Recursal (#balanca-painel)
    ================================================ */
 .outline-view-popup {
     position: fixed;
@@ -1078,12 +1079,20 @@
     border-radius: 12px;
     box-shadow: 0 12px 48px rgba(0, 0, 0, 0.28);
     z-index: var(--z-outline-modal);
-    width: 90vw;
-    max-width: 900px;
-    max-height: 85vh;
+
+    width: 92vw;
+    max-width: 1300px;
+    height: 88vh;
+    max-height: 88vh;
+
     display: flex;
     flex-direction: column;
     overflow: hidden;
+}
+
+/* Evita que as linhas de texto fiquem longas demais (fadigando a visão) no painel largo */
+#outline-view-content {
+    padding: 32px 10%;
 }
 
 /* Bloco de Seção com Destaque e Elevação Suave */
