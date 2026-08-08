@@ -977,18 +977,32 @@ body[data-context="ed"] .topics-content-area {
 
 /* ================================================
    VISÃO ESTRUTURADA (OUTLINE MODE - ED) - REFINADO v3.2.0
+   Dimensões espelhando o Dossiê Recursal (#balanca-painel)
    ================================================ */
 .outline-view-popup {
     position: fixed;
-    top: 50%; left: 50%;
+    top: 50%;
+    left: 50%;
     transform: translate(-50%, -50%);
     background: #ffffff;
     border: 1px solid var(--border-color);
     border-radius: 12px;
     box-shadow: 0 12px 48px rgba(0, 0, 0, 0.28);
     z-index: var(--z-outline-modal);
-    width: 90vw; max-width: 900px; max-height: 85vh;
-    display: flex; flex-direction: column; overflow: hidden;
+
+    width: 92vw;
+    max-width: 1300px;
+    height: 88vh;
+    max-height: 88vh;
+
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Evita que as linhas de texto fiquem longas demais (fadigando a visão) no painel largo */
+#outline-view-content {
+    padding: 32px 10%;
 }
 
 /* Bloco de Seção com Destaque e Elevação Suave */
