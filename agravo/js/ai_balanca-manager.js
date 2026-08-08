@@ -49,20 +49,74 @@ window.BalancaManager = (function() {
         document.getElementById('balanca-painel').style.display = 'flex';
 
         const iframe = document.getElementById('balanca-iframe');
+        const irParaTrilha = !!htmlState; // só tenta scroll se já existir dossiê carregado
         
         // Listener seguro que se auto-destrói para evitar memory leak
         const onIframeLoad = () => {
             sincronizarContextoDossie(typeof topicos !== 'undefined' ? topicos : []);
+            
+            if (irParaTrilha) {
+                aguardarDomERolarParaTrilha(iframe);
+            }
+
             iframe.removeEventListener('load', onIframeLoad);
         };
         iframe.addEventListener('load', onIframeLoad);
 
         if (htmlState) {
+            // Força o navegador a tratar como nova navegação, garantindo que
+            // o evento 'load' dispare mesmo se o conteúdo for idêntico ao anterior.
+            iframe.removeAttribute('srcdoc');
             iframe.removeAttribute('src');
+            // Reflow síncrono necessário antes de reatribuir o mesmo srcdoc
+            void iframe.offsetWidth;
             iframe.srcdoc = htmlState;
         } else {
             iframe.removeAttribute('srcdoc');
             iframe.src = '../dossie/index.html'; // Puxa o gerador da raiz
+        }
+    }
+
+    /**
+     * Aguarda o DOM interno do iframe estar pronto (sem número mágico de tempo)
+     * e então executa a busca + scroll até a Trilha de Julgamento.
+     */
+    function aguardarDomERolarParaTrilha(iframe, tentativas = 0) {
+        const MAX_TENTATIVAS = 20; // ~1s no total (20 x 50ms), suficiente para dossiês grandes
+        const doc = iframe.contentDocument;
+
+        if (!doc || doc.readyState !== 'complete') {
+            if (tentativas < MAX_TENTATIVAS) {
+                setTimeout(() => aguardarDomERolarParaTrilha(iframe, tentativas + 1), 50);
+            }
+            return;
+        }
+
+        rolarParaTrilhaDeJulgamento(doc);
+    }
+
+    function rolarParaTrilhaDeJulgamento(doc) {
+        try {
+            // ESTRATÉGIA 1 (preferencial): ID fixo injetado pelo gerador
+            let alvo = doc.getElementById('secao-trilha-julgamento');
+
+            // ESTRATÉGIA 2 (fallback de compatibilidade): busca textual restrita
+            if (!alvo) {
+                const candidatos = Array.from(doc.querySelectorAll('h1, h2, h3, h4, div.section-title'));
+                alvo = candidatos.find(el =>
+                    el.textContent.trim().toLowerCase() === 'trilha de julgamento' ||
+                    el.textContent.trim().toLowerCase().startsWith('trilha de julgamento')
+                );
+            }
+
+            if (alvo) {
+                alvo.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Reaproveita a animação já existente no projeto
+                alvo.classList.add('card-flash-focus');
+                setTimeout(() => alvo.classList.remove('card-flash-focus'), 1300);
+            }
+        } catch (e) {
+            console.warn('[Juris Notes AI] Não foi possível localizar a Trilha de Julgamento no dossiê.', e);
         }
     }
 
