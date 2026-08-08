@@ -258,9 +258,9 @@ function renderContent(data) {
 
 let windowAvailableTopics = [];
 
-// 1. OUVINTE DE MENSAGENS GLOBAL BLINDADO
+// 1. OUVINTE DE MENSAGENS GLOBAL
 window.addEventListener('message', function(event) {
-    // CORREÇÃO DE SEGURANÇA: Previne Cross-Origin Communication indesejada
+    // Validação de origem — mesma política já usada em balanca-manager.js
     const allowedOrigins = [window.location.origin, 'http://localhost', 'http://127.0.0.1'];
     if (!allowedOrigins.some(origin => event.origin.startsWith(origin))) return;
 
@@ -298,13 +298,14 @@ window.addEventListener('message', function(event) {
         });
     }
     
-    // NAVEGAÇÃO PARA TAREFAS
     if (event.data && event.data.type === 'SCROLL_TO_TASKS') {
+        // Busca resiliente pelo título da seção
         const headers = Array.from(document.querySelectorAll('.section-title'));
         const obsTitle = headers.find(el => el.textContent.toLowerCase().includes('observações gerais'));
         
         if (obsTitle) {
             obsTitle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Feedback visual sutil (pisca o bloco para guiar o olhar)
             const obsContainer = document.getElementById('obs-list');
             if (obsContainer) {
                 obsContainer.style.transition = 'box-shadow 0.3s ease';
@@ -314,24 +315,27 @@ window.addEventListener('message', function(event) {
         }
     }
 
-    // NOVA NAVEGAÇÃO INTELIGENTE PARA A TRILHA DE JULGAMENTO
     if (event.data && event.data.type === 'SCROLL_TO_TRILHA') {
-        // Estratégia principal: ID Fixo. Fallback: Busca textual em headers
+        // ESTRATÉGIA 1 (preferencial): ID fixo já presente no template atual
         let alvo = document.getElementById('secao-trilha-julgamento');
+
+        // ESTRATÉGIA 2 (fallback): busca textual para dossiês legados sem o ID
         if (!alvo) {
             const candidatos = Array.from(document.querySelectorAll('h1, h2, h3, h4, div.section-title'));
-            alvo = candidatos.find(el => 
+            alvo = candidatos.find(el =>
                 el.textContent.trim().toLowerCase().startsWith('trilha de julgamento')
             );
         }
 
         if (alvo) {
             alvo.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            // CORREÇÃO DE BUG VISUAL: box-shadow inline substitui a falha do card-flash-focus
+
+            // Destaque visual aplicado diretamente via inline style —
+            // não depende de nenhuma classe CSS pré-definida no dossiê.
             const trilhaContainer = document.getElementById('sortable-list');
             if (trilhaContainer) {
                 trilhaContainer.style.transition = 'box-shadow 0.3s ease';
-                trilhaContainer.style.boxShadow = '0 0 0 2px #f97316'; // Laranja destaque
+                trilhaContainer.style.boxShadow = '0 0 0 2px #f97316'; // Laranja — tema da Trilha
                 setTimeout(() => trilhaContainer.style.boxShadow = 'none', 1000);
             }
         }
