@@ -46,49 +46,108 @@ window.BalancaManager = (function() {
         }
     });
 
-    function abrirPainel(event, targetContext = 'TRILHA') {
+    function abrirPainel() {
         document.getElementById('balanca-modal-backdrop').style.display = 'block';
         document.getElementById('balanca-painel').style.display = 'flex';
 
         const iframe = document.getElementById('balanca-iframe');
-        const isLoaded = !!htmlState; // só dispara comando se já houver dossiê carregado
-        let actionDispatched = false;
+        const irParaTrilha = !!htmlState; // só tenta scroll se já existir dossiê carregado
 
         // Listener seguro que se auto-destrói para evitar memory leak
-        const handleIframeReady = () => {
+        const onIframeLoad = () => {
             sincronizarContextoDossie(typeof topicos !== 'undefined' ? topicos : []);
 
-            if (isLoaded && !actionDispatched && iframe.contentWindow) {
-                actionDispatched = true;
-                if (targetContext === 'TRILHA') {
-                    iframe.contentWindow.postMessage({ type: 'SCROLL_TO_TRILHA' }, window.location.origin);
-                } else if (targetContext === 'TASKS') {
-                    iframe.contentWindow.postMessage({ type: 'SCROLL_TO_TASKS' }, window.location.origin);
-                }
+            if (irParaTrilha) {
+                aguardarDomERolarParaTrilha(iframe);
             }
-            iframe.removeEventListener('load', handleIframeReady);
+
+            iframe.removeEventListener('load', onIframeLoad);
         };
-        iframe.addEventListener('load', handleIframeReady);
+        iframe.addEventListener('load', onIframeLoad);
 
         if (htmlState) {
-            // Força o navegador a tratar como nova navegação, garantindo
-            // que o evento 'load' dispare mesmo com conteúdo idêntico ao anterior.
+            // Força o navegador a tratar como nova navegação, garantindo que
+            // o evento 'load' dispare mesmo se o conteúdo for idêntico ao anterior.
             iframe.removeAttribute('srcdoc');
             iframe.removeAttribute('src');
             void iframe.offsetWidth; // reflow síncrono necessário antes de reatribuir o mesmo srcdoc
             iframe.srcdoc = htmlState;
-            // Fallback para navegadores que pulam o load event ao reinjetar srcdoc
-            setTimeout(handleIframeReady, 400);
         } else {
             iframe.removeAttribute('srcdoc');
-            iframe.src = '../dossie/index.html';
+            iframe.src = '../dossie/index.html'; // Caminho realocado do gerador
         }
     }
 
-    // Ponto de entrada exclusivo para Lembretes — reaproveita a mesma inteligência do abrirPainel
+    /**
+     * Aguarda o DOM interno do iframe estar pronto (sem número mágico de tempo)
+     * e então executa a busca + scroll até a Trilha de Julgamento.
+     */
+    function aguardarDomERolarParaTrilha(iframe, tentativas = 0) {
+        const MAX_TENTATIVAS = 20; // ~1s no total (20 x 50ms)
+        const doc = iframe.contentDocument;
+
+        if (!doc || doc.readyState !== 'complete') {
+            if (tentativas < MAX_TENTATIVAS) {
+                setTimeout(() => aguardarDomERolarParaTrilha(iframe, tentativas + 1), 50);
+            }
+            return;
+        }
+
+        rolarParaTrilhaDeJulgamento(doc);
+    }
+
+    function rolarParaTrilhaDeJulgamento(doc) {
+        try {
+            // ESTRATÉGIA 1 (preferencial e confirmada no gerador atual):
+            // id="secao-trilha-julgamento" já existe em index.html do Dossiê.
+            let alvo = doc.getElementById('secao-trilha-julgamento');
+
+            // ESTRATÉGIA 2 (fallback de compatibilidade retroativa):
+            // cobre dossiês antigos salvos sem o id, e também variações de
+            // numeração/rótulo (ex.: "4. Trilha de Julgamento (Arraste para Reordenar)").
+            if (!alvo) {
+                const candidatos = Array.from(doc.querySelectorAll('h1, h2, h3, h4, div.section-title'));
+                alvo = candidatos.find(el =>
+                    el.textContent.trim().toLowerCase().includes('trilha de julgamento')
+                );
+            }
+
+            if (alvo) {
+                alvo.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Reaproveita a animação já existente no projeto (juris-reader-tools.css)
+                alvo.classList.add('card-flash-focus');
+                setTimeout(() => alvo.classList.remove('card-flash-focus'), 1300);
+            }
+        } catch (e) {
+            console.warn('[Juris Notes] Não foi possível localizar a Trilha de Julgamento no dossiê.', e);
+        }
+    }
+
+    // Ponto de entrada exclusivo para Lembretes
     function abrirLembretes(event) {
-        if (event) event.stopPropagation();
-        abrirPainel(event, 'TASKS');
+        if(event) event.stopPropagation();
+        
+        abrirPainel(); 
+        const iframe = document.getElementById('balanca-iframe');
+        
+        // BLINDAGEM: Trava de disparo único
+        let scrollDisparado = false;
+        const dispararScroll = () => {
+            if (scrollDisparado) return;
+            scrollDisparado = true;
+            
+            if (iframe.contentWindow) {
+                iframe.contentWindow.postMessage({ type: 'SCROLL_TO_TASKS' }, '*');
+            }
+            iframe.removeEventListener('load', dispararScroll);
+        };
+        
+        // Tenta usar a via expressa (evento nativo)
+        iframe.addEventListener('load', dispararScroll);
+        
+        // Fallback: Se o navegador for preguiçoso e pular o evento nativo, 
+        // forçamos o scroll após 400ms.
+        setTimeout(dispararScroll, 400);
     }
 
     function sincronizarContextoDossie(topicosInjetados) {
