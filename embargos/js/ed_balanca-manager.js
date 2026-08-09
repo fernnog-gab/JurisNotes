@@ -100,12 +100,13 @@ window.BalancaManager = (function() {
             // ESTRATÉGIA 1 (preferencial): ID fixo injetado pelo gerador
             let alvo = doc.getElementById('secao-trilha-julgamento');
 
-            // ESTRATÉGIA 2 (fallback de compatibilidade): busca textual restrita a títulos
+            // ESTRATÉGIA 2 (fallback de compatibilidade retroativa):
+            // cobre dossiês antigos salvos sem o id, e também variações de
+            // numeração/rótulo (ex.: "4. Trilha de Julgamento (Arraste para Reordenar)").
             if (!alvo) {
                 const candidatos = Array.from(doc.querySelectorAll('h1, h2, h3, h4, div.section-title'));
                 alvo = candidatos.find(el =>
-                    el.textContent.trim().toLowerCase() === 'trilha de julgamento' ||
-                    el.textContent.trim().toLowerCase().startsWith('trilha de julgamento')
+                    el.textContent.trim().toLowerCase().includes('trilha de julgamento')
                 );
             }
 
