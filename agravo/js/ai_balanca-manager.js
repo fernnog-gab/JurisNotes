@@ -101,11 +101,11 @@ window.BalancaManager = (function() {
             let alvo = doc.getElementById('secao-trilha-julgamento');
 
             // ESTRATÉGIA 2 (fallback de compatibilidade): busca textual restrita
+            // Cobre dossiês antigos salvos sem o id, e também variações de numeração
             if (!alvo) {
                 const candidatos = Array.from(doc.querySelectorAll('h1, h2, h3, h4, div.section-title'));
                 alvo = candidatos.find(el =>
-                    el.textContent.trim().toLowerCase() === 'trilha de julgamento' ||
-                    el.textContent.trim().toLowerCase().startsWith('trilha de julgamento')
+                    el.textContent.trim().toLowerCase().includes('trilha de julgamento')
                 );
             }
 
