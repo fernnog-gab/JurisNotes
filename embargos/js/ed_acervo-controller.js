@@ -38,6 +38,23 @@ let _eventDelegationAtivo = false;
 // ==========================================
 let _isViewTransitioning = false;
 
+/**
+ * Helper de Sanitização Arquitetural
+ * Garante a proteção contra XSS (Cross-Site Scripting).
+ * Tenta usar o serviço global, faz fallback seguro para API nativa do DOM em caso de falha.
+ */
+function _safeEscaparHTML(str) {
+    if (!str) return '';
+    // Tenta usar a dependência externa primária
+    if (typeof TopicsManager !== 'undefined' && typeof TopicsManager.escaparHTML === 'function') {
+        return TopicsManager.escaparHTML(str);
+    }
+    // Fallback Defensivo Inquebrável (Browser DOM API)
+    const divFantasma = document.createElement('div');
+    divFantasma.textContent = str; // textContent converte tags em texto puro de forma segura
+    return divFantasma.innerHTML;
+}
+
 // HELPER PRIVADO (Defesa de UI)
 function _safeDisplay(id, styleStr) {
     const el = document.getElementById(id);
@@ -480,7 +497,7 @@ function configurarEventDelegation() {
     _eventDelegationAtivo = true;
 }
 
-// Lógica isolada com roteamento nativo do ED
+// Lógica isolada com roteamento nativo do ED (Com Resiliência de Estado e Segurança)
 function selecionarEAtivarModelo(cardElement, modeloId) {
     // 1. Aborta execuções pendentes e ativa a trava arquitetural
     if (window.filtrarAcervoPrincipalDebounced && window.filtrarAcervoPrincipalDebounced.cancel) {
@@ -494,75 +511,110 @@ function selecionarEAtivarModelo(cardElement, modeloId) {
         
         const mod = _todosModelosEmMemoria.find(m => m.id === modeloId);
         if (!mod) {
-            _isViewTransitioning = false; // Libera trava em caso de falha
+            _isViewTransitioning = false;
             return;
         }
 
         _modeloSelecionadoId = mod.id;
-    _modeloSelecionadoNodes = mod.nos;
-    _modeloSelecionadoEscopo = mod.escopo || 'card';
-    
-    const previewHtml = mod.nos.map(n => `
-        <div class="acervo-node-preview">
-            ${getIconeAcervoSVG(n.intencao)}
-            <span class="acervo-node-text wrap-text">${TopicsManager.escaparHTML(n.texto)}</span>
-        </div>
-    `).join('');
-    
-    const previewBox = document.getElementById('box-preview-acervo');
-    previewBox.innerHTML = previewHtml;
-    previewBox.style.display = 'block';
-    
-    window.ativarModoFocoAcervo(mod.nome);
-    
-    // Roteamento Defensivo (Legado do ED)
-    _safeDisplay('box-destino-dinamico-acervo', 'block');
-    _safeDisplay('destino-acervo-card', 'none');
-    _safeDisplay('destino-acervo-tese', 'none');
-    _safeDisplay('destino-acervo-global', 'none');
-    
-    const btnInserir = document.getElementById('btn-inserir-acervo');
-    if(!btnInserir) return;
-    btnInserir.disabled = false;
-
-    const topicoId = typeof TopicsManager !== 'undefined' ? TopicsManager.getActiveTabId() : null;
-    const topico = topicoId ? topicos.find(t => t.id === topicoId) : null;
-
-    if (_modeloSelecionadoEscopo === 'global') {
-        _safeDisplay('destino-acervo-global', 'block');
-        btnInserir.textContent = '✔ Inserir Globalmente';
-    } 
-    else if (_modeloSelecionadoEscopo === 'tese') {
-        _safeDisplay('destino-acervo-tese', 'block');
-        btnInserir.textContent = '✔ Inserir no Vício'; // Nomenclatura ED
+        _modeloSelecionadoNodes = mod.nos;
+        _modeloSelecionadoEscopo = mod.escopo || 'card';
         
-        const selectTese = document.getElementById('select-destino-acervo-tese');
-        const aviso = document.getElementById('aviso-sem-tese');
+        // Uso do helper centralizado e blindado contra XSS
+        const previewHtml = mod.nos.map(n => `
+            <div class="acervo-node-preview">
+                ${typeof getIconeAcervoSVG === 'function' ? getIconeAcervoSVG(n.intencao) : '📄'}
+                <span class="acervo-node-text wrap-text">${_safeEscaparHTML(n.texto)}</span>
+            </div>
+        `).join('');
         
-        if(selectTese && aviso && topico) {
-            selectTese.innerHTML = '<option value="">Selecione um Vício existente...</option>';
-            const tesesUnicas = [...new Set(topico.anotacoes.filter(a => a.tese && a.tese.trim() !== '').map(a => a.tese))];
+        const previewBox = document.getElementById('box-preview-acervo');
+        if (previewBox) {
+            previewBox.innerHTML = previewHtml;
+            previewBox.style.display = 'block';
+        }
+        
+        window.ativarModoFocoAcervo(mod.nome);
+        
+        // Roteamento Defensivo (Legado do ED)
+        _safeDisplay('box-destino-dinamico-acervo', 'block');
+        _safeDisplay('destino-acervo-card', 'none');
+        _safeDisplay('destino-acervo-tese', 'none');
+        _safeDisplay('destino-acervo-global', 'none');
+        
+        const btnInserir = document.getElementById('btn-inserir-acervo');
+        if(!btnInserir) return;
+        btnInserir.disabled = false;
+
+        // Recuperação Segura do Tópico Ativo
+        const topicoId = (typeof TopicsManager !== 'undefined' && typeof TopicsManager.getActiveTabId === 'function') 
+            ? TopicsManager.getActiveTabId() 
+            : null;
             
-            if (tesesUnicas.length === 0) {
-                selectTese.style.display = 'none';
-                aviso.style.display = 'block';
-                btnInserir.disabled = true;
-            } else {
-                selectTese.style.display = 'block';
-                aviso.style.display = 'none';
-                tesesUnicas.forEach(t => selectTese.appendChild(new Option(t, t)));
+        let topico = null;
+        if (topicoId) {
+            if (typeof topicos !== 'undefined' && Array.isArray(topicos)) {
+                topico = topicos.find(t => t.id === topicoId);
+            } else if (typeof window.topicos !== 'undefined' && Array.isArray(window.topicos)) {
+                topico = window.topicos.find(t => t.id === topicoId);
             }
         }
-    } else {
-        _safeDisplay('destino-acervo-card', 'block');
-        btnInserir.textContent = '✔ Inserir no Card';
-    }
 
-    _safeDisplay('btn-inserir-acervo', 'block');
-    
+        if (_modeloSelecionadoEscopo === 'global') {
+            _safeDisplay('destino-acervo-global', 'block');
+            btnInserir.textContent = '✔ Inserir Globalmente';
+        } 
+        else if (_modeloSelecionadoEscopo === 'tese') {
+            _safeDisplay('destino-acervo-tese', 'block');
+            btnInserir.textContent = '✔ Inserir no Vício'; 
+            
+            const selectTese = document.getElementById('select-destino-acervo-tese');
+            const aviso = document.getElementById('aviso-sem-tese');
+            
+            if(selectTese && aviso && topico) {
+                selectTese.innerHTML = '<option value="">Selecione um Vício existente...</option>';
+                // Evita quebra caso a.tese não exista na estrutura do modelo de dados
+                const tesesUnicas = [...new Set(topico.anotacoes.filter(a => a && a.tese && a.tese.trim() !== '').map(a => a.tese))];
+                
+                if (tesesUnicas.length === 0) {
+                    selectTese.style.display = 'none';
+                    aviso.style.display = 'block';
+                    btnInserir.disabled = true;
+                } else {
+                    selectTese.style.display = 'block';
+                    aviso.style.display = 'none';
+                    tesesUnicas.forEach(t => selectTese.appendChild(new Option(t, t)));
+                }
+            }
+        } else {
+            _safeDisplay('destino-acervo-card', 'block');
+            btnInserir.textContent = '✔ Inserir no Card';
+        }
+
+        _safeDisplay('btn-inserir-acervo', 'block');
+        
     } catch (error) {
-        _isViewTransitioning = false; // Libera trava em caso de erro crítico
-        console.error("[ED AcervoController] Erro ao selecionar modelo:", error);
+        console.error("[ED AcervoController] Erro crítico ao renderizar modelo:", error);
+        
+        // ROLLBACK DE UI OBRIGATÓRIO (Impede a tela branca)
+        const listView = document.getElementById('acervo-list-view');
+        const focusView = document.getElementById('acervo-focus-view');
+        
+        if (focusView) {
+            focusView.style.display = 'none';
+            focusView.classList.remove('is-active');
+        }
+        if (listView) {
+            listView.style.display = 'flex';
+            listView.style.opacity = '1';
+        }
+
+        // Feedback UX
+        if (typeof exibirToast === 'function') {
+            exibirToast('Falha ao processar as informações deste modelo.', 'erro');
+        }
+
+        // Libera a trava para que o usuário possa tentar novamente
+        _isViewTransitioning = false; 
     }
 }
 
@@ -1129,27 +1181,35 @@ window.copiarPromptNotebookLM = function() {
 // FUNÇÕES DE CONTROLE DE VIEW SWAP (ACERVO)
 // ==========================================
 
+// Atualização da função de transição visual
 window.ativarModoFocoAcervo = function(tituloModelo) {
     const tituloEl = document.getElementById('focus-modelo-titulo');
-    if (tituloEl) tituloEl.textContent = TopicsManager.escaparHTML(tituloModelo);
+    
+    // Uso do helper DRY e XSS-proof
+    if (tituloEl) {
+        tituloEl.textContent = _safeEscaparHTML(tituloModelo);
+    }
     
     const listView = document.getElementById('acervo-list-view');
     const focusView = document.getElementById('acervo-focus-view');
+    
+    if (!listView || !focusView) return; 
     
     // Animação de saída da lista
     listView.style.opacity = '0';
     setTimeout(() => {
         listView.style.display = 'none';
+        
         // Prepara e anima entrada do foco
         focusView.style.display = 'flex';
-        // Força reflow para o motor do navegador entender a mudança de display antes de animar
+        // Força reflow sincronizado para o navegador entender a mudança de display antes de animar
         void focusView.offsetWidth; 
         
-        focusView.classList.add('is-active'); // CSS assume controle total da opacidade e transição
+        focusView.classList.add('is-active'); 
         
         // Libera a trava de estado com folga de segurança após a animação
         setTimeout(() => { _isViewTransitioning = false; }, 50); 
-    }, 250); // Tempo sincronizado com a transition do CSS
+    }, 250);
 };
 
 window.desativarModoFocoAcervo = function() {
