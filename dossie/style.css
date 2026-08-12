@@ -40,7 +40,8 @@ body {
   box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
   overflow: visible !important; 
   margin: 0 auto;
-  padding-bottom: 60px; 
+  /* AUMENTO DA MARGEM INFERIOR: Cria zona de escape para o menu suspenso */
+  padding-bottom: 280px; 
   display: none; 
   margin-bottom: 40px;
 }
@@ -850,3 +851,15 @@ header {
 }
 
 /* Gambiarra legada de overflow: visible removida. Menu opera nativamente em portal flutuante. */
+
+/* =========================================
+   BLINDAGEM DE EXPORTAÇÃO E IMPRESSÃO
+   ========================================= */
+@media print {
+    .container {
+        /* Restaura o tamanho original na hora de salvar o PDF, 
+           removendo o espaço em branco do final da página gerado pela zona de escape */
+        padding-bottom: 60px !important;
+        margin-bottom: 0 !important;
+    }
+}
