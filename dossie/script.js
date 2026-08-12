@@ -568,21 +568,19 @@ function addNewObs() {
     updateTaskCounters();
 }
 
-// 4. LÓGICA DO MENU FLUTUANTE DE SELEÇÃO
-
-// VARIÁVEL GLOBAL PARA CONTROLE DE EVENTOS (Evita Race Conditions)
-let popoverTimeoutId = null;
+// --- 4. LÓGICA DO MENU FLUTUANTE DE SELEÇÃO (SMART POPOVER + ANTI-FLICKER) ---
+let obsSelectorArmTimer = null;
 
 window.openObsTopicSelector = function(circleEl) {
-    // 1. Blindagem de clique duplo e limpeza de timers residuais
+    // BLINDAGEM 1: impede que o clique atual vaze e feche o menu instantaneamente
     if (window.event) window.event.stopPropagation();
-    clearTimeout(popoverTimeoutId);
-    window.closeAllObsTopicSelectors();
 
-    // 2. Construção do DOM do Menu
+    closeAllObsTopicSelectors();
+
     const menu = document.createElement('div');
     menu.className = 'obs-topic-selector-menu';
-    
+    menu.style.visibility = 'hidden'; // ANTI-FLICKER: mede sem pintar na tela
+
     const optionGlobal = document.createElement('div');
     optionGlobal.className = 'obs-topic-option';
     optionGlobal.innerHTML = `<div class="color-dot" style="background: #ffffff; border: 1px solid #ccc;"></div> Global`;
@@ -591,7 +589,7 @@ window.openObsTopicSelector = function(circleEl) {
     });
     menu.appendChild(optionGlobal);
 
-    if (windowAvailableTopics && windowAvailableTopics.length > 0) {
+    if (windowAvailableTopics.length > 0) {
         const divider = document.createElement('div');
         divider.className = 'obs-topic-divider';
         menu.appendChild(divider);
@@ -601,7 +599,6 @@ window.openObsTopicSelector = function(circleEl) {
             option.className = 'obs-topic-option';
             const safeName = t.nome.replace(/'/g, "\\'");
             option.innerHTML = `<div class="color-dot" style="background: ${t.cor};"></div> ${safeName}`;
-            
             option.addEventListener('click', () => {
                 window.applyObsTopic(circleEl, t.id, t.nome, t.cor);
             });
@@ -609,60 +606,50 @@ window.openObsTopicSelector = function(circleEl) {
         });
     }
 
-    // 3. Injeção "Invisível" para cálculo de geometria
-    menu.style.visibility = 'hidden'; 
-    menu.style.display = 'block';
     document.body.appendChild(menu);
-    
-    // 4. Inteligência Espacial (Smart Positioning)
+
+    // FORCED SYNCHRONOUS LAYOUT: o navegador calcula a geometria agora,
+    // com o menu invisível — medição segura e sem piscada.
     const rect = circleEl.getBoundingClientRect();
-    const menuWidth = menu.offsetWidth;
     const menuHeight = menu.offsetHeight;
-    
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceRight = window.innerWidth - rect.left;
-    
-    let transformOriginY = 'top';
-    let transformOriginX = 'left';
+    const menuWidth = menu.offsetWidth;
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+    const gap = 8;
 
-    // Cálculo Eixo Y (Vertical)
-    if (spaceBelow < menuHeight && rect.top > menuHeight) {
-        // Abre para cima
+    // EIXO Y — Inversão inteligente: se não couber embaixo, abre para cima
+    const spaceBelow = viewportH - rect.bottom;
+    if (spaceBelow < menuHeight && rect.top > spaceBelow) {
         menu.style.top = 'auto';
-        menu.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
-        transformOriginY = 'bottom';
+        menu.style.bottom = (viewportH - rect.top + gap) + 'px';
     } else {
-        // Abre para baixo (Padrão)
-        menu.style.top = (rect.bottom + 8) + 'px';
         menu.style.bottom = 'auto';
+        menu.style.top = (rect.bottom + gap) + 'px';
     }
 
-    // Cálculo Eixo X (Horizontal)
-    if (spaceRight < menuWidth && rect.right > menuWidth) {
-        // Alinha pela direita do botão
+    // EIXO X — Blindagem contra vazamento horizontal na borda direita
+    if (rect.left + menuWidth > viewportW - gap) {
         menu.style.left = 'auto';
-        menu.style.right = (window.innerWidth - rect.right) + 'px';
-        transformOriginX = 'right';
+        menu.style.right = (viewportW - rect.right) + 'px';
     } else {
-        // Alinha pela esquerda do botão (Padrão)
-        menu.style.left = rect.left + 'px';
         menu.style.right = 'auto';
+        menu.style.left = rect.left + 'px';
     }
 
-    menu.style.transformOrigin = `${transformOriginX} ${transformOriginY}`;
-
-    // 5. Renderização visual no próximo frame (GPU Paint)
+    // REVEAL: só torna visível no próximo frame, já na coordenada final
     requestAnimationFrame(() => {
         menu.style.visibility = 'visible';
-        menu.classList.add('popover-enter-active'); 
-        
-        // 6. Inscrição segura de ouvintes de evento
-        popoverTimeoutId = setTimeout(() => {
-            document.addEventListener('click', closeAllObsTopicSelectors);
-            // { passive: true } melhora a performance de rolagem
-            window.addEventListener('scroll', closeAllObsTopicSelectors, { capture: true, passive: true });
-        }, 50);
+        menu.classList.add('is-visible');
     });
+
+    // BLINDAGEM 2: arma os fechadores após 50ms, com debounce anti race-condition
+    if (obsSelectorArmTimer) clearTimeout(obsSelectorArmTimer);
+    obsSelectorArmTimer = setTimeout(() => {
+        document.addEventListener('click', closeAllObsTopicSelectors);
+        window.addEventListener('scroll', closeAllObsTopicSelectors, true);
+        window.addEventListener('resize', closeAllObsTopicSelectors);
+        obsSelectorArmTimer = null;
+    }, 50);
 };
 
 window.applyObsTopic = function(circleEl, topicId, topicName, topicColor) {
@@ -686,12 +673,11 @@ window.applyObsTopic = function(circleEl, topicId, topicName, topicColor) {
 };
 
 window.closeAllObsTopicSelectors = function() {
-    clearTimeout(popoverTimeoutId); // Limpeza de segurança
-    const menus = document.querySelectorAll('.obs-topic-selector-menu');
-    menus.forEach(menu => menu.remove());
-    
+    if (obsSelectorArmTimer) { clearTimeout(obsSelectorArmTimer); obsSelectorArmTimer = null; }
+    document.querySelectorAll('.obs-topic-selector-menu').forEach(menu => menu.remove());
     document.removeEventListener('click', closeAllObsTopicSelectors);
-    window.removeEventListener('scroll', closeAllObsTopicSelectors, { capture: true, passive: true });
+    window.removeEventListener('scroll', closeAllObsTopicSelectors, true);
+    window.removeEventListener('resize', closeAllObsTopicSelectors);
 };
 
 function addNewTopic() {
