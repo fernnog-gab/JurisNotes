@@ -572,15 +572,16 @@ function addNewObs() {
 let obsSelectorArmTimer = null;
 
 window.openObsTopicSelector = function(circleEl) {
-    // BLINDAGEM 1: impede que o clique atual vaze e feche o menu instantaneamente
+    // Blindagem: impede que o clique atual feche o menu instantaneamente
     if (window.event) window.event.stopPropagation();
 
     closeAllObsTopicSelectors();
 
     const menu = document.createElement('div');
     menu.className = 'obs-topic-selector-menu';
-    menu.style.visibility = 'hidden'; // ANTI-FLICKER: mede sem pintar na tela
+    menu.style.visibility = 'hidden'; // Anti-flicker pattern
 
+    // --- MONTAGEM DAS OPÇÕES ---
     const optionGlobal = document.createElement('div');
     optionGlobal.className = 'obs-topic-option';
     optionGlobal.innerHTML = `<div class="color-dot" style="background: #ffffff; border: 1px solid #ccc;"></div> Global`;
@@ -589,7 +590,7 @@ window.openObsTopicSelector = function(circleEl) {
     });
     menu.appendChild(optionGlobal);
 
-    if (windowAvailableTopics.length > 0) {
+    if (windowAvailableTopics && windowAvailableTopics.length > 0) {
         const divider = document.createElement('div');
         divider.className = 'obs-topic-divider';
         menu.appendChild(divider);
@@ -606,10 +607,10 @@ window.openObsTopicSelector = function(circleEl) {
         });
     }
 
+    // INJEÇÃO NO PORTAL (Corpo do Iframe)
     document.body.appendChild(menu);
 
-    // FORCED SYNCHRONOUS LAYOUT: o navegador calcula a geometria agora,
-    // com o menu invisível — medição segura e sem piscada.
+    // MATEMÁTICA DE POSICIONAMENTO FIXO (VIEWPORT)
     const rect = circleEl.getBoundingClientRect();
     const menuHeight = menu.offsetHeight;
     const menuWidth = menu.offsetWidth;
@@ -617,37 +618,44 @@ window.openObsTopicSelector = function(circleEl) {
     const viewportH = window.innerHeight;
     const gap = 8;
 
-    // EIXO Y — Inversão inteligente: se não couber embaixo, abre para cima
+    // EIXO Y — Inversão inteligente (Edge Detection)
     const spaceBelow = viewportH - rect.bottom;
     if (spaceBelow < menuHeight && rect.top > spaceBelow) {
-        menu.style.top = 'auto';
+        // Abre para CIMA (Ancora pelo bottom)
         menu.style.bottom = (viewportH - rect.top + gap) + 'px';
+        menu.style.top = 'auto';
     } else {
-        menu.style.bottom = 'auto';
+        // Abre para BAIXO (Ancora pelo top)
         menu.style.top = (rect.bottom + gap) + 'px';
+        menu.style.bottom = 'auto';
     }
 
-    // EIXO X — Blindagem contra vazamento horizontal na borda direita
+    // EIXO X — Prevenção de vazamento horizontal
     if (rect.left + menuWidth > viewportW - gap) {
-        menu.style.left = 'auto';
+        // Alinha pela direita
         menu.style.right = (viewportW - rect.right) + 'px';
+        menu.style.left = 'auto';
     } else {
-        menu.style.right = 'auto';
+        // Alinha pela esquerda
         menu.style.left = rect.left + 'px';
+        menu.style.right = 'auto';
     }
 
-    // REVEAL: só torna visível no próximo frame, já na coordenada final
+    // REVEAL: Torna visível no próximo frame, mitigando gargalos de layout
     requestAnimationFrame(() => {
         menu.style.visibility = 'visible';
         menu.classList.add('is-visible');
     });
 
-    // BLINDAGEM 2: arma os fechadores após 50ms, com debounce anti race-condition
+    // LISTENERS DE SEGURANÇA E AUTO-DISMISS
     if (obsSelectorArmTimer) clearTimeout(obsSelectorArmTimer);
     obsSelectorArmTimer = setTimeout(() => {
         document.addEventListener('click', closeAllObsTopicSelectors);
+        // O capture:true no scroll é vital para capturar scroll de divs internas
         window.addEventListener('scroll', closeAllObsTopicSelectors, true);
         window.addEventListener('resize', closeAllObsTopicSelectors);
+        // Adiciona suporte a ESC para acessibilidade e UX
+        window.addEventListener('keydown', handleEscapeKey);
         obsSelectorArmTimer = null;
     }, 50);
 };
@@ -672,12 +680,20 @@ window.applyObsTopic = function(circleEl, topicId, topicName, topicColor) {
     circleEl.setAttribute('style', circleEl.style.cssText);
 };
 
+// Nova função auxiliar para fechar com a tecla ESC
+function handleEscapeKey(e) {
+    if (e.key === 'Escape') {
+        closeAllObsTopicSelectors();
+    }
+}
+
 window.closeAllObsTopicSelectors = function() {
     if (obsSelectorArmTimer) { clearTimeout(obsSelectorArmTimer); obsSelectorArmTimer = null; }
     document.querySelectorAll('.obs-topic-selector-menu').forEach(menu => menu.remove());
     document.removeEventListener('click', closeAllObsTopicSelectors);
     window.removeEventListener('scroll', closeAllObsTopicSelectors, true);
     window.removeEventListener('resize', closeAllObsTopicSelectors);
+    window.removeEventListener('keydown', handleEscapeKey);
 };
 
 function addNewTopic() {
