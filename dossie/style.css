@@ -775,20 +775,25 @@ header {
     transform: scale(1.15);
 }
 
+/* =========================================
+   MENU SUSPENSO DE SELECAO - SMART POPOVER
+   (comentarios em linha propria: imuniza
+   contra truncamento no copiar-e-colar)
+   ========================================= */
 .obs-topic-selector-menu {
-    position: fixed;               /* imune ao overflow de qualquer container pai */
-    z-index: 99999;                /* elevação máxima, sobrepõe o painel do dossiê */
+    position: fixed;
+    z-index: 99999;
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.25);
     min-width: 220px;
-    max-width: calc(100vw - 20px); /* trava responsiva: nunca quebra telas estreitas */
+    max-width: calc(100vw - 20px);
     max-height: 250px;
     overflow-y: auto;
     padding: 6px;
     box-sizing: border-box;
-    visibility: hidden;            /* nasce invisível; o JS revela após posicionar */
+    visibility: hidden;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 #ffffff;
 }
