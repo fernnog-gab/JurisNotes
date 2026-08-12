@@ -497,30 +497,33 @@ function configurarEventDelegation() {
     _eventDelegationAtivo = true;
 }
 
-// Lógica isolada com roteamento nativo do ED (Com Resiliência de Estado e Segurança)
+/* ================================================
+   ROTEAMENTO E SELEÇÃO DE MODELO (Fail-Safe)
+   ================================================ */
 function selecionarEAtivarModelo(cardElement, modeloId) {
-    // 1. Aborta execuções pendentes e ativa a trava arquitetural
+    // 1. Aborta execuções pendentes e ativa a trava
     if (window.filtrarAcervoPrincipalDebounced && window.filtrarAcervoPrincipalDebounced.cancel) {
         window.filtrarAcervoPrincipalDebounced.cancel();
     }
-    _isViewTransitioning = true; // Trava o estado
+    _isViewTransitioning = true; 
 
     try {
+        // Controle visual de seleção
         document.querySelectorAll('#acervo-items-wrapper .acervo-item').forEach(el => el.classList.remove('selected'));
         cardElement.classList.add('selected');
         
+        // Busca em memória com trava
         const mod = _todosModelosEmMemoria.find(m => m.id === modeloId);
         if (!mod) {
-            _isViewTransitioning = false;
-            return;
+            throw new Error("Modelo não encontrado na memória local.");
         }
 
         _modeloSelecionadoId = mod.id;
-        _modeloSelecionadoNodes = mod.nos;
+        _modeloSelecionadoNodes = mod.nos || [];
         _modeloSelecionadoEscopo = mod.escopo || 'card';
         
-        // Uso do helper centralizado e blindado contra XSS
-        const previewHtml = mod.nos.map(n => `
+        // Renderização do Preview usando o Helper Seguro (com fallback para array vazio)
+        const previewHtml = _modeloSelecionadoNodes.map(n => `
             <div class="acervo-node-preview">
                 ${typeof getIconeAcervoSVG === 'function' ? getIconeAcervoSVG(n.intencao) : '📄'}
                 <span class="acervo-node-text wrap-text">${_safeEscaparHTML(n.texto)}</span>
@@ -528,27 +531,26 @@ function selecionarEAtivarModelo(cardElement, modeloId) {
         `).join('');
         
         const previewBox = document.getElementById('box-preview-acervo');
-        if (previewBox) {
-            previewBox.innerHTML = previewHtml;
-            previewBox.style.display = 'block';
-        }
+        if (!previewBox) throw new Error("Elemento DOM não encontrado: 'box-preview-acervo'");
         
+        previewBox.innerHTML = previewHtml;
+        previewBox.style.display = 'block';
+        
+        // Inicia a transição de foco
         window.ativarModoFocoAcervo(mod.nome);
         
-        // Roteamento Defensivo (Legado do ED)
+        // Reset de Destinos
         _safeDisplay('box-destino-dinamico-acervo', 'block');
         _safeDisplay('destino-acervo-card', 'none');
         _safeDisplay('destino-acervo-tese', 'none');
         _safeDisplay('destino-acervo-global', 'none');
         
         const btnInserir = document.getElementById('btn-inserir-acervo');
-        if(!btnInserir) return;
-        btnInserir.disabled = false;
+        if(btnInserir) btnInserir.disabled = false;
 
-        // Recuperação Segura do Tópico Ativo
+        // Recuperação Segura do Tópico Ativo (Adaptável a RO e ED)
         const topicoId = (typeof TopicsManager !== 'undefined' && typeof TopicsManager.getActiveTabId === 'function') 
-            ? TopicsManager.getActiveTabId() 
-            : null;
+            ? TopicsManager.getActiveTabId() : null;
             
         let topico = null;
         if (topicoId) {
@@ -559,26 +561,28 @@ function selecionarEAtivarModelo(cardElement, modeloId) {
             }
         }
 
+        // Lógica de UI para Destino
         if (_modeloSelecionadoEscopo === 'global') {
             _safeDisplay('destino-acervo-global', 'block');
-            btnInserir.textContent = '✔ Inserir Globalmente';
+            if(btnInserir) btnInserir.textContent = '✔ Inserir Globalmente';
         } 
         else if (_modeloSelecionadoEscopo === 'tese') {
             _safeDisplay('destino-acervo-tese', 'block');
-            btnInserir.textContent = '✔ Inserir no Vício'; 
+            if(btnInserir) btnInserir.textContent = '✔ Inserir no Vício'; 
             
             const selectTese = document.getElementById('select-destino-acervo-tese');
             const aviso = document.getElementById('aviso-sem-tese');
             
             if(selectTese && aviso && topico) {
                 selectTese.innerHTML = '<option value="">Selecione um Vício existente...</option>';
-                // Evita quebra caso a.tese não exista na estrutura do modelo de dados
-                const tesesUnicas = [...new Set(topico.anotacoes.filter(a => a && a.tese && a.tese.trim() !== '').map(a => a.tese))];
+                // Fallback seguro caso 'topico.anotacoes' não exista no ED
+                const anotacoes = topico.anotacoes || [];
+                const tesesUnicas = [...new Set(anotacoes.filter(a => a && a.tese && a.tese.trim() !== '').map(a => a.tese))];
                 
                 if (tesesUnicas.length === 0) {
                     selectTese.style.display = 'none';
                     aviso.style.display = 'block';
-                    btnInserir.disabled = true;
+                    if(btnInserir) btnInserir.disabled = true;
                 } else {
                     selectTese.style.display = 'block';
                     aviso.style.display = 'none';
@@ -587,15 +591,15 @@ function selecionarEAtivarModelo(cardElement, modeloId) {
             }
         } else {
             _safeDisplay('destino-acervo-card', 'block');
-            btnInserir.textContent = '✔ Inserir no Card';
+            if(btnInserir) btnInserir.textContent = '✔ Inserir no Card';
         }
 
         _safeDisplay('btn-inserir-acervo', 'block');
         
     } catch (error) {
-        console.error("[ED AcervoController] Erro crítico ao renderizar modelo:", error);
+        console.error("[ED Acervo] Falha crítica ao abrir modelo:", error);
         
-        // ROLLBACK DE UI OBRIGATÓRIO (Impede a tela branca)
+        // UI ROLLBACK: Força a interface a voltar ao estado seguro (Lista)
         const listView = document.getElementById('acervo-list-view');
         const focusView = document.getElementById('acervo-focus-view');
         
@@ -608,13 +612,11 @@ function selecionarEAtivarModelo(cardElement, modeloId) {
             listView.style.opacity = '1';
         }
 
-        // Feedback UX
         if (typeof exibirToast === 'function') {
-            exibirToast('Falha ao processar as informações deste modelo.', 'erro');
+            exibirToast('Não foi possível carregar este modelo.', 'erro');
         }
 
-        // Libera a trava para que o usuário possa tentar novamente
-        _isViewTransitioning = false; 
+        _isViewTransitioning = false; // Destrava a tela
     }
 }
 
@@ -1181,11 +1183,11 @@ window.copiarPromptNotebookLM = function() {
 // FUNÇÕES DE CONTROLE DE VIEW SWAP (ACERVO)
 // ==========================================
 
-// Atualização da função de transição visual
+/* ================================================
+   ANIMAÇÃO E TRANSIÇÃO DE FOCO (Com Proteção de DOM)
+   ================================================ */
 window.ativarModoFocoAcervo = function(tituloModelo) {
     const tituloEl = document.getElementById('focus-modelo-titulo');
-    
-    // Uso do helper DRY e XSS-proof
     if (tituloEl) {
         tituloEl.textContent = _safeEscaparHTML(tituloModelo);
     }
@@ -1193,7 +1195,9 @@ window.ativarModoFocoAcervo = function(tituloModelo) {
     const listView = document.getElementById('acervo-list-view');
     const focusView = document.getElementById('acervo-focus-view');
     
-    if (!listView || !focusView) return; 
+    if (!listView || !focusView) {
+        throw new Error("Elementos estruturais (acervo-list-view ou acervo-focus-view) ausentes no HTML.");
+    }
     
     // Animação de saída da lista
     listView.style.opacity = '0';
@@ -1202,14 +1206,14 @@ window.ativarModoFocoAcervo = function(tituloModelo) {
         
         // Prepara e anima entrada do foco
         focusView.style.display = 'flex';
-        // Força reflow sincronizado para o navegador entender a mudança de display antes de animar
+        // Força reflow (Sincronização de GPU)
         void focusView.offsetWidth; 
         
         focusView.classList.add('is-active'); 
         
-        // Libera a trava de estado com folga de segurança após a animação
+        // Libera a trava de estado com folga de segurança após a animação CSS
         setTimeout(() => { _isViewTransitioning = false; }, 50); 
-    }, 250);
+    }, 250); 
 };
 
 window.desativarModoFocoAcervo = function() {
