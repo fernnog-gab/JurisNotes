@@ -569,14 +569,17 @@ function addNewObs() {
 }
 
 // 4. LÓGICA DO MENU FLUTUANTE DE SELEÇÃO
-window.openObsTopicSelector = function(circleEl) {
-    // BLINDAGEM 1: Impede que o clique atual vaze e feche o menu instantaneamente
-    if (window.event) {
-        window.event.stopPropagation();
-    }
-    
-    closeAllObsTopicSelectors();
 
+// VARIÁVEL GLOBAL PARA CONTROLE DE EVENTOS (Evita Race Conditions)
+let popoverTimeoutId = null;
+
+window.openObsTopicSelector = function(circleEl) {
+    // 1. Blindagem de clique duplo e limpeza de timers residuais
+    if (window.event) window.event.stopPropagation();
+    clearTimeout(popoverTimeoutId);
+    window.closeAllObsTopicSelectors();
+
+    // 2. Construção do DOM do Menu
     const menu = document.createElement('div');
     menu.className = 'obs-topic-selector-menu';
     
@@ -588,7 +591,7 @@ window.openObsTopicSelector = function(circleEl) {
     });
     menu.appendChild(optionGlobal);
 
-    if (windowAvailableTopics.length > 0) {
+    if (windowAvailableTopics && windowAvailableTopics.length > 0) {
         const divider = document.createElement('div');
         divider.className = 'obs-topic-divider';
         menu.appendChild(divider);
@@ -606,16 +609,60 @@ window.openObsTopicSelector = function(circleEl) {
         });
     }
 
+    // 3. Injeção "Invisível" para cálculo de geometria
+    menu.style.visibility = 'hidden'; 
+    menu.style.display = 'block';
     document.body.appendChild(menu);
     
+    // 4. Inteligência Espacial (Smart Positioning)
     const rect = circleEl.getBoundingClientRect();
-    menu.style.top = (rect.bottom + window.scrollY + 8) + 'px';
-    menu.style.left = (rect.left + window.scrollX) + 'px';
+    const menuWidth = menu.offsetWidth;
+    const menuHeight = menu.offsetHeight;
     
-    // BLINDAGEM 2: Espera 50 milissegundos (imperceptível) antes de ativar a armadilha de fechar
-    setTimeout(() => {
-        document.addEventListener('click', closeAllObsTopicSelectors);
-    }, 50);
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceRight = window.innerWidth - rect.left;
+    
+    let transformOriginY = 'top';
+    let transformOriginX = 'left';
+
+    // Cálculo Eixo Y (Vertical)
+    if (spaceBelow < menuHeight && rect.top > menuHeight) {
+        // Abre para cima
+        menu.style.top = 'auto';
+        menu.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+        transformOriginY = 'bottom';
+    } else {
+        // Abre para baixo (Padrão)
+        menu.style.top = (rect.bottom + 8) + 'px';
+        menu.style.bottom = 'auto';
+    }
+
+    // Cálculo Eixo X (Horizontal)
+    if (spaceRight < menuWidth && rect.right > menuWidth) {
+        // Alinha pela direita do botão
+        menu.style.left = 'auto';
+        menu.style.right = (window.innerWidth - rect.right) + 'px';
+        transformOriginX = 'right';
+    } else {
+        // Alinha pela esquerda do botão (Padrão)
+        menu.style.left = rect.left + 'px';
+        menu.style.right = 'auto';
+    }
+
+    menu.style.transformOrigin = `${transformOriginX} ${transformOriginY}`;
+
+    // 5. Renderização visual no próximo frame (GPU Paint)
+    requestAnimationFrame(() => {
+        menu.style.visibility = 'visible';
+        menu.classList.add('popover-enter-active'); 
+        
+        // 6. Inscrição segura de ouvintes de evento
+        popoverTimeoutId = setTimeout(() => {
+            document.addEventListener('click', closeAllObsTopicSelectors);
+            // { passive: true } melhora a performance de rolagem
+            window.addEventListener('scroll', closeAllObsTopicSelectors, { capture: true, passive: true });
+        }, 50);
+    });
 };
 
 window.applyObsTopic = function(circleEl, topicId, topicName, topicColor) {
@@ -639,9 +686,12 @@ window.applyObsTopic = function(circleEl, topicId, topicName, topicColor) {
 };
 
 window.closeAllObsTopicSelectors = function() {
+    clearTimeout(popoverTimeoutId); // Limpeza de segurança
     const menus = document.querySelectorAll('.obs-topic-selector-menu');
     menus.forEach(menu => menu.remove());
+    
     document.removeEventListener('click', closeAllObsTopicSelectors);
+    window.removeEventListener('scroll', closeAllObsTopicSelectors, { capture: true, passive: true });
 };
 
 function addNewTopic() {
