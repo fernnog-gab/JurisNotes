@@ -501,67 +501,69 @@ function configurarEventDelegation() {
    ROTEAMENTO E SELEÇÃO DE MODELO (Fail-Safe)
    ================================================ */
 function selecionarEAtivarModelo(cardElement, modeloId) {
-    // 1. Aborta execuções pendentes e ativa a trava
+    console.log("[Acervo ED] 1. Card clicado. Solicitando ModeloID:", modeloId);
+    
     if (window.filtrarAcervoPrincipalDebounced && window.filtrarAcervoPrincipalDebounced.cancel) {
         window.filtrarAcervoPrincipalDebounced.cancel();
     }
+    if (window.filtrarListaUIDebounced && window.filtrarListaUIDebounced.cancel) {
+        window.filtrarListaUIDebounced.cancel(); // Fallback para versões mistas
+    }
+    
     _isViewTransitioning = true; 
 
     try {
-        // Controle visual de seleção
         document.querySelectorAll('#acervo-items-wrapper .acervo-item').forEach(el => el.classList.remove('selected'));
         cardElement.classList.add('selected');
         
-        // Busca em memória com trava
         const mod = _todosModelosEmMemoria.find(m => m.id === modeloId);
-        if (!mod) {
-            throw new Error("Modelo não encontrado na memória local.");
-        }
+        if (!mod) throw new Error(`Modelo não encontrado na memória (ID: ${modeloId}).`);
 
         _modeloSelecionadoId = mod.id;
+        // DEFESA DE DADOS: Garante que "nos" seja um array válido para evitar crash no .map
         _modeloSelecionadoNodes = mod.nos || [];
         _modeloSelecionadoEscopo = mod.escopo || 'card';
         
-        // Renderização do Preview usando o Helper Seguro (com fallback para array vazio)
-        const previewHtml = _modeloSelecionadoNodes.map(n => `
+        console.log(`[Acervo ED] 2. Modelo carregado: ${mod.nome}. Qtd Nós: ${_modeloSelecionadoNodes.length}`);
+        
+        // Renderização com fallback visual e blindagem XSS já implementada
+        const previewHtml = _modeloSelecionadoNodes.map(n => {
+            const intencao = n.intencao || 'premissa';
+            const textoLimpo = (typeof _safeEscaparHTML === 'function') 
+                ? _safeEscaparHTML(n.texto || '') 
+                : (n.texto || ''); // Prevenção extrema se o helper global falhar
+
+            return `
             <div class="acervo-node-preview">
-                ${typeof getIconeAcervoSVG === 'function' ? getIconeAcervoSVG(n.intencao) : '📄'}
-                <span class="acervo-node-text wrap-text">${_safeEscaparHTML(n.texto)}</span>
-            </div>
-        `).join('');
+                ${typeof getIconeAcervoSVG === 'function' ? getIconeAcervoSVG(intencao) : '📄'}
+                <span class="acervo-node-text wrap-text">${textoLimpo}</span>
+            </div>`;
+        }).join('');
         
         const previewBox = document.getElementById('box-preview-acervo');
-        if (!previewBox) throw new Error("Elemento DOM não encontrado: 'box-preview-acervo'");
+        if (!previewBox) throw new Error("A div 'box-preview-acervo' não existe no HTML do ED.");
         
-        previewBox.innerHTML = previewHtml;
+        previewBox.innerHTML = previewHtml || '<p style="color:#888; text-align:center; margin-top:20px;">Este modelo não possui conteúdo salvo.</p>';
         previewBox.style.display = 'block';
         
-        // Inicia a transição de foco
+        console.log("[Acervo ED] 3. Preview gerado no DOM. Chamando transição de foco...");
         window.ativarModoFocoAcervo(mod.nome);
         
-        // Reset de Destinos
+        // Reset de Destinos (UI Legada)
         _safeDisplay('box-destino-dinamico-acervo', 'block');
         _safeDisplay('destino-acervo-card', 'none');
         _safeDisplay('destino-acervo-tese', 'none');
         _safeDisplay('destino-acervo-global', 'none');
         
         const btnInserir = document.getElementById('btn-inserir-acervo');
-        if(btnInserir) btnInserir.disabled = false;
+        if (btnInserir) btnInserir.disabled = false;
 
-        // Recuperação Segura do Tópico Ativo (Adaptável a RO e ED)
-        const topicoId = (typeof TopicsManager !== 'undefined' && typeof TopicsManager.getActiveTabId === 'function') 
-            ? TopicsManager.getActiveTabId() : null;
-            
+        const topicoId = (typeof TopicsManager !== 'undefined' && typeof TopicsManager.getActiveTabId === 'function') ? TopicsManager.getActiveTabId() : null;
         let topico = null;
-        if (topicoId) {
-            if (typeof topicos !== 'undefined' && Array.isArray(topicos)) {
-                topico = topicos.find(t => t.id === topicoId);
-            } else if (typeof window.topicos !== 'undefined' && Array.isArray(window.topicos)) {
-                topico = window.topicos.find(t => t.id === topicoId);
-            }
+        if (topicoId && typeof topicos !== 'undefined' && Array.isArray(topicos)) {
+            topico = topicos.find(t => t.id === topicoId);
         }
 
-        // Lógica de UI para Destino
         if (_modeloSelecionadoEscopo === 'global') {
             _safeDisplay('destino-acervo-global', 'block');
             if(btnInserir) btnInserir.textContent = '✔ Inserir Globalmente';
@@ -574,10 +576,8 @@ function selecionarEAtivarModelo(cardElement, modeloId) {
             const aviso = document.getElementById('aviso-sem-tese');
             
             if(selectTese && aviso && topico) {
-                selectTese.innerHTML = '<option value="">Selecione um Vício existente...</option>';
-                // Fallback seguro caso 'topico.anotacoes' não exista no ED
-                const anotacoes = topico.anotacoes || [];
-                const tesesUnicas = [...new Set(anotacoes.filter(a => a && a.tese && a.tese.trim() !== '').map(a => a.tese))];
+                selectTese.innerHTML = '<option value="">Selecione um Vício...</option>';
+                const tesesUnicas = [...new Set((topico.anotacoes || []).filter(a => a && a.tese && a.tese.trim() !== '').map(a => a.tese))];
                 
                 if (tesesUnicas.length === 0) {
                     selectTese.style.display = 'none';
@@ -595,11 +595,12 @@ function selecionarEAtivarModelo(cardElement, modeloId) {
         }
 
         _safeDisplay('btn-inserir-acervo', 'block');
+        console.log("[Acervo ED] 4. Operações Síncronas Concluídas.");
         
     } catch (error) {
-        console.error("[ED Acervo] Falha crítica ao abrir modelo:", error);
+        console.error("[Acervo ED] Falha Síncrona (A Tela seria branca aqui):", error);
         
-        // UI ROLLBACK: Força a interface a voltar ao estado seguro (Lista)
+        // ROLLBACK OBRIGATÓRIO DA UI
         const listView = document.getElementById('acervo-list-view');
         const focusView = document.getElementById('acervo-focus-view');
         
@@ -612,11 +613,8 @@ function selecionarEAtivarModelo(cardElement, modeloId) {
             listView.style.opacity = '1';
         }
 
-        if (typeof exibirToast === 'function') {
-            exibirToast('Não foi possível carregar este modelo.', 'erro');
-        }
-
-        _isViewTransitioning = false; // Destrava a tela
+        if (typeof exibirToast === 'function') exibirToast('Erro lógico ao abrir o modelo. Tente novamente.', 'erro');
+        _isViewTransitioning = false; 
     }
 }
 
@@ -1187,33 +1185,62 @@ window.copiarPromptNotebookLM = function() {
    ANIMAÇÃO E TRANSIÇÃO DE FOCO (Com Proteção de DOM)
    ================================================ */
 window.ativarModoFocoAcervo = function(tituloModelo) {
-    const tituloEl = document.getElementById('focus-modelo-titulo');
-    if (tituloEl) {
-        tituloEl.textContent = _safeEscaparHTML(tituloModelo);
+    try {
+        const tituloEl = document.getElementById('focus-modelo-titulo');
+        if (tituloEl) {
+            tituloEl.textContent = (typeof _safeEscaparHTML === 'function') ? _safeEscaparHTML(tituloModelo) : tituloModelo;
+        }
+        
+        const listView = document.getElementById('acervo-list-view');
+        const focusView = document.getElementById('acervo-focus-view');
+        
+        if (!listView || !focusView) throw new Error("List View ou Focus View não encontrados no HTML.");
+        
+        console.log("[Acervo ED] 5. Escondendo lista de modelos...");
+        listView.style.opacity = '0'; // Dispara a transição CSS
+        
+        // Bloco Assíncrono - Blindado com Try/Catch Interno
+        setTimeout(() => {
+            try {
+                console.log("[Acervo ED] 6. Timeout concluído. Exibindo foco (Força Bruta)...");
+                
+                listView.style.display = 'none';
+                
+                // Renderização de Força Bruta (Sobrepõe qualquer CSS ausente ou conflituoso no ED)
+                focusView.style.display = 'flex';
+                focusView.style.opacity = '1';
+                focusView.style.visibility = 'visible';
+                
+                // Força o navegador a pintar a tela antes de prosseguir
+                void focusView.offsetWidth; 
+                
+                focusView.classList.add('is-active'); 
+                
+                setTimeout(() => { _isViewTransitioning = false; }, 50); 
+                console.log("[Acervo ED] 7. Transição Visual concluída com sucesso.");
+                
+            } catch (asyncError) {
+                console.error("[Acervo ED] Falha Assíncrona durante a animação:", asyncError);
+                
+                // Rollback Assíncrono (Impede que a tela fique eternamente branca se a animação falhar)
+                if (listView) {
+                    listView.style.display = 'flex';
+                    listView.style.opacity = '1';
+                }
+                if (focusView) {
+                    focusView.style.display = 'none';
+                    focusView.style.opacity = '0';
+                    focusView.classList.remove('is-active');
+                }
+                _isViewTransitioning = false;
+                if (typeof exibirToast === 'function') exibirToast('Falha na renderização visual da tela.', 'aviso');
+            }
+        }, 250); 
+        
+    } catch (e) {
+        console.error("[Acervo ED] Falha crítica inicializando a transição:", e);
+        throw e; // Lança o erro para que a função principal faça o rollback da tela
     }
-    
-    const listView = document.getElementById('acervo-list-view');
-    const focusView = document.getElementById('acervo-focus-view');
-    
-    if (!listView || !focusView) {
-        throw new Error("Elementos estruturais (acervo-list-view ou acervo-focus-view) ausentes no HTML.");
-    }
-    
-    // Animação de saída da lista
-    listView.style.opacity = '0';
-    setTimeout(() => {
-        listView.style.display = 'none';
-        
-        // Prepara e anima entrada do foco
-        focusView.style.display = 'flex';
-        // Força reflow (Sincronização de GPU)
-        void focusView.offsetWidth; 
-        
-        focusView.classList.add('is-active'); 
-        
-        // Libera a trava de estado com folga de segurança após a animação CSS
-        setTimeout(() => { _isViewTransitioning = false; }, 50); 
-    }, 250); 
 };
 
 window.desativarModoFocoAcervo = function() {
