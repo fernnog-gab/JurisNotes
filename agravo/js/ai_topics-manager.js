@@ -319,67 +319,73 @@ window.TopicsManager = (function () {
 
     // Função estática gerarSVGConector removida (substituída pelo motor dinâmico desenharConexoes)
 
+    /**
+     * FÁBRICA UNIFICADA DE SUB-NÓS (Nós de Ideia e Diretrizes)
+     * Centraliza a renderização eliminando duplicação de templates e garantindo SSOT.
+     */
+    function _gerarTemplateSubNo(sub, idx, ctx) {
+        const intencao = sub.intencao || 'premissa';
+        const isHasIntent = true; 
+        const subIconSVG = obterIconeIntencao(intencao);
+        
+        const badgeClass = isHasIntent ? `sub-badge has-intent intencao-${intencao}` : 'sub-badge';
+        const label = isHasIntent ? `${subIconSVG} ${ctx.prefixoBadge}${ctx.usarLetra ? gerarLetra(idx) : (idx + 1)}` : `${ctx.prefixoBadge}${ctx.usarLetra ? gerarLetra(idx) : (idx + 1)}`;
+        
+        const textoFormatado = renderizarMarkdownSeguro(escaparHTML(sub.texto));
+        const isRevisada = sub.revisada === true;
+        const itemWrapperClass = intencao === 'nota' ? `sub-annotation-item is-nota-interna ${isRevisada ? 'is-revisada' : 'is-pendente'}` : 'sub-annotation-item';
+        
+        const clickSubMenu = ctx.parentIndex === null 
+            ? `abrirMenuSubAnotacao('${ctx.topicoId}', null, '${ctx.viewSource.replace(/'/g, "\\'")}', ${sub.localIndex}, event)`
+            : `abrirMenuSubAnotacao('${ctx.topicoId}', '${ctx.parentIndex}', '${ctx.viewSource}', ${sub.localIndex}, event)`;
+
+        const classBorda = ctx.bordaClass ? ` ${ctx.bordaClass}` : '';
+        const classFase = ctx.bordaFaseClass ? ` ${ctx.bordaFaseClass}` : '';
+        const styleAttr = ctx.bordaStyle ? ` style="${ctx.bordaStyle}"` : '';
+
+        return `
+            <div class="${itemWrapperClass}" data-source="${ctx.viewSource}">
+                <div class="sub-annotation-card${classFase}${classBorda}"${styleAttr}>
+                    <div class="${badgeClass}"
+                         title="Opções deste nó/diretriz"
+                         onclick="${clickSubMenu}">
+                        ${label}
+                    </div>
+                    <div class="sub-text-content">${textoFormatado}</div>
+                    
+                    <button class="btn-leitura-flutuante" aria-label="Abrir modo leitura" data-raw-text="${escaparHTML(sub.texto)}" data-raw-title="${escaparHTML(ctx.tituloLeitura)}" onclick="TopicsManager.abrirModoLeitura(this)" title="Abrir no Modo Leitura (Tela Cheia)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                        </svg>
+                    </button>
+                    
+                    <button class="btn-copiar-zen" aria-label="Copiar texto bruto" onclick="navigator.clipboard.writeText('${escaparHTML(sub.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto para a área de transferência">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        Copiar Trecho
+                    </button>
+                    
+                    ${_gerarBtnRevisaoHtml(ctx.topicoId, ctx.parentIndex === null ? null : parseInt(ctx.parentIndex, 10), ctx.viewSource, sub.localIndex, intencao, isRevisada)}
+                </div>
+            </div>`;
+    }
+
     // NOVO HELPER: Extraído de criarCard para suportar reaproveitamento
     function _gerarCartoesSubAnotacao(arrayDeNos, faseDoCardBase, activeTabId, topicoIndex) {
         if (!arrayDeNos || arrayDeNos.length === 0) return '';
         
         const subCardsHTML = arrayDeNos.map((sub, sIdx) => {
-            const intencao = sub.intencao || 'premissa';
-            let iconSVG = '';
-
-            if (intencao === 'comando') {
-                iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>`;
-            } else if (intencao === 'texto') {
-                iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`;
-            } else if (intencao === 'nota') {
-                iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
-            } else if (intencao === 'premissa') {
-                iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>`;
-            } else if (intencao === 'fundamentacao') {
-                iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>`;
-            } else if (intencao === 'alegacao') {
-                iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
-            } else if (intencao === 'fundamento_sentenca') {
-                iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16M4 2h16M6 6v12M10 6v12M14 6v12M18 6v12M2 6h20"></path></svg>`;
-            } else if (intencao === 'refutacao') {
-                iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>`;
-            } else if (intencao === 'preliminar') {
-                iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
-            }
-
-            const label = `${iconSVG} ${sIdx + 1}.${gerarLetra(sIdx)}`;
-            const textoFormatado = renderizarMarkdownSeguro(escaparHTML(sub.texto));
-            const badgeClass = `sub-badge has-intent intencao-${intencao}`;
-            
             const bordaFaseClass = faseDoCardBase === 0 ? 'borda-fase-ai-diretriz' : `borda-fase-${faseDoCardBase}`;
 
-            const isNotaInterna = intencao === 'nota';
-            const isRevisada = sub.revisada === true;
-            const itemWrapperClass = isNotaInterna ? `sub-annotation-item is-nota-interna ${isRevisada ? 'is-revisada' : 'is-pendente'}` : `sub-annotation-item`;
-
-            return `
-                <div class="${itemWrapperClass}" data-source="${sub.viewSource}">
-                    <div class="sub-annotation-card ${bordaFaseClass}">
-                        <div class="${badgeClass}"
-                             title="Opções desta diretriz"
-                             onclick="abrirMenuSubAnotacao('${activeTabId}', '${topicoIndex}', '${sub.viewSource}', ${sub.localIndex}, event)">
-                            ${label}
-                        </div>
-                        <div class="sub-text-content">${textoFormatado}</div>
-                        
-                        <button class="btn-leitura-flutuante" data-raw-text="${escaparHTML(sub.texto)}" data-raw-title="Nó de Ideia" onclick="TopicsManager.abrirModoLeitura(this)" title="Abrir no Modo Leitura (Tela Cheia)">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                            </svg>
-                        </button>
-                        <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(sub.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto para a área de transferência">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                            Copiar Trecho
-                        </button>
-                        ${_gerarBtnRevisaoHtml(activeTabId, topicoIndex, sub.viewSource, sub.localIndex, intencao, isRevisada)}
-                    </div>
-                </div>`;
+            return _gerarTemplateSubNo(sub, sIdx, {
+                topicoId: activeTabId,
+                parentIndex: topicoIndex,
+                viewSource: sub.viewSource,
+                bordaFaseClass: bordaFaseClass,
+                prefixoBadge: `${sIdx + 1}.`,
+                usarLetra: true,
+                tituloLeitura: 'Nó de Ideia'
+            });
         }).join('');
 
         return `<div class="sub-annotations-wrapper">${subCardsHTML}</div>`;
@@ -666,34 +672,20 @@ window.TopicsManager = (function () {
         const teseViewSource = `obice:${teseAtual}`;
         const idObiceSeguro = teseAtual.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '_');
 
+        const tituloContexto = `Diretriz do Óbice: ${teseAtual}`;
         const tesesHtml = diretrizes.map((d, sIdx) => {
-            const intencao = d.intencao || 'premissa';
-            const iconSVG = obterIconeIntencao(intencao);
-            const isRevisada = d.revisada === true;
-            const itemWrapperClass = intencao === 'nota' ? `sub-annotation-item is-nota-interna ${isRevisada ? 'is-revisada' : 'is-pendente'}` : 'sub-annotation-item';
-            return `
-            <div class="${itemWrapperClass}" data-source="${teseViewSource}">
-                <div class="sub-annotation-card" style="border-left: 5px solid ${corTema}; border-color: ${rgbaTeseBorda};">
-                    <div class="sub-badge has-intent intencao-${intencao}" 
-                         title="Opções desta diretriz"
-                         onclick="abrirMenuSubAnotacao('${tabId}', '${teseViewSource.replace(/'/g, "\\'")}', '${teseViewSource.replace(/'/g, "\\'")}', ${sIdx}, event)">
-                         ${iconSVG} D.${sIdx + 1}
-                    </div>
-                    <div class="sub-text-content">${renderizarMarkdownSeguro(escaparHTML(d.texto))}</div>
-                    <button class="btn-expand-text" data-raw-text="${escaparHTML(d.texto)}" data-raw-title="Diretriz de Óbice" onclick="TopicsManager.abrirModoLeitura(this)">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                        </svg>
-                        Modo Leitura
-                    </button>
-                    <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(d.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto para a área de transferência">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                        Copiar Trecho
-                    </button>
-                    ${_gerarBtnRevisaoHtml(tabId, null, teseViewSource, sIdx, intencao, isRevisada)}
-                </div>
-            </div>`;
+            // Garante mapeamento local correto
+            d.localIndex = sIdx;
+            
+            return _gerarTemplateSubNo(d, sIdx, {
+                topicoId: tabId,
+                parentIndex: null,
+                viewSource: teseViewSource,
+                bordaStyle: `border-left: 5px solid ${corTema}; border-color: ${rgbaTeseBorda};`,
+                prefixoBadge: 'D.',
+                usarLetra: false,
+                tituloLeitura: tituloContexto
+            });
         }).join('');
 
         return `
@@ -925,34 +917,17 @@ window.TopicsManager = (function () {
 
             if (topicoAtivo.diretrizesGlobais && topicoAtivo.diretrizesGlobais.length > 0) {
                 globaisHtml = topicoAtivo.diretrizesGlobais.map((d, sIdx) => {
-                    const intencao = d.intencao || 'premissa';
-                    const iconSVG = obterIconeIntencao(intencao);
-                    const isRevisada = d.revisada === true;
-                    const itemWrapperClass = intencao === 'nota' ? `sub-annotation-item is-nota-interna ${isRevisada ? 'is-revisada' : 'is-pendente'}` : 'sub-annotation-item';
-                    return `
-                    <div class="${itemWrapperClass}" data-source="global">
-                        <!-- APLICA A CLASSE DE BORDA ESCURA DA DIRETRIZ GLOBAL -->
-                        <div class="sub-annotation-card borda-global">
-                            <div class="sub-badge has-intent intencao-${intencao}" 
-                                 title="Opções desta diretriz"
-                                 onclick="abrirMenuSubAnotacao('${activeTabId}', 'global', 'global', ${sIdx}, event)">
-                                 ${iconSVG} G.${sIdx + 1}
-                            </div>
-                            <div class="sub-text-content">${renderizarMarkdownSeguro(escaparHTML(d.texto))}</div>
-                            <button class="btn-expand-text" data-raw-text="${escaparHTML(d.texto)}" data-raw-title="Diretriz Global" onclick="TopicsManager.abrirModoLeitura(this)">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                                </svg>
-                                Modo Leitura
-                            </button>
-                            <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(d.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto para a área de transferência">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                                Copiar Trecho
-                            </button>
-                            ${_gerarBtnRevisaoHtml(activeTabId, null, 'global', sIdx, intencao, isRevisada)}
-                        </div>
-                    </div>`;
+                    d.localIndex = sIdx;
+                    
+                    return _gerarTemplateSubNo(d, sIdx, {
+                        topicoId: activeTabId,
+                        parentIndex: null,
+                        viewSource: 'global',
+                        bordaClass: 'borda-global',
+                        prefixoBadge: 'G.',
+                        usarLetra: false,
+                        tituloLeitura: 'Diretriz Global'
+                    });
                 }).join('');
             }
 

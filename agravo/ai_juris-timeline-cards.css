@@ -253,27 +253,6 @@
 .sub-text-content.expanded::-webkit-scrollbar-track { background: transparent; }
 .sub-text-content.expanded::-webkit-scrollbar-thumb { background: #d0cabc; border-radius: 4px; }
 
-.btn-expand-text {
-    background: rgba(26, 58, 92, 0.05);
-    border: 1px solid rgba(26, 58, 92, 0.1);
-    color: var(--trt-blue-mid);
-    font-size: 0.75rem;
-    font-weight: 700;
-    cursor: pointer;
-    margin-top: 12px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border-radius: 6px;
-    transition: background 0.2s, color 0.2s;
-}
-.btn-expand-text svg { width: 14px; height: 14px; stroke: currentColor; }
-.btn-expand-text:hover {
-    background: var(--trt-blue);
-    color: white;
-}
-
 /* Tipografia do conteúdo dentro do Modo Leitura */
 #reading-mode-content b, #reading-mode-content strong {
     color: var(--trt-blue);
