@@ -982,7 +982,32 @@ window.TopicsManager = (function () {
                 });
                 sumarioHtml += '</div>';
             }
-            const cardsHTML = topicoAtivo.anotacoes.map(criarCard).join('');
+            
+            let cardsHTML = '';
+            let ultimaTeseRenderizada = null;
+
+            topicoAtivo.anotacoes.forEach((anotacao, index) => {
+                const teseAtual = anotacao.tese && anotacao.tese.trim() !== '' ? anotacao.tese.trim() : 'Provas não agrupadas';
+                
+                // Se detectou mudança de tese, injeta um Banner Divisor Centralizado
+                if (teseAtual !== ultimaTeseRenderizada) {
+                    // Calculamos a cor baseada no tópico ativo para harmonizar o layout
+                    const corFundo = hexToRgba(_activeTopicoCor, 0.1);
+                    const corBorda = _activeTopicoCor;
+                    
+                    cardsHTML += `
+                        <div class="tese-divider-banner" style="width: 100%; display: flex; justify-content: center; margin: 32px 0 16px 0; position: relative; z-index: 5;">
+                            <div style="background-color: #ffffff; border: 2px solid ${corBorda}; border-radius: 20px; padding: 6px 20px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); background-image: linear-gradient(${corFundo}, ${corFundo});">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="${corBorda}" stroke-width="2" style="width: 18px; height: 18px;"><path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M2 15h10"></path><path d="M9 18l3-3-3-3"></path></svg>
+                                <span style="font-weight: 800; color: #1a3a5c; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">${escaparHTML(teseAtual)}</span>
+                            </div>
+                        </div>`;
+                    ultimaTeseRenderizada = teseAtual;
+                }
+
+                // Mantém a renderização do Card Intacta (Paridade Par/Ímpar preservada)
+                cardsHTML += criarCard(anotacao, index, topicoAtivo.anotacoes);
+            });
 
             // NOVA LÓGICA: Montagem do Bloco de Diretrizes (Hierarquia) INCONDICIONAL
             let htmlDiretrizes = '';

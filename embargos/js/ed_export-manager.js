@@ -181,10 +181,25 @@ window.ExportManager = (function () {
         if (!topico.anotacoes || topico.anotacoes.length === 0) {
             md += `*Nenhum elemento processual foi anexado para auditoria.*\n`;
         } else {
+            // [NOVO CÓDIGO: Máquina de estado para controle de tags XML]
+            let ultimaTeseExportada = null;
+
             // 3. ITERAÇÃO PROFUNDA COM ENVELOPAMENTO XML
-                topico.anotacoes.forEach((an, idx) => {
-                    const numIdeia = idx + 1;
-                    const refCitacao = _formatarCitacaoOficial(an.pjeId, an.pagina);
+            topico.anotacoes.forEach((an, idx) => {
+                const teseAtual = an.tese && an.tese.trim() !== '' ? an.tese.trim() : 'Argumentação Geral';
+                const vicioAtual = an.vicio || topico.vicio || 'Nao Especificado';
+
+                // Lógica Cirúrgica: Fechar grupo anterior e abrir novo grupo se houver quebra
+                if (teseAtual !== ultimaTeseExportada) {
+                    if (ultimaTeseExportada !== null) {
+                        md += `</grupo_tese>\n\n`; // Fecha o cluster anterior
+                    }
+                    md += `<grupo_tese vicio_investigado="${_escapeXmlAttr(vicioAtual)}" delimitacao_faticas_da_tese="${_escapeXmlAttr(teseAtual)}">\n`;
+                    ultimaTeseExportada = teseAtual;
+                }
+
+                const numIdeia = idx + 1;
+                const refCitacao = _formatarCitacaoOficial(an.pjeId, an.pagina);
                     
                     // Avaliação OK: Utiliza o SSOT com renderHtml=false para garantir uma string limpa no payload da IA
                     const tituloVicio = window.JurisUtils.obterBadgeTeseCompleto(an.vicio || topico.vicio, an.tese, false) || 'Auditoria Geral';
@@ -291,6 +306,12 @@ window.ExportManager = (function () {
 
                 md += `</analise_de_evidencia>\n\n`;
             });
+
+            // [NOVO CÓDIGO: Trava de segurança no final do loop]
+            // Garante o fechamento da última tag de grupo aberta
+            if (ultimaTeseExportada !== null) {
+                md += `</grupo_tese>\n\n`;
+            }
         }
 
         // 4. INJEÇÃO GLOBAL (Bordas do Payload)
