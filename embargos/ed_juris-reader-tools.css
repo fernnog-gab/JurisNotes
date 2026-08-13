@@ -56,12 +56,12 @@ body.modo-extrator-ativo #crop-overlay { display: block; cursor: crosshair; back
    ESTILOS DO ALFINETE VISUAL E ESTADO DO BOTÃO
    ================================================ */
 
-/* Estado concluído do botão Extrator (Fúcsia ED) - Alta especificidade sem !important */
+/* Estado concluído do botão Extrator (Amarelo) - Alta especificidade sem !important */
 button#btn-ferramenta-extrator.extrator-completo:not(:disabled) {
-    background-color: #D500B5;
-    border-color: #b00096;
+    background-color: #fbc02d;
+    border-color: #f57f17;
     color: white;
-    box-shadow: 0 4px 10px rgba(213, 0, 181, 0.4);
+    box-shadow: 0 4px 10px rgba(251, 192, 45, 0.4);
 }
 
 /* Garante que o ícone interno respeite a inversão de cores (cobre fill e stroke) */
