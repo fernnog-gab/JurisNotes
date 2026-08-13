@@ -817,6 +817,10 @@ window.TopicsManager = (function () {
             return;
         }
 
+        // PURGA DE ESTADO: Limpa resíduos do estado vazio antes de re-renderizar
+        contentEl.style.borderTop = '';
+        contentEl.style.backgroundColor = '';
+
         // Resiliência: garante que sempre há uma aba ativa válida
         if (!activeTabId || !topicosArray.some(t => t.id === activeTabId)) {
             activeTabId = topicosArray[0].id;
@@ -829,20 +833,18 @@ window.TopicsManager = (function () {
             const btn      = document.createElement('div');
 
             btn.className        = `topic-tab-btn ${isActive ? 'active' : ''}`;
-            btn.textContent      = topico.nome;
             btn.title            = topico.nome; 
-            btn.style.backgroundColor = topico.cor;
+            
+            // Injeção puramente declarativa de variáveis CSS
+            const corContraste = obterCorContraste(topico.cor);
+            btn.style.setProperty('--tab-bg', topico.cor);
+            btn.style.setProperty('--tab-color', corContraste);
 
-            if (isActive) {
-                btn.style.border = `3px solid ${escurecerCor(topico.cor)}`;
-                btn.style.borderBottom = 'none';
-                btn.style.color = escurecerCor(topico.cor, 0.4);
-                contentEl.style.borderTop = `3px solid ${escurecerCor(topico.cor)}`;
-            } else {
-                btn.style.border = '1px solid #dde3ea';
-                btn.style.borderBottom = 'none';
-                btn.style.color = '#555';
-            }
+            // Encapsulamento de label para proteger o flexbox text-overflow
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'tab-label';
+            labelSpan.textContent = topico.nome;
+            btn.appendChild(labelSpan);
 
             btn.onclick = () => {
                 activeTabId = topico.id;
@@ -857,6 +859,7 @@ window.TopicsManager = (function () {
         if (!topicoAtivo) return;
 
         _activeTopicoCor = topicoAtivo.cor;
+        contentEl.style.setProperty('--active-tab-color', _activeTopicoCor);
         const corTextoTese = obterCorContraste(_activeTopicoCor);
 
         // NOVO: Painel Preâmbulo Estático gerado incondicionalmente

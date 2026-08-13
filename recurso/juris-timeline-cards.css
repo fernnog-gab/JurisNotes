@@ -7,30 +7,139 @@
    1. FICHÁRIO E SISTEMA DE ABAS INTERNAS
    ================================================ */
 #history-container { flex: 1; overflow: auto; padding: 20px 24px; display: none; }
-.topics-tab-bar { display: flex; flex-wrap: wrap; margin-bottom: 0; padding-top: 4px; }
-.topic-tab-btn { padding: 8px 12px; cursor: pointer; border: 1px solid rgba(0,0,0,0.1); border-bottom: none; margin-right: 4px; margin-bottom: -3px; color: #2c2c2c; border-radius: 6px 6px 0 0; font-size: 0.85rem; font-weight: 500; transition: filter 0.2s, transform 0.1s; max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; z-index: 1; }
-.topic-tab-btn:hover:not(.active) { filter: brightness(0.95); }
-.topic-tab-btn.active { font-weight: 800; color: #000; z-index: 5; padding-bottom: 12px; box-shadow: inset 0 0 8px rgba(255, 255, 255, 0.4); border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.topics-tab-bar { 
+    display: flex; 
+    flex-wrap: wrap; 
+    margin-bottom: 0; 
+    padding-top: 8px; 
+}
+
+.topic-tab-btn { 
+    position: relative; 
+    padding: 8px 16px; 
+    cursor: pointer; 
+    margin-right: 4px; 
+    margin-bottom: -3px; 
+    max-width: 140px; 
+    border-radius: 8px 8px 0 0; 
+    font-size: 0.85rem; 
+    font-weight: 600; 
+    overflow: visible; 
+    background: var(--tab-bg, #eee);
+    color: var(--tab-color, #333);
+    background-image: linear-gradient(to bottom, rgba(255,255,255,0.25) 0%, rgba(0,0,0,0.05) 100%);
+    border: 1px solid rgba(0,0,0,0.1);
+    border-top: 3px solid transparent; 
+    border-bottom: none;
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), filter 0.2s; 
+    z-index: 1;
+    display: flex;
+    align-items: center;
+}
+
+.tab-label {
+    min-width: 0; 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis;
+    display: block;
+    width: 100%;
+}
+
+.topic-tab-btn:hover:not(.active) { 
+    filter: brightness(1.05); 
+    transform: translateY(-1px);
+}
+
+.topic-tab-btn.active { 
+    font-weight: 800; 
+    z-index: 5; 
+    padding-bottom: 11px; 
+    background: var(--notes-bg-color, #ffffff); 
+    background-image: none; 
+    color: var(--trt-blue, #1a202c);
+    border: 1px solid #dde3ea;
+    border-top: 3px solid var(--tab-bg); 
+    border-bottom: none;
+    transform: translateY(-2px);
+    box-shadow: 0 -3px 8px rgba(0,0,0,0.06); 
+}
+
+.topic-tab-btn::before,
+.topic-tab-btn::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    width: 8px; 
+    height: 8px;
+    pointer-events: none;
+}
+
+.topic-tab-btn::before {
+    left: -8px;
+    background: radial-gradient(circle at top left, transparent 8px, var(--tab-bg, #eee) 9px);
+}
+.topic-tab-btn::after {
+    right: -8px;
+    background: radial-gradient(circle at top right, transparent 8px, var(--tab-bg, #eee) 9px);
+}
+
+.topic-tab-btn.active::before {
+    background: radial-gradient(circle at top left, transparent 8px, var(--notes-bg-color, #ffffff) 9px);
+}
+.topic-tab-btn.active::after {
+    background: radial-gradient(circle at top right, transparent 8px, var(--notes-bg-color, #ffffff) 9px);
+}
+
 /* ========================================================
    ABAS FANTASMAS - TOM CINZA CHUMBO COM VOLUME 3D (CORRIGIDO)
    ======================================================== */
 .topic-tab-ghost {
     flex: 1 1 auto;
     min-width: 48px;
-    max-width: 140px;
+    max-width: 140px; 
     padding: 8px 12px;
+    margin-right: 4px; 
+    margin-bottom: -3px; 
     border: 1px solid #545d66;
     border-bottom: none;
-    margin-right: 4px;
-    margin-bottom: -3px;
-    border-radius: 6px 6px 0 0;
+    border-radius: 8px 8px 0 0;
     background: linear-gradient(to bottom, #737e87, #545d66);
-    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.15), 0 -1px 3px rgba(0, 0, 0, 0.15);
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.15);
     pointer-events: none;
     position: relative;
     z-index: 1;
 }
-.topics-content-area { padding: 18px 8px; overflow-y: auto; border-radius: 0 6px 6px 6px; min-height: 200px; position: relative; z-index: 2; background-color: var(--notes-bg-color); transition: background-color 0.3s ease; }
+
+.topic-tab-ghost::before,
+.topic-tab-ghost::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    width: 8px; 
+    height: 8px;
+}
+.topic-tab-ghost::before {
+    left: -8px;
+    background: radial-gradient(circle at top left, transparent 8px, #545d66 9px);
+}
+.topic-tab-ghost::after {
+    right: -8px;
+    background: radial-gradient(circle at top right, transparent 8px, #545d66 9px);
+}
+
+.topics-content-area { 
+    padding: 18px 8px; 
+    overflow-y: auto; 
+    border-radius: 0 6px 6px 6px; 
+    min-height: 200px; 
+    position: relative; 
+    z-index: 2; 
+    background-color: var(--notes-bg-color); 
+    border-top: 3px solid var(--active-tab-color, #dde3ea); 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    transition: background-color 0.3s ease; 
+}
 .empty-state { text-align: center; color: #aab; font-size: 0.88rem; line-height: 1.7; margin-top: 40px; padding: 0 20px; }
 .empty-state strong { color: var(--trt-blue-mid); font-size: 1.1rem; }
 
