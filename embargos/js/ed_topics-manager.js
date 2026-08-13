@@ -1016,7 +1016,7 @@ window.TopicsManager = (function () {
                         diretrizesDoVicio,  // Mantém os botões e regras de IA funcionando
                         activeTabId,
                         [teseAtual],        // Exibe apenas a tese deste grupo específico
-                        index + 1           // +1 garante o zigue-zague correto no mapa mental
+                        index               // Índice sincronizado para alinhamento (Esquerda/Direita)
                     );
 
                     ultimaTeseRenderizada = teseAtual;
