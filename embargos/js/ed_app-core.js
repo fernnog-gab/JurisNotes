@@ -158,11 +158,18 @@ window.JurisUtils.descobrirRuidosEstruturais = function(textoPagA, textoPagB) {
 window.JurisUtils.formatarVicioED = function(vicioRaw) {
     if (!vicioRaw) return 'Vício Não Especificado';
     
-    // Dicionário de Correção Gramatical e Tipificação
+    // Dicionário Híbrido: Mapeia Legado + Novas Chaves normativas
     const dicionario = {
+        // Legados da V1
         'omissao': 'Omissão',
         'contradicao': 'Contradição',
-        'erro': 'Erro Material / Obscuridade'
+        'erro': 'Erro Material', // Fallback Legado garantido
+        
+        // Novas chaves da V2
+        'obscuridade': 'Obscuridade',
+        'manifesto_equivoco': 'Manifesto Equívoco',
+        'erro_material': 'Erro Material',
+        'pre_questionamento': 'Pré-Questionamento'
     };
     
     return dicionario[vicioRaw.toLowerCase()] || vicioRaw;
@@ -845,45 +852,74 @@ function verificarAcervoEmSegundoPlano(nomeTopico) {
     }, { timeout: 5000 });
 }
 
-function criarTopicoPrompt() {
-    const vicioInput = prompt('Selecione o tipo de Vício:\n1 - Omissão\n2 - Contradição\n3 - Erro Material / Obscuridade');
-    if (!vicioInput) return;
+window.criarTopicoPrompt = function() {
+    document.getElementById('input-tema-novo-topico').value = '';
+    // Reseta para o primeiro radio selecionado
+    document.querySelector('input[name="vicio_alegado_novo"][value="omissao"]').checked = true;
     
-    const mapaVicios = { '1': 'omissao', '2': 'contradicao', '3': 'erro' };
-    const vicioTipado = mapaVicios[vicioInput.trim()];
+    document.getElementById('novo-topico-backdrop').style.display = 'block';
+    document.getElementById('modal-novo-topico').style.display = 'flex';
     
-    if (!vicioTipado) {
-        exibirToast('Opção inválida. Digite 1, 2 ou 3.', 'erro');
+    setTimeout(() => {
+        document.getElementById('input-tema-novo-topico').focus();
+    }, 100);
+};
+
+window.fecharModalCriarTopico = function() {
+    document.getElementById('novo-topico-backdrop').style.display = 'none';
+    document.getElementById('modal-novo-topico').style.display = 'none';
+};
+
+window.confirmarCriacaoTopico = function() {
+    const radioVicio = document.querySelector('input[name="vicio_alegado_novo"]:checked');
+    if (!radioVicio) {
+        exibirToast('Selecione uma hipótese legal.', 'erro');
         return;
     }
 
-    const nomeEspecifico = prompt('Descreva o tema (Ex: Horas Extras, Multa):');
-    if (!nomeEspecifico || !nomeEspecifico.trim()) return;
+    const vicioTipado = radioVicio.value; // Chave estruturada limpa (ex: pre_questionamento)
+    
+    const inputTema = document.getElementById('input-tema-novo-topico');
+    const nomeEspecifico = inputTema.value.trim();
+    if (!nomeEspecifico) {
+        exibirToast('Por favor, defina o tema do embargo.', 'aviso');
+        inputTema.focus();
+        return;
+    }
 
-    const nomeCompleto = `${vicioTipado.toUpperCase()} — ${nomeEspecifico.trim()}`;
+    // Formatação elegante usando a camada de normalização
+    const vicioFormatadoVisivel = window.JurisUtils.formatarVicioED(vicioTipado);
+    const nomeCompleto = `${vicioFormatadoVisivel.toUpperCase()} — ${nomeEspecifico}`;
     
     const duplicado = topicos.some(t => t.nome.toLowerCase() === nomeCompleto.toLowerCase());
-    if (duplicado) return exibirToast(`Já existe análise para "${nomeCompleto}".`, 'aviso');
+    if (duplicado) {
+        exibirToast(`Já existe análise para "${nomeCompleto}".`, 'aviso');
+        return;
+    }
 
     const cor = TopicsManager.obterCor(topicos.length);
     
-    // SSOT: O vício agora nasce com o tópico.
+    // Injeta a variável no "Cérebro" do Tópico (SSOT)
     topicos.push({ 
         id: 'topico-' + Date.now(), 
         nome: nomeCompleto, 
-        vicio: vicioTipado, // Dado estruturado vital para o ed_topics-manager.js
+        vicio: vicioTipado, 
         cor, 
         anotacoes: [] 
     });
 
+    fecharModalCriarTopico();
     renderizarTopicos();
-    salvarBackupAutomatico();
-    trocarAba('historico');
-    exibirToast(`Análise de ${vicioTipado} iniciada.`, 'sucesso');
     
-    // Dispara a verificação de acervo de forma não bloqueante
-    verificarAcervoEmSegundoPlano(nomeCompleto);
-}
+    if (typeof salvarBackupAutomatico === 'function') salvarBackupAutomatico();
+    
+    trocarAba('historico');
+    exibirToast(`Análise de ${vicioFormatadoVisivel} iniciada.`, 'sucesso');
+    
+    if (typeof verificarAcervoEmSegundoPlano === 'function') {
+        verificarAcervoEmSegundoPlano(nomeCompleto);
+    }
+};
 
 function renderizarTopicos() {
     TopicsManager.renderizarFichario(topicos);

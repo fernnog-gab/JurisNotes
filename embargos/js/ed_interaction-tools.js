@@ -122,15 +122,11 @@ function renderizarFasesModais(context) {
 function toggleAgruparPopup() {
     const isAgrupar = document.querySelector('input[name="modo_agrupar_popup"]:checked').value === 'agrupar';
     document.getElementById('input-ideia-popup').style.display = isAgrupar ? 'block' : 'none';
-    document.getElementById('vicio-popup-select').style.display = isAgrupar ? 'none' : 'block';
-    if(isAgrupar) document.getElementById('input-ideia-popup').focus();
 }
 
 function toggleAgruparWizard() {
     const isAgrupar = document.querySelector('input[name="modo_agrupar_wizard"]:checked').value === 'agrupar';
     document.getElementById('input-ideia-wizard').style.display = isAgrupar ? 'block' : 'none';
-    document.getElementById('vicio-wizard-select').style.display = isAgrupar ? 'none' : 'block';
-    if(isAgrupar) document.getElementById('input-ideia-wizard').focus();
 }
 
 function processarAgrupamento(topicoId, inputId) {
@@ -156,22 +152,10 @@ function selecionarDocumento(docLabel, polo, context) {
 
     const inputId = context === 'popup' ? 'input-ideia-popup' : 'input-ideia-wizard';
     const targetIndex = processarAgrupamento(topicoId, inputId);
-    if (targetIndex === false) return; // Erro validado pelo input de agrupamento
+    if (targetIndex === false) return; 
 
     _pendingTargetIndex = targetIndex;
-    _wizardVicioSelecionado = null;
-
-    // NOVO: Validação Antecipada. Trava ANTES de pedir polo.
-    if (targetIndex === null) {
-        const vicioSelectId = context === 'popup' ? 'vicio-popup-select' : 'vicio-wizard-select';
-        const vicio = document.getElementById(vicioSelectId).value;
-        if (!vicio) {
-            exibirToast('Por favor, classifique o Vício Alegado antes de prosseguir.', 'erro');
-            return; // Bloqueia fluxo
-        }
-        _wizardVicioSelecionado = vicio;
-    }
-
+    
     if (polo === 'DUAL') {
         _docSelecionado = docLabel;
         _isWizardContext = (context === 'wizard');
@@ -196,7 +180,6 @@ function selecionarDocumento(docLabel, polo, context) {
             htmlBotoes += `<button class="chip-btn chip-re" onclick="confirmarPolo('Parte Ré', event)">✔ Parte Ré</button>`;
         }
         
-        // Renderiza o botão Voltar com container extra se for no Wizard para preservar o layout original
         if (context === 'popup') {
             htmlBotoes += `<button class="chip-btn chip-cancelar" onclick="voltarParaDocumentos('popup', event)">← Voltar</button>`;
         } else {
@@ -227,38 +210,33 @@ function voltarParaDocumentos(context, event) {
 }
 
 function executarSalvamento(docLabel, polo, topicoId, targetIndex, context) {
-    // 1. Identificar a fase via DOC_CONFIG centralizado
     const conf = DOC_CONFIG.find(d => d.label === docLabel);
     const faseNova = conf ? conf.fase : 4;
 
-    // 2. Middleware (Guardrail Client-Side)
     if (faseNova === 4 && targetIndex === null) {
         const topicoAlvo = topicos.find(t => t.id === topicoId);
         if (topicoAlvo) {
-            // Conta quantas provas fáticas raiz já existem
             const qtdFase4 = topicoAlvo.anotacoes.filter(a => {
                 const aConf = DOC_CONFIG.find(d => d.label === a.documento);
                 return aConf && aConf.fase === 4;
             }).length;
             
-            if (qtdFase4 >= 1) { // Dispara a partir do segundo item
+            if (qtdFase4 >= 1) { 
                 exibirToast("⚠️ Guardrail ED: Extrações extensas configuram risco de rejulgamento fático. Limite-se a falhas estruturais.", "aviso");
             }
         }
     }
 
-    // 3. Execução normal e delegação ao core
     if (context === 'popup') {
         const comentario = document.getElementById('comentario-input').value.trim();
-        salvarAnotacao(pendingTipo, pendingConteudo, docLabel, polo, topicoId, comentario, targetIndex, null, _wizardVicioSelecionado);
+        salvarAnotacao(pendingTipo, pendingConteudo, docLabel, polo, topicoId, comentario, targetIndex, null, null);
         fecharPopupClassificacao();
     } else {
         _ultimoTopicoUsadoId = topicoId;
         const comentario = document.getElementById('crop-comment-input').value.trim();
-        salvarAnotacao('imagem', _wizardImagemCapturada, docLabel, polo, topicoId, comentario, targetIndex, null, _wizardVicioSelecionado);
+        salvarAnotacao('imagem', _wizardImagemCapturada, docLabel, polo, topicoId, comentario, targetIndex, null, null);
         fecharTudoWizard();
     }
-    _wizardVicioSelecionado = null; // Libera memória
 }
 
 /* ================================================
@@ -413,10 +391,6 @@ function fecharTudoWizard() {
     document.getElementById('crop-wizard-step1').style.display = 'none';
     document.getElementById('crop-wizard-step2').style.display = 'none';
     document.getElementById('wizard-backdrop').style.display   = 'none';
-    
-    // LIMPEZA DE ESTADO DE COMPONENTES
-    const vicioWizard = document.getElementById('vicio-wizard-select');
-    if (vicioWizard) vicioWizard.value = ''; // FIX: State Leakage Evitado
 
     _wizardTopicoSelecionado = null;
     _wizardImagemCapturada   = null;
@@ -442,7 +416,6 @@ function fecharPopupClassificacao() {
     
     // LIMPEZA DE ESTADO DE COMPONENTES
     document.getElementById('input-ideia-popup').value = '';
-    document.getElementById('vicio-popup-select').value = ''; // FIX: State Leakage Evitado
 
     const txtArea = document.getElementById('comentario-input');
     if (txtArea) {
