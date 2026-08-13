@@ -9,18 +9,30 @@
 #history-container { flex: 1; overflow: auto; padding: 20px 24px; display: none; }
 .topics-tab-bar { 
     display: flex; 
-    flex-wrap: wrap; 
-    margin-bottom: 0; 
+    flex-wrap: nowrap; 
+    overflow-x: auto;
+    overflow-y: hidden;
     padding-top: 8px; 
+    padding-bottom: 6px; 
+    margin-bottom: -6px; 
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+    position: relative;
+    z-index: 10;
 }
+.topics-tab-bar::-webkit-scrollbar { height: 6px; }
+.topics-tab-bar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+.topics-tab-bar::-webkit-scrollbar-track { background: transparent; }
 
 .topic-tab-btn { 
     position: relative; 
+    flex: 0 0 auto;
     padding: 8px 16px; 
     cursor: pointer; 
     margin-right: 4px; 
     margin-bottom: -3px; 
-    max-width: 140px; 
+    min-width: 80px;
+    max-width: 180px; 
     border-radius: 8px 8px 0 0; 
     font-size: 0.85rem; 
     font-weight: 600; 
@@ -54,7 +66,7 @@
 .topic-tab-btn.active { 
     font-weight: 800; 
     z-index: 5; 
-    padding-bottom: 11px; 
+    padding-bottom: 12px; 
     background: var(--notes-bg-color, #ffffff); 
     background-image: none; 
     color: var(--trt-blue, #1a202c);
@@ -91,42 +103,7 @@
     background: radial-gradient(circle at top right, transparent 8px, var(--notes-bg-color, #ffffff) 9px);
 }
 
-/* ========================================================
-   ABAS FANTASMAS - TOM CINZA CHUMBO COM VOLUME 3D (CORRIGIDO)
-   ======================================================== */
-.topic-tab-ghost {
-    flex: 1 1 auto;
-    min-width: 48px;
-    max-width: 140px; 
-    padding: 8px 12px;
-    margin-right: 4px; 
-    margin-bottom: -3px; 
-    border: 1px solid #545d66;
-    border-bottom: none;
-    border-radius: 8px 8px 0 0;
-    background: linear-gradient(to bottom, #737e87, #545d66);
-    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.15);
-    pointer-events: none;
-    position: relative;
-    z-index: 1;
-}
-
-.topic-tab-ghost::before,
-.topic-tab-ghost::after {
-    content: "";
-    position: absolute;
-    bottom: 0;
-    width: 8px; 
-    height: 8px;
-}
-.topic-tab-ghost::before {
-    left: -8px;
-    background: radial-gradient(circle at top left, transparent 8px, #545d66 9px);
-}
-.topic-tab-ghost::after {
-    right: -8px;
-    background: radial-gradient(circle at top right, transparent 8px, #545d66 9px);
-}
+/* ABAS FANTASMAS REMOVIDAS - O scroll horizontal lida com o transbordo nativamente */
 
 .topics-content-area { 
     padding: 18px 8px; 

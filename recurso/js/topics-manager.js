@@ -18,8 +18,7 @@ window.TopicsManager = (function () {
                     posicionarNosDeIdeia(container);
                     requestAnimationFrame(() => desenharConexoes());
                 }
-                // Adiciona o recálculo do header
-                _ajustarAbasFantasmas();
+                // _ajustarAbasFantasmas(); // Desativado - Scroll horizontal nativo
             });
         }, 16); 
     });
@@ -735,65 +734,7 @@ window.TopicsManager = (function () {
         </div>`;
     }
 
-    /**
-     * Motor Geométrico: Mede a última linha e preenche o espaço restante com abas inativas.
-     * Desenvolvido com separação Read/Write para evitar Layout Thrashing.
-     */
-    function _ajustarAbasFantasmas() {
-        const headerEl = document.getElementById('topics-tabs-header');
-        if (!headerEl || headerEl.clientWidth === 0) return;
-
-        // FASE 1: WRITE (Limpeza prévia essencial para não sujar a leitura geométrica)
-        headerEl.querySelectorAll('.topic-tab-ghost').forEach(el => el.remove());
-
-        const abasReais = Array.from(headerEl.querySelectorAll('.topic-tab-btn'));
-        if (abasReais.length === 0) return;
-
-        // FASE 2: READ (Leitura em Batch forçando 1 único reflow)
-        const containerWidth = headerEl.clientWidth;
-        let lastRowTop = abasReais[0].offsetTop;
-        let lastRowItems = [];
-
-        // Agrupa as abas por eixo Y para identificar inequivocamente a última linha
-        for (let i = 0; i < abasReais.length; i++) {
-            const aba = abasReais[i];
-            if (aba.offsetTop > lastRowTop) {
-                lastRowTop = aba.offsetTop;
-                lastRowItems = [aba]; // Reseta o array para a nova linha
-            } else {
-                lastRowItems.push(aba);
-            }
-        }
-
-        const ultimaAba = lastRowItems[lastRowItems.length - 1];
-        
-        // Espaço livre = Largura Total - (Posição X da última aba + Largura dela + Margem Direita)
-        const spaceRemaining = containerWidth - (ultimaAba.offsetLeft + ultimaAba.offsetWidth + 4);
-
-        // FASE 3: CALC (Geometria Proporcional)
-        // Largura de referência = Média de tamanho das abas da última linha
-        const totalWidthLastRow = lastRowItems.reduce((acc, el) => acc + el.offsetWidth, 0);
-        const avgWidth = totalWidthLastRow / lastRowItems.length;
-        // Limita ao max-width do CSS para manter consistência visual
-        const refWidth = Math.min(avgWidth, 140); 
-
-        // Math.floor garante que NUNCA geraremos abas a mais, evitando quebra de linha e loop infinito
-        const ghostCount = Math.floor((spaceRemaining + 4) / (refWidth + 4));
-
-        if (ghostCount <= 0) return;
-
-        // FASE 4: WRITE (Injeção via DocumentFragment)
-        const fragment = document.createDocumentFragment();
-        for (let i = 0; i < ghostCount; i++) {
-            const ghost = document.createElement('div');
-            ghost.className = 'topic-tab-ghost';
-            ghost.setAttribute('aria-hidden', 'true'); // Acessibilidade: Ocultar de leitores de tela
-            ghost.style.flexBasis = `${refWidth}px`; // Delega ao CSS o balanço fino dos pixels
-            fragment.appendChild(ghost);
-        }
-
-        headerEl.appendChild(fragment);
-    }
+    // Função _ajustarAbasFantasmas() removida - Substituída por arquitetura de Scroll Horizontal
 
     /**
      * Re-renderiza o fichário inteiro.
@@ -826,6 +767,10 @@ window.TopicsManager = (function () {
             activeTabId = topicosArray[0].id;
         }
 
+        // Cache do scroll atual antes da destruição
+        const scrollAnterior = headerEl.scrollLeft;
+        let abaAtivaNode = null;
+
         // 1. Construir as abas do fichário
         headerEl.innerHTML = '';
         topicosArray.forEach(topico => {
@@ -852,6 +797,8 @@ window.TopicsManager = (function () {
             };
 
             headerEl.appendChild(btn);
+            
+            if (isActive) abaAtivaNode = btn;
         });
 
         // 2. Construir o conteúdo do tópico ativo
@@ -860,6 +807,14 @@ window.TopicsManager = (function () {
 
         _activeTopicoCor = topicoAtivo.cor;
         contentEl.style.setProperty('--active-tab-color', _activeTopicoCor);
+
+        // Restauração do estado de scroll após o paint do DOM
+        requestAnimationFrame(() => {
+            headerEl.scrollLeft = scrollAnterior;
+            if (abaAtivaNode) {
+                abaAtivaNode.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+            }
+        });
         const corTextoTese = obterCorContraste(_activeTopicoCor);
 
         // NOVO: Painel Preâmbulo Estático gerado incondicionalmente
@@ -1102,13 +1057,12 @@ window.TopicsManager = (function () {
             _atualizarMarcadoresDeIdeia(topicoAtivo);
             atualizarContadorNotasOcultas();
             
-            // Nova Injeção: Ajuste geométrico de layout
-            _ajustarAbasFantasmas();
+            // _ajustarAbasFantasmas(); // Desativado - Scroll horizontal nativo
         });
     }
 
     /**
-     * Motor de Posicionamento Absoluto dos Nós de Ideia
+     * Motor Geométrico: Mede a última linha e preenche o espaço restante com abas inativas.
      * Evita Layout Thrashing através de leitura em massa (Passe A) seguida de mutação (Passe B)
      */
     function posicionarNosDeIdeia(container) {
@@ -1352,6 +1306,17 @@ window.TopicsManager = (function () {
                 cardInterno.style.boxShadow = '';
             }, 1200);
         }
+    }
+
+    // Listener ergonômico para Scroll Horizontal com a roda do mouse
+    const _headerEl = document.getElementById('topics-tabs-header');
+    if (_headerEl) {
+        _headerEl.addEventListener('wheel', (evt) => {
+            if (evt.deltaY !== 0) {
+                evt.preventDefault();
+                _headerEl.scrollLeft += evt.deltaY * 2;
+            }
+        }, { passive: false });
     }
 
     // API pública do módulo
