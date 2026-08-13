@@ -672,11 +672,12 @@ window.TopicsManager = (function () {
                          ${subIconSVG} ${prefixo}.${idx + 1}
                     </div>
                     <div class="sub-text-content">${renderizarMarkdownSeguro(escaparHTML(sub.texto))}</div>
-                    <button class="btn-leitura-flutuante" data-raw-text="${escaparHTML(sub.texto)}" data-raw-title="Diretriz" onclick="TopicsManager.abrirModoLeitura(this)" title="Abrir no Modo Leitura (Tela Cheia)" style="display: none;">
+                    <button class="btn-expand-text" data-raw-text="${escaparHTML(sub.texto)}" data-raw-title="Diretriz" onclick="TopicsManager.abrirModoLeitura(this)">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
                             <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
                         </svg>
+                        Modo Leitura
                     </button>
                     <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(sub.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto para a área de transferência">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
@@ -735,7 +736,7 @@ window.TopicsManager = (function () {
             const textNodes = Array.from(document.querySelectorAll('.sub-text-content, .card-texto'));
             const measurements = textNodes.map(node => ({
                 el: node,
-                btn: node.parentElement.querySelector('.btn-expand-text, .btn-leitura-flutuante'),
+                btn: node.parentElement.querySelector('.btn-expand-text'),
                 isOverflowing: node.scrollHeight > node.clientHeight
             }));
 
@@ -743,7 +744,7 @@ window.TopicsManager = (function () {
                 measurements.forEach(m => {
                     if (m.isOverflowing) {
                         // Exibe o botão e aplica a classe do fade-out
-                        if (m.btn) m.btn.style.display = 'flex';
+                        if (m.btn) m.btn.style.display = 'inline-flex';
                         m.el.classList.add('is-truncated');
                     } else {
                         // Garante a limpeza do estado caso a tela seja redimensionada
