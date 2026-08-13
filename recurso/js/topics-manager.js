@@ -9,7 +9,7 @@ window.TopicsManager = (function () {
 
     // Observer Otimizado (Debounce de ~16ms para agrupar Recalculate Styles)
     let _layoutDebounceTimer = null;
-    const resizeObserver = new ResizeObserver(() => {
+    const resizeObserver = new ResizeObserver((entries) => {
         clearTimeout(_layoutDebounceTimer);
         _layoutDebounceTimer = setTimeout(() => {
             requestAnimationFrame(() => {
@@ -18,6 +18,8 @@ window.TopicsManager = (function () {
                     posicionarNosDeIdeia(container);
                     requestAnimationFrame(() => desenharConexoes());
                 }
+                // Adiciona o recálculo do header
+                _ajustarAbasFantasmas();
             });
         }, 16); 
     });
@@ -734,6 +736,66 @@ window.TopicsManager = (function () {
     }
 
     /**
+     * Motor Geométrico: Mede a última linha e preenche o espaço restante com abas inativas.
+     * Desenvolvido com separação Read/Write para evitar Layout Thrashing.
+     */
+    function _ajustarAbasFantasmas() {
+        const headerEl = document.getElementById('topics-tabs-header');
+        if (!headerEl || headerEl.clientWidth === 0) return;
+
+        // FASE 1: WRITE (Limpeza prévia essencial para não sujar a leitura geométrica)
+        headerEl.querySelectorAll('.topic-tab-ghost').forEach(el => el.remove());
+
+        const abasReais = Array.from(headerEl.querySelectorAll('.topic-tab-btn'));
+        if (abasReais.length === 0) return;
+
+        // FASE 2: READ (Leitura em Batch forçando 1 único reflow)
+        const containerWidth = headerEl.clientWidth;
+        let lastRowTop = abasReais[0].offsetTop;
+        let lastRowItems = [];
+
+        // Agrupa as abas por eixo Y para identificar inequivocamente a última linha
+        for (let i = 0; i < abasReais.length; i++) {
+            const aba = abasReais[i];
+            if (aba.offsetTop > lastRowTop) {
+                lastRowTop = aba.offsetTop;
+                lastRowItems = [aba]; // Reseta o array para a nova linha
+            } else {
+                lastRowItems.push(aba);
+            }
+        }
+
+        const ultimaAba = lastRowItems[lastRowItems.length - 1];
+        
+        // Espaço livre = Largura Total - (Posição X da última aba + Largura dela + Margem Direita)
+        const spaceRemaining = containerWidth - (ultimaAba.offsetLeft + ultimaAba.offsetWidth + 4);
+
+        // FASE 3: CALC (Geometria Proporcional)
+        // Largura de referência = Média de tamanho das abas da última linha
+        const totalWidthLastRow = lastRowItems.reduce((acc, el) => acc + el.offsetWidth, 0);
+        const avgWidth = totalWidthLastRow / lastRowItems.length;
+        // Limita ao max-width do CSS para manter consistência visual
+        const refWidth = Math.min(avgWidth, 140); 
+
+        // Math.floor garante que NUNCA geraremos abas a mais, evitando quebra de linha e loop infinito
+        const ghostCount = Math.floor((spaceRemaining + 4) / (refWidth + 4));
+
+        if (ghostCount <= 0) return;
+
+        // FASE 4: WRITE (Injeção via DocumentFragment)
+        const fragment = document.createDocumentFragment();
+        for (let i = 0; i < ghostCount; i++) {
+            const ghost = document.createElement('div');
+            ghost.className = 'topic-tab-ghost';
+            ghost.setAttribute('aria-hidden', 'true'); // Acessibilidade: Ocultar de leitores de tela
+            ghost.style.flexBasis = `${refWidth}px`; // Delega ao CSS o balanço fino dos pixels
+            fragment.appendChild(ghost);
+        }
+
+        headerEl.appendChild(fragment);
+    }
+
+    /**
      * Re-renderiza o fichário inteiro.
      */
     function renderizarFichario(topicosArray) {
@@ -1019,6 +1081,8 @@ window.TopicsManager = (function () {
             const historyContainer = document.getElementById('history-container');
                 if (historyContainer && typeof resizeObserver !== 'undefined') resizeObserver.observe(historyContainer);
             
+            if (headerEl && typeof resizeObserver !== 'undefined') resizeObserver.observe(headerEl);
+
             document.querySelectorAll('.image-resize-wrapper').forEach(wrapper => {
                 wrapper.addEventListener('mouseup', () => desenharConexoes());
                 wrapper.addEventListener('mouseleave', () => desenharConexoes());
@@ -1034,6 +1098,9 @@ window.TopicsManager = (function () {
             
             _atualizarMarcadoresDeIdeia(topicoAtivo);
             atualizarContadorNotasOcultas();
+            
+            // Nova Injeção: Ajuste geométrico de layout
+            _ajustarAbasFantasmas();
         });
     }
 
