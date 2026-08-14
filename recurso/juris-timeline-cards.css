@@ -462,16 +462,7 @@
     box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
 
-.preamble-card.is-empty {
-    border-color: transparent;
-    background: transparent;
-    box-shadow: none;
-}
-
-.preamble-card.is-empty:hover {
-    border-color: var(--border-color);
-    background: rgba(255,255,255,0.7);
-}
+/* Bloco is-empty removido para herança nativa do card base */
 
 /* Corredor de Leitura para sub-anotações (Media Query Protegida) */
 @media (min-width: 1024px) {
