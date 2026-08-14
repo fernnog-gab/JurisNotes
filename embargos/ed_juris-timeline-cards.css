@@ -649,9 +649,9 @@ body[data-context="ed"] .topics-content-area {
 }
 
 /* ================================================
-   CRONÔMETRO DE EFICIÊNCIA (TIME TRACKER) - FLUTUANTE
+   CRONÔMETRO DE EFICIÊNCIA (TIME TRACKER)
+   Migrado para o header em ed_juris-reader-tools.css
    ================================================ */
-/* Container original removido. Tracker migrado para a Ilha de Ferramentas (header-tools-area) no ed_index.html */
 
 #efficiency-tracker-pill {
     position: relative;

@@ -238,7 +238,7 @@
     
     <div class="main-content">
         <div class="tabs" role="navigation" aria-label="Navegação Principal">
-            <!-- 1. Envelopamento das Abas de Navegação -->
+            
             <div class="tabs-nav">
                 <button class="tab-btn active" id="tab-leitura" onclick="trocarAba('leitura')">
                     Processo <span id="tag-numero-processo" class="tab-module-badge badge-ed" style="display: none; margin-left: 6px; font-size: 0.65rem;"></span>
@@ -248,27 +248,22 @@
                 </button>
             </div>
             
-            <!-- 2. Nova Ilha de Ferramentas Minimalista no Header -->
+            <!-- Nova Ilha de Ferramentas Minimalista no Header (ED) -->
             <div class="header-tools-area" role="toolbar" aria-label="Ferramentas da Sessão">
                 
                 <!-- Módulo: Player de Áudio (Com Berço Fantasma) -->
                 <div class="ghost-mic-wrapper" title="Nenhuma audiência em andamento">
-                    <!-- 1. O Fantasma (Sempre visível no fundo) -->
                     <svg class="ghost-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
                     </svg>
-                    
-                    <!-- 2. O Indicador Real -->
                     <div id="active-audio-indicator" role="button" tabindex="0" aria-label="Audiência em andamento" onclick="AudioManager.alternarPlayer()" title="Audiência em andamento (Clique para abrir)" style="display: none;">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                        </svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path></svg>
                     </div>
                 </div>
-
+        
                 <div class="tool-separator"></div>
-
-                <!-- Módulo: Contrato de Trabalho (Injetado para conformidade com o módulo RO) -->
+        
+                <!-- Módulo: Contrato de Trabalho (Injetado para ED) -->
                 <div id="btn-contrato-trabalho" class="floating-pill-dark" role="button" tabindex="0" aria-label="Parâmetros do Contrato" style="display:none;" onclick="ContratoManager.abrirModal()" title="Adicionar Parâmetros do Contrato">
                     <div class="pill-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -278,20 +273,18 @@
                     </div>
                     <span id="contrato-status-text">Contrato</span>
                 </div>
-
+        
                 <div class="tool-separator"></div>
-
-                <!-- Módulo: Time Tracker & Lâmpada (Movido do DOM inferior para a Ilha) -->
+        
+                <!-- Módulo: Time Tracker -->
                 <div id="efficiency-tracker-container" class="tracker-group" style="display: none;">
                     <div id="hidden-notes-tracker" class="floating-lamp-tracker" role="button" tabindex="0" style="display: none;" onclick="TopicsManager.rolarParaProximaNotaOculta()" title="Você tem notas ocultas neste tópico. Clique para navegar.">
                         <div class="lamp-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"></path>
-                            </svg>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"></path></svg>
                         </div>
                         <span id="hidden-notes-badge" class="task-badge">0</span>
                     </div>
-
+        
                     <div id="efficiency-tracker-pill" role="button" tabindex="0" onclick="TimeTrackerManager.handleClick()">
                         <div id="tracker-bg-mask"></div>
                         <div class="tracker-content">
@@ -330,9 +323,9 @@
         <div id="history-container">
             <div id="topics-tabs-header" class="topics-tab-bar"></div>
             
-            <!-- NOVO: Wrapper relativo que encapsula o conteúdo -->
+            <!-- NOVO: Wrapper relativo que encapsula o cronômetro e o conteúdo -->
             <div style="position: relative;">
-                <!-- Módulos de Tracker flutuante migrados para a Ilha de Ferramentas (Header) -->
+                <!-- Ferramentas flutuantes movidas para o Header da aplicação -->
                 
                 <!-- Área onde os cards são injetados pelo sistema -->
                 <div id="topics-tab-content" class="topics-content-area"></div>
