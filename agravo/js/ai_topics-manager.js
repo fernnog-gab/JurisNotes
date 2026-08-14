@@ -749,20 +749,18 @@ window.TopicsManager = (function () {
             const btn      = document.createElement('div');
 
             btn.className        = `topic-tab-btn ${isActive ? 'active' : ''}`;
-            btn.textContent      = topico.nome;
             btn.title            = topico.nome; 
-            btn.style.backgroundColor = topico.cor;
+            
+            // Injeção declarativa de variáveis CSS (Aba ganha inteligência via CSS)
+            const corContraste = obterCorContraste(topico.cor);
+            btn.style.setProperty('--tab-bg', topico.cor);
+            btn.style.setProperty('--tab-color', corContraste);
 
-            if (isActive) {
-                btn.style.border = `3px solid ${escurecerCor(topico.cor)}`;
-                btn.style.borderBottom = 'none';
-                btn.style.color = escurecerCor(topico.cor, 0.4);
-                contentEl.style.borderTop = `3px solid ${escurecerCor(topico.cor)}`;
-            } else {
-                btn.style.border = '1px solid #dde3ea';
-                btn.style.borderBottom = 'none';
-                btn.style.color = '#555';
-            }
+            // Encapsulamento da label para o ellipsis funcionar perfeitamente
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'tab-label';
+            labelSpan.textContent = topico.nome;
+            btn.appendChild(labelSpan);
 
             btn.onclick = () => {
                 activeTabId = topico.id;
@@ -781,6 +779,9 @@ window.TopicsManager = (function () {
 
         _activeTopicoCor = topicoAtivo.cor;
         const corTextoTese = obterCorContraste(_activeTopicoCor);
+        
+        // Transmite a cor da aba ativa para a borda superior do conteúdo (escurecendo levemente)
+        contentEl.style.setProperty('--active-tab-color', escurecerCor(_activeTopicoCor));
 
         // Restauração do estado de scroll após o paint do DOM
         requestAnimationFrame(() => {
