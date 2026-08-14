@@ -839,18 +839,11 @@ window.TopicsManager = (function () {
             btn.className        = `topic-tab-btn ${isActive ? 'active' : ''}`;
             btn.textContent      = topico.nome;
             btn.title            = topico.nome; 
-            btn.style.backgroundColor = topico.cor;
-
-            if (isActive) {
-                btn.style.border = `3px solid ${escurecerCor(topico.cor)}`;
-                btn.style.borderBottom = 'none';
-                btn.style.color = escurecerCor(topico.cor, 0.4);
-                contentEl.style.borderTop = `3px solid ${escurecerCor(topico.cor)}`;
-            } else {
-                btn.style.border = '1px solid #dde3ea';
-                btn.style.borderBottom = 'none';
-                btn.style.color = '#555';
-            }
+            
+            // Injeção declarativa de variáveis CSS (Padronizado com o painel de Recurso)
+            const corContraste = obterCorContraste(topico.cor);
+            btn.style.setProperty('--tab-bg', topico.cor);
+            btn.style.setProperty('--tab-color', corContraste);
 
             btn.onclick = () => {
                 activeTabId = topico.id;
@@ -867,6 +860,10 @@ window.TopicsManager = (function () {
         if (!topicoAtivo) return;
 
         _activeTopicoCor = topicoAtivo.cor;
+        
+        // Define a cor da linha superior dinâmica para amarrar a aba ao conteúdo
+        contentEl.style.setProperty('--active-tab-color', escurecerCor(_activeTopicoCor, 0.85));
+        
         const corTextoTese = obterCorContraste(_activeTopicoCor);
 
         // Restauração do estado de scroll após o paint do DOM
