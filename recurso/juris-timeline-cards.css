@@ -13,16 +13,13 @@
     overflow-x: auto;
     overflow-y: hidden;
     padding-top: 8px; 
-    padding-bottom: 6px; 
-    margin-bottom: -6px; 
-    scrollbar-width: thin;
-    scrollbar-color: #cbd5e1 transparent;
+    scrollbar-width: none; /* Esconde no Firefox */
     position: relative;
     z-index: 10;
 }
-.topics-tab-bar::-webkit-scrollbar { height: 6px; }
-.topics-tab-bar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
-.topics-tab-bar::-webkit-scrollbar-track { background: transparent; }
+.topics-tab-bar::-webkit-scrollbar { 
+    display: none; /* Esconde no Chrome/Edge/Safari */
+}
 
 .topic-tab-btn { 
     position: relative; 
@@ -66,7 +63,7 @@
 .topic-tab-btn.active { 
     font-weight: 800; 
     z-index: 5; 
-    padding-bottom: 12px; 
+    padding-bottom: 11px; 
     background: var(--notes-bg-color, #ffffff); 
     background-image: none; 
     color: var(--trt-blue, #1a202c);

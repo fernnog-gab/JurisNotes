@@ -773,7 +773,7 @@ window.TopicsManager = (function () {
 
         // 1. Construir as abas do fichário
         headerEl.innerHTML = '';
-        topicosArray.forEach(topico => {
+        [...topicosArray].reverse().forEach(topico => {
             const isActive = topico.id === activeTabId;
             const btn      = document.createElement('div');
 
