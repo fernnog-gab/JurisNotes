@@ -717,28 +717,8 @@
 /* ================================================
    CRONÔMETRO DE EFICIÊNCIA (TIME TRACKER)
    ================================================ */
-/* --- NOVA ARQUITETURA DO HUB DE FERRAMENTAS --- */
-.floating-tools-hub {
-    position: sticky;
-    top: 18px;
-    z-index: 1000;
-    height: 0; /* Resolve o "buraco" de layout puxando o conteúdo para cima */
-    overflow: visible;
-    display: flex;
-    gap: 12px;
-    justify-content: flex-end;
-    align-items: flex-start;
-    padding-right: 24px;
-    pointer-events: none; /* ESCUDO DE EVENTOS: O container inteiro é "atravessável" */
-}
-
-/* Agrupador visual interno (não deve bloquear cliques) */
-.tracker-group {
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-    pointer-events: none; 
-}
+/* --- ARQUITETURA DO HUB MIGRADA PARA O HEADER --- */
+/* Classes legadas (.floating-tools-hub e .tracker-group) removidas */
 
 /* ISOLAMENTO ESTRITO: Reativa cliques APENAS nos botões finais */
 #btn-contrato-trabalho,

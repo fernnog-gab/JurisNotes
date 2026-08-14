@@ -238,15 +238,58 @@
     </div>
     
     <div class="main-content">
-        <div class="tabs">
-            <button class="tab-btn active" id="tab-leitura" onclick="trocarAba('leitura')">
-                Processo <span id="tag-numero-processo" class="tab-module-badge badge-ro" style="display: none; margin-left: 6px; font-size: 0.65rem;"></span>
-            </button>
-            <button class="tab-btn" id="tab-historico" onclick="trocarAba('historico')"> 
-            Anotações <span class="tab-module-badge badge-ro">RECURSO</span>
-        </button>
-            <div id="active-audio-indicator" onclick="AudioManager.alternarPlayer()" title="Audiência em andamento (Clique para abrir)" style="display: none;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path></svg>
+        <div class="tabs" role="navigation" aria-label="Navegação Principal">
+            
+            <!-- 1. Envelopamento das Abas de Navegação -->
+            <div class="tabs-nav">
+                <button class="tab-btn active" id="tab-leitura" onclick="trocarAba('leitura')">
+                    Processo <span id="tag-numero-processo" class="tab-module-badge badge-ro" style="display: none; margin-left: 6px; font-size: 0.65rem;"></span>
+                </button>
+                <button class="tab-btn" id="tab-historico" onclick="trocarAba('historico')"> 
+                    Anotações <span class="tab-module-badge badge-ro">RECURSO</span>
+                </button>
+            </div>
+        
+            <!-- 2. Nova Ilha de Ferramentas Minimalista no Header -->
+            <div class="header-tools-area" role="toolbar" aria-label="Ferramentas da Sessão">
+                
+                <!-- Módulo: Player de Áudio -->
+                <div id="active-audio-indicator" role="button" tabindex="0" aria-label="Audiência em andamento" onclick="AudioManager.alternarPlayer()" title="Audiência em andamento (Clique para abrir)" style="display: none;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path></svg>
+                </div>
+        
+                <div class="tool-separator"></div>
+        
+                <!-- Módulo: Contrato de Trabalho -->
+                <div id="btn-contrato-trabalho" class="floating-pill-dark" role="button" tabindex="0" aria-label="Parâmetros do Contrato" style="display:none;" onclick="ContratoManager.abrirModal()" title="Adicionar Parâmetros do Contrato">
+                    <div class="pill-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                        </svg>
+                    </div>
+                    <span id="contrato-status-text">Contrato</span>
+                </div>
+        
+                <div class="tool-separator"></div>
+        
+                <!-- Módulo: Time Tracker -->
+                <div id="efficiency-tracker-container" class="tracker-group" style="display: none;">
+                    <div id="hidden-notes-tracker" class="floating-lamp-tracker" role="button" tabindex="0" style="display: none;" onclick="TopicsManager.rolarParaProximaNotaOculta()" title="Você tem notas ocultas neste tópico. Clique para navegar.">
+                        <div class="lamp-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"></path></svg>
+                        </div>
+                        <span id="hidden-notes-badge" class="task-badge">0</span>
+                    </div>
+        
+                    <div id="efficiency-tracker-pill" role="button" tabindex="0" onclick="TimeTrackerManager.handleClick()">
+                        <div id="tracker-bg-mask"></div>
+                        <div class="tracker-content">
+                            <div id="efficiency-tracker-dot"></div>
+                            <span id="efficiency-tracker-time">00:00</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -280,40 +323,7 @@
             <!-- Wrapper relativo mantido para preservar o 'Containing Block' do Sticky -->
             <div style="position: relative;">
                 
-                <!-- HUB FLUTUANTE: Centralizador invisível no fluxo -->
-                <div id="floating-tools-hub" class="floating-tools-hub">
-                    
-                    <div id="btn-contrato-trabalho" class="floating-pill-dark floating-pill-compact" style="display:none;" onclick="ContratoManager.abrirModal()" title="Adicionar Parâmetros do Contrato">
-                        <div class="pill-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-                                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-                            </svg>
-                        </div>
-                        <span id="contrato-status-text">Contrato</span>
-                    </div>
-
-                    <!-- Container do Tracker (apenas agrupa, sem bloquear cliques) -->
-                    <div id="efficiency-tracker-container" class="tracker-group" style="display: none;">
-                        
-                        <div id="hidden-notes-tracker" class="floating-lamp-tracker" style="display: none;" onclick="TopicsManager.rolarParaProximaNotaOculta()" title="Você tem notas ocultas neste tópico. Clique para navegar.">
-                            <div class="lamp-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"></path>
-                                </svg>
-                            </div>
-                            <span id="hidden-notes-badge" class="task-badge">0</span>
-                        </div>
-
-                        <div id="efficiency-tracker-pill" onclick="TimeTrackerManager.handleClick()">
-                            <div id="tracker-bg-mask"></div>
-                            <div class="tracker-content">
-                                <div id="efficiency-tracker-dot"></div>
-                                <span id="efficiency-tracker-time">00:00</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <!-- HUB FLUTUANTE removido (Ferramentas migradas para o Header .tabs) -->
                 
                 <!-- Área onde os cards são injetados pelo sistema -->
                 <div id="topics-tab-content" class="topics-content-area"></div>

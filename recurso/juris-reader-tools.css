@@ -486,6 +486,69 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
     height: 11px;
 }
 
+/* Mutação Contextual: Quando o Contrato entra no Header, ele vira um círculo minimalista */
+.header-tools-area .floating-pill-dark {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 50%;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    color: #ffffff;
+}
+
+.header-tools-area .floating-pill-dark:hover {
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: none;
+    transform: scale(1.05);
+}
+
+.header-tools-area .floating-pill-dark .pill-icon {
+    margin-right: 0;
+    background: transparent;
+    width: 20px;
+    height: 20px;
+}
+
+/* Oculta o texto para manter o visual minimalista */
+.header-tools-area #contrato-status-text {
+    display: none;
+}
+
+/* Badge de Feedback Visual (Sinal Verde de Dados Salvos) */
+.header-tools-area #btn-contrato-trabalho {
+    position: relative;
+}
+
+.header-tools-area #btn-contrato-trabalho.has-data::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 8px;
+    height: 8px;
+    background-color: #39FF14;
+    border: 2px solid var(--trt-blue);
+    border-radius: 50%;
+    box-shadow: 0 0 4px rgba(0,0,0,0.3);
+}
+
+.header-tools-area #btn-contrato-trabalho.alerta-prescricao::after {
+    background-color: #ff5252;
+}
+
+/* Ajuste geométrico do Cronômetro para o ambiente escuro do header */
+.header-tools-area #efficiency-tracker-pill {
+    height: 28px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.header-tools-area #tracker-bg-mask {
+    background: rgba(255, 255, 255, 0.9);
+}
+
 /* ================================================
    EDITOR RICO (WYSIWYG) - contenteditable
    ================================================ */
