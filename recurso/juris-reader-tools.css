@@ -178,6 +178,110 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
 .wizard-header.backup-header svg { width: 20px; height: 20px; }
 
 /* ================================================
+   3.5 ILHA DE FERRAMENTAS (HEADER MÓDULO ED)
+   ================================================ */
+/* 1. Estilos do Berço Fantasma (Microfone) */
+.header-tools-area .ghost-mic-wrapper {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+}
+
+.header-tools-area .ghost-mic-wrapper .ghost-svg {
+    width: 16px;
+    height: 16px;
+    color: rgba(255, 255, 255, 0.2);
+    position: absolute;
+}
+
+.header-tools-area #active-audio-indicator {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    z-index: 2;
+    box-shadow: 0 2px 6px rgba(229, 57, 53, 0.4);
+}
+
+.header-tools-area #active-audio-indicator svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* 2. Refinamento Visual do Contrato (Fúcsia ED, Ícone Branco e Blindagem Global) */
+.header-tools-area #btn-contrato-trabalho {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 50%;
+    justify-content: center;
+    border: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    background-color: #D500B5; /* Fúcsia - Identidade do Módulo ED */
+    color: #ffffff; /* Alto contraste para o fúcsia */
+    display: flex !important; /* Proteção contra manipulação JS */
+    position: relative;
+}
+
+.header-tools-area #btn-contrato-trabalho:hover {
+    background-color: #E600C4;
+    transform: scale(1.08);
+}
+
+.header-tools-area #btn-contrato-trabalho .pill-icon {
+    margin-right: 0;
+    background: transparent;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.header-tools-area #contrato-status-text {
+    display: none;
+}
+
+.header-tools-area #btn-contrato-trabalho.has-data::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 8px;
+    height: 8px;
+    background-color: #39FF14;
+    border: 2px solid #121820;
+    border-radius: 50%;
+    box-shadow: 0 0 4px rgba(0,0,0,0.3);
+}
+
+.header-tools-area #btn-contrato-trabalho.alerta-prescricao::after {
+    background-color: #ff5252;
+}
+
+/* 3. Visibilidade Global do Cronômetro e Ajuste Geométrico */
+.header-tools-area #efficiency-tracker-container {
+    display: flex !important;
+    gap: 8px;
+}
+
+.header-tools-area #efficiency-tracker-pill {
+    height: 28px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-tools-area #tracker-bg-mask {
+    background: rgba(255, 255, 255, 0.9);
+}
+
+/* ================================================
    4. COMPONENTES DE ÁUDIO
    ================================================ */
 #active-audio-indicator { isolation: isolate; position: relative; margin-left: auto; margin-right: 16px; align-self: center; background: #e53935; color: white; width: 34px; height: 34px; border-radius: 50%; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 6px rgba(229, 57, 53, 0.4); animation: pulse-mic 2s infinite; }

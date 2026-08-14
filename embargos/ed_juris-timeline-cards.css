@@ -651,18 +651,7 @@ body[data-context="ed"] .topics-content-area {
 /* ================================================
    CRONÔMETRO DE EFICIÊNCIA (TIME TRACKER) - FLUTUANTE
    ================================================ */
-#efficiency-tracker-container {
-    position: sticky;
-    top: 18px;
-    z-index: 1000;
-    height: 0;
-    overflow: visible;
-    display: flex;
-    justify-content: flex-end;
-    align-items: flex-start; /* Previne o esmagamento do flexbox */
-    margin-right: 24px;
-    pointer-events: none;
-}
+/* Container original removido. Tracker migrado para a Ilha de Ferramentas (header-tools-area) no ed_index.html */
 
 #efficiency-tracker-pill {
     position: relative;
