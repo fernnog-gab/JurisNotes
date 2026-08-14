@@ -364,3 +364,108 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
     background-color: var(--border-color);
     margin: 0 4px;
 }
+
+/* ================================================
+   HEADER TOOLS AREA (Slate Dark & Empty States)
+   ================================================ */
+
+/* 0. Estilos do Berço Fantasma (Microfone) */
+.header-tools-area .ghost-mic-wrapper {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+}
+
+.header-tools-area .ghost-mic-wrapper .ghost-svg {
+    width: 16px;
+    height: 16px;
+    color: rgba(255, 255, 255, 0.2);
+    position: absolute;
+}
+
+.header-tools-area #active-audio-indicator {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    z-index: 2;
+    box-shadow: 0 2px 6px rgba(229, 57, 53, 0.4);
+}
+
+.header-tools-area #active-audio-indicator svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* 1. Refinamento Visual do Contrato (Paleta Agravo: Verde Limão, Ícone Escuro e Blindagem) */
+.header-tools-area #btn-contrato-trabalho {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 50%;
+    justify-content: center;
+    border: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    background-color: #A3E635; /* Verde Limão (AI) */
+    color: #1a1a1a; 
+    display: flex !important; /* Proteção contra manipulação JS */
+    position: relative; 
+}
+
+.header-tools-area #btn-contrato-trabalho:hover {
+    background-color: #8ce015; /* Verde mais vibrante no hover */
+    transform: scale(1.08);
+}
+
+.header-tools-area #btn-contrato-trabalho .pill-icon {
+    margin-right: 0;
+    background: transparent;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Oculta o texto para manter o visual minimalista */
+.header-tools-area #contrato-status-text {
+    display: none;
+}
+
+/* Badge de Feedback Visual (Sinal Verde de Dados Salvos) adaptado ao novo fundo */
+.header-tools-area #btn-contrato-trabalho.has-data::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 8px;
+    height: 8px;
+    background-color: #39FF14;
+    border: 2px solid #121820; /* Borda sincronizada com o painel Slate Dark */
+    border-radius: 50%;
+    box-shadow: 0 0 4px rgba(0,0,0,0.3);
+}
+
+.header-tools-area #btn-contrato-trabalho.alerta-prescricao::after {
+    background-color: #ff5252;
+}
+
+/* 2. Visibilidade Global e Ajuste do Cronômetro */
+.header-tools-area #efficiency-tracker-container {
+    display: flex !important; /* Proteção contra manipulação JS */
+}
+
+.header-tools-area #efficiency-tracker-pill {
+    height: 28px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.header-tools-area #tracker-bg-mask {
+    background: rgba(255, 255, 255, 0.9);
+}

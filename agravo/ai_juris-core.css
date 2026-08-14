@@ -288,10 +288,41 @@ body.theme-anotacoes-jasmine {
 
 .tabs {
     display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
     position: relative;
     background: #dde3ea;
     border-bottom: 2px solid var(--trt-blue);
     flex-shrink: 0;
+}
+
+.tabs-nav {
+    display: flex;
+    flex: 1;
+}
+
+.header-tools-area {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    background-color: #121820; /* Slate Dark */
+    border-radius: 20px 20px 0 0;
+    padding: 6px 16px;
+    margin-right: 12px;
+    height: 44px;
+    gap: 8px;
+}
+
+.tool-separator {
+    width: 1px;
+    height: 20px;
+    background-color: rgba(255, 255, 255, 0.25); /* Fio de luz nítido */
+    margin: 0 4px;
+}
+
+@media (max-width: 768px) {
+    .header-tools-area { padding: 4px 8px; margin-right: 4px; gap: 4px; }
+    .tool-separator { margin: 0; }
 }
 
 .tab-btn {
