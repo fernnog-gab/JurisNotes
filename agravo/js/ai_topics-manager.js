@@ -738,9 +738,13 @@ window.TopicsManager = (function () {
             activeTabId = topicosArray[0].id;
         }
 
-        // 1. Construir as abas do fichário
+        // Cache do scroll atual antes da destruição
+        const scrollAnterior = headerEl.scrollLeft;
+        let abaAtivaNode = null;
+
+        // 1. Construir as abas do fichário (Mais recentes à esquerda)
         headerEl.innerHTML = '';
-        topicosArray.forEach(topico => {
+        [...topicosArray].reverse().forEach(topico => {
             const isActive = topico.id === activeTabId;
             const btn      = document.createElement('div');
 
@@ -766,6 +770,9 @@ window.TopicsManager = (function () {
             };
 
             headerEl.appendChild(btn);
+            
+            // Captura o node para centralizar a visão nele após o render
+            if (isActive) abaAtivaNode = btn;
         });
 
         // 2. Construir o conteúdo do tópico ativo
@@ -774,6 +781,14 @@ window.TopicsManager = (function () {
 
         _activeTopicoCor = topicoAtivo.cor;
         const corTextoTese = obterCorContraste(_activeTopicoCor);
+
+        // Restauração do estado de scroll após o paint do DOM
+        requestAnimationFrame(() => {
+            headerEl.scrollLeft = scrollAnterior;
+            if (abaAtivaNode) {
+                abaAtivaNode.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+            }
+        });
 
         // NOVO: Painel Preâmbulo Estático gerado incondicionalmente
         const preambleHtml = `
@@ -1258,6 +1273,17 @@ window.TopicsManager = (function () {
                 cardInterno.style.boxShadow = '';
             }, 1200);
         }
+    }
+
+    // Listener ergonômico para Scroll Horizontal com a roda do mouse
+    const _headerEl = document.getElementById('topics-tabs-header');
+    if (_headerEl) {
+        _headerEl.addEventListener('wheel', (evt) => {
+            if (evt.deltaY !== 0) {
+                evt.preventDefault();
+                _headerEl.scrollLeft += evt.deltaY * 2;
+            }
+        }, { passive: false });
     }
 
     // API pública do módulo
