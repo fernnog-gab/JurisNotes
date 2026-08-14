@@ -486,30 +486,34 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
     height: 11px;
 }
 
-/* Mutação Contextual: Quando o Contrato entra no Header, ele vira um círculo minimalista */
-.header-tools-area .floating-pill-dark {
+/* 1. Refinamento Visual do Contrato (Amarelo, Ícone Escuro e Blindagem Global) */
+.header-tools-area #btn-contrato-trabalho {
     width: 32px;
     height: 32px;
     padding: 0;
     border-radius: 50%;
     justify-content: center;
-    background: transparent;
     border: none;
-    box-shadow: none;
-    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    background-color: #fbc02d; 
+    color: #1a1a1a; 
+    display: flex !important; /* Proteção contra manipulação JS */
+    position: relative; /* Base para o posicionamento do badge */
 }
 
-.header-tools-area .floating-pill-dark:hover {
-    background: rgba(255, 255, 255, 0.1);
-    box-shadow: none;
-    transform: scale(1.05);
+.header-tools-area #btn-contrato-trabalho:hover {
+    background-color: #f9a825;
+    transform: scale(1.08);
 }
 
-.header-tools-area .floating-pill-dark .pill-icon {
+.header-tools-area #btn-contrato-trabalho .pill-icon {
     margin-right: 0;
     background: transparent;
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Oculta o texto para manter o visual minimalista */
@@ -517,11 +521,7 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
     display: none;
 }
 
-/* Badge de Feedback Visual (Sinal Verde de Dados Salvos) */
-.header-tools-area #btn-contrato-trabalho {
-    position: relative;
-}
-
+/* Badge de Feedback Visual (Sinal Verde de Dados Salvos) adaptado ao novo fundo */
 .header-tools-area #btn-contrato-trabalho.has-data::after {
     content: '';
     position: absolute;
@@ -530,9 +530,14 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
     width: 8px;
     height: 8px;
     background-color: #39FF14;
-    border: 2px solid var(--trt-blue);
+    border: 2px solid #121820; /* Borda sincronizada com o painel Slate Dark */
     border-radius: 50%;
     box-shadow: 0 0 4px rgba(0,0,0,0.3);
+}
+
+/* 3. Visibilidade Global do Cronômetro */
+.header-tools-area #efficiency-tracker-container {
+    display: flex !important; /* Proteção contra manipulação JS */
 }
 
 .header-tools-area #btn-contrato-trabalho.alerta-prescricao::after {
