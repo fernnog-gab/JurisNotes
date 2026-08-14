@@ -253,9 +253,19 @@
             <!-- 2. Nova Ilha de Ferramentas Minimalista no Header -->
             <div class="header-tools-area" role="toolbar" aria-label="Ferramentas da Sessão">
                 
-                <!-- Módulo: Player de Áudio -->
-                <div id="active-audio-indicator" role="button" tabindex="0" aria-label="Audiência em andamento" onclick="AudioManager.alternarPlayer()" title="Audiência em andamento (Clique para abrir)" style="display: none;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path></svg>
+                <!-- Módulo: Player de Áudio (Com Berço Fantasma) -->
+                <div class="ghost-mic-wrapper" title="Nenhuma audiência em andamento">
+                    <!-- 1. O Fantasma (Sempre visível no fundo) -->
+                    <svg class="ghost-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    </svg>
+                    
+                    <!-- 2. O Indicador Real (Fica por cima quando o JS o ativa) -->
+                    <div id="active-audio-indicator" role="button" tabindex="0" aria-label="Audiência em andamento" onclick="AudioManager.alternarPlayer()" title="Audiência em andamento (Clique para abrir)" style="display: none;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        </svg>
+                    </div>
                 </div>
         
                 <div class="tool-separator"></div>

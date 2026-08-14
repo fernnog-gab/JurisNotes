@@ -316,7 +316,7 @@ body.theme-anotacoes-jasmine {
 .tool-separator {
     width: 1px;
     height: 20px;
-    background-color: rgba(255, 255, 255, 0.10);
+    background-color: rgba(255, 255, 255, 0.25);
     margin: 0 4px;
 }
 
