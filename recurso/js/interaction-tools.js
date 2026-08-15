@@ -35,6 +35,168 @@ let _ultimoTopicoUsadoId     = null;  // Memória inteligente: pré-seleciona na
 let pendingTipo     = null;   // Tipo da extração pendente: 'texto' | 'imagem'
 let pendingConteudo = null;   // Conteúdo bruto da extração pendente
 
+/* ================================================
+   CONTROLADOR SINGLETON DO DROPDOWN (PREVINE MEMORY LEAKS E CLIPPING)
+   ================================================ */
+const DropdownManager = (function() {
+    let _activeTrigger = null;
+    let _activePortal = null;
+    let _eventosGlobaisRegistrados = false;
+
+    function fecharAtivo() {
+        if (_activePortal) {
+            _activePortal.remove();
+            _activePortal = null;
+        }
+        if (_activeTrigger) {
+            _activeTrigger.setAttribute('aria-expanded', 'false');
+            _activeTrigger.focus();
+            _activeTrigger = null;
+        }
+    }
+
+    function registrarEventosGerais() {
+        if (_eventosGlobaisRegistrados) return;
+        
+        document.addEventListener('click', (e) => {
+            if (_activePortal && !_activePortal.contains(e.target) && !_activeTrigger.contains(e.target)) {
+                fecharAtivo();
+            }
+        });
+
+        window.addEventListener('scroll', fecharAtivo, { passive: true, capture: true });
+        window.addEventListener('resize', fecharAtivo, { passive: true });
+        
+        _eventosGlobaisRegistrados = true;
+    }
+
+    function abrirPortal(triggerEl, topicosArray, selectNativo, onSelectCallback) {
+        fecharAtivo(); 
+        
+        _activeTrigger = triggerEl;
+        _activeTrigger.setAttribute('aria-expanded', 'true');
+
+        const rect = triggerEl.getBoundingClientRect();
+        
+        _activePortal = document.createElement('div');
+        _activePortal.className = 'jcs-options-portal';
+        _activePortal.setAttribute('role', 'listbox');
+        
+        _activePortal.style.top = `${rect.bottom + 4}px`;
+        _activePortal.style.left = `${rect.left}px`;
+        _activePortal.style.width = `${rect.width}px`;
+
+        let focusedIndex = -1;
+        const optionsNodes = [];
+
+        topicosArray.forEach((t, index) => {
+            const opt = document.createElement('div');
+            opt.className = 'jcs-option';
+            opt.setAttribute('role', 'option');
+            opt.innerHTML = `<div class="jcs-color-dot" style="background-color: ${t.cor};"></div> <span>${t.nome}</span>`;
+            
+            const selecionarOpcao = () => {
+                selectNativo.value = t.id;
+                triggerEl.querySelector('.jcs-trigger-content').innerHTML = opt.innerHTML;
+                
+                selectNativo.dispatchEvent(new Event('change'));
+                if (onSelectCallback) onSelectCallback(t);
+                
+                fecharAtivo();
+            };
+
+            opt.addEventListener('click', selecionarOpcao);
+            opt.addEventListener('mousemove', () => atualizarFoco(index));
+
+            optionsNodes.push({ node: opt, selectFn: selecionarOpcao });
+            _activePortal.appendChild(opt);
+        });
+
+        function atualizarFoco(newIndex) {
+            if (focusedIndex >= 0) optionsNodes[focusedIndex].node.classList.remove('is-focused');
+            focusedIndex = newIndex;
+            if (focusedIndex >= 0) {
+                optionsNodes[focusedIndex].node.classList.add('is-focused');
+                optionsNodes[focusedIndex].node.scrollIntoView({ block: 'nearest' });
+            }
+        }
+
+        _activePortal.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                atualizarFoco((focusedIndex + 1) % optionsNodes.length);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                atualizarFoco((focusedIndex - 1 + optionsNodes.length) % optionsNodes.length);
+            } else if (e.key === 'Enter' && focusedIndex >= 0) {
+                e.preventDefault();
+                optionsNodes[focusedIndex].selectFn();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                fecharAtivo();
+            }
+        });
+
+        document.body.appendChild(_activePortal); 
+        _activePortal.setAttribute('tabindex', '-1');
+        _activePortal.focus(); 
+    }
+
+    function renderizar(selectId, topicosArray, preSelecionadoId = null, onSelectCallback = null) {
+        registrarEventosGerais();
+        
+        const selectNativo = document.getElementById(selectId);
+        if (!selectNativo) return;
+
+        selectNativo.innerHTML = '<option value="">Selecione o Tópico...</option>';
+        topicosArray.forEach(t => selectNativo.appendChild(new Option(t.nome, t.id)));
+        if (preSelecionadoId) selectNativo.value = preSelecionadoId;
+        
+        selectNativo.classList.add('sr-only');
+
+        const wrapperAntigo = selectNativo.nextElementSibling;
+        if (wrapperAntigo && wrapperAntigo.classList.contains('juris-custom-select')) {
+            wrapperAntigo.remove();
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'juris-custom-select';
+        
+        const topicoInicial = topicosArray.find(t => t.id === preSelecionadoId);
+        const triggerHtml = topicoInicial 
+            ? `<div class="jcs-color-dot" style="background-color: ${topicoInicial.cor};"></div> <span>${topicoInicial.nome}</span>`
+            : `<span class="jcs-placeholder-text">Selecione o Tópico...</span>`;
+
+        wrapper.innerHTML = `
+            <div class="jcs-trigger" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false">
+                <div style="display:flex; align-items:center; gap:10px;" class="jcs-trigger-content">
+                    ${triggerHtml}
+                </div>
+                <svg viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" style="width:16px; height:16px;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+        `;
+
+        const triggerBtn = wrapper.querySelector('.jcs-trigger');
+
+        const abrir = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            abrirPortal(triggerBtn, topicosArray, selectNativo, onSelectCallback);
+        };
+
+        triggerBtn.addEventListener('click', abrir);
+        triggerBtn.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') abrir(e);
+        });
+
+        selectNativo.parentNode.insertBefore(wrapper, selectNativo.nextSibling);
+    }
+
+    return { renderizar };
+})();
+
+window.DropdownManager = DropdownManager;
+
 window.toggleModoFoco = function(ativar) {
     // Agora capturamos OS DOIS painéis principais da tela
     const pdfContainer = document.getElementById('pdf-container');
@@ -277,12 +439,7 @@ function iniciarRecorteWizard() {
         return;
     }
 
-    const select = document.getElementById('crop-topic-select');
-    select.innerHTML = '<option value="">Selecione o Tópico...</option>';
-    topicos.forEach(t => select.appendChild(new Option(t.nome, t.id)));
-
-    // Memória inteligente: pré-seleciona o último tópico utilizado
-    if (_ultimoTopicoUsadoId) select.value = _ultimoTopicoUsadoId;
+    DropdownManager.renderizar('crop-topic-select', topicos, _ultimoTopicoUsadoId);
 
     document.getElementById('wizard-backdrop').style.display  = 'block';
     document.getElementById('crop-wizard-step1').style.display = 'flex';
@@ -461,13 +618,7 @@ function exibirPopupClassificacao(tipo, conteudo) {
     pendingTipo = tipo;
     pendingConteudo = conteudo;
 
-    const select = document.getElementById('seletor-topico');
-    select.innerHTML = '<option value="">Selecione o Tópico...</option>';
-    topicos.forEach(t => {
-        const opt = new Option(t.nome, t.id);
-        opt.dataset.cor = t.cor;
-        select.appendChild(opt);
-    });
+    DropdownManager.renderizar('seletor-topico', topicos);
 
     document.getElementById('agrupamento-popup-box').style.display = 'none';
     document.querySelector('input[name="modo_agrupar_popup"][value="nova"]').checked = true;
@@ -587,16 +738,8 @@ overlay.addEventListener('mousedown', function (e) {
         document.body.classList.remove('modo-extrator-ativo');
         overlay.style.display = 'none';
 
-        const select = document.getElementById('extrator-topic-select');
-        select.innerHTML = '';
-        
-        // Memória inteligente para acelerar o processo (usa o tópico ativo se houver)
         const activeTabId = (typeof TopicsManager !== 'undefined') ? TopicsManager.getActiveTabId() : null;
-        topicos.forEach(t => {
-            const opt = new Option(t.nome, t.id);
-            if (t.id === activeTabId) opt.selected = true;
-            select.appendChild(opt);
-        });
+        DropdownManager.renderizar('extrator-topic-select', topicos, activeTabId);
         
         document.getElementById('extrator-modal-backdrop').style.display = 'block';
         document.getElementById('extrator-wizard-popup').style.display = 'flex';

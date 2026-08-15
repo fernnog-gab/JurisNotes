@@ -751,3 +751,97 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
     background-color: var(--border-color);
     margin: 0 4px;
 }
+
+/* ================================================
+   DROPDOWN CUSTOMIZADO DE TÓPICOS (UI E ACESSIBILIDADE)
+   ================================================ */
+
+/* Classe universal de acessibilidade (Oculta visualmente, mantém no Accessibility Tree) */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+.juris-custom-select {
+    position: relative;
+    width: 100%;
+    user-select: none;
+}
+
+.jcs-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: #fafafa;
+    font-size: 0.84rem;
+    color: var(--text-dark);
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    outline: none;
+}
+
+/* O outline padrão é removido, mas o focus-visible garante acessibilidade no teclado */
+.jcs-trigger:hover, .jcs-trigger:focus-visible {
+    border-color: var(--trt-blue-mid);
+    background: #ffffff;
+    box-shadow: 0 0 0 2px rgba(26, 58, 92, 0.2);
+}
+
+/* PORTAL PATTERN: Esta classe será injetada diretamente no <body> */
+.jcs-options-portal {
+    position: fixed; /* Escapa matematicamente de overflow: hidden dos modais */
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    z-index: 100000;
+    max-height: 220px;
+    overflow-y: auto;
+    padding-bottom: 16px; /* Ajuste crucial para o último elemento não colar na base */
+    display: flex;
+    flex-direction: column;
+}
+
+.jcs-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.15s;
+    outline: none;
+}
+
+.jcs-option:last-child {
+    border-bottom: none;
+}
+
+.jcs-option:hover, .jcs-option.is-focused {
+    background: var(--trt-light-bg);
+}
+
+/* O Card Circular de Cor */
+.jcs-color-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    border: 1px solid rgba(0,0,0,0.1);
+}
+
+.jcs-placeholder-text {
+    color: #888;
+}
