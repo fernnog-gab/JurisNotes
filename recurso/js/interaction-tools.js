@@ -39,10 +39,12 @@ let pendingConteudo = null;   // Conteúdo bruto da extração pendente
    CONTROLADOR SINGLETON DO DROPDOWN (PREVINE MEMORY LEAKS E CLIPPING)
    ================================================ */
 const DropdownManager = (function() {
+    // Escopo Privado de Estado
     let _activeTrigger = null;
     let _activePortal = null;
     let _eventosGlobaisRegistrados = false;
 
+    // Métodos Privados
     function fecharAtivo() {
         if (_activePortal) {
             _activePortal.remove();
@@ -58,13 +60,21 @@ const DropdownManager = (function() {
     function registrarEventosGerais() {
         if (_eventosGlobaisRegistrados) return;
         
+        // Clica fora fecha o dropdown
         document.addEventListener('click', (e) => {
             if (_activePortal && !_activePortal.contains(e.target) && !_activeTrigger.contains(e.target)) {
                 fecharAtivo();
             }
         });
 
-        window.addEventListener('scroll', fecharAtivo, { passive: true, capture: true });
+        // CORREÇÃO DO BUG DO SCROLL: Ignora se o scroll vier de dentro do próprio Portal
+        window.addEventListener('scroll', (e) => {
+            if (_activePortal && (e.target === _activePortal || _activePortal.contains(e.target))) {
+                return; // Permite rolar a lista sem fechá-la
+            }
+            fecharAtivo();
+        }, { passive: true, capture: true });
+        
         window.addEventListener('resize', fecharAtivo, { passive: true });
         
         _eventosGlobaisRegistrados = true;
@@ -82,9 +92,18 @@ const DropdownManager = (function() {
         _activePortal.className = 'jcs-options-portal';
         _activePortal.setAttribute('role', 'listbox');
         
+        // CORREÇÃO DA LARGURA: Pelo menos a largura do botão, mas garantindo 380px para leitura
+        const desiredWidth = Math.max(rect.width, 380);
+        _activePortal.style.width = `${desiredWidth}px`;
+
+        // Proteção para a lista alargada não vazar o monitor pela direita
+        if (rect.left + desiredWidth > window.innerWidth) {
+            _activePortal.style.left = `${window.innerWidth - desiredWidth - 16}px`;
+        } else {
+            _activePortal.style.left = `${rect.left}px`;
+        }
+        
         _activePortal.style.top = `${rect.bottom + 4}px`;
-        _activePortal.style.left = `${rect.left}px`;
-        _activePortal.style.width = `${rect.width}px`;
 
         let focusedIndex = -1;
         const optionsNodes = [];
@@ -142,14 +161,18 @@ const DropdownManager = (function() {
         _activePortal.focus(); 
     }
 
+    // Método Público a ser revelado
     function renderizar(selectId, topicosArray, preSelecionadoId = null, onSelectCallback = null) {
         registrarEventosGerais();
         
         const selectNativo = document.getElementById(selectId);
         if (!selectNativo) return;
 
+        // INVERSÃO DA ORDEM: Clona o array original e inverte para jogar os recentes para o topo
+        const topicosOrdenados = [...topicosArray].reverse();
+
         selectNativo.innerHTML = '<option value="">Selecione o Tópico...</option>';
-        topicosArray.forEach(t => selectNativo.appendChild(new Option(t.nome, t.id)));
+        topicosOrdenados.forEach(t => selectNativo.appendChild(new Option(t.nome, t.id)));
         if (preSelecionadoId) selectNativo.value = preSelecionadoId;
         
         selectNativo.classList.add('sr-only');
@@ -162,7 +185,7 @@ const DropdownManager = (function() {
         const wrapper = document.createElement('div');
         wrapper.className = 'juris-custom-select';
         
-        const topicoInicial = topicosArray.find(t => t.id === preSelecionadoId);
+        const topicoInicial = topicosOrdenados.find(t => t.id === preSelecionadoId);
         const triggerHtml = topicoInicial 
             ? `<div class="jcs-color-dot" style="background-color: ${topicoInicial.cor};"></div> <span>${topicoInicial.nome}</span>`
             : `<span class="jcs-placeholder-text">Selecione o Tópico...</span>`;
@@ -181,7 +204,8 @@ const DropdownManager = (function() {
         const abrir = (e) => {
             e.preventDefault();
             e.stopPropagation();
-            abrirPortal(triggerBtn, topicosArray, selectNativo, onSelectCallback);
+            // Passa os tópicos já ordenados para o Portal
+            abrirPortal(triggerBtn, topicosOrdenados, selectNativo, onSelectCallback);
         };
 
         triggerBtn.addEventListener('click', abrir);
@@ -192,7 +216,9 @@ const DropdownManager = (function() {
         selectNativo.parentNode.insertBefore(wrapper, selectNativo.nextSibling);
     }
 
-    return { renderizar };
+    return { 
+        renderizar 
+    };
 })();
 
 window.DropdownManager = DropdownManager;
