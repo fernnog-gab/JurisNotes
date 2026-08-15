@@ -569,10 +569,6 @@ window.TopicsManager = (function () {
             }).join('');
         }
 
-        // Avalia se o card possui tese preenchida para gerar o affordance de UX
-        const isTesePreenchida = (anotacao.tese && anotacao.tese.trim() !== '');
-        const emptyBadgeClass = isTesePreenchida ? '' : 'is-empty-thesis';
-
         // Wrapper Master Flex atualizado para envelopar a hierarquia inteira
         const wrapperMaster = `
             <div class="timeline-item-master ${alignClass}" id="timeline-wrapper-${anotacao.uuid || index}">
@@ -582,7 +578,7 @@ window.TopicsManager = (function () {
                      ondragenter="DnDManager.dragEnter(event)"
                      ondragleave="DnDManager.dragLeave(event)">
                     <div class="annotation-number-area">
-                        <div class="timeline-number master-drag-handle ${emptyBadgeClass}" 
+                        <div class="timeline-number master-drag-handle" 
                              draggable="true"
                              ondragstart="DnDManager.dragStart(event, '${activeTabId}', ${index}, 'main')"
                              ondragend="DnDManager.dragEnd(event)"
@@ -921,34 +917,34 @@ window.TopicsManager = (function () {
                 sumarioHtml += '</div>';
             }
             
-            // Loop customizado com injeção de Painel de Tese (Ocultação Segura)
+            // Loop customizado com injeção condicional do Painel de Tese
             let cardsHTML = '';
             let ultimaTeseRenderizada = null;
 
             topicoAtivo.anotacoes.forEach((an, index) => {
-                // 1. STATE LOOKUP: Chave exata de memória para não orfanar dados
+                // 1. Busca os dados de forma segura (preserva notas já criadas)
                 const chaveTeseCrua = an.tese || "Tese Não Nomeada";
                 const diretrizes = (topicoAtivo.diretrizesPorTese && topicoAtivo.diretrizesPorTese[chaveTeseCrua]) 
                                     ? topicoAtivo.diretrizesPorTese[chaveTeseCrua] 
                                     : [];
                 
-                // 2. VIEW LOGIC: Validação se a string existe visualmente
+                // 2. Verifica se o usuário de fato escreveu uma tese
                 const isTesePreenchida = (an.tese && an.tese.trim() !== '');
 
-                // 3. SEGREGAÇÃO: O card atual pertence a um grupo novo?
+                // 3. Se houver quebra de grupo (novo grupo de provas)
                 if (chaveTeseCrua !== ultimaTeseRenderizada) {
                     
-                    // 4. REGRA DE OURO (Segurança de Dados): Oculta se estiver vazia, EXCETO se houver diretrizes/notas.
+                    // 4. Ocultação Segura: Só desenha o card se a tese tiver nome OU se houver notas salvas nela
                     if (isTesePreenchida || diretrizes.length > 0) {
-                        // Se não tem título mas tem notas, precisamos renderizar o painel com o título genérico para acomodar as notas.
                         const tituloExibicao = isTesePreenchida ? an.tese : "Tese Não Nomeada";
                         cardsHTML += _gerarHtmlTeseGroup(tituloExibicao, diretrizes, activeTabId, _activeTopicoCor, index);
                     }
                     
-                    // Atualiza o ponteiro incondicionalmente para manter a paridade do loop
+                    // Atualiza a referência do agrupamento atual
                     ultimaTeseRenderizada = chaveTeseCrua;
                 }
                 
+                // Desenha o card da prova e o número colorido exatamente como antes (Intocado)
                 cardsHTML += criarCard(an, index, topicoAtivo.anotacoes);
             });
             
