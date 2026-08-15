@@ -162,6 +162,18 @@
     transition: stroke 0.3s ease; /* Transição suave caso o usuário alterne temas */
 }
 
+/* Affordance de UX: Indica ao usuário que o card de tese atrelado a este número está vazio */
+.timeline-number.is-empty-thesis {
+    background-color: transparent !important;
+    border: 2px dashed var(--notes-marker-border);
+    opacity: 0.8;
+}
+.timeline-number.is-empty-thesis:hover {
+    background-color: #ffe082 !important;
+    border: 2px solid var(--notes-marker-border);
+    opacity: 1;
+}
+
 /* ================================================
    3. CARDS DE ANOTAÇÃO E AGRUPAMENTOS
    ================================================ */

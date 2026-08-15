@@ -569,6 +569,10 @@ window.TopicsManager = (function () {
             }).join('');
         }
 
+        // Avalia se o card possui tese preenchida para gerar o affordance de UX
+        const isTesePreenchida = (anotacao.tese && anotacao.tese.trim() !== '');
+        const emptyBadgeClass = isTesePreenchida ? '' : 'is-empty-thesis';
+
         // Wrapper Master Flex atualizado para envelopar a hierarquia inteira
         const wrapperMaster = `
             <div class="timeline-item-master ${alignClass}" id="timeline-wrapper-${anotacao.uuid || index}">
@@ -578,7 +582,7 @@ window.TopicsManager = (function () {
                      ondragenter="DnDManager.dragEnter(event)"
                      ondragleave="DnDManager.dragLeave(event)">
                     <div class="annotation-number-area">
-                        <div class="timeline-number master-drag-handle" 
+                        <div class="timeline-number master-drag-handle ${emptyBadgeClass}" 
                              draggable="true"
                              ondragstart="DnDManager.dragStart(event, '${activeTabId}', ${index}, 'main')"
                              ondragend="DnDManager.dragEnd(event)"
@@ -917,21 +921,32 @@ window.TopicsManager = (function () {
                 sumarioHtml += '</div>';
             }
             
-            // Loop customizado com injeção de Painel de Tese
+            // Loop customizado com injeção de Painel de Tese (Ocultação Segura)
             let cardsHTML = '';
             let ultimaTeseRenderizada = null;
 
             topicoAtivo.anotacoes.forEach((an, index) => {
-                const teseAtual = an.tese || "Tese Não Nomeada";
+                // 1. STATE LOOKUP: Chave exata de memória para não orfanar dados
+                const chaveTeseCrua = an.tese || "Tese Não Nomeada";
+                const diretrizes = (topicoAtivo.diretrizesPorTese && topicoAtivo.diretrizesPorTese[chaveTeseCrua]) 
+                                    ? topicoAtivo.diretrizesPorTese[chaveTeseCrua] 
+                                    : [];
                 
-                if (teseAtual !== ultimaTeseRenderizada) {
-                    const diretrizes = (topicoAtivo.diretrizesPorTese && topicoAtivo.diretrizesPorTese[teseAtual]) ? topicoAtivo.diretrizesPorTese[teseAtual] : [];
+                // 2. VIEW LOGIC: Validação se a string existe visualmente
+                const isTesePreenchida = (an.tese && an.tese.trim() !== '');
+
+                // 3. SEGREGAÇÃO: O card atual pertence a um grupo novo?
+                if (chaveTeseCrua !== ultimaTeseRenderizada) {
                     
-                    // DELEGAÇÃO: componente puro injeta o card já com o alinhamento
-                    // sincronizado ao índice global acumulado (não a um grupo fixo).
-                    cardsHTML += _gerarHtmlTeseGroup(teseAtual, diretrizes, activeTabId, _activeTopicoCor, index);
+                    // 4. REGRA DE OURO (Segurança de Dados): Oculta se estiver vazia, EXCETO se houver diretrizes/notas.
+                    if (isTesePreenchida || diretrizes.length > 0) {
+                        // Se não tem título mas tem notas, precisamos renderizar o painel com o título genérico para acomodar as notas.
+                        const tituloExibicao = isTesePreenchida ? an.tese : "Tese Não Nomeada";
+                        cardsHTML += _gerarHtmlTeseGroup(tituloExibicao, diretrizes, activeTabId, _activeTopicoCor, index);
+                    }
                     
-                    ultimaTeseRenderizada = teseAtual;
+                    // Atualiza o ponteiro incondicionalmente para manter a paridade do loop
+                    ultimaTeseRenderizada = chaveTeseCrua;
                 }
                 
                 cardsHTML += criarCard(an, index, topicoAtivo.anotacoes);
