@@ -911,19 +911,31 @@ window.TopicsManager = (function () {
             let cardsHTML = '';
             let ultimaTeseRenderizada = null;
 
-            // 1. LOOP DE PROVAS E DIRETRIZES POR ÓBICE (TESE)
+            // 1. LOOP DE PROVAS E DIRETRIZES POR ÓBICE (TESE) - Ocultação Segura
             topicoAtivo.anotacoes.forEach((an, index) => {
-                const teseAtual = an.tese || "Óbice Não Nomeado"; 
+                // 1. Busca os dados de forma segura (preserva notas já criadas)
+                const chaveObiceCrua = an.tese || "Óbice Não Nomeado"; 
+                const diretrizes = (topicoAtivo.diretrizesPorObice && topicoAtivo.diretrizesPorObice[chaveObiceCrua]) 
+                                    ? topicoAtivo.diretrizesPorObice[chaveObiceCrua] 
+                                    : [];
                 
-                if (teseAtual !== ultimaTeseRenderizada && teseAtual !== "Óbice Não Nomeado") {
-                    const diretrizes = (topicoAtivo.diretrizesPorObice && topicoAtivo.diretrizesPorObice[teseAtual]) ? topicoAtivo.diretrizesPorObice[teseAtual] : [];
+                // 2. Verifica se o usuário de fato escreveu um óbice/tese
+                const isObicePreenchido = (an.tese && an.tese.trim() !== '');
+
+                // 3. Se houver quebra de grupo (novo grupo de provas)
+                if (chaveObiceCrua !== ultimaTeseRenderizada) {
                     
-                    // DELEGAÇÃO: Componente puro injeta o card sincronizado ao índice global
-                    cardsHTML += _gerarHtmlObiceGroup(teseAtual, diretrizes, activeTabId, _activeTopicoCor, index);
+                    // 4. Ocultação Segura: Só desenha o card se o óbice tiver nome OU se houver notas salvas nele
+                    if (isObicePreenchido || diretrizes.length > 0) {
+                        const tituloExibicao = isObicePreenchido ? an.tese : "Óbice Não Nomeado";
+                        cardsHTML += _gerarHtmlObiceGroup(tituloExibicao, diretrizes, activeTabId, _activeTopicoCor, index);
+                    }
                     
-                    ultimaTeseRenderizada = teseAtual;
+                    // Atualiza a referência do agrupamento atual
+                    ultimaTeseRenderizada = chaveObiceCrua;
                 }
                 
+                // Desenha o card da prova e o número colorido exatamente como antes (Intocado)
                 cardsHTML += criarCard(an, index, topicoAtivo.anotacoes);
             });
             
