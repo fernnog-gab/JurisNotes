@@ -1000,37 +1000,45 @@ window.TopicsManager = (function () {
             const diretrizesGlobaisSeguras = topicoAtivo.diretrizesGlobais || [];
             htmlDiretrizes += renderizarNivelHierarquico('global', null, diretrizesGlobaisSeguras, activeTabId, [], 0);
 
-            // 2. Lógica Dinâmica: Cards do Vício
+            // 2. Lógica Dinâmica: Cards do Vício (Ocultação Condicional)
             let cardsHTML = '';
             let ultimaTeseRenderizada = null;
 
             topicoAtivo.anotacoes.forEach((anotacao, index) => {
-                const teseAtual = anotacao.tese && anotacao.tese.trim() !== '' ? anotacao.tese.trim() : 'Provas não agrupadas';
+                // 1. Busca os dados de forma segura (preserva notas já criadas)
+                const chaveTeseCrua = anotacao.tese || "Provas não agrupadas";
                 
-                // Puxa a chave crua do banco (ex: 'omissao')
+                // 2. Verifica se o usuário de fato escreveu uma tese/grupo
+                const isTesePreenchida = (anotacao.tese && anotacao.tese.trim() !== '');
+
+                // Puxa a chave crua do banco (ex: 'omissao') e formata para exibição
                 const vicioRaw = anotacao.vicio || topicoAtivo.vicio || 'omissao';
-                
-                // CORREÇÃO DO ERRO DE ESCRITA: Traduz 'omissao' para 'Omissão' com acento
                 const vicioFormatado = window.JurisUtils.formatarVicioED(vicioRaw);
 
-                // Se detectou mudança de tese, injeta o card do Vício
-                if (teseAtual !== ultimaTeseRenderizada) {
+                // 3. Se houver quebra de grupo (novo grupo de provas)
+                if (chaveTeseCrua !== ultimaTeseRenderizada) {
                     // Busca as diretrizes salvas para este vício específico
                     const diretrizesDoVicio = (topicoAtivo.diretrizesPorVicio && topicoAtivo.diretrizesPorVicio[vicioRaw])
                                               ? topicoAtivo.diretrizesPorVicio[vicioRaw]
                                               : [];
 
-                    // Injeta dinamicamente o card de Vício nativo no topo da Tese
-                    cardsHTML += renderizarNivelHierarquico(
-                        'vicio',
-                        vicioFormatado,     // Nome bonito (com acento)
-                        diretrizesDoVicio,  // Mantém os botões e regras de IA funcionando
-                        activeTabId,
-                        [teseAtual],        // Exibe apenas a tese deste grupo específico
-                        index               // Índice sincronizado para alinhamento (Esquerda/Direita)
-                    );
+                    // 4. Ocultação Segura: Só desenha o card se a tese tiver nome OU se houver notas/diretrizes salvas nela
+                    if (isTesePreenchida || diretrizesDoVicio.length > 0) {
+                        const tituloExibicao = isTesePreenchida ? anotacao.tese.trim() : "Provas não agrupadas";
+                        
+                        // Injeta dinamicamente o card de Vício nativo no topo da Tese
+                        cardsHTML += renderizarNivelHierarquico(
+                            'vicio',
+                            vicioFormatado,     // Nome bonito (com acento)
+                            diretrizesDoVicio,  // Mantém os botões e regras de IA funcionando
+                            activeTabId,
+                            [tituloExibicao],   // Exibe apenas a tese deste grupo específico
+                            index               // Índice sincronizado para alinhamento (Esquerda/Direita)
+                        );
+                    }
 
-                    ultimaTeseRenderizada = teseAtual;
+                    // Atualiza a referência do agrupamento atual incondicionalmente
+                    ultimaTeseRenderizada = chaveTeseCrua;
                 }
 
                 // Renderiza a prova (Card 1, 2, 3...)
