@@ -306,6 +306,45 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
 .export-option-subtitle { font-size: 0.75rem; color: #666; margin-top: 2px; }
 
 /* ================================================
+   OTIMIZAÇÕES DIMENSIONAIS (MODAIS DE IA E ACERVO)
+   ================================================ */
+
+/* 1. Shell (Contêiner Pai) */
+#modal-gerador-contexto {
+    width: 92vw;
+    height: 88vh;
+    max-width: 1300px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Trava de segurança: impede scroll duplo com a classe base */
+}
+
+/* 2. Zonas Rígidas (Preserva Cabeçalho e Rodapé de colapsos) */
+#modal-gerador-contexto > .wizard-header,
+#modal-gerador-contexto > .wizard-actions {
+    flex-shrink: 0;
+}
+
+/* 3. Zona Fluida (Miolo de Conteúdo) */
+.gerador-contexto-body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 8px;
+    flex: 1;
+    min-height: 0; /* Trava arquitetural do Flexbox: permite que o scroll funcione */
+    overflow-y: auto;
+    padding-right: 8px;
+    padding-bottom: 12px;
+}
+
+/* 4. UX Quick Win: Aproveitamento da expansão vertical */
+#ctx-teor-sentenca,
+#ctx-teor-recurso {
+    min-height: 180px !important; /* Aumenta a área de colagem visual */
+}
+
+/* ================================================
    ACERVO DE MODELOS — espelha exatamente o comportamento
    dimensional do painel Dossiê Recursal (#balanca-painel).
    ================================================ */

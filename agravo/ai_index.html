@@ -1208,13 +1208,13 @@
     <!-- MODAL DO GERADOR DE CONTEXTO IA -->
     <div id="gerador-contexto-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.40); z-index: 4004;" onclick="fecharModalGeradorContexto()"></div>
 
-    <div id="modal-gerador-contexto" class="crop-wizard-popup" style="display:none; z-index: 4005; width: 90vw; max-width: 800px;">
+    <div id="modal-gerador-contexto" class="crop-wizard-popup" style="display:none; z-index: 4005;">
         <div class="wizard-header" style="display: flex; justify-content: space-between; align-items: center;">
             <span>🧩 Gerador de Contexto para IA</span>
             <button style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b;" onclick="fecharModalGeradorContexto()">✕</button>
         </div>
         
-        <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 8px;">
+        <div class="gerador-contexto-body">
             
             <div>
                 <p class="popup-label">1. Histórico da Minuta (Opcional):</p>
