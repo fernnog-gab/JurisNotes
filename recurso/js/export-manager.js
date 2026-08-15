@@ -204,11 +204,15 @@ window.ExportManager = (function () {
             return docs;
         });
 
-        const palavrasChaveExecucao = [
-            'Agravo de Petição', 'Contraminuta', 'Sentença de Execução', 
-            'Embargos à Execução', 'Título Executivo', 'Cálculos', 
-            'Liquidação', 'Penhora', 'Bacenjud', 'Sisbajud', 'Impugnação aos Cálculos'
-        ];
+        // 1. Termos internos fixos (não selecionáveis na UI, mas que podem constar em nomes de documentos legados)
+        const termosBase = ['Sentença de Execução', 'Cálculos', 'Liquidação', 'Penhora', 'Bacenjud', 'Sisbajud', 'Impugnação aos Cálculos'];
+        
+        // 2. Extrai dinamicamente as labels da UI marcadas como Execução
+        const labelsExecucaoUI = window.DOC_CONFIG ? 
+            window.DOC_CONFIG.filter(d => d.isExecucao).map(d => d.label) : [];
+
+        // 3. União dos arrays (Fallback + Dinâmico)
+        const palavrasChaveExecucao = [...termosBase, ...labelsExecucaoUI];
 
         return {
             isExecucao: todosDocumentos.some(doc => palavrasChaveExecucao.some(palavra => doc.includes(palavra))),

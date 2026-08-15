@@ -973,15 +973,20 @@ async function capturarTrechoSelecionado() {
 
 function identificarFaseMetodologica(docNome) {
     if (!docNome) return 4; 
-    if (typeof DOC_CONFIG !== 'undefined') {
-        const conf = DOC_CONFIG.find(d => d.label === docNome);
+    
+    // 1. Busca na Single Source of Truth (SSOT) Global
+    if (window.DOC_CONFIG) {
+        const conf = window.DOC_CONFIG.find(d => d.label === docNome);
         if (conf) return conf.fase;
     }
+    
+    // 2. Fallback de Segurança e Retrocompatibilidade (Backups antigos)
     const upper = docNome.toUpperCase();
-    if (upper.includes('RECURSO') || upper.includes('CONTRARRAZÕES')) return 1;
-    if (upper.includes('INICIAL') || upper.includes('CONTEST') || upper.includes('IMPUGNAÇÃO')) return 2;
+    if (upper.includes('RECURSO') || upper.includes('CONTRARRAZÕES') || upper.includes('AGRAVO') || upper.includes('CONTRAMINUTA')) return 1;
+    if (upper.includes('INICIAL') || upper.includes('CONTEST') || upper.includes('IMPUGNAÇÃO') || upper.includes('TÍTULO') || upper.includes('CÁLCULOS')) return 2;
     if (upper.includes('SENTENÇA') || upper.includes('ACÓRDÃO') || upper.includes('DECISÃO') || upper.includes('EMBARGOS')) return 3;
-    return 4; 
+    
+    return 4; // Fase 4: Provas e Outros (Padrão)
 }
 
 /**
