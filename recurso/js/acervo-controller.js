@@ -1037,7 +1037,8 @@ window.exportarBaseParaNotebookLM = async function(event) {
         _downloadTextoComoArquivo(`JurisNotes_Acervo_Exportacao_${dataFormatada}.txt`, txtConteudo);
 
         // 3. Destruição visual de Modais (Bypass de Side-effects)
-        // Evitamos chamar as funções originais do sistema para não disparar 'reads' desnecessários no Firebase.
+        // NOTA ARQUITETURAL: Intencionalmente NÃO removemos a classe pdf-foco-ativo aqui.
+        // Isso garante a continuidade visual da lona de desfoque durante a transição.
         const modalTags = document.getElementById('modal-gerenciar-tags');
         const modalAcervo = document.getElementById('modal-acervo-inserir');
         const wizardBackdrop = document.getElementById('wizard-backdrop');
@@ -1048,6 +1049,11 @@ window.exportarBaseParaNotebookLM = async function(event) {
         
         // 4. Exibição do Prompt
         window.abrirModalPromptNotebookLM();
+
+        // 5. UX ENHANCEMENT: Auto-copy imediato aproveitando o contexto de clique do evento original
+        setTimeout(() => {
+            window.copiarPromptNotebookLM();
+        }, 100);
 
     } catch (error) {
         console.error("[AcervoController] Erro na exportação:", error);
@@ -1067,8 +1073,18 @@ window.abrirModalPromptNotebookLM = function() {
 };
 
 window.fecharModalPromptNotebookLM = function() {
+    // Oculta o modal de prompt
     document.getElementById('prompt-notebooklm-backdrop').style.display = 'none';
     document.getElementById('modal-prompt-notebooklm').style.display = 'none';
+    
+    // LIMPEZA DEFENSIVA E EXPLÍCITA:
+    // Varredura direta no DOM para matar o estado de foco translúcido (blur)
+    // que foi injetado imperativamente pelo fluxo legado do Acervo.
+    const historyContainer = document.getElementById('history-container');
+    const pdfContainer = document.getElementById('pdf-container');
+    
+    if (historyContainer) historyContainer.classList.remove('pdf-foco-ativo');
+    if (pdfContainer) pdfContainer.classList.remove('pdf-foco-ativo');
 };
 
 window.copiarPromptNotebookLM = function() {

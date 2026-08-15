@@ -1362,9 +1362,22 @@ Colunas: "Nome Problemático Atual" | "Sugestão de Novo Nome" | "Motivo da Alte
 4. Árvore Taxonômica Essencial
 Crie um sumário hierárquico enxuto com as Grandes Categorias e Subcategorias que emergem do acervo, focado em criar um índice limpo, rápido e eficiente para o uso diário no software.</textarea>
 
-        <div class="wizard-actions" style="margin-top: 16px;">
+        <div class="wizard-actions" style="margin-top: 16px; justify-content: space-between;">
+            <!-- Lado Esquerdo: Fechar -->
             <button class="chip-btn chip-cancelar" onclick="fecharModalPromptNotebookLM()">Fechar</button>
-            <button class="chip-btn chip-autora" style="background: #2e7d32; color: white; border: none; padding-left: 24px; padding-right: 24px;" onclick="copiarPromptNotebookLM()">📋 Copiar Prompt Mestre</button>
+            
+            <!-- Lado Direito: Ações -->
+            <div style="display: flex; gap: 8px;">
+                <button class="chip-btn chip-autora" style="background: #2e7d32; color: white; border: none; padding-left: 16px; padding-right: 16px;" onclick="copiarPromptNotebookLM()" title="Copiar comando novamente">
+                    📋 Copiar Mestre
+                </button>
+                <a href="https://notebooklm.google.com/" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
+                    <button class="chip-btn chip-autora" style="background: var(--trt-blue); color: white; border: none; padding-left: 16px; padding-right: 16px; cursor: pointer; height: 100%; display: flex; align-items: center; gap: 6px;">
+                        Abrir NotebookLM 
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                    </button>
+                </a>
+            </div>
         </div>
     </div>
 
