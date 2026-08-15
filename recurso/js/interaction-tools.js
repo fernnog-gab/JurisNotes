@@ -52,16 +52,19 @@ window.toggleModoFoco = function(ativar) {
 };
 
 // --- CONFIGURAÇÃO CENTRAL DE DOCUMENTOS ---
-const DOC_CONFIG = [
+// Agora exportado globalmente para que os outros arquivos possam ler
+window.DOC_CONFIG = [
     // --- FASE 1: Postulação e Recursos ---
     { label: 'Recurso Ordinário', polo: 'DUAL', tipo: 'dual', fase: 1 },
     { label: 'Contrarrazões', polo: 'DUAL', tipo: 'dual', fase: 1 },
+    // INCLUSÃO: Recursos da Fase de Execução
+    { label: 'Agravo de Petição', polo: 'DUAL', tipo: 'dual', fase: 1, isExecucao: true },
+    { label: 'Contraminuta (ao Agravo)', polo: 'DUAL', tipo: 'dual', fase: 1, isExecucao: true },
 
     // --- FASE 2: Gênese do Conflito ---
     { label: 'Petição Inicial', polo: 'Parte Autora', tipo: 'auto', fase: 2 },
     { label: 'Contestação', polo: 'Parte Ré', tipo: 'auto', fase: 2 },
     { label: 'Impugnação à Contestação', polo: 'Parte Autora', tipo: 'auto', fase: 2 },
-    // Novas Entradas Execução:
     { label: 'Título Executivo', polo: 'Juízo / Tribunal', tipo: 'auto', fase: 2, isExecucao: true },
     { label: 'Cálculos de Liquidação', polo: 'DUAL', tipo: 'dual', fase: 2, isExecucao: true },
     { label: 'Embargos à Execução', polo: 'Parte Executada', tipo: 'auto', fase: 2, isExecucao: true },
@@ -71,7 +74,6 @@ const DOC_CONFIG = [
     { label: 'Sentença', polo: 'Juízo', tipo: 'auto', fase: 3 },
     { label: 'Acórdão / Decisão TRT', polo: 'Juízo', tipo: 'auto', fase: 3 },
     { label: 'Sentença de Embargos de Declaração', polo: 'Juízo', tipo: 'auto', fase: 3 },
-    // Novas Entradas Execução:
     { label: 'Sentença de Liquidação', polo: 'Juízo', tipo: 'auto', fase: 3, isExecucao: true },
     { label: 'Decisão de Embargos à Execução', polo: 'Juízo', tipo: 'auto', fase: 3, isExecucao: true },
 
@@ -80,7 +82,6 @@ const DOC_CONFIG = [
     { label: 'Laudo Pericial', polo: 'Perito', tipo: 'auto', fase: 4 },
     { label: 'Documento (Prova Pré-constituída)', polo: 'DUAL', tipo: 'dual', fase: 4 },
     { label: 'Despacho / Decisão', polo: 'Juízo', tipo: 'auto', fase: 4 },
-    // Novas Entradas Execução (substituindo a antiga genérica):
     { label: 'Mandado de Penhora', polo: 'Auxiliar da Justiça', tipo: 'auto', fase: 4, isExecucao: true },
     { label: 'Bacenjud / Sisbajud', polo: 'Juízo / Tribunal', tipo: 'auto', fase: 4, isExecucao: true },
     { label: 'Decisão / Despacho (Execução)', polo: 'Juízo / Tribunal', tipo: 'auto', fase: 4, isExecucao: true },
@@ -112,7 +113,20 @@ function renderizarFasesModais(context) {
             btn.classList.add(`active-f${f.id}`);
             
             listContainer.innerHTML = '';
-            DOC_CONFIG.filter(doc => doc.fase === f.id).forEach(doc => {
+            let inseriuSeparadorExecucao = false;
+
+            // Usa a nova matriz global
+            window.DOC_CONFIG.filter(doc => doc.fase === f.id).forEach(doc => {
+                
+                // Injeta um mini-separador visual na Fase 1 para dividir Conhecimento de Execução
+                if (f.id === 1 && doc.isExecucao && !inseriuSeparadorExecucao) {
+                    const sep = document.createElement('div');
+                    sep.style.cssText = "width:100%; text-align:center; margin: 12px 0 6px 0; font-size:0.75rem; color:#64748b; font-weight:bold; text-transform:uppercase; border-bottom:1px dashed #cbd5e1; padding-bottom:4px;";
+                    sep.textContent = "Fase de Execução";
+                    listContainer.appendChild(sep);
+                    inseriuSeparadorExecucao = true;
+                }
+
                 const docBtn = document.createElement('button');
                 docBtn.className = `doc-btn ${doc.tipo}`;
                 docBtn.textContent = doc.label;
@@ -169,15 +183,14 @@ function selecionarDocumento(docLabel, polo, context) {
         _docSelecionado = docLabel;
         _isWizardContext = (context === 'wizard');
         
-        const conf = DOC_CONFIG.find(d => d.label === docLabel);
-        const isExecucao = conf && conf.isExecucao;
+        // CORREÇÃO AQUI: Agora lê do window.DOC_CONFIG
+        const conf = window.DOC_CONFIG.find(d => d.label === docLabel);
 
         const targetDocText = context === 'popup' ? 'popup-doc-selecionado' : 'wizard-doc-selecionado';
         const targetContainer = context === 'popup' ? 'popup-polo-buttons-container' : 'wizard-polo-buttons-container';
         
         document.getElementById(targetDocText).innerText = docLabel;
         
-        // 1. Dicionário de UI (Single Source of Truth para Botões)
         const botoesDef = {
             autora:    `<button class="chip-btn chip-autora" onclick="confirmarPolo('Parte Autora', event)">✔ Parte Autora</button>`,
             re:        `<button class="chip-btn chip-re" onclick="confirmarPolo('Parte Ré', event)">✔ Parte Ré</button>`,
@@ -189,8 +202,13 @@ function selecionarDocumento(docLabel, polo, context) {
 
         let htmlBotoes = '';
         
-        // 2. Mapeamento Lógico Baseado em Metadados
-        if (conf && conf.isHibrido) {
+        // LÓGICA BLINDADA:
+        // Se for um recurso da Fase 1 E for de execução (Agravo/Contraminuta)
+        if (conf && conf.isExecucao && conf.fase === 1) {
+            htmlBotoes += `${botoesDef.exequente}${botoesDef.executada}`;
+        } 
+        // Lógicas antigas mantidas para segurança
+        else if (conf && conf.isHibrido) {
             htmlBotoes += `${botoesDef.autora}${botoesDef.re}${botoesDef.exequente}${botoesDef.executada}${botoesDef.juizo}`;
         } else if (conf && conf.isExecucao) {
             htmlBotoes += `${botoesDef.exequente}${botoesDef.executada}${botoesDef.juizo}${botoesDef.auxiliar}`;
@@ -198,7 +216,6 @@ function selecionarDocumento(docLabel, polo, context) {
             htmlBotoes += `${botoesDef.autora}${botoesDef.re}`;
         }
 
-        // 3. Renderização Consistente do Botão Voltar
         if (context === 'popup') {
             htmlBotoes += `<button class="chip-btn chip-cancelar" onclick="voltarParaDocumentos('popup', event)">← Voltar</button>`;
         } else {
