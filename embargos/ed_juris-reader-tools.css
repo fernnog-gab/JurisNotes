@@ -308,13 +308,20 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
     height: 32px;
     padding: 0;
     border-radius: 50%;
+    
+    /* Configurações de Flexbox para centralização total */
+    display: flex !important; /* Proteção contra manipulação JS */
     justify-content: center;
+    align-items: center; /* NOVO: Centraliza verticalmente */
+    
     border: none;
     box-shadow: 0 2px 6px rgba(0,0,0,0.2);
     background-color: #D500B5; /* Fúcsia específico de Embargos */
     color: #ffffff; /* Fúcsia absorve muito a luz, exige ícone branco */
-    display: flex !important; /* Proteção contra manipulação JS */
     position: relative;
+    
+    /* NOVO: Adicionado para deixar o efeito hover mais fluido */
+    transition: transform 0.2s ease, background-color 0.2s ease;
 }
 
 .header-tools-area #btn-contrato-trabalho:hover {
