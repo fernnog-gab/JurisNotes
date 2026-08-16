@@ -191,11 +191,18 @@ window.AudioManager = (function() {
 
     function abrirModalClassificacao() {
         if (window.toggleModoFoco) window.toggleModoFoco(true);
-        const selectTopico = document.getElementById('audio-topic-select');
-        selectTopico.innerHTML = '<option value="">Selecione o Tópico...</option>';
-
+        
         const topicosAtuais = _deps.getTopicos();
-        topicosAtuais.forEach(t => selectTopico.appendChild(new Option(t.nome, t.id)));
+        
+        // Uso seguro via injeção de dependência
+        if (typeof _deps.renderDropdown === 'function') {
+            _deps.renderDropdown('audio-topic-select', topicosAtuais);
+        } else {
+            // Fallback legado de segurança
+            const selectTopico = document.getElementById('audio-topic-select');
+            selectTopico.innerHTML = '<option value="">Selecione o Tópico...</option>';
+            topicosAtuais.forEach(t => selectTopico.appendChild(new Option(t.nome, t.id)));
+        }
 
         document.getElementById('audio-speaker-role').value = '';
         document.getElementById('audio-speaker-side-box').style.display = 'none';

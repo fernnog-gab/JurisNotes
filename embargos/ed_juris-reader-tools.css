@@ -117,7 +117,7 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
 .doc-btn.neutro { color: #455a64; background: #f5f7f8; }
 .doc-highlight { font-size: 0.9rem; font-weight: 800; margin-bottom: 12px; color: var(--trt-blue-mid); text-align: center; background: var(--trt-light-bg); padding: 6px; border-radius: 4px; }
 
-#classification-popup { position: fixed; background: white; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; box-shadow: var(--shadow-md); z-index: var(--z-classification-popup); display: none; flex-direction: column; gap: 8px; min-width: 220px; }
+#classification-popup { position: fixed; background: white; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; box-shadow: var(--shadow-md); z-index: var(--z-classification-popup); display: none; flex-direction: column; gap: 8px; min-width: 420px; }
 .popup-label { font-size: 0.74rem; color: #999; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
 .topic-select { width: 100%; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; font-size: 0.84rem; color: var(--text-dark); background: #fafafa; cursor: pointer; outline: none; transition: border-color 0.2s; }
 .topic-select:focus { border-color: var(--trt-blue-mid); background: white; }
@@ -147,7 +147,7 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
 .ann-action-btn.btn-intent.active-intent { background-color: #f5f5f5; border-left: 3px solid var(--trt-blue-mid); border-radius: 0 6px 6px 0; font-weight: bold; }
 
 #wizard-backdrop { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.40); z-index: var(--z-wizard-backdrop); }
-.crop-wizard-popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; box-shadow: 0 12px 48px rgba(0, 0, 0, 0.28); z-index: var(--z-wizard-modal); min-width: 360px; max-width: 90vw; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.crop-wizard-popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; box-shadow: 0 12px 48px rgba(0, 0, 0, 0.28); z-index: var(--z-wizard-modal); min-width: 420px; max-width: 90vw; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
 .wizard-header { font-size: 1.05rem; font-weight: 800; color: var(--trt-blue); border-bottom: 2px solid var(--trt-light-bg); padding-bottom: 8px; margin-bottom: 4px; }
 .wizard-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; padding-top: 12px; border-top: 1px solid #eee; }
 .crop-preview-container { text-align: center; background: var(--trt-light-bg); border: 2px dashed var(--border-color); border-radius: 8px; padding: 12px; max-height: 40vh; overflow-y: auto; }
@@ -164,6 +164,26 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
 .edit-textarea:focus { border-color: var(--trt-blue-mid); }
 .edit-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; padding-top: 12px; border-top: 1px solid #eee; }
 .edit-save-btn { background: var(--trt-blue); color: white; border-color: var(--trt-blue); }
+
+/* ================================================
+   DROPDOWN CUSTOMIZADO DE TÓPICOS (UI E ACESSIBILIDADE)
+   ================================================ */
+.sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;
+}
+.juris-custom-select { position: relative; width: 100%; user-select: none; }
+.jcs-trigger {
+    display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 6px; background: #fafafa; font-size: 0.84rem; color: var(--text-dark); cursor: pointer; transition: border-color 0.2s, background 0.2s; outline: none;
+}
+.jcs-trigger:hover, .jcs-trigger:focus-visible { border-color: var(--trt-blue-mid); background: #ffffff; box-shadow: 0 0 0 2px rgba(26, 58, 92, 0.2); }
+.jcs-options-portal {
+    position: fixed; background: #ffffff; border: 1px solid var(--border-color); border-radius: 6px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15); z-index: 100000; max-height: 220px; overflow-y: auto; padding-bottom: 16px; display: flex; flex-direction: column;
+}
+.jcs-option { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; font-size: 0.85rem; border-bottom: 1px solid #f0f0f0; transition: background-color 0.15s; outline: none; }
+.jcs-option:last-child { border-bottom: none; }
+.jcs-option:hover, .jcs-option.is-focused { background: var(--trt-light-bg); }
+.jcs-color-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.2); border: 1px solid rgba(0,0,0,0.1); }
+.jcs-placeholder-text { color: #888; }
 
 /* ================================================
    EDITOR RICO (WYSIWYG) - contenteditable
