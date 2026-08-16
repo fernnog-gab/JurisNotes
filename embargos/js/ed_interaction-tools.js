@@ -909,6 +909,32 @@ window.limparAreaInternaLGPD = function() {
     exibirToast('Área restrita limpa.', 'info');
 };
 
+/* --- MICRO-SERVIÇOS DA ÁREA DA MINUTA --- */
+window.limparMinutaAnterior = function() {
+    const textarea = document.getElementById('ctx-minuta-anterior');
+    if (textarea) {
+        textarea.value = '';
+        sessionStorage.removeItem('juris_ed_ctx_minuta');
+        exibirToast('Texto da minuta limpo.', 'info');
+    }
+};
+
+window.colarNaMinuta = async function() {
+    const textarea = document.getElementById('ctx-minuta-anterior');
+    if (!textarea) return;
+    
+    try {
+        const text = await navigator.clipboard.readText();
+        textarea.value = text;
+        window.salvarRascunhoContextoDebounced();
+        exibirToast('Texto colado com sucesso!', 'sucesso');
+    } catch (err) {
+        console.warn('Fallback ativado: Permissão de Clipboard bloqueada.');
+        textarea.focus();
+        exibirToast('Permissão bloqueada. Pressione Ctrl+V para colar.', 'aviso');
+    }
+};
+
 /* --- ATUALIZAÇÃO DO AUTO-SAVE COM INJEÇÃO DE HASH DO PROCESSO --- */
 window.salvarRascunhoContextoDebounced = _debounce(function() {
     try {
@@ -1064,7 +1090,10 @@ window.gerarECopiarContexto = function(modo = 'pro') {
 
     const btnId = modo === 'interno' ? 'btn-copiar-contexto-interno' : 'btn-copiar-contexto-pro';
     const btn = document.getElementById(btnId);
-    const originalText = btn.innerHTML; // Preserva a estrutura original
+    
+    // Mutação Atômica - Apenas UMA declaração de originalText
+    const targetTextNode = btn.querySelector('.btn-main-text');
+    const originalText = targetTextNode.innerText;
     
     // Concatenação Inteligente
     let outputFinal = "";
@@ -1099,17 +1128,17 @@ window.gerarECopiarContexto = function(modo = 'pro') {
         }
     }
 
-    // Feedback Visual Progressivo
-    btn.innerHTML = "<span style='font-weight: bold;'>⏳ Copiando...</span>";
+    // Feedback Visual Progressivo (Mutação Limpa sem Layout Shift)
+    targetTextNode.innerText = '⏳ Copiando...';
     btn.style.opacity = "0.8";
 
     if (!navigator.clipboard) {
-        executarCopiaFallback(outputFinal, btn, originalText, modo);
+        executarCopiaFallback(outputFinal, btn, targetTextNode, originalText, modo);
         return;
     }
 
     navigator.clipboard.writeText(outputFinal).then(() => {
-        btn.innerHTML = "<span style='font-weight: bold;'>✅ Sucesso!</span>";
+        targetTextNode.innerText = '✅ Sucesso!';
         btn.style.backgroundColor = "#2e7d32"; 
         btn.style.opacity = "1";
         
@@ -1117,25 +1146,26 @@ window.gerarECopiarContexto = function(modo = 'pro') {
         exibirToast(msgToast, 'sucesso');
         
         setTimeout(() => {
-            btn.innerHTML = originalText;
+            targetTextNode.innerText = originalText;
             btn.style.backgroundColor = modo === 'interno' ? '#f57c00' : 'var(--trt-blue)';
-            fecharModalGeradorContexto();
+            if(typeof window.fecharModalGeradorContexto === 'function') window.fecharModalGeradorContexto();
         }, 1500); 
         
     }).catch(err => {
         console.error('Falha na Clipboard API:', err);
-        executarCopiaFallback(outputFinal, btn, originalText, modo);
+        executarCopiaFallback(outputFinal, btn, targetTextNode, originalText, modo);
     });
 };
 
-function executarCopiaFallback(texto, btn, originalText, modo) {
-    btn.innerHTML = "<span style='font-weight: bold;'>⚠️ Falha ao Copiar</span>";
+function executarCopiaFallback(texto, btn, targetTextNode, originalText, modo) {
+    targetTextNode.innerText = '⚠️ Falhou';
     btn.style.backgroundColor = "#d32f2f";
     btn.style.opacity = "1";
     exibirToast('Permissão negada. Copie manualmente (Ctrl+A, Ctrl+C).', 'erro');
     
+    // Retorna visual do botão após 3s, mas NÃO fecha o modal
     setTimeout(() => {
-        btn.innerHTML = originalText;
+        targetTextNode.innerText = originalText;
         btn.style.backgroundColor = modo === 'interno' ? '#f57c00' : 'var(--trt-blue)';
     }, 3000);
 }
