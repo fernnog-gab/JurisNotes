@@ -927,7 +927,7 @@ function _debounce(func, wait) {
     };
 }
 
-/* --- FUNÇÃO DE LIMPEZA MANUAL --- */
+/* --- NOVA FUNÇÃO DE LIMPEZA MANUAL --- */
 window.limparAreaInternaLGPD = function() {
     document.getElementById('ctx-teor-sentenca').value = '';
     document.getElementById('ctx-teor-recurso').value = '';
@@ -936,30 +936,13 @@ window.limparAreaInternaLGPD = function() {
     exibirToast('Área restrita limpa.', 'info');
 };
 
-/* --- MICRO-SERVIÇOS DA ÁREA DA MINUTA --- */
-window.limparMinutaAnterior = function() {
-    const textarea = document.getElementById('ctx-minuta-anterior');
-    if (textarea) {
-        textarea.value = '';
-        sessionStorage.removeItem('juris_ctx_minuta');
-        exibirToast('Texto da minuta limpo.', 'info');
-    }
-};
-
-window.colarNaMinuta = async function() {
-    const textarea = document.getElementById('ctx-minuta-anterior');
-    if (!textarea) return;
-    
-    try {
-        const text = await navigator.clipboard.readText();
-        textarea.value = text;
-        window.salvarRascunhoContextoDebounced();
-        exibirToast('Texto colado com sucesso!', 'sucesso');
-    } catch (err) {
-        console.warn('Fallback ativado: Permissão de Clipboard bloqueada.');
-        textarea.focus();
-        exibirToast('Permissão bloqueada. Pressione Ctrl+V para colar.', 'aviso');
-    }
+/* --- NOVA FUNÇÃO DE LIMPEZA MANUAL --- */
+window.limparAreaInternaLGPD = function() {
+    document.getElementById('ctx-teor-sentenca').value = '';
+    document.getElementById('ctx-teor-recurso').value = '';
+    sessionStorage.removeItem('juris_ctx_sentenca');
+    sessionStorage.removeItem('juris_ctx_recurso');
+    exibirToast('Área restrita limpa.', 'info');
 };
 
 /* --- ATUALIZAÇÃO DO AUTO-SAVE COM INJEÇÃO DE HASH DO PROCESSO --- */
@@ -1122,7 +1105,10 @@ window.gerarECopiarContexto = function(modo = 'pro') {
 
     const btnId = modo === 'interno' ? 'btn-copiar-contexto-interno' : 'btn-copiar-contexto-pro';
     const btn = document.getElementById(btnId);
-    const originalText = btn.innerHTML; // Preserva a estrutura do <span>
+    
+    // CORREÇÃO: Mutação Atômica - Apenas UMA declaração de originalText
+    const targetTextNode = btn.querySelector('.btn-main-text');
+    const originalText = targetTextNode.innerText;
     
     let outputFinal = "";
     
@@ -1157,13 +1143,9 @@ window.gerarECopiarContexto = function(modo = 'pro') {
         }
     }
 
-    // Mutação Atômica: Opera apenas no nó texto para evitar Layout Shift
-    const targetTextNode = btn.querySelector('.btn-main-text');
-    const originalText = targetTextNode.innerText;
-    
-    // Estado Loading
+    // Feedback Visual Progressivo (Atualizado sem quebrar o layout)
     targetTextNode.innerText = '⏳ Copiando...';
-    btn.style.opacity = '0.8';
+    btn.style.opacity = "0.8";
 
     if (!navigator.clipboard) {
         executarCopiaFallback(outputFinal, btn, targetTextNode, originalText, modo);
@@ -1171,10 +1153,9 @@ window.gerarECopiarContexto = function(modo = 'pro') {
     }
 
     navigator.clipboard.writeText(outputFinal).then(() => {
-        // Estado Sucesso
         targetTextNode.innerText = '✅ Sucesso!';
-        btn.style.backgroundColor = '#2e7d32'; 
-        btn.style.opacity = '1';
+        btn.style.backgroundColor = "#2e7d32"; 
+        btn.style.opacity = "1";
         
         const msgToast = modo === 'interno' ? 'Pacote Interno copiado (com XML).' : 'Pacote PRO seguro copiado.';
         exibirToast(msgToast, 'sucesso');
@@ -1182,8 +1163,10 @@ window.gerarECopiarContexto = function(modo = 'pro') {
         setTimeout(() => {
             targetTextNode.innerText = originalText;
             btn.style.backgroundColor = modo === 'interno' ? '#f57c00' : 'var(--trt-blue)';
-            window.fecharModalGeradorContexto();
+            // Usando window para garantir escopo global caso tenha sido perdido
+            if(typeof window.fecharModalGeradorContexto === 'function') window.fecharModalGeradorContexto();
         }, 1500); 
+        
     }).catch(err => {
         console.error('Falha na Clipboard API:', err);
         executarCopiaFallback(outputFinal, btn, targetTextNode, originalText, modo);
@@ -1192,10 +1175,11 @@ window.gerarECopiarContexto = function(modo = 'pro') {
 
 function executarCopiaFallback(texto, btn, targetTextNode, originalText, modo) {
     targetTextNode.innerText = '⚠️ Falhou';
-    btn.style.backgroundColor = '#d32f2f';
-    btn.style.opacity = '1';
+    btn.style.backgroundColor = "#d32f2f";
+    btn.style.opacity = "1";
     exibirToast('Permissão negada. Copie manualmente (Ctrl+A, Ctrl+C).', 'erro');
     
+    // Retorna visual do botão após 3s, mas NÃO fecha o modal
     setTimeout(() => {
         targetTextNode.innerText = originalText;
         btn.style.backgroundColor = modo === 'interno' ? '#f57c00' : 'var(--trt-blue)';
