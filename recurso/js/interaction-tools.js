@@ -927,7 +927,7 @@ function _debounce(func, wait) {
     };
 }
 
-/* --- NOVA FUNÇÃO DE LIMPEZA MANUAL --- */
+/* --- FUNÇÃO DE LIMPEZA MANUAL --- */
 window.limparAreaInternaLGPD = function() {
     document.getElementById('ctx-teor-sentenca').value = '';
     document.getElementById('ctx-teor-recurso').value = '';
@@ -936,13 +936,30 @@ window.limparAreaInternaLGPD = function() {
     exibirToast('Área restrita limpa.', 'info');
 };
 
-/* --- NOVA FUNÇÃO DE LIMPEZA MANUAL --- */
-window.limparAreaInternaLGPD = function() {
-    document.getElementById('ctx-teor-sentenca').value = '';
-    document.getElementById('ctx-teor-recurso').value = '';
-    sessionStorage.removeItem('juris_ctx_sentenca');
-    sessionStorage.removeItem('juris_ctx_recurso');
-    exibirToast('Área restrita limpa.', 'info');
+/* --- MICRO-SERVIÇOS DA ÁREA DA MINUTA --- */
+window.limparMinutaAnterior = function() {
+    const textarea = document.getElementById('ctx-minuta-anterior');
+    if (textarea) {
+        textarea.value = '';
+        sessionStorage.removeItem('juris_ctx_minuta');
+        exibirToast('Texto da minuta limpo.', 'info');
+    }
+};
+
+window.colarNaMinuta = async function() {
+    const textarea = document.getElementById('ctx-minuta-anterior');
+    if (!textarea) return;
+    
+    try {
+        const text = await navigator.clipboard.readText();
+        textarea.value = text;
+        window.salvarRascunhoContextoDebounced();
+        exibirToast('Texto colado com sucesso!', 'sucesso');
+    } catch (err) {
+        console.warn('Fallback ativado: Permissão de Clipboard bloqueada.');
+        textarea.focus();
+        exibirToast('Permissão bloqueada. Pressione Ctrl+V para colar.', 'aviso');
+    }
 };
 
 /* --- ATUALIZAÇÃO DO AUTO-SAVE COM INJEÇÃO DE HASH DO PROCESSO --- */
@@ -1140,44 +1157,47 @@ window.gerarECopiarContexto = function(modo = 'pro') {
         }
     }
 
-    // Feedback Visual Progressivo
-    btn.innerHTML = "<span style='font-weight: bold;'>⏳ Copiando...</span>";
-    btn.style.opacity = "0.8";
+    // Mutação Atômica: Opera apenas no nó texto para evitar Layout Shift
+    const targetTextNode = btn.querySelector('.btn-main-text');
+    const originalText = targetTextNode.innerText;
+    
+    // Estado Loading
+    targetTextNode.innerText = '⏳ Copiando...';
+    btn.style.opacity = '0.8';
 
     if (!navigator.clipboard) {
-        executarCopiaFallback(outputFinal, btn, originalText, modo);
+        executarCopiaFallback(outputFinal, btn, targetTextNode, originalText, modo);
         return;
     }
 
     navigator.clipboard.writeText(outputFinal).then(() => {
-        btn.innerHTML = "<span style='font-weight: bold;'>✅ Sucesso!</span>";
-        btn.style.backgroundColor = "#2e7d32"; 
-        btn.style.opacity = "1";
+        // Estado Sucesso
+        targetTextNode.innerText = '✅ Sucesso!';
+        btn.style.backgroundColor = '#2e7d32'; 
+        btn.style.opacity = '1';
         
         const msgToast = modo === 'interno' ? 'Pacote Interno copiado (com XML).' : 'Pacote PRO seguro copiado.';
         exibirToast(msgToast, 'sucesso');
         
         setTimeout(() => {
-            btn.innerHTML = originalText;
+            targetTextNode.innerText = originalText;
             btn.style.backgroundColor = modo === 'interno' ? '#f57c00' : 'var(--trt-blue)';
-            fecharModalGeradorContexto();
-        }, 1500); // 1.5s para o usuário ler o sucesso
-        
+            window.fecharModalGeradorContexto();
+        }, 1500); 
     }).catch(err => {
         console.error('Falha na Clipboard API:', err);
-        executarCopiaFallback(outputFinal, btn, originalText, modo);
+        executarCopiaFallback(outputFinal, btn, targetTextNode, originalText, modo);
     });
 };
 
-function executarCopiaFallback(texto, btn, originalText, modo) {
-    btn.innerHTML = "<span style='font-weight: bold;'>⚠️ Falha ao Copiar</span>";
-    btn.style.backgroundColor = "#d32f2f";
-    btn.style.opacity = "1";
+function executarCopiaFallback(texto, btn, targetTextNode, originalText, modo) {
+    targetTextNode.innerText = '⚠️ Falhou';
+    btn.style.backgroundColor = '#d32f2f';
+    btn.style.opacity = '1';
     exibirToast('Permissão negada. Copie manualmente (Ctrl+A, Ctrl+C).', 'erro');
     
-    // Retorna visual do botão após 3s, mas NÃO fecha o modal
     setTimeout(() => {
-        btn.innerHTML = originalText;
+        targetTextNode.innerText = originalText;
         btn.style.backgroundColor = modo === 'interno' ? '#f57c00' : 'var(--trt-blue)';
     }, 3000);
 }

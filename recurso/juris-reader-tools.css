@@ -845,3 +845,34 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
 .jcs-placeholder-text {
     color: #888;
 }
+
+/* ================================================
+   MICROAÇÕES (GERADOR DE CONTEXTO)
+   ================================================ */
+.icon-action-micro {
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #64748b;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    padding: 0;
+}
+.icon-action-micro:hover {
+    background: var(--trt-light-bg);
+    color: var(--trt-blue);
+    border-color: var(--trt-blue-mid);
+    transform: translateY(-1px);
+}
+.icon-action-micro svg { width: 14px; height: 14px; }
+.icon-action-micro.danger:hover {
+    color: #d32f2f !important;
+    border-color: #ef9a9a !important;
+    background: #fff5f5 !important;
+}
