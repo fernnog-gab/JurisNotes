@@ -56,18 +56,18 @@ body.modo-extrator-ativo #crop-overlay { display: block; cursor: crosshair; back
    ESTILOS DO ALFINETE VISUAL E ESTADO DO BOTÃO
    ================================================ */
 
-/* Estado concluído do botão Extrator (Amarelo) - Alta especificidade sem !important */
+/* Estado concluído do botão Extrator (Verde-Limão AI) - Alta especificidade sem !important */
 button#btn-ferramenta-extrator.extrator-completo:not(:disabled) {
-    background-color: #fbc02d;
-    border-color: #f57f17;
-    color: white;
-    box-shadow: 0 4px 10px rgba(251, 192, 45, 0.4);
+    background-color: #A3E635; /* Verde-Limão base da identidade AI */
+    border-color: #8ce015;     /* Borda levemente mais escura */
+    color: #000000;            /* Fonte escura para contraste */
+    box-shadow: 0 4px 10px rgba(163, 230, 53, 0.4);
 }
 
-/* Garante que o ícone interno respeite a inversão de cores (cobre fill e stroke) */
+/* Garante que o ícone interno (Alfinete) respeite o contraste (preto sobre verde) */
 button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
-    stroke: white;
-    fill: white;
+    stroke: #000000;
+    fill: none; /* Mantém o padrão de linha vazada, caso o ícone exija, ou mude para #000000 se quiser preenchido */
 }
 
 /* Refatoração da classe existente: Pino colorido por dado (Inline Style) */
