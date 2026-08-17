@@ -87,12 +87,16 @@ const DropdownManager = (function() {
         _activeTrigger.setAttribute('aria-expanded', 'true');
 
         const rect = triggerEl.getBoundingClientRect();
-        
-        _activePortal = document.createElement('div');
-        _activePortal.className = 'jcs-options-portal';
-        _activePortal.setAttribute('role', 'listbox');
-        
-        // CORREÇÃO DA LARGURA: Pelo menos a largura do botão, mas garantindo 380px para leitura
+    
+    _activePortal = document.createElement('div');
+    _activePortal.className = 'jcs-options-portal';
+    _activePortal.setAttribute('role', 'listbox');
+    
+    // -> NOVA LINHA INJETADA (CONTRATO DE ARQUITETURA): 
+    // Blinda este elemento e seus filhos contra o fechamento global de modais
+    _activePortal.setAttribute('data-ignore-outside', 'true');
+    
+    // CORREÇÃO DA LARGURA: Pelo menos a largura do botão, mas garantindo 380px para leitura
         const desiredWidth = Math.max(rect.width, 380);
         _activePortal.style.width = `${desiredWidth}px`;
 

@@ -1171,16 +1171,30 @@ document.addEventListener('keydown', function (e) {
 });
 
 document.addEventListener('click', function (e) {
-    const popup = document.getElementById('classification-popup');
-    if (popup && popup.style.display === 'flex' && !popup.contains(e.target) && !e.target.closest('.icon-btn')) {
-        if (typeof fecharPopupClassificacao === 'function') fecharPopupClassificacao();
+    // 1. EARLY EXIT: Verifica Contrato Global de Ignorar Clique Fora
+    if (e.target.closest('[data-ignore-outside="true"]')) {
+        return; // Aborta a verificação de fechamento
     }
+
+    // 2. Lógica de Fechamento do Popup de Classificação
+    const popup = document.getElementById('classification-popup');
+    if (popup && popup.style.display === 'flex') {
+        const clicouForaDoPopup = !popup.contains(e.target);
+        const naoClicouEmBotao = !e.target.closest('.icon-btn');
+        
+        if (clicouForaDoPopup && naoClicouEmBotao) {
+            if (typeof fecharPopupClassificacao === 'function') fecharPopupClassificacao();
+        }
+    }
+    
+    // 3. Fechamento de Menus Contextuais
     const menu = document.getElementById('annotation-context-menu');
     if (menu) menu.style.display = 'none';
 
     const menuSub = document.getElementById('sub-annotation-context-menu');
     if (menuSub) menuSub.style.display = 'none';
 
+    // 4. Fechamento de Menus Flutuantes do Header
     const menuJuris = document.getElementById('juris-menu');
     if (menuJuris && menuJuris.style.display === 'flex' && !menuJuris.contains(e.target) && !e.target.closest('.sidebar-logo-container')) {
         menuJuris.style.display = 'none';
