@@ -915,7 +915,7 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
     left: 50%;
     transform: translate(-50%, -50%);
     width: 92vw;
-    max-width: 1000px;
+    max-width: 1300px;
     height: 88vh;
     max-height: 88vh;
     background: #ffffff;
