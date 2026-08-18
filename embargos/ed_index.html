@@ -157,6 +157,14 @@
                     </svg>
                 </button>
 
+                <!-- NOVO BOTÃO: Visão de Minuta -->
+                <button class="icon-btn" id="btn-visao-minuta" onclick="MinutaViewManager.abrir()" title="Visão de Minuta (Pré-visualização do Texto)&#10;Exibe apenas argumentos e comandos." disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                </button>
+
                  <!-- NOVO: Botão da Balança da Justiça -->
                 <button class="icon-btn" id="btn-balanca-justica" onclick="BalancaManager.abrirPainel(event)" title="Dossiê Recursal&#10;[Alt + B] para abrir/substituir" disabled>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1443,6 +1451,34 @@ Crie um sumário hierárquico enxuto com as Grandes Categorias e Subcategorias q
                     Copiar Formatado (Word / PJe)
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- BACKDROP E MODAL: VISÃO DE MINUTA -->
+    <div id="minuta-view-backdrop" class="minuta-view-backdrop" onclick="MinutaViewManager.fechar()"></div>
+
+    <div id="minuta-view-modal" class="minuta-view-popup fechavel-por-esc">
+        <div class="wizard-header">
+            <span class="minuta-header-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                Visão de Minuta (Leitura Fluida)
+            </span>
+            <button class="minuta-close-btn" onclick="MinutaViewManager.fechar()">✕</button>
+        </div>
+        
+        <div id="minuta-view-content" class="minuta-content-area"></div>
+
+        <div class="wizard-actions minuta-actions-bar">
+            <button class="chip-btn chip-cancelar" onclick="MinutaViewManager.fechar()">Fechar (Esc)</button>
+            <button class="chip-btn chip-autora minuta-copy-btn" onclick="MinutaViewManager.copiarTexto()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                Copiar Texto da Minuta
+            </button>
         </div>
     </div>
 
