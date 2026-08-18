@@ -1798,5 +1798,53 @@ window.MinutaViewManager = (function() {
         }
     }
 
-    return { abrir, fechar, copiarTexto };
+    function copiarComoMarkdown() {
+        const activeId = TopicsManager.getActiveTabId();
+        const topico = topicos.find(t => t.id === activeId);
+        if (!topico) return;
+
+        let md = `# Tópico: ${topico.nome}\n\n`;
+        let nodesEncontrados = false;
+
+        // Função interna para processar cada nó para Markdown
+        function _processarNoMd(noItem) {
+            const intencao = noItem.intencao || 'premissa';
+            if (!INTENCOES_PERMITIDAS.includes(intencao)) return '';
+            
+            nodesEncontrados = true;
+            let texto = noItem.texto.trim();
+            
+            if (intencao === 'comando') {
+                return `> **COMANDO / INSTRUÇÃO:**\n> ${texto}\n\n`;
+            }
+            return `${texto}\n\n`;
+        }
+
+        if (topico.diretrizesGlobais?.length > 0) {
+            topico.diretrizesGlobais.forEach(dir => { md += _processarNoMd(dir); });
+        }
+
+        let ultimaTese = null;
+        topico.anotacoes.forEach(an => {
+            const teseAtual = an.tese || "Provas sem agrupamento de tese";
+            if (teseAtual !== ultimaTese) {
+                topico.diretrizesPorTese?.[teseAtual]?.forEach(dir => { md += _processarNoMd(dir); });
+                ultimaTese = teseAtual;
+            }
+            an.subAnotacoes?.forEach(sub => { md += _processarNoMd(sub); });
+            an.itensCorrelacionados?.forEach(corr => {
+                corr.subAnotacoes?.forEach(sub => { md += _processarNoMd(sub); });
+            });
+        });
+
+        if (!nodesEncontrados) {
+            md += `*Nenhum nó de ideia elegível para a minuta foi encontrado neste tópico.*\n`;
+        }
+
+        navigator.clipboard.writeText(md.trim()).then(() => {
+            exibirToast('Minuta copiada em Markdown para IA!', 'sucesso');
+        });
+    }
+
+    return { abrir, fechar, copiarTexto, copiarComoMarkdown };
 })();
