@@ -637,3 +637,199 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
 .header-tools-area #tracker-bg-mask {
     background: rgba(255, 255, 255, 0.9);
 }
+
+/* ================================================
+   VISÃO DE MINUTA (LEITURA FLUIDA)
+   ================================================ */
+
+.minuta-text-block { margin-bottom: 12px; color: #1e293b; }
+.minuta-text-block p { margin-bottom: 0.5em; }
+
+.minuta-comando-card {
+    background-color: #fdfbf7;
+    border: 1px solid #e8e2c8;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    margin-top: 8px;
+    color: #4a4533;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.minuta-comando-card::before {
+    content: "Comando Direto / Instrução";
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #c62828;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+}
+
+/* =========================================================
+   COMPONENTE BASE: MODAIS DE DOCUMENTO (OUTLINE & MINUTA)
+   ========================================================= */
+.doc-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 92vw;
+    max-width: 1300px;
+    height: 88vh;
+    max-height: 88vh;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.28);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: var(--z-outline-modal);
+}
+
+.doc-modal__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    background: #fdfdfd;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.doc-modal__title {
+    font-weight: 700;
+    color: var(--trt-blue);
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.doc-modal__title svg {
+    width: 20px;
+    height: 20px;
+}
+
+.doc-modal__close-btn {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #64748b;
+    padding: 4px;
+    transition: color 0.2s;
+}
+
+.doc-modal__close-btn:hover { color: #d32f2f; }
+
+.doc-modal__content {
+    flex: 1;
+    overflow-y: auto;
+    background: #ffffff;
+    color: #2c2c2c;
+    font-size: 1.05rem;
+    line-height: 1.7;
+    padding: 24px 32px;
+}
+
+.doc-modal__footer {
+    padding: 16px 24px;
+    background: #f8f9fa;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.doc-modal__actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* Modificadores Visuais e Utilitários */
+.doc-modal__topic-title {
+    font-weight: 700;
+    color: #6a1b9a;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+}
+
+.doc-modal__topic-subtitle {
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+.icon-only-btn {
+    width: 44px;
+    height: 44px;
+    padding: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.icon-only-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.icon-only-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+/* =========================================================
+   TOOLTIP CUSTOMIZADO GLOBAL (ZERO JS)
+   ========================================================= */
+.juris-tooltip {
+    position: relative;
+}
+
+.juris-tooltip::before,
+.juris-tooltip::after {
+    position: absolute;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease 0.1s, visibility 0.2s ease 0.1s, transform 0.2s ease 0.1s;
+    pointer-events: none;
+    z-index: 10000;
+}
+
+.juris-tooltip::before {
+    content: attr(data-tooltip);
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background-color: #2c3e50;
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.juris-tooltip::after {
+    content: '';
+    bottom: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    border-width: 6px;
+    border-style: solid;
+    border-color: #2c3e50 transparent transparent transparent;
+}
+
+.juris-tooltip:hover::before,
+.juris-tooltip:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
