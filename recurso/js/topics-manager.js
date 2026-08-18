@@ -1367,7 +1367,6 @@ window.OutlineViewManager = (function() {
         const contentEl = document.getElementById('outline-view-content');
         if (contentEl) {
             contentEl.innerHTML = _construirHTML(topico);
-            _atualizarEstatisticas(topico); // Corrigido: Sem acento
         }
 
         document.getElementById('outline-view-backdrop').style.display = 'block';
@@ -1577,22 +1576,7 @@ window.OutlineViewManager = (function() {
         return html;
     }
 
-    // Função renomeada conforme recomendação técnica (sem acento)
-    function _atualizarEstatisticas(topico) {
-        const statsEl = document.getElementById('outline-stats-badge');
-        if (!statsEl) return;
-        const totalProvas = topico.anotacoes.length;
-        let totalNos = 0;
-        topico.anotacoes.forEach(a => {
-            if (a.subAnotacoes) totalNos += a.subAnotacoes.filter(s => s.intencao !== 'nota').length;
-            if (a.itensCorrelacionados) {
-                a.itensCorrelacionados.forEach(c => {
-                    if (c.subAnotacoes) totalNos += c.subAnotacoes.filter(s => s.intencao !== 'nota').length;
-                });
-            }
-        });
-        statsEl.textContent = `${totalProvas} prova(s) | ${totalNos} nó(s) de ideia`;
-    }
+    // Função _atualizarEstatisticas removida conforme Refatoração Arquitetural O(n)
 
     // Cópia Segura (Word/PJe): Sanitização por clonagem de nó DOM em memória
     async function copiarTudo() {
@@ -1730,7 +1714,12 @@ window.MinutaViewManager = (function() {
     }
 
     function _construirHTML(topico) {
-        let html = `<h2 style="font-size:1.5rem; color:var(--trt-blue); margin-bottom: 24px; border-bottom: 2px solid #eee; padding-bottom: 8px;">Tópico: ${TopicsManager.escaparHTML(topico.nome)}</h2>`;
+        // Arquitetura limpa: delegação visual para as classes do CSS (.doc-modal)
+        let html = `
+        <div style="margin-bottom: 24px;">
+            <div class="doc-modal__topic-title">Tópico: ${TopicsManager.escaparHTML(topico.nome)}</div>
+            <p class="doc-modal__topic-subtitle">Pré-visualização da extração linear da minuta.</p>
+        </div>`;
         let nodesEncontrados = false;
 
         if (topico.diretrizesGlobais?.length > 0) {
