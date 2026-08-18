@@ -1544,3 +1544,132 @@ window.OutlineViewManager = (function() {
 
     return { abrir, fechar, copiarTudo, copiarComoMarkdown, copiarTrechoElemento };
 })();
+
+/* ================================================
+   VISÃO DE MINUTA (LEITURA FLUIDA)
+   ================================================ */
+window.MinutaViewManager = (function() {
+    'use strict';
+
+    const INTENCOES_PERMITIDAS = ['comando', 'texto', 'premissa', 'preliminar', 'refutacao'];
+
+    function abrir() {
+        const activeId = TopicsManager.getActiveTabId();
+        if (!activeId) {
+            exibirToast('Selecione um tópico primeiro.', 'aviso');
+            return;
+        }
+
+        const topico = topicos.find(t => t.id === activeId);
+        if (!topico) return;
+
+        const contentEl = document.getElementById('minuta-view-content');
+        if (contentEl) contentEl.innerHTML = _construirHTML(topico);
+
+        document.getElementById('minuta-view-backdrop').style.display = 'block';
+        document.getElementById('minuta-view-modal').style.display = 'flex';
+    }
+
+    function fechar() {
+        document.getElementById('minuta-view-backdrop').style.display = 'none';
+        document.getElementById('minuta-view-modal').style.display = 'none';
+        const contentEl = document.getElementById('minuta-view-content');
+        if (contentEl) contentEl.innerHTML = ''; // Prevenção de DOM State Leakage
+    }
+
+    function _render(texto) {
+        return TopicsManager.renderizarMarkdownSeguro(TopicsManager.escaparHTML(texto || ''));
+    }
+
+    function _processarNo(noItem) {
+        const intencao = noItem.intencao || 'premissa';
+        if (!INTENCOES_PERMITIDAS.includes(intencao)) return '';
+
+        const textoHTML = _render(noItem.texto);
+        return intencao === 'comando' 
+            ? `<div class="minuta-comando-card">${textoHTML}</div>` 
+            : `<div class="minuta-text-block">${textoHTML}</div>`;
+    }
+
+    function _construirHTML(topico) {
+        let html = `<h2 style="font-size:1.5rem; color:var(--trt-blue); margin-bottom: 24px; border-bottom: 2px solid #eee; padding-bottom: 8px;">Tópico: ${TopicsManager.escaparHTML(topico.nome)}</h2>`;
+        let nodesEncontrados = false;
+
+        if (topico.diretrizesGlobais?.length > 0) {
+            topico.diretrizesGlobais.forEach(dir => {
+                const nodeHtml = _processarNo(dir);
+                if(nodeHtml) { html += nodeHtml; nodesEncontrados = true; }
+            });
+        }
+
+        let ultimaTese = null;
+        topico.anotacoes.forEach(an => {
+            const teseAtual = an.tese || "Provas sem agrupamento de tese";
+            if (teseAtual !== ultimaTese) {
+                // ADAPTAÇÃO PARA AGRAVO DE INSTRUMENTO (AI): diretrizesPorObice
+                topico.diretrizesPorObice?.[teseAtual]?.forEach(dir => {
+                    const nodeHtml = _processarNo(dir);
+                    if(nodeHtml) { html += nodeHtml; nodesEncontrados = true; }
+                });
+                ultimaTese = teseAtual;
+            }
+
+            an.subAnotacoes?.forEach(sub => {
+                const nodeHtml = _processarNo(sub);
+                if(nodeHtml) { html += nodeHtml; nodesEncontrados = true; }
+            });
+
+            an.itensCorrelacionados?.forEach(corr => {
+                corr.subAnotacoes?.forEach(sub => {
+                    const nodeHtml = _processarNo(sub);
+                    if(nodeHtml) { html += nodeHtml; nodesEncontrados = true; }
+                });
+            });
+        });
+
+        if (!nodesEncontrados) {
+            html += `<p style="color: #94a3b8; font-style: italic;">Nenhum nó de ideia elegível para a minuta foi encontrado neste tópico.</p>`;
+        }
+
+        return html;
+    }
+
+    async function copiarTexto() {
+        const contentEl = document.getElementById('minuta-view-content');
+        if (!contentEl) return;
+        
+        const clone = contentEl.cloneNode(true);
+        clone.querySelector('h2')?.remove();
+
+        const plainText = clone.innerText.trim();
+        const htmlText = clone.innerHTML;
+
+        try {
+            const clipboardItem = new ClipboardItem({
+                'text/plain': new Blob([plainText], { type: 'text/plain' }),
+                'text/html': new Blob([htmlText], { type: 'text/html' })
+            });
+            await navigator.clipboard.write([clipboardItem]);
+            exibirToast('Texto copiado com formatação preservada!', 'sucesso');
+        } catch (err) {
+            const textArea = document.createElement("div");
+            textArea.contentEditable = true;
+            textArea.innerHTML = htmlText;
+            textArea.style.position = "fixed";
+            textArea.style.opacity = "0";
+            document.body.appendChild(textArea);
+            
+            const range = document.createRange();
+            range.selectNodeContents(textArea);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+            
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+            exibirToast('Texto copiado (Modo Legado).', 'info');
+        }
+    }
+
+    return { abrir, fechar, copiarTexto };
+})();
