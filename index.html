@@ -79,75 +79,62 @@
         }
 
         /* ==========================================
-           EFEITO DA LOGO: ESTRELA ORBITAL (HUB)
+           EFEITO DA LOGO: COMETA (HUB)
            ========================================== */
         
-        /* 1. O Contêiner que define o eixo do universo da logo */
+        /* 1. O Contêiner Base */
         .hub-logo-container {
             position: relative;
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 110px;  /* Espaço para a órbita não cortar */
-            height: 110px;
+            width: 120px;  
+            height: 120px;
             margin-bottom: 16px;
             border-radius: 50%;
-            /* Fundo radial sutil para dar profundidade ao brilho */
-            background: radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 60%);
         }
 
-        /* 2. A Logo centralizada */
+        /* 2. O Efeito Cometa (Anel Externo Giratório) */
+        .hub-logo-container::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(transparent 75%, var(--color-ro-bg) 95%, #ffffff 100%);
+            animation: spin-glow-hub 2.5s linear infinite;
+            z-index: 0;
+        }
+
+        /* 3. A Máscara Interna (Cria o furo do anel) */
+        .hub-logo-container::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 106px; /* Tamanho exato para deixar 7px de borda brilhante */
+            height: 106px;
+            background: var(--trt-blue); /* Camufla com a cor de fundo do body */
+            border-radius: 50%;
+            z-index: 1;
+        }
+
+        /* 4. A Logo Central */
         .hub-logo {
             width: 80px;
             height: auto;
-            margin: 0; /* Margem controlada pelo container agora */
-            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
             position: relative;
-            z-index: 2;
+            z-index: 2; /* Garante que fique acima da máscara */
         }
 
-        /* 3. O Anel Invisível que gira */
-        .orbiting-star {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 3;
-            animation: spin-orbit 8s linear infinite; /* Rotação suave de 8 segundos */
-            pointer-events: none; /* Impede que a estrela bloqueie cliques na logo */
-        }
-
-        /* 4. A Estrela em si (presa na borda do anel) */
-        .orbiting-star::before {
-            content: '✦';
-            position: absolute;
-            top: 0px; 
-            left: 50%;
-            transform: translateX(-50%);
-            color: var(--color-ro-bg); /* Usa o Dourado do RO que já está no seu :root */
-            font-size: 22px;
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8), 0 0 20px rgba(255, 215, 0, 0.4);
-            animation: pulse-star 1.5s ease-in-out infinite alternate;
-        }
-
-        /* Keyframes: Rotação Infinita */
-        @keyframes spin-orbit {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        /* Keyframes: Efeito do brilho pulsando como uma estrela real */
-        @keyframes pulse-star {
-            0% { 
-                opacity: 0.6; 
-                transform: translateX(-50%) scale(0.85); 
-            }
-            100% { 
-                opacity: 1; 
-                transform: translateX(-50%) scale(1.15); 
-                text-shadow: 0 0 15px rgba(255, 215, 0, 1), 0 0 30px rgba(255, 215, 0, 0.6);
-            }
+        /* 5. Keyframes de Rotação */
+        @keyframes spin-glow-hub {
+            0%   { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
         }
 
         /* ==========================================
@@ -316,9 +303,8 @@
     <!-- Hub Principal -->
     <div class="hub-container">
         <div class="hub-header">
-            <!-- NOVO: Contêiner que isola a animação -->
+            <!-- NOVO: Contêiner que isola a animação (Efeito Cometa) -->
             <div class="hub-logo-container">
-                <div class="orbiting-star"></div>
                 <img src="imagens/logo.png" alt="Juris Notes" class="hub-logo" onerror="this.style.display='none'">
             </div>
             <h1>Juris Notes</h1>
