@@ -1376,7 +1376,6 @@ window.OutlineViewManager = (function() {
         const contentEl = document.getElementById('outline-view-content');
         if (contentEl) {
             contentEl.innerHTML = _construirHTML(topico);
-            _atualizarEstatisticas(topico); 
         }
 
         document.getElementById('outline-view-backdrop').style.display = 'block';
@@ -1552,19 +1551,7 @@ window.OutlineViewManager = (function() {
         return html;
     }
 
-    function _atualizarEstatisticas(topico) {
-        const statsEl = document.getElementById('outline-stats-badge');
-        if (!statsEl) return;
-        const totalProvas = topico.anotacoes.length;
-        let totalNos = 0;
-        topico.anotacoes.forEach(a => {
-            if (a.subAnotacoes) totalNos += a.subAnotacoes.filter(s => s.intencao !== 'nota').length;
-            if (a.itensCorrelacionados) a.itensCorrelacionados.forEach(c => {
-                if (c.subAnotacoes) totalNos += c.subAnotacoes.filter(s => s.intencao !== 'nota').length;
-            });
-        });
-        statsEl.textContent = `${totalProvas} extração(ões) | ${totalNos} nó(s) de ideia`;
-    }
+    // Função _atualizarEstatisticas removida (Eliminação de Dead Code O(n))
 
     // SANITIZAÇÃO (Defense-in-Depth) contra contaminação DOM ao copiar
     async function copiarTudo() {
@@ -1689,7 +1676,12 @@ window.MinutaViewManager = (function() {
     }
 
     function _construirHTML(topico) {
-        let html = `<h2 style="font-size:1.5rem; color:var(--trt-blue); margin-bottom: 24px; border-bottom: 2px solid #eee; padding-bottom: 8px;">Vício: ${TopicsManager.escaparHTML(topico.nome)}</h2>`;
+        // Arquitetura limpa: delegação visual para as classes do CSS (.doc-modal)
+        let html = `
+        <div style="margin-bottom: 24px;">
+            <div class="doc-modal__topic-title">Vício: ${TopicsManager.escaparHTML(topico.nome)}</div>
+            <p class="doc-modal__topic-subtitle">Pré-visualização da extração linear da minuta.</p>
+        </div>`;
         let nodesEncontrados = false;
 
         if (topico.diretrizesGlobais?.length > 0) {
@@ -1770,5 +1762,55 @@ window.MinutaViewManager = (function() {
         }
     }
 
-    return { abrir, fechar, copiarTexto };
+    function copiarComoMarkdown() {
+        const activeId = TopicsManager.getActiveTabId();
+        const topico = topicos.find(t => t.id === activeId);
+        if (!topico) return;
+
+        let md = `# Vício: ${topico.nome}\n\n`;
+        let nodesEncontrados = false;
+
+        function _processarNoMd(noItem) {
+            const intencao = noItem.intencao || 'premissa';
+            if (!INTENCOES_PERMITIDAS.includes(intencao)) return '';
+            
+            nodesEncontrados = true;
+            let texto = noItem.texto.trim();
+            
+            if (intencao === 'comando') {
+                return `> **COMANDO / INSTRUÇÃO:**\n> ${texto}\n\n`;
+            }
+            return `${texto}\n\n`;
+        }
+
+        if (topico.diretrizesGlobais?.length > 0) {
+            topico.diretrizesGlobais.forEach(dir => { md += _processarNoMd(dir); });
+        }
+
+        let ultimaTese = null;
+        topico.anotacoes.forEach(an => {
+            const teseAtual = an.tese || "Provas sem agrupamento";
+            const vicioRaw = an.vicio || topico.vicio || 'omissao';
+            
+            if (teseAtual !== ultimaTese) {
+                topico.diretrizesPorVicio?.[vicioRaw]?.forEach(dir => { md += _processarNoMd(dir); });
+                ultimaTese = teseAtual;
+            }
+            
+            an.subAnotacoes?.forEach(sub => { md += _processarNoMd(sub); });
+            an.itensCorrelacionados?.forEach(corr => {
+                corr.subAnotacoes?.forEach(sub => { md += _processarNoMd(sub); });
+            });
+        });
+
+        if (!nodesEncontrados) {
+            md += `*Nenhum nó de ideia elegível para a minuta foi encontrado neste tópico.*\n`;
+        }
+
+        navigator.clipboard.writeText(md.trim()).then(() => {
+            exibirToast('Minuta copiada em Markdown para IA!', 'sucesso');
+        });
+    }
+
+    return { abrir, fechar, copiarTexto, copiarComoMarkdown };
 })();
