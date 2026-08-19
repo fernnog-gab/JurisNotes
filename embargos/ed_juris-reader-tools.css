@@ -154,17 +154,40 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
 .crop-preview-container img { max-width: 100%; border-radius: 4px; box-shadow: var(--shadow-sm); }
 .wizard-polo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
+/* ================================================
+   MODAL DE EDIÇÃO DE TEXTO (CORREÇÃO DE ROLAGEM E ALTURA)
+   ================================================ */
+
+/* 1. Trava o tamanho do modal (A Jaula) */
 .text-edit-modal { 
-    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-    background: white; border: 1px solid var(--border-color); border-radius: 12px; 
-    padding: 20px; box-shadow: 0 12px 48px rgba(0,0,0,0.28); 
+    position: fixed; 
+    top: 50%; 
+    left: 50%; 
+    transform: translate(-50%, -50%); 
+    background: white; 
+    border: 1px solid var(--border-color); 
+    border-radius: 12px; 
+    padding: 20px; 
+    box-shadow: 0 12px 48px rgba(0,0,0,0.28); 
     z-index: var(--z-text-edit-modal); 
-    display: flex; flex-direction: column; gap: 12px; 
-    min-width: 0; width: min(640px, calc(100vw - 32px)); 
-    max-height: min(85dvh, 860px); overflow: hidden; box-sizing: border-box; 
+    min-width: 400px; 
+    width: 90vw; 
+    max-width: 800px;
+    
+    /* A TRAVA DE ALTURA CRÍTICA (85% da tela) */
+    max-height: 85vh !important; 
+    
+    display: flex; 
+    flex-direction: column; 
+    gap: 12px; 
+    overflow: hidden !important; /* Corta vazamentos visuais */
 }
-.text-edit-modal .edit-header, .text-edit-modal .edit-toolbar, .text-edit-modal .edit-actions {
-    flex-shrink: 0;
+
+/* 2. Blinda o cabeçalho, toolbar e botões para não serem esmagados */
+.text-edit-modal .edit-header,
+.text-edit-modal .edit-toolbar,
+.text-edit-modal .edit-actions {
+    flex-shrink: 0 !important;
 }
 .edit-header { font-size: 1.05rem; font-weight: 800; color: var(--trt-blue); border-bottom: 2px solid var(--trt-light-bg); padding-bottom: 8px; }
 .edit-toolbar { display: flex; gap: 8px; margin-bottom: 4px; }
@@ -199,23 +222,25 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
 /* ================================================
    EDITOR RICO (WYSIWYG) - contenteditable
    ================================================ */
-.edit-textarea.rich-editor {
-    outline: none;
-    flex: 1 1 0%;
-    min-height: clamp(72px, 20vh, 160px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
+/* 3. Transforma apenas o editor de texto na área rolável */
+.text-edit-modal .edit-textarea.rich-editor {
     white-space: pre-wrap;
-    overflow-wrap: break-word;
-    resize: none;
-    scrollbar-width: thin;
-    scrollbar-color: #cbd5e1 #f1f5f9;
+    word-wrap: break-word;
+    outline: none;
+    
+    flex: 1 1 auto !important; /* Ocupa todo espaço que sobrar */
+    min-height: 0 !important; /* REGRA DE OURO: Permite o Flexbox gerar scroll */
+    overflow-y: auto !important; /* Força a barra de rolagem vertical */
+    resize: none !important; /* Desabilita o ajuste manual que quebra o layout */
+    
+    /* Previne que a rolagem aqui afete a página atrás do modal */
+    overscroll-behavior: contain;
 }
 
-.edit-textarea.rich-editor::-webkit-scrollbar { width: 8px; }
-.edit-textarea.rich-editor::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
-.edit-textarea.rich-editor::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-.edit-textarea.rich-editor::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+/* Customização visual da barra de rolagem */
+.text-edit-modal .edit-textarea.rich-editor::-webkit-scrollbar { width: 8px; }
+.text-edit-modal .edit-textarea.rich-editor::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+.text-edit-modal .edit-textarea.rich-editor::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
 /* Placeholder controlado por classe JS, evita bugs do Chrome com <br> residuais */
 .edit-textarea.rich-editor.is-empty::before {
