@@ -154,16 +154,30 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
 .crop-preview-container img { max-width: 100%; border-radius: 4px; box-shadow: var(--shadow-sm); }
 .wizard-polo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
-.text-edit-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; box-shadow: 0 12px 48px rgba(0,0,0,0.28); z-index: var(--z-text-edit-modal); min-width: 400px; max-width: 90vw; display: flex; flex-direction: column; gap: 12px; }
-.edit-header { font-size: 1.05rem; font-weight: 800; color: var(--trt-blue); border-bottom: 2px solid var(--trt-light-bg); padding-bottom: 8px; }
-.edit-toolbar { display: flex; gap: 8px; margin-bottom: 4px; }
+/* ================================================
+   MODAL DE EDIÇÃO WYSIWYG & ÁUDIO (ARQUITETURA REVISADA)
+   ================================================ */
+.text-edit-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; box-shadow: 0 12px 48px rgba(0,0,0,0.28); z-index: var(--z-text-edit-modal); min-width: min(400px, 94vw); max-width: 90vw; display: flex; flex-direction: column; gap: 12px; max-height: 90vh; overflow: hidden; }
+.edit-header { font-size: 1.05rem; font-weight: 800; color: var(--trt-blue); border-bottom: 2px solid var(--trt-light-bg); padding-bottom: 8px; flex-shrink: 0; }
+.edit-toolbar { display: flex; gap: 8px; margin-bottom: 4px; flex-shrink: 0; }
 .edit-tool-btn { background: #fff; border: 1px solid #bbb; border-radius: 6px; cursor: pointer; color: var(--trt-blue); transition: all 0.2s ease; width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center; }
 .edit-tool-btn svg { width: 18px; height: 18px; pointer-events: none; }
 .edit-tool-btn:hover { background: #f0f4f8; border-color: var(--trt-blue-mid); color: var(--trt-blue-mid); }
-.edit-textarea { width: 100%; min-height: 140px; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; font-size: 0.9rem; line-height: 1.5; outline: none; resize: vertical; }
-.edit-textarea:focus { border-color: var(--trt-blue-mid); }
-.edit-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; padding-top: 12px; border-top: 1px solid #eee; }
+.edit-textarea { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; font-size: 0.9rem; line-height: 1.5; outline: none; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; white-space: pre-wrap; word-wrap: break-word; resize: none; transition: border-color 0.2s, box-shadow 0.2s; }
+.edit-textarea:focus { border-color: var(--trt-blue-mid); box-shadow: 0 0 0 2px rgba(26, 58, 92, 0.12); }
+.edit-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; padding-top: 12px; border-top: 1px solid #eee; flex-shrink: 0; }
 .edit-save-btn { background: var(--trt-blue); color: white; border-color: var(--trt-blue); }
+
+/* Especificidade para o Comentário de Áudio e Inputs */
+.text-edit-modal #edit-text-input { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; resize: none; }
+.text-edit-modal #edit-comentario-input { flex: 0 1 auto; min-height: min(72px, 15vh); max-height: min(20vh, 200px); }
+
+/* Estilização Cross-Browser da Scrollbar */
+.text-edit-modal #edit-text-input, .text-edit-modal .edit-textarea { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+.text-edit-modal #edit-text-input::-webkit-scrollbar, .text-edit-modal .edit-textarea::-webkit-scrollbar { width: 8px; }
+.text-edit-modal #edit-text-input::-webkit-scrollbar-track, .text-edit-modal .edit-textarea::-webkit-scrollbar-track { background: transparent; }
+.text-edit-modal #edit-text-input::-webkit-scrollbar-thumb, .text-edit-modal .edit-textarea::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.text-edit-modal #edit-text-input::-webkit-scrollbar-thumb:hover, .text-edit-modal .edit-textarea::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 .aba-manager-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; background: #fafafa; margin-bottom: 6px; }
 .aba-manager-nome { font-weight: 600; color: var(--trt-blue); font-size: 0.88rem; }

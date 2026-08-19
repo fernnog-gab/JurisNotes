@@ -291,7 +291,14 @@ function abrirModalEdicao(contexto, textoAtual, comentarioAtual = '') {
 
     document.getElementById('text-edit-backdrop').style.display = 'block';
     document.getElementById('text-edit-modal').style.display = 'flex';
-    setTimeout(() => editor.focus(), 50);
+    
+    // UX Recovery: Foca no elemento e reseta a posição da scrollbar com segurança
+    setTimeout(() => {
+        editor.focus();
+        if (typeof editor.scrollTop === 'number') {
+            editor.scrollTop = 0;
+        }
+    }, 50);
 }
 
 function fecharModalEdicao() {
