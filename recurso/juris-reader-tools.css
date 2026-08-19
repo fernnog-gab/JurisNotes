@@ -169,24 +169,8 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
 .edit-save-btn { background: var(--trt-blue); color: white; border-color: var(--trt-blue); }
 
 /* Especificidade para o Comentário de Áudio e Inputs */
-.text-edit-modal #edit-text-input, 
-.text-edit-modal .edit-textarea {
-    /* CORREÇÃO DO BUG WEBKIT/SAFARI: flex-basis: 0px impede que o tamanho do texto inflado quebre o max-height do modal pai */
-    flex: 1 1 0px; 
-    min-height: 0; 
-    overflow-y: auto; 
-    overscroll-behavior: contain; 
-    white-space: pre-wrap; 
-    word-wrap: break-word; 
-    resize: none; 
-    transition: border-color 0.2s, box-shadow 0.2s; 
-}
-
-.text-edit-modal #edit-comentario-input { 
-    flex: 0 1 auto; 
-    min-height: min(72px, 15vh); 
-    max-height: min(20vh, 200px); 
-}
+.text-edit-modal #edit-text-input { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; resize: none; }
+.text-edit-modal #edit-comentario-input { flex: 0 1 auto; min-height: min(72px, 15vh); max-height: min(20vh, 200px); }
 
 /* Estilização Cross-Browser da Scrollbar */
 .text-edit-modal #edit-text-input, .text-edit-modal .edit-textarea { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }

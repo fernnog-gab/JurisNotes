@@ -292,33 +292,13 @@ function abrirModalEdicao(contexto, textoAtual, comentarioAtual = '') {
     document.getElementById('text-edit-backdrop').style.display = 'block';
     document.getElementById('text-edit-modal').style.display = 'flex';
     
-    // UX Recovery & Race Condition Fix (Double requestAnimationFrame)
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            // 1. Reset da área de Comentários (se visível)
-            if (commentArea && commentArea.style.display !== 'none') {
-                commentArea.scrollTop = 0;
-            }
-
-            // 2. Prevenção de Scroll Automático do Browser no Editor (ContentEditable)
-            if (!isAudio && editor.firstChild) {
-                const range = document.createRange();
-                const sel = window.getSelection();
-                range.setStart(editor.firstChild, 0);
-                range.collapse(true);
-                sel.removeAllRanges();
-                sel.addRange(range);
-            }
-
-            // 3. Foco Seguro
-            editor.focus();
-
-            // 4. Forçar ScrollTop absoluto pós-render (Garantia Final)
-            if (typeof editor.scrollTop === 'number') {
-                editor.scrollTop = 0;
-            }
-        });
-    });
+    // UX Recovery: Foca no elemento e reseta a posição da scrollbar com segurança
+    setTimeout(() => {
+        editor.focus();
+        if (typeof editor.scrollTop === 'number') {
+            editor.scrollTop = 0;
+        }
+    }, 50);
 }
 
 function fecharModalEdicao() {
