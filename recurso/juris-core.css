@@ -765,3 +765,22 @@ body[data-active-tab="leitura"] #idea-markers-list {
     box-shadow: var(--shadow-sm);
     transition: all 0.05s ease-in;
 }
+
+/* =========================================================
+   TOKENS SEMÂNTICOS DE CARREGAMENTO (SKELETON & SPINNER)
+   Garante adaptação de tema entre Fundo Branco e Jasmine
+   ========================================================= */
+
+/* Fallback Global (Tema Branco padrão) */
+:root {
+    --pdf-skeleton-bg: #f0f4f8;
+    --pdf-skeleton-highlight: rgba(255, 255, 255, 0.7);
+    --pdf-skeleton-spinner: var(--trt-blue, #1a3a5c);
+}
+
+/* Sobrescrita dinâmica quando o Tema Jasmine está ativo no <body> */
+body.theme-processo-jasmine {
+    --pdf-skeleton-bg: #f7d99a; /* Dourado muito suave, baixo contraste com fundo */
+    --pdf-skeleton-highlight: rgba(255, 248, 225, 0.65); /* Feixe de luz quente e sutil */
+    --pdf-skeleton-spinner: #a9712a; /* Marrom sóbrio para o spinner, mantendo elegância */
+}

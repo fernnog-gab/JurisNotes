@@ -1174,3 +1174,61 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
 .native-task-item.completed { opacity: 0.5; background-color: #f1f5f9; }
 .native-task-item.completed input[type="text"] { text-decoration: line-through; color: #64748b; }
 .topic-circle-indicator { width: 14px; height: 14px; border-radius: 50%; margin-right: 8px; cursor: pointer; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+/* =========================================================
+   REVISÃO ARQUITETURAL: EFEITOS DE CARREGAMENTO DO PDF
+   Refatorado para Theme-Aware, Aceleração de GPU e A11y
+   ========================================================= */
+
+/* Fundo inteligente reativo ao tema */
+.pdf-page-container[data-loaded="false"],
+.pdf-page-container[data-loaded="loading"] {
+    background-color: var(--pdf-skeleton-bg) !important; 
+    position: relative;
+    overflow: hidden;
+}
+
+/* Shimmer com Aceleração de GPU (Transform) */
+.pdf-page-container[data-loaded="false"]::before,
+.pdf-page-container[data-loaded="loading"]::before {
+    content: "";
+    position: absolute;
+    top: 0; 
+    left: 0; /* Ajustado para início exato */
+    width: 100%; 
+    height: 100%;
+    /* Utiliza os tokens injetados pelo juris-core.css */
+    background: linear-gradient(90deg, transparent, var(--pdf-skeleton-highlight), transparent);
+    /* Desloca para fora da tela inicialmente */
+    transform: translateX(-150%);
+    animation: pdf-shimmer-gpu 1.5s infinite;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Spinner Inteligente (Reage à cor base do tema) */
+.pdf-page-container[data-loaded="loading"]::after {
+    border-top-color: var(--pdf-skeleton-spinner) !important;
+}
+
+/* Keyframe baseado em matemática vetorial (GPU) */
+@keyframes pdf-shimmer-gpu {
+    0% { transform: translateX(-150%); }
+    100% { transform: translateX(150%); }
+}
+
+/* Acessibilidade: Respeito à preferência do SO do usuário e prevenção de fadiga de CPU */
+@media (prefers-reduced-motion: reduce) {
+    .pdf-page-container[data-loaded="false"]::before,
+    .pdf-page-container[data-loaded="loading"]::before {
+        animation: none !important;
+        opacity: 0.5;
+        transform: translateX(0); /* Fixa o gradiente suave no centro */
+    }
+    
+    .pdf-page-container[data-loaded="loading"]::after {
+        animation: none !important;
+        /* Dá um feedback visual sutil de opacidade ao invés de giro brusco */
+        opacity: 0.6; 
+    }
+}
