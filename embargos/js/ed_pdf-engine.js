@@ -330,13 +330,27 @@ window.PdfEngine = (function () {
                     if (_pdfDestroyObserver) _pdfDestroyObserver.disconnect();
                     _activePages.clear();
 
-                    // Observer 1: Renderiza cedo (800px)
+                    // Observer de Renderização com Micro-Task Filtering e Skeleton State (Adaptado ED: 800px)
                     _pdfRenderObserver = new IntersectionObserver((entries) => {
                         entries.forEach(entry => {
-                            if (entry.isIntersecting && entry.target.dataset.loaded === 'false') {
-                                const pageNum = parseInt(entry.target.dataset.pageNumber);
-                                renderizarPaginaElemento(pageNum, entry.target);
-                                entry.target.dataset.loaded = 'true';
+                            const container = entry.target;
+                            
+                            if (entry.isIntersecting) {
+                                if (container.dataset.loaded === 'false') {
+                                    // Altera o estado imediatamente para mostrar o Spinner
+                                    container.dataset.loaded = 'loading'; 
+                                    
+                                    container._scrollRaf = requestAnimationFrame(() => {
+                                        renderizarPaginaElemento(parseInt(container.dataset.pageNumber), container);
+                                    });
+                                }
+                            } else {
+                                // Se saiu da tela rápido demais, aborta o frame e volta pro estado false
+                                if (container._scrollRaf && container.dataset.loaded === 'loading') {
+                                    cancelAnimationFrame(container._scrollRaf);
+                                    container._scrollRaf = null;
+                                    container.dataset.loaded = 'false';
+                                }
                             }
                         });
                     }, { root: document.getElementById('pdf-container'), rootMargin: '800px 0px', threshold: 0 });
@@ -371,31 +385,8 @@ window.PdfEngine = (function () {
                     const firstPage = await pdf.getPage(1);
                     const viewportCSS = firstPage.getViewport({ scale: 1.5 });
 
-                    try {
-                        const textContentFirstPage = await firstPage.getTextContent();
-                        // 1. Higieniza o texto (remove espaços e quebras de linha invisíveis)
-                        const rawString = textContentFirstPage.items.map(item => item.str).join('');
-                        const sanitizedString = rawString.replace(/\s+/g, '');
-
-                        // 2. Regex robusta CNJ: Captura 7 dígitos, 2 dígitos e 4 do ano
-                        const cnjRegex = /(\d{7})[-]?(\d{2})\.?(\d{4})\.?\d\.?\d{2}\.?\d{4}/;
-                        const match = sanitizedString.match(cnjRegex);
-
-                        if (match && typeof _deps.onProcessoIdentificado === 'function') {
-                            // Modificação: Em vez de parseInt, aplicamos slice(-4) na string de 7 dígitos.
-                            // Isso preserva os zeros necessários para formar 4 casas decimais.
-                            const sequencialLimpo = match[1].slice(-4); 
-                            const digito = match[2];
-                            const ano = match[3];
-
-                            // Monta o formato ultra-curto (Ex: 0541-68.2025)
-                            const numeroUltraCurto = `${sequencialLimpo}-${digito}.${ano}`; 
-                            
-                            _deps.onProcessoIdentificado(numeroUltraCurto);
-                        }
-                    } catch (err) {
-                        console.warn("[Juris Notes ED] Falha ao tentar capturar o número do processo na capa.", err);
-                    }
+                    // -- INÍCIO: OTIMIZAÇÃO DE MONTAGEM O(1) COM DOCUMENT FRAGMENT --
+                    const fragment = document.createDocumentFragment();
 
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const pageContainer = document.createElement('div');
@@ -410,11 +401,35 @@ window.PdfEngine = (function () {
                             background-color: var(--pdf-bg-color);
                             box-shadow: var(--shadow-md);
                         `;
-                        wrapper.appendChild(pageContainer);
+                        fragment.appendChild(pageContainer);
                         
                         _pdfRenderObserver.observe(pageContainer);
                         _pdfDestroyObserver.observe(pageContainer);
                         _pdfReadTracker.observe(pageContainer);
+                    }
+                    
+                    wrapper.appendChild(fragment);
+                    // -- FIM: OTIMIZAÇÃO DE MONTAGEM O(1) --
+
+                    try {
+                        const textContentFirstPage = await firstPage.getTextContent();
+                        const rawString = textContentFirstPage.items.map(item => item.str).join('');
+                        const sanitizedString = rawString.replace(/\s+/g, '');
+
+                        const cnjRegex = /(\d{7})[-]?(\d{2})\.?(\d{4})\.?\d\.?\d{2}\.?\d{4}/;
+                        const match = sanitizedString.match(cnjRegex);
+
+                        if (match && typeof _deps.onProcessoIdentificado === 'function') {
+                            const sequencialLimpo = match[1].slice(-4); 
+                            const digito = match[2];
+                            const ano = match[3];
+
+                            const numeroUltraCurto = `${sequencialLimpo}-${digito}.${ano}`; 
+                            
+                            _deps.onProcessoIdentificado(numeroUltraCurto);
+                        }
+                    } catch (err) {
+                        console.warn("[Juris Notes ED] Falha ao tentar capturar o número do processo na capa.", err);
                     }
 
                     await _deps.onPdfCarregado(isRetomada);
@@ -509,10 +524,16 @@ window.PdfEngine = (function () {
                     linkService: jurisLinkService 
                 });
             }
+            
+            // NOVO: Apenas após TODO o canvas e texto serem renderizados, marcamos como true.
+            container.dataset.loaded = 'true'; 
+
         } catch (err) {
             if (err.name !== 'RenderingCancelledException') {
                 console.error('Erro ao renderizar página PDF:', err);
             }
+            // NOVO: Se a renderização for cancelada ou falhar, volta ao estado vazio
+            container.dataset.loaded = 'false';
         } finally {
             container._renderTask = null;
         }
