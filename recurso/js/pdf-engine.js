@@ -330,18 +330,31 @@ window.PdfEngine = (function () {
                     if (_pdfDestroyObserver) _pdfDestroyObserver.disconnect();
                     _activePages.clear();
 
-                    // Observer 1: Renderiza cedo (1200px)
+                    // Observer de Renderização com Micro-Task Filtering
                     _pdfRenderObserver = new IntersectionObserver((entries) => {
                         entries.forEach(entry => {
-                            if (entry.isIntersecting && entry.target.dataset.loaded === 'false') {
-                                const pageNum = parseInt(entry.target.dataset.pageNumber);
-                                renderizarPaginaElemento(pageNum, entry.target);
-                                entry.target.dataset.loaded = 'true';
+                            const container = entry.target;
+                            
+                            if (entry.isIntersecting) {
+                                // Se entrou na tela, aguarda um frame (aprox 16ms) antes de iniciar
+                                // Isso evita sobrecarregar o Worker do PDF.js em um scroll hiper-rápido
+                                if (container.dataset.loaded === 'false') {
+                                    container._scrollRaf = requestAnimationFrame(() => {
+                                        renderizarPaginaElemento(parseInt(container.dataset.pageNumber), container);
+                                        container.dataset.loaded = 'true';
+                                    });
+                                }
+                            } else {
+                                // Se saiu da tela rápido demais (antes do próximo frame), aborta.
+                                if (container._scrollRaf) {
+                                    cancelAnimationFrame(container._scrollRaf);
+                                    container._scrollRaf = null;
+                                }
                             }
                         });
                     }, { root: document.getElementById('pdf-container'), rootMargin: '1200px 0px', threshold: 0 });
 
-                    // Observer 2: Destrói tarde (Histerese de 3000px)
+                    // Observer de Destruição Agressiva
                     _pdfDestroyObserver = new IntersectionObserver((entries) => {
                         entries.forEach(entry => {
                             const container = entry.target;
@@ -350,13 +363,14 @@ window.PdfEngine = (function () {
                             } else {
                                 _activePages.delete(container);
                                 if (container.dataset.loaded === 'true') {
-                                    descarregarPaginaElemento(container);
+                                    descarregarPaginaElemento(container); // Contém _renderTask.cancel() internamente
                                     container.dataset.loaded = 'false';
                                 }
                             }
                         });
                     }, { root: document.getElementById('pdf-container'), rootMargin: '3000px 0px', threshold: 0 });
 
+                    // Tracker de Leitura (Atualiza display de página)
                     if (_pdfReadTracker) _pdfReadTracker.disconnect();
                     _pdfReadTracker = new IntersectionObserver((entries) => {
                         entries.forEach(entry => {
@@ -371,37 +385,16 @@ window.PdfEngine = (function () {
                     const firstPage = await pdf.getPage(1);
                     const viewportCSS = firstPage.getViewport({ scale: 1.5 });
 
-                    try {
-                        const textContentFirstPage = await firstPage.getTextContent();
-                        // 1. Higieniza o texto (remove espaços para evitar erros de leitura do PDF)
-                        const rawString = textContentFirstPage.items.map(item => item.str).join('');
-                        const sanitizedString = rawString.replace(/\s+/g, '');
-
-                        // 2. Regex atualizada para capturar 3 grupos: Sequencial, Dígito e Ano
-                    const cnjRegex = /(\d{7})[-]?(\d{2})\.?(\d{4})\.?\d\.?\d{2}\.?\d{4}/;
-                    const match = sanitizedString.match(cnjRegex);
-
-                    if (match && typeof _deps.onProcessoIdentificado === 'function') {
-                        // Modificação: Em vez de parseInt, aplicamos slice(-4) na string de 7 dígitos.
-                        // Isso preserva os zeros necessários para formar 4 casas decimais.
-                        const sequencialLimpo = match[1].slice(-4); 
-                        const digito = match[2];
-                        const ano = match[3];
-
-                        // Monta o formato ultra-curto (Ex: 0541-68.2025)
-                        const numeroUltraCurto = `${sequencialLimpo}-${digito}.${ano}`; 
-                        
-                        _deps.onProcessoIdentificado(numeroUltraCurto);
-                    }
-                    } catch (err) {
-                        console.warn("[Juris Notes] Falha ao tentar capturar o número do processo na capa.", err);
-                    }
-
+                    // -- INÍCIO: OTIMIZAÇÃO DE MONTAGEM O(1) COM DOCUMENT FRAGMENT --
+                    const fragment = document.createDocumentFragment();
+                    
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const pageContainer = document.createElement('div');
                         pageContainer.className = 'pdf-page-container';
                         pageContainer.dataset.pageNumber = i;
                         pageContainer.dataset.loaded = 'false';
+                        // A classe .pdf-page-container no CSS já garante o content-visibility: auto
+                        // O height definido aqui atua como contain-intrinsic-size fallback exato
                         pageContainer.style.cssText = `
                             width: ${viewportCSS.width}px;
                             height: ${viewportCSS.height}px;
@@ -410,11 +403,35 @@ window.PdfEngine = (function () {
                             background-color: var(--pdf-bg-color);
                             box-shadow: var(--shadow-md);
                         `;
-                        wrapper.appendChild(pageContainer);
+                        
+                        fragment.appendChild(pageContainer);
                         
                         _pdfRenderObserver.observe(pageContainer);
                         _pdfDestroyObserver.observe(pageContainer);
                         _pdfReadTracker.observe(pageContainer);
+                    }
+                    
+                    // Injeção de Reflow Único
+                    wrapper.appendChild(fragment);
+                    // -- FIM: OTIMIZAÇÃO DE MONTAGEM O(1) --
+
+                    try {
+                        // Lógica mantida: Captura de metadados do PJe da primeira página
+                        const textContentFirstPage = await firstPage.getTextContent();
+                        const rawString = textContentFirstPage.items.map(item => item.str).join('');
+                        const sanitizedString = rawString.replace(/\s+/g, '');
+                        const cnjRegex = /(\d{7})[-]?(\d{2})\.?(\d{4})\.?\d\.?\d{2}\.?\d{4}/;
+                        const match = sanitizedString.match(cnjRegex);
+
+                        if (match && typeof _deps.onProcessoIdentificado === 'function') {
+                            const sequencialLimpo = match[1].slice(-4); 
+                            const digito = match[2];
+                            const ano = match[3];
+                            const numeroUltraCurto = `${sequencialLimpo}-${digito}.${ano}`; 
+                            _deps.onProcessoIdentificado(numeroUltraCurto);
+                        }
+                    } catch (err) {
+                        console.warn("[Juris Notes] Falha ao capturar o número do processo na capa.", err);
                     }
 
                     await _deps.onPdfCarregado(isRetomada);
