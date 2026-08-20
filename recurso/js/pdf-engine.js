@@ -336,19 +336,20 @@ window.PdfEngine = (function () {
                             const container = entry.target;
                             
                             if (entry.isIntersecting) {
-                                // Se entrou na tela, aguarda um frame (aprox 16ms) antes de iniciar
-                                // Isso evita sobrecarregar o Worker do PDF.js em um scroll hiper-rápido
                                 if (container.dataset.loaded === 'false') {
+                                    // NOVO: Altera o estado imediatamente para mostrar o Spinner
+                                    container.dataset.loaded = 'loading'; 
+                                    
                                     container._scrollRaf = requestAnimationFrame(() => {
                                         renderizarPaginaElemento(parseInt(container.dataset.pageNumber), container);
-                                        container.dataset.loaded = 'true';
                                     });
                                 }
                             } else {
-                                // Se saiu da tela rápido demais (antes do próximo frame), aborta.
-                                if (container._scrollRaf) {
+                                // Se saiu da tela rápido demais, aborta o frame e volta pro estado false
+                                if (container._scrollRaf && container.dataset.loaded === 'loading') {
                                     cancelAnimationFrame(container._scrollRaf);
                                     container._scrollRaf = null;
+                                    container.dataset.loaded = 'false';
                                 }
                             }
                         });
@@ -526,10 +527,17 @@ window.PdfEngine = (function () {
                     linkService: jurisLinkService 
                 });
             }
+            
+            // NOVO: Apenas após TODO o canvas e texto serem renderizados, marcamos como true.
+            // Isso faz o CSS esconder o Skeleton e o Spinner, revelando a página.
+            container.dataset.loaded = 'true'; 
+
         } catch (err) {
             if (err.name !== 'RenderingCancelledException') {
                 console.error('Erro ao renderizar página PDF:', err);
             }
+            // NOVO: Se a renderização for cancelada ou falhar, volta ao estado vazio
+            container.dataset.loaded = 'false';
         } finally {
             container._renderTask = null;
         }
