@@ -3,6 +3,23 @@
    ORQUESTRADOR CENTRAL E INFRAESTRUTURA DA APLICAÇÃO
    ================================================ */
 
+// Utilitário para evitar Layout Thrashing e Flickering
+window.RenderCycle = {
+    awaitNextFrame: () => new Promise(resolve => {
+        requestAnimationFrame(() => requestAnimationFrame(resolve));
+    }),
+    bloquearScrollBody: (bloquear) => {
+        if (bloquear) {
+            const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
+            document.body.style.overflow = 'hidden';
+            document.body.style.paddingRight = `${scrollBarWidth}px`;
+        } else {
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }
+    }
+};
+
 /* ================================================
    MÓDULO DA SPLASH SCREEN (GERENCIADOR DE ESTADO E EVENT LOOP)
    ================================================ */
@@ -667,6 +684,7 @@ function encerrarSessao() {
     if (typeof fecharPopupClassificacao === 'function') fecharPopupClassificacao();
     if (window.AudioManager) window.AudioManager.encerrar();
     if (window.TimeTrackerManager) window.TimeTrackerManager.parar();
+    if (window.TaskManager) window.TaskManager.setTarefasState([]);
 
     topicos      = [];
     modoRetomada = false;
@@ -1221,6 +1239,8 @@ document.addEventListener('keydown', function (e) {
         modaisFechaveis.forEach(modal => {
             if (modal.style.display === 'flex' || modal.style.display === 'block') {
                 if (modal.id === 'outline-view-modal' && window.OutlineViewManager) OutlineViewManager.fechar();
+                if (modal.id === 'minuta-view-modal' && window.MinutaViewManager) MinutaViewManager.fechar();
+                if (modal.id === 'modal-tarefas' && window.TaskManager) TaskManager.fecharModal();
             }
         });
     }
@@ -1756,3 +1776,206 @@ window.atualizarStatusBotaoExtrator = function() {
         btn.title = 'Alfinete de Extração (Marcar Início/Fim para IA)';
     }
 };
+
+/* ================================================
+   MÓDULO GERENCIADOR DE TAREFAS NATIVO (TASK MANAGER)
+   ================================================ */
+window.TaskManager = (function() {
+    let selectorArmTimer = null;
+
+    async function abrirModal(e) {
+        if(e) e.stopPropagation();
+        const backdrop = document.getElementById('tarefas-modal-backdrop');
+        const modal = document.getElementById('modal-tarefas');
+        
+        RenderCycle.bloquearScrollBody(true);
+        backdrop.style.display = 'block';
+        modal.style.display = 'flex';
+        
+        await RenderCycle.awaitNextFrame();
+        
+        atualizarBadge();
+        const lista = document.getElementById('native-obs-list');
+        if(lista) lista.scrollTop = 0;
+    }
+
+    function fecharModal() {
+        document.getElementById('tarefas-modal-backdrop').style.display = 'none';
+        document.getElementById('modal-tarefas').style.display = 'none';
+        RenderCycle.bloquearScrollBody(false);
+        atualizarBadge();
+        if(typeof salvarBackupAutomatico === 'function') salvarBackupAutomatico();
+    }
+
+    function adicionarTarefa() {
+        const container = document.getElementById('native-obs-list');
+        if(!container) return;
+        const div = document.createElement('div');
+        div.className = 'native-task-item';
+        
+        div.innerHTML = `
+            <input type="checkbox" onchange="TaskManager.toggleConcluido(this)">
+            <div class="topic-circle-indicator" data-topic-id="global" title="Global" style="background-color: #ffffff; border: 2px solid #cbd5e1;" onclick="TaskManager.abrirSeletorTemas(this, event)"></div>
+            <input type="text" placeholder="Escreva sua tarefa..." oninput="this.setAttribute('value', this.value);">
+            <button onclick="this.parentElement.remove(); TaskManager.atualizarBadge();" style="border:none; background:none; cursor:pointer; color:#ef4444; margin-left: 8px;">✕</button>
+        `;
+        container.appendChild(div);
+        
+        requestAnimationFrame(() => {
+            container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+        });
+        atualizarBadge();
+        if(typeof salvarBackupAutomatico === 'function') salvarBackupAutomatico();
+    }
+
+    function toggleConcluido(chk) {
+        const item = chk.closest('.native-task-item');
+        if(chk.checked) {
+            item.classList.add('completed');
+            chk.setAttribute('checked', 'checked');
+        } else {
+            item.classList.remove('completed');
+            chk.removeAttribute('checked');
+        }
+        atualizarBadge();
+        if(typeof salvarBackupAutomatico === 'function') salvarBackupAutomatico();
+    }
+
+    function atualizarBadge() {
+        const container = document.getElementById('native-obs-list');
+        if(!container) return;
+        
+        const pendentes = container.querySelectorAll('input[type="checkbox"]:not(:checked)').length;
+        const btn = document.getElementById('btn-lembretes-tarefa');
+        const badge = document.getElementById('badge-tarefas');
+        
+        if (!btn) return;
+
+        if(pendentes > 0) {
+            btn.classList.add('has-tasks');
+            if(badge) {
+                badge.style.display = 'flex';
+                badge.textContent = pendentes > 99 ? '99+' : pendentes;
+            }
+        } else {
+            btn.classList.remove('has-tasks');
+            if(badge) badge.style.display = 'none';
+        }
+    }
+
+    function abrirSeletorTemas(circleEl, event) {
+        if (event) event.stopPropagation();
+
+        document.querySelectorAll('.obs-topic-selector-menu').forEach(m => m.remove());
+
+        const menu = document.createElement('div');
+        menu.className = 'obs-topic-selector-menu jcs-options-portal';
+        menu.style.visibility = 'hidden'; 
+        menu.style.position = 'fixed';
+        menu.style.width = '200px';
+
+        const optionGlobal = document.createElement('div');
+        optionGlobal.className = 'jcs-option';
+        optionGlobal.innerHTML = `<div class="jcs-color-dot" style="background: #ffffff; border: 1px solid #ccc;"></div> Global`;
+        optionGlobal.addEventListener('click', () => applyTheme(circleEl, 'global', 'Global', '#ffffff', menu));
+        menu.appendChild(optionGlobal);
+
+        if (typeof topicos !== 'undefined' && topicos.length > 0) {
+            const div = document.createElement('div');
+            div.style.height = '1px';
+            div.style.backgroundColor = '#eee';
+            menu.appendChild(div);
+
+            topicos.forEach(t => {
+                const opt = document.createElement('div');
+                opt.className = 'jcs-option';
+                opt.innerHTML = `<div class="jcs-color-dot" style="background: ${t.cor};"></div> <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${t.nome}</span>`;
+                opt.addEventListener('click', () => applyTheme(circleEl, t.id, t.nome, t.cor, menu));
+                menu.appendChild(opt);
+            });
+        }
+
+        document.body.appendChild(menu);
+
+        const rect = circleEl.getBoundingClientRect();
+        menu.style.left = rect.left + 'px';
+        menu.style.top = (rect.bottom + 4) + 'px';
+
+        requestAnimationFrame(() => {
+            menu.style.visibility = 'visible';
+        });
+
+        if (selectorArmTimer) clearTimeout(selectorArmTimer);
+        selectorArmTimer = setTimeout(() => {
+            const closeFn = () => {
+                menu.remove();
+                document.removeEventListener('click', closeFn);
+            };
+            document.addEventListener('click', closeFn);
+        }, 50);
+    }
+
+    function applyTheme(circleEl, id, nome, cor, menu) {
+        circleEl.dataset.topicId = id;
+        circleEl.style.backgroundColor = cor;
+        circleEl.title = nome;
+        if(id === 'global') {
+            circleEl.style.border = '2px solid #cbd5e1';
+            circleEl.style.boxShadow = 'none';
+        } else {
+            circleEl.style.border = '2px solid transparent';
+            circleEl.style.boxShadow = `0 0 6px ${cor}40`;
+        }
+        menu.remove();
+        if(typeof salvarBackupAutomatico === 'function') salvarBackupAutomatico();
+    }
+
+    function getTarefasState() {
+        const container = document.getElementById('native-obs-list');
+        if(!container) return [];
+        
+        return Array.from(container.querySelectorAll('.native-task-item')).map(item => {
+            const chk = item.querySelector('input[type="checkbox"]');
+            const txt = item.querySelector('input[type="text"]');
+            const ind = item.querySelector('.topic-circle-indicator');
+            return {
+                concluida: chk.checked,
+                texto: txt.value,
+                topicId: ind ? ind.dataset.topicId : 'global',
+                topicCor: ind ? ind.style.backgroundColor : '#ffffff'
+            };
+        });
+    }
+
+    function setTarefasState(tarefasArray) {
+        const container = document.getElementById('native-obs-list');
+        if(!container) return;
+        container.innerHTML = '';
+        
+        if(!tarefasArray || tarefasArray.length === 0) {
+            atualizarBadge();
+            return;
+        }
+
+        tarefasArray.forEach(t => {
+            const div = document.createElement('div');
+            div.className = 'native-task-item';
+            if(t.concluida) div.classList.add('completed');
+            
+            const checkedAttr = t.concluida ? 'checked="checked"' : '';
+            const borderStyle = t.topicId === 'global' ? '2px solid #cbd5e1' : '2px solid transparent';
+            const shadowStyle = t.topicId === 'global' ? 'none' : `0 0 6px ${t.topicCor}40`;
+
+            div.innerHTML = `
+                <input type="checkbox" onchange="TaskManager.toggleConcluido(this)" ${checkedAttr}>
+                <div class="topic-circle-indicator" data-topic-id="${t.topicId}" title="${t.topicId === 'global' ? 'Global' : 'Tópico Específico'}" style="background-color: ${t.topicCor}; border: ${borderStyle}; box-shadow: ${shadowStyle};" onclick="TaskManager.abrirSeletorTemas(this, event)"></div>
+                <input type="text" placeholder="Escreva sua tarefa..." value="${t.texto.replace(/"/g, '&quot;')}" oninput="this.setAttribute('value', this.value);">
+                <button onclick="this.parentElement.remove(); TaskManager.atualizarBadge();" style="border:none; background:none; cursor:pointer; color:#ef4444; margin-left: 8px;">✕</button>
+            `;
+            container.appendChild(div);
+        });
+        atualizarBadge();
+    }
+
+    return { abrirModal, fecharModal, adicionarTarefa, toggleConcluido, atualizarBadge, abrirSeletorTemas, getTarefasState, setTarefasState };
+})();

@@ -121,32 +121,7 @@ window.BalancaManager = (function() {
         }
     }
 
-    // NOVA FUNÇÃO: Ponto de entrada exclusivo para Lembretes
-    function abrirLembretes(event) {
-        if(event) event.stopPropagation();
-        
-        abrirPainel(); 
-        const iframe = document.getElementById('balanca-iframe');
-        
-        // BLINDAGEM: Trava de disparo único
-        let scrollDisparado = false;
-        const dispararScroll = () => {
-            if (scrollDisparado) return;
-            scrollDisparado = true;
-            
-            if (iframe.contentWindow) {
-                iframe.contentWindow.postMessage({ type: 'SCROLL_TO_TASKS' }, '*');
-            }
-            iframe.removeEventListener('load', dispararScroll);
-        };
-        
-        // Tenta usar a via expressa (evento nativo)
-        iframe.addEventListener('load', dispararScroll);
-        
-        // Fallback: Se o navegador for preguiçoso e pular o evento nativo, 
-        // forçamos o scroll após 400ms.
-        setTimeout(dispararScroll, 400);
-    }
+    // (abrirLembretes removido - transferido para TaskManager nativo)
 
     function sincronizarContextoDossie(topicosInjetados) {
         const iframe = document.getElementById('balanca-iframe');
@@ -183,44 +158,14 @@ window.BalancaManager = (function() {
     }
 
     // ==========================================
-    // MOTOR DE LEITURA DE TAREFAS PRECISO
+    // DELEGAÇÃO DE TAREFAS NATIVAS
     // ==========================================
     function avaliarTarefasPendentes() {
-        let count = 0;
-        const iframe = document.getElementById('balanca-iframe');
-
-        // TENTATIVA 1: Ler do Iframe AO VIVO (Garante dados frescos se o painel estiver aberto na hora da exportação)
-        if (iframe && iframe.contentDocument) {
-            try {
-                const doc = iframe.contentDocument;
-                const obsList = doc.getElementById('obs-list'); // Lê exatamente do HTML importado
-                if (obsList) {
-                    // Conta os checkboxes de tarefas que NÃO estão checados
-                    const tarefasAbertas = obsList.querySelectorAll('.chk-input:not(:checked)');
-                    count = tarefasAbertas.length;
-                    return count;
-                }
-            } catch (e) {
-                // Silencia erros de CORS temporários
-            }
+        const badge = document.getElementById('badge-tarefas');
+        if(badge && badge.style.display !== 'none') {
+            return parseInt(badge.textContent.replace('+', '')) || 0;
         }
-
-        // TENTATIVA 2: Fallback para a string salva via DOMParser (Caso o painel esteja fechado)
-        if (htmlState) {
-            try {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(htmlState, 'text/html');
-                const obsList = doc.getElementById('obs-list');
-                if (obsList) {
-                    const tarefasAbertas = obsList.querySelectorAll('.chk-input:not(:checked)');
-                    count = tarefasAbertas.length;
-                }
-            } catch (e) {
-                console.warn("[Juris Notes ED] Erro ao analisar tarefas do HTML salvo.", e);
-            }
-        }
-
-        return count;
+        return 0;
     }
 
     // ==========================================
@@ -229,32 +174,18 @@ window.BalancaManager = (function() {
     function atualizarInterface() {
         const btnBalanca = document.getElementById('btn-balanca-justica');
         const btnLembrete = document.getElementById('btn-lembretes-tarefa');
-        const badge = document.getElementById('badge-tarefas');
         
         if (!btnBalanca || !btnLembrete) return;
 
-        // Regra 1: O ícone da balança só fica carregado (Fúcsia no ED) se houver HTML
+        // Regra 1: O ícone da balança só fica carregado se houver HTML
         if (htmlState) {
             btnBalanca.classList.add('is-loaded');
-            btnLembrete.disabled = false;
         } else {
             btnBalanca.classList.remove('is-loaded');
-            btnLembrete.disabled = true;
         }
-
-        // Regra 2: Computa e pinta as tarefas (Amarelo Semântico de Alerta)
-        pendingTasksCount = avaliarTarefasPendentes();
-
-        if (pendingTasksCount > 0) {
-            btnLembrete.classList.add('has-tasks');
-            if (badge) {
-                badge.style.display = 'flex';
-                badge.textContent = pendingTasksCount > 99 ? '99+' : pendingTasksCount;
-            }
-        } else {
-            btnLembrete.classList.remove('has-tasks');
-            if (badge) badge.style.display = 'none';
-        }
+        
+        // Regra 2: Botão Lembretes independe da Balança agora
+        btnLembrete.disabled = false;
     }
 
     function fecharPainel() {
@@ -362,7 +293,6 @@ window.BalancaManager = (function() {
 
     return { 
         abrirPainel, 
-        abrirLembretes, 
         fecharPainel, 
         processarUpload, 
         getHtmlState, 
@@ -370,7 +300,7 @@ window.BalancaManager = (function() {
         resetarEstado,
         resetToGenerator,
         getPendingTasks: avaliarTarefasPendentes,
-        executarGuardrailDeTarefas, // <--- NOVA FUNÇÃO EXPORTADA
-        sincronizarTopicos: sincronizarContextoDossie // <-- EXPOSIÇÃO DA FUNÇÃO
+        executarGuardrailDeTarefas, 
+        sincronizarTopicos: sincronizarContextoDossie 
     };
 })();
