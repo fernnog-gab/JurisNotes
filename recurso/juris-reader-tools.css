@@ -1150,30 +1150,111 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
    UI MODAL NATIVO DE TAREFAS E SCROLL INDICATOR
    ========================================================= */
 
-/* Indicador visual de scroll (UX) via CSS Moderno (Shadow inset no topo/base) */
-.scroll-indicator-container {
-    background: 
-        linear-gradient(#f8fafc 30%, rgba(248,250,252,0)),
-        linear-gradient(rgba(248,250,252,0), #f8fafc 70%) 0 100%,
-        radial-gradient(farthest-side at 50% 0, rgba(0,0,0,.1), rgba(0,0,0,0)),
-        radial-gradient(farthest-side at 50% 100%, rgba(0,0,0,.1), rgba(0,0,0,0)) 0 100%;
-    background-repeat: no-repeat;
-    background-color: #f8fafc;
-    background-size: 100% 40px, 100% 40px, 100% 14px, 100% 14px;
-    background-attachment: local, local, scroll, scroll;
+/* =========================================================
+   REFACTORY: MODAL DO GERENCIADOR DE TAREFAS
+   ========================================================= */
+#modal-tarefas {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    
+    /* Layout Responsivo e Fluido */
+    width: min(92vw, 1000px);
+    min-width: min(340px, calc(100vw - 32px));
+    height: fit-content;
+    max-height: min(88vh, 88dvh);
+    
+    /* Base Visual e Z-Index isolado */
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.28);
+    z-index: var(--z-wizard-modal);
+    
+    /* Estrutura Interna */
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
 }
 
-/* Migração UI Tarefas */
-.native-task-item {
-    display: flex; align-items: center; background: #fff; padding: 10px; border-radius: 6px; margin-bottom: 6px; border: 1px solid var(--border-color);
+/* O container da lista: liberto da trava de 200px */
+#modal-tarefas .task-list-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    margin-top: 12px;
+    background: var(--trt-light-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
 }
-.native-task-item input[type="text"] {
-    flex: 1; border: none; outline: none; font-size: 0.85rem; color: var(--text-dark); background: transparent; padding: 4px;
+
+/* Estilização da Tarefa (Encapsulada) */
+#modal-tarefas .native-task-item {
+    display: flex; 
+    align-items: flex-start;
+    background: #fff; 
+    padding: 10px 12px;
+    border-radius: 6px; 
+    border: 1px solid var(--border-color);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 }
-.native-task-item input[type="checkbox"] { margin-right: 12px; accent-color: var(--trt-blue); cursor: pointer; width: 16px; height: 16px; }
-.native-task-item.completed { opacity: 0.5; background-color: #f1f5f9; }
-.native-task-item.completed input[type="text"] { text-decoration: line-through; color: #64748b; }
-.topic-circle-indicator { width: 14px; height: 14px; border-radius: 50%; margin-right: 8px; cursor: pointer; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+#modal-tarefas .native-task-item input[type="checkbox"] {
+    margin-top: 4px;
+    margin-right: 12px;
+    accent-color: var(--trt-blue);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+/* O coração da nova UX: Textarea auto-expansível */
+#modal-tarefas .native-task-item textarea {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 0.95rem;
+    color: var(--text-dark);
+    resize: none;
+    line-height: 1.5;
+    padding: 2px 4px;
+    
+    /* CSS Moderno para auto-crescimento */
+    field-sizing: content;
+    min-height: 28px;
+    max-height: 250px;
+}
+
+/* Fallback para navegadores que não suportam field-sizing */
+@supports not (field-sizing: content) {
+    #modal-tarefas .native-task-item textarea {
+        overflow-y: auto;
+        height: 60px;
+    }
+}
+
+/* Estado Concluído */
+#modal-tarefas .native-task-item.completed {
+    opacity: 0.6;
+    background-color: var(--trt-light-bg);
+}
+
+#modal-tarefas .native-task-item.completed textarea {
+    text-decoration: line-through;
+    color: #64748b;
+}
+
+/* Ajuste do botão fechar e indicador dentro do item */
+#modal-tarefas .native-task-item button { margin-top: 2px; }
+#modal-tarefas .topic-circle-indicator { margin-top: 5px; }
 
 /* =========================================================
    REVISÃO ARQUITETURAL: EFEITOS DE CARREGAMENTO DO PDF
