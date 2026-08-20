@@ -1170,7 +1170,7 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
     border: 1px solid var(--border-color);
     border-radius: 12px;
     box-shadow: 0 12px 48px rgba(0, 0, 0, 0.28);
-    z-index: var(--z-wizard-modal);
+    z-index: 4005; /* Força o modal a ficar acima do backdrop (que é 4004) */
     
     /* Estrutura Interna */
     display: flex;
