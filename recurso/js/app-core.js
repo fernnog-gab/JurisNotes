@@ -1781,8 +1781,8 @@ window.TaskManager = (function() {
         div.innerHTML = `
             <input type="checkbox" onchange="TaskManager.toggleConcluido(this)">
             <div class="topic-circle-indicator" data-topic-id="global" title="Global" style="background-color: #ffffff; border: 2px solid #cbd5e1;" onclick="TaskManager.abrirSeletorTemas(this, event)"></div>
-            <textarea rows="1" placeholder="Escreva sua tarefa..." oninput="this.innerHTML = this.value;"></textarea>
-            <button onclick="this.parentElement.remove(); TaskManager.atualizarBadge();" style="border:none; background:none; cursor:pointer; color:#ef4444; margin-left: 8px;" title="Remover Tarefa">✕</button>
+            <input type="text" placeholder="Escreva sua tarefa..." oninput="this.setAttribute('value', this.value);">
+            <button onclick="this.parentElement.remove(); TaskManager.atualizarBadge();" style="border:none; background:none; cursor:pointer; color:#ef4444; margin-left: 8px;">✕</button>
         `;
         container.appendChild(div);
         
@@ -1904,7 +1904,7 @@ window.TaskManager = (function() {
         
         return Array.from(container.querySelectorAll('.native-task-item')).map(item => {
             const chk = item.querySelector('input[type="checkbox"]');
-            const txt = item.querySelector('textarea');
+            const txt = item.querySelector('input[type="text"]');
             const ind = item.querySelector('.topic-circle-indicator');
             return {
                 concluida: chk.checked,
@@ -1937,8 +1937,8 @@ window.TaskManager = (function() {
             div.innerHTML = `
                 <input type="checkbox" onchange="TaskManager.toggleConcluido(this)" ${checkedAttr}>
                 <div class="topic-circle-indicator" data-topic-id="${t.topicId}" title="${t.topicId === 'global' ? 'Global' : 'Tópico Específico'}" style="background-color: ${t.topicCor}; border: ${borderStyle}; box-shadow: ${shadowStyle};" onclick="TaskManager.abrirSeletorTemas(this, event)"></div>
-                <textarea rows="1" placeholder="Escreva sua tarefa..." oninput="this.innerHTML = this.value;">${t.texto.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
-                <button onclick="this.parentElement.remove(); TaskManager.atualizarBadge();" style="border:none; background:none; cursor:pointer; color:#ef4444; margin-left: 8px;" title="Remover Tarefa">✕</button>
+                <input type="text" placeholder="Escreva sua tarefa..." value="${t.texto.replace(/"/g, '&quot;')}" oninput="this.setAttribute('value', this.value);">
+                <button onclick="this.parentElement.remove(); TaskManager.atualizarBadge();" style="border:none; background:none; cursor:pointer; color:#ef4444; margin-left: 8px;">✕</button>
             `;
             container.appendChild(div);
         });
