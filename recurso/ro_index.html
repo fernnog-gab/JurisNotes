@@ -502,26 +502,29 @@
     <div id="toast-feedback" class="toast-feedback"></div>
     
     <!-- Modal Nativo de Tarefas -->
-    <div id="tarefas-modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(2px); z-index: 4004;" onclick="TaskManager.fecharModal()"></div>
+    <div id="tarefas-modal-backdrop" class="backdrop-seguro" style="display: none;" onclick="TaskManager.fecharModal()"></div>
 
-    <div id="modal-tarefas" class="crop-wizard-popup fechavel-por-esc" style="display:none; z-index: 4005; min-width: 450px; max-width: 600px; max-height: 85vh; flex-direction: column;">
-        <div class="wizard-header" style="flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;">
-            <span style="display: flex; align-items: center; gap: 8px;">
+    <div id="modal-tarefas" class="crop-wizard-popup modal-tarefas-amplo fechavel-por-esc" style="display:none;">
+        <div class="wizard-header wizard-header--flex">
+            <span class="wizard-header__title">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
                 Gerenciador de Tarefas
             </span>
-            <button style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b;" onclick="TaskManager.fecharModal()">✕</button>
+            <button class="wizard-header__close-btn" onclick="TaskManager.fecharModal()">✕</button>
         </div>
         
-        <!-- Blindagem Flexbox: min-height: 0 força o overflow correto -->
-        <div class="doc-list-container scroll-indicator-container" id="native-obs-list" style="flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 10px; margin-top: 12px; background: #f8fafc; border: 1px solid var(--border-color);">
-            <!-- Tarefas dinâmicas -->
-        </div>
-        
-        <div style="flex-shrink: 0; margin-top: 12px;">
-            <button class="chip-btn chip-autora" style="width: 100%; border: 1px dashed var(--trt-blue); background: transparent; color: var(--trt-blue);" onclick="TaskManager.adicionarTarefa()">
-                + Adicionar Nova Tarefa
-            </button>
+        <!-- Contêiner centralizado para ergonomia de leitura -->
+        <div class="tarefas-container-interno">
+            <!-- Blindagem Flexbox + Scroll Indicator nativo -->
+            <div class="doc-list-container scroll-indicator-container native-obs-list-amplo" id="native-obs-list">
+                <!-- Tarefas dinâmicas -->
+            </div>
+            
+            <div class="tarefas-actions-footer">
+                <button class="chip-btn chip-autora btn-adicionar-tarefa" onclick="TaskManager.adicionarTarefa()">
+                    + Adicionar Nova Tarefa
+                </button>
+            </div>
         </div>
     </div>
 
