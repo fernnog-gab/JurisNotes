@@ -912,7 +912,7 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
 }
 
 /* =========================================================
-   UI MODAL NATIVO DE TAREFAS (ED)
+   UI MODAL NATIVO DE TAREFAS (EXPANDIDO E ERGONÔMICO - ED)
    ========================================================= */
 .scroll-indicator-container {
     background: 
@@ -926,8 +926,114 @@ button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
     background-attachment: local, local, scroll, scroll;
 }
 
-.native-task-item { display: flex; align-items: center; background: #fff; padding: 10px; border-radius: 6px; margin-bottom: 6px; border: 1px solid var(--border-color); }
-.native-task-item input[type="text"] { flex: 1; border: none; outline: none; font-size: 0.85rem; color: var(--text-dark); background: transparent; padding: 4px; }
+/* Garantia de Backdrop isolado (Padrão visual ED) */
+.backdrop-seguro {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 37, 61, 0.85);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: var(--z-abas-modal-backdrop, 4004);
+}
+
+/* Modificador Estrutural do Modal */
+.modal-tarefas-amplo {
+    z-index: var(--z-abas-modal, 4005);
+    width: 92vw;
+    max-width: 1200px;
+    height: 85vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Isolamento do Header do Modal */
+.wizard-header--flex {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.wizard-header__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.wizard-header__close-btn {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #64748b;
+    transition: color 0.2s ease;
+}
+.wizard-header__close-btn:hover { color: #d32f2f; }
+
+/* Contêiner Interno: Trava ergonômica para leitura de tarefas */
+.tarefas-container-interno {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    padding-bottom: 16px;
+}
+
+.native-obs-list-amplo {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 16px;
+    margin-top: 12px;
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+}
+
+.tarefas-actions-footer {
+    flex-shrink: 0;
+    margin-top: 12px;
+}
+
+.btn-adicionar-tarefa {
+    width: 100%;
+    padding: 12px;
+    font-size: 0.95rem;
+    border: 1px dashed var(--ed-neon-bg, #d500b5);
+    background: transparent;
+    color: var(--ed-neon-bg, #d500b5);
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.btn-adicionar-tarefa:hover {
+    background: rgba(213, 0, 181, 0.05); /* Efeito hover temático ED */
+}
+
+/* UI Tarefas (Ajustes Ergonômicos) */
+.native-task-item {
+    display: flex; 
+    align-items: center; 
+    background: #fff; 
+    padding: 12px 14px; 
+    border-radius: 8px; 
+    margin-bottom: 8px; 
+    border: 1px solid var(--border-color);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+.native-task-item input[type="text"] {
+    flex: 1; 
+    border: none; 
+    outline: none; 
+    font-size: 0.95rem; 
+    color: var(--text-dark); 
+    background: transparent; 
+    padding: 4px 10px;
+}
 .native-task-item input[type="checkbox"] { margin-right: 12px; accent-color: var(--ed-neon-bg, #d500b5); cursor: pointer; width: 16px; height: 16px; }
 .native-task-item.completed { opacity: 0.5; background-color: #f1f5f9; }
 .native-task-item.completed input[type="text"] { text-decoration: line-through; color: #64748b; }
