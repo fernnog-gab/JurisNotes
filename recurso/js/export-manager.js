@@ -660,9 +660,17 @@ window.ExportManager = (function () {
             }, {});
 
             const docNomes = {
-                sentenca: "Sentença / Acórdão", recurso_autora: "Recurso (Autora)", recurso_re: "Recurso (Ré)",
-                contrarrazões_autora: "Contrarrazões (Autora)", contrarrazões_re: "Contrarrazões (Ré)",
-                inicial: "Petição Inicial", contestacao: "Contestação"
+                sentenca: "Sentença / Decisão", 
+                agravo_peticao_exequente: "Agravo de Petição (Exequente)",
+                agravo_peticao_executada: "Agravo de Petição (Executada)",
+                agravo_peticao_terceiro: "Agravo de Petição (Terceiro)",
+                contraminuta_agravo: "Contraminuta (ao Agravo)",
+                recurso_autora: "Recurso (Autora)", 
+                recurso_re: "Recurso (Ré)",
+                contrarrazões_autora: "Contrarrazões (Autora)", 
+                contrarrazões_re: "Contrarrazões (Ré)",
+                inicial: "Petição Inicial", 
+                contestacao: "Contestação"
             };
 
             const svgPin = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 11.78L20.24 16H13v6l-1 2-1-2v-6H3.76L8 11.78V4h1V2h6v2h1v7.78z"></path></svg>`;

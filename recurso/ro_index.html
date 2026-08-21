@@ -1450,14 +1450,24 @@ Crie um sumário hierárquico enxuto com as Grandes Categorias e Subcategorias q
             <div>
                 <p class="popup-label">Peça Processual:</p>
                 <select id="extrator-doc-select" class="topic-select">
-                    <option value="sentenca">Sentença / Acórdão</option>
-                    <option value="recurso_autora">Recurso Ordinário (Autora)</option>
-                    <option value="recurso_re">Recurso Ordinário (Ré)</option>
-                    <option value="contrarrazões_autora">Contrarrazões (Autora)</option>
-                    <option value="contrarrazões_re">Contrarrazões (Ré)</option>
-                    <option value="inicial">Petição Inicial</option>
-                    <option value="contestacao">Contestação</option>
-                </select>
+    <optgroup label="Decisões">
+        <option value="sentenca">Sentença / Acórdão / Decisão</option>
+    </optgroup>
+    <optgroup label="Fase de Execução">
+        <option value="agravo_peticao_exequente">Agravo de Petição (Exequente)</option>
+        <option value="agravo_peticao_executada">Agravo de Petição (Executada)</option>
+        <option value="agravo_peticao_terceiro">Agravo de Petição (Terceiro Interessado)</option>
+        <option value="contraminuta_agravo">Contraminuta (ao Agravo de Petição)</option>
+    </optgroup>
+    <optgroup label="Fase de Conhecimento">
+        <option value="recurso_autora">Recurso Ordinário (Autora)</option>
+        <option value="recurso_re">Recurso Ordinário (Ré)</option>
+        <option value="contrarrazões_autora">Contrarrazões (Autora)</option>
+        <option value="contrarrazões_re">Contrarrazões (Ré)</option>
+        <option value="inicial">Petição Inicial</option>
+        <option value="contestacao">Contestação</option>
+    </optgroup>
+</select>
             </div>
             <div>
                 <p class="popup-label">Este clique representa o:</p>

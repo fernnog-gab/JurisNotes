@@ -1222,9 +1222,13 @@ document.addEventListener('mouseover', (e) => {
     const docTipo = pin.dataset.tooltipDoc;
     const topicoNome = pin.dataset.tooltipTopico;
 
-    // Dicionário visual
+    // Dicionário visual atualizado para o balão do alfinete
     const docNomes = { 
-        sentenca: "Sentença / Acórdão", 
+        sentenca: "Sentença / Decisão", 
+        agravo_peticao_exequente: "Agravo de Petição (Exequente)",
+        agravo_peticao_executada: "Agravo de Petição (Executada)",
+        agravo_peticao_terceiro: "Agravo de Petição (Terceiro)",
+        contraminuta_agravo: "Contraminuta (ao Agravo)",
         recurso_autora: "Recurso (Autora)", 
         recurso_re: "Recurso (Ré)", 
         contrarrazões_autora: "Contrarrazões (Autora)", 
