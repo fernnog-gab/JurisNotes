@@ -65,10 +65,11 @@ window.BackupManager = (function () {
                 pdfHash:           _pdfHash,
                 possuiAudio:       possuiAudio,
                 balancaHtml:       window.BalancaManager ? window.BalancaManager.getHtmlState() : null,
-                versaoApp:         '7.1', // Adição de Parâmetros Contratuais Globais
+                versaoApp:         '7.2', // ATUALIZADO: Adição do salvamento de Tarefas
                 ultimaAtualizacao: Date.now(),
                 atalhosPdf:        atalhosCapturados,
-                contrato:          window.ContratoManager ? window.ContratoManager.getDados() : null
+                contrato:          window.ContratoManager ? window.ContratoManager.getDados() : null,
+                tarefas:           window.TaskManager ? window.TaskManager.getTarefasState() : []
             },
             dados: topicos
         }, null, 2);
@@ -258,6 +259,11 @@ window.BackupManager = (function () {
 
         if (window.ContratoManager) {
             window.ContratoManager.setDados(pacote.metadata.contrato || null);
+        }
+
+        // Restaura as tarefas na interface (Lida com backups legados via fallback para [])
+        if (window.TaskManager) {
+            window.TaskManager.setTarefasState(pacote.metadata.tarefas || []);
         }
 
         return pacote;
