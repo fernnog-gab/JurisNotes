@@ -65,9 +65,10 @@ window.BackupManager = (function () {
                 pdfHash:           _pdfHash,
                 possuiAudio:       possuiAudio,
                 balancaHtml:       window.BalancaManager ? window.BalancaManager.getHtmlState() : null,
-                versaoApp:         '7.0', // MARCO DA NOVA ARQUITETURA E LIMPEZA DE VEREDITO
+                versaoApp:         '7.1', // ATUALIZADO: Adição do salvamento de Tarefas no módulo AI
                 ultimaAtualizacao: Date.now(),
-                atalhosPdf:        atalhosCapturados
+                atalhosPdf:        atalhosCapturados,
+                tarefas:           window.TaskManager ? window.TaskManager.getTarefasState() : []
             },
             dados: topicos
         }, null, 2);
@@ -249,6 +250,11 @@ window.BackupManager = (function () {
         
         if (window.BalancaManager) {
             window.BalancaManager.restoreHtmlState(pacote.metadata.balancaHtml || null);
+        }
+
+        // Restaura as tarefas na interface (Lida com backups legados via fallback para [])
+        if (window.TaskManager) {
+            window.TaskManager.setTarefasState(pacote.metadata.tarefas || []);
         }
 
         return pacote;
