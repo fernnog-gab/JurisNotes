@@ -1408,15 +1408,39 @@
 }
 .pilha-editavel:hover { background-color: rgba(255, 193, 7, 0.15); }
 
-/* Descrição (com suporte a Scrollbar) */
+/* Descrição (com suporte a Scrollbar e Markdown) */
 .pilha-editavel-desc {
     max-height: 120px;
     overflow-y: auto;
-    font-weight: 400 !important;
-    color: #666 !important;
+    font-weight: 400;
+    color: #666;
     line-height: 1.5;
-    font-size: 0.8rem !important;
-    margin-bottom: 0 !important;
+    font-size: 0.8rem;
+    margin-bottom: 0;
+}
+
+/* Suporte às tags inline geradas pelo renderizarMarkdownSeguro */
+.pilha-editavel-desc b,
+.pilha-editavel-desc strong {
+    font-weight: 700;
+    color: var(--trt-blue);
+}
+
+.pilha-editavel-desc i,
+.pilha-editavel-desc em {
+    font-style: italic;
+}
+
+.pilha-editavel-desc u {
+    text-decoration: underline;
+}
+
+.pilha-editavel-desc .txt-largo-1 {
+    font-size: 1.15em;
+}
+
+.pilha-editavel-desc .txt-largo-2 {
+    font-size: 1.3em;
 }
 .pilha-editavel-desc::-webkit-scrollbar { width: 4px; }
 .pilha-editavel-desc::-webkit-scrollbar-track { background: transparent; }
