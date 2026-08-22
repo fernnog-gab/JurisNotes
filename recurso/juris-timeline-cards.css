@@ -236,7 +236,89 @@
 .main-card-wrapper.drag-over > .annotation-card { border-top: 3px dashed var(--trt-blue-mid) !important; background-color: rgba(26, 58, 92, 0.03); }
 .master-drag-handle:active { cursor: grabbing !important; }
 
-/* Adaptações de Áudio para o Card (Herdado do Leitor) */
+/* ================================================
+   10. EMPILHAMENTO DE NÓS DE IDEIAS (PILHAS)
+   ================================================ */
+.sub-annotation-stack {
+    border-color: var(--trt-blue-mid) !important;
+    will-change: transform;
+    cursor: default;
+    background-color: #ffffff;
+    position: relative; /* Necessário para os pseudo-elementos */
+}
+
+/* Efeito de Volume com Pseudo-elementos (GPU renderizado) */
+.sub-annotation-stack::before,
+.sub-annotation-stack::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: inherit;
+    border: 1px solid #cbd5e1;
+    background-color: #f8fafc;
+    z-index: -1;
+}
+
+.sub-annotation-stack::before {
+    transform: translateY(4px) translateX(4px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.sub-annotation-stack::after {
+    transform: translateY(8px) translateX(8px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+/* Badge Numérico Flutuante (Ação Destrutiva) */
+.stack-roman-badge {
+    position: absolute;
+    top: -12px;
+    left: -12px;
+    width: 32px;
+    height: 32px;
+    background-color: var(--trt-blue);
+    color: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 800;
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    z-index: 5;
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s;
+}
+
+.stack-roman-badge:hover {
+    transform: scale(1.15);
+    background-color: #ef4444; /* Vermelho alerta para Desagrupar */
+}
+
+/* Botão Interno de Abertura do Modo Leitura */
+.stack-read-btn {
+    width: 100%;
+    margin-top: 4px;
+    padding: 8px;
+    background: #f1f5f9;
+    border: 1px dashed var(--trt-blue-mid);
+    color: var(--trt-blue);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+.stack-read-btn:hover {
+    background: var(--trt-blue);
+    color: #ffffff;
+    border-style: solid;
+}
 .card-audio { background: #fdfaf4; border: 1px solid #f2e3c6; padding: 12px; border-radius: 6px; margin-top: 10px; display: flex; align-items: center; gap: 12px; }
 .audio-icon-box { background: #ffe082; color: #d84315; padding: 10px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .audio-icon-box svg { width: 20px; height: 20px; }
