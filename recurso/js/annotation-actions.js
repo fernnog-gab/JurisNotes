@@ -564,46 +564,24 @@ function confirmarReordenacaoPosicao() {
    2. NOVA FUNCIONALIDADE: TRANSFERÊNCIA INTELIGENTE
    ================================================ */
 
-// 1. CRIAR A PILHA
-window.criarPilhaDeIdeias = function() {
-    if (!_menuSubAnotacaoCtx) return;
-    const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
-    const alvo = _resolverSubAlvo(topico, _menuSubAnotacaoCtx.parentIndex, _menuSubAnotacaoCtx.viewSource);
-    const sub = alvo.subAnotacoes[_menuSubAnotacaoCtx.localIndex];
-    
-    if (sub.grupoId) return exibirToast('Este nó já pertence a uma pilha.', 'aviso');
-
-    sub.grupoId = 'grp-' + Date.now().toString(36);
-    renderizarTopicos(); 
-    salvarBackupAutomatico();
-    document.getElementById('sub-annotation-context-menu').style.display = 'none';
-};
-
-// 2. ABRIR MODAL COM AUTO-PREENCHIMENTO
-window.abrirModalTransferirSubAnotacao = function() {
+function abrirModalTransferirSubAnotacao() {
     if (!_menuSubAnotacaoCtx) return;
     document.getElementById('sub-annotation-context-menu').style.display = 'none';
     
-    const inputDestino = document.getElementById('input-transferir-sub-destino');
-    // Preenche com o número do Card Mestre atual automaticamente!
-    inputDestino.value = _menuSubAnotacaoCtx.parentIndex + 1;
-    
+    document.getElementById('input-transferir-sub-destino').value = '';
     document.getElementById('transfer-sub-target-box').style.display = 'none';
     document.getElementById('select-transferir-sub-alvo').innerHTML = '';
     
     document.getElementById('transferir-sub-backdrop').style.display = 'block';
     document.getElementById('modal-transferir-sub').style.display = 'flex';
     
-    // Força a leitura imediata das pilhas existentes neste card
-    window.carregarSubAlvosTransferencia();
-    
-    setTimeout(() => inputDestino.focus(), 50);
-};
+    setTimeout(() => document.getElementById('input-transferir-sub-destino').focus(), 50);
+}
 
-window.fecharModalTransferirSub = function() {
+function fecharModalTransferirSub() {
     document.getElementById('transferir-sub-backdrop').style.display = 'none';
     document.getElementById('modal-transferir-sub').style.display = 'none';
-};
+}
 
 // Helper: Extrai um snippet seguro para montar os rótulos do select
 function _gerarSnippetCard(item) {
@@ -611,6 +589,7 @@ function _gerarSnippetCard(item) {
     let snippet = '';
     
     if (item.tipo === 'texto') {
+        // Remove quebras de linha e limita a 25 caracteres
         const limpo = item.conteudo.replace(/<[^>]*>?/gm, '').substring(0, 25);
         snippet = `[T] "${limpo}..."`;
     } else if (item.tipo === 'audio') {
@@ -621,8 +600,7 @@ function _gerarSnippetCard(item) {
     return `${docTag} - ${snippet}`;
 }
 
-// 3. CARREGAR ALVOS (AGORA MOSTRA AS PILHAS)
-window.carregarSubAlvosTransferencia = function() {
+function carregarSubAlvosTransferencia() {
     if (!_menuSubAnotacaoCtx) return;
     const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
     const inputVal = parseInt(document.getElementById('input-transferir-sub-destino').value, 10);
@@ -636,42 +614,20 @@ window.carregarSubAlvosTransferencia = function() {
     if (isNaN(inputVal) || inputVal < 1 || inputVal > topico.anotacoes.length) return;
 
     const cardDestino = topico.anotacoes[inputVal - 1];
-    let temOpcoes = false;
     
-    // Lista os anexos
+    // Identificou um Grupo. Requisita especificação do usuário com rótulos ricos.
     if (cardDestino.itensCorrelacionados && cardDestino.itensCorrelacionados.length > 0) {
         select.appendChild(new Option(`🌟 Mestre: ${_gerarSnippetCard(cardDestino)}`, 'main'));
+        
         cardDestino.itensCorrelacionados.forEach((item, idx) => {
             select.appendChild(new Option(`↳ Anexo: ${_gerarSnippetCard(item)}`, idx));
         });
-        temOpcoes = true;
+        
+        targetBox.style.display = 'flex';
     }
+}
 
-    // LISTA AS PILHAS
-    const gruposEncontrados = new Set();
-    const mapearGrupos = (subArr) => { if(subArr) subArr.forEach(s => { if(s.grupoId) gruposEncontrados.add(s.grupoId); }); };
-    
-    mapearGrupos(cardDestino.subAnotacoes);
-    if(cardDestino.itensCorrelacionados) cardDestino.itensCorrelacionados.forEach(ic => mapearGrupos(ic.subAnotacoes));
-
-    if (gruposEncontrados.size > 0) {
-        if (temOpcoes) {
-            const divider = document.createElement('option');
-            divider.disabled = true; divider.text = "── Pilhas Existentes ──";
-            select.appendChild(divider);
-        }
-        let counter = 1;
-        gruposEncontrados.forEach(grpId => {
-            select.appendChild(new Option(`📚 Agrupar na Pilha (${counter++})`, `pilha|${grpId}`));
-        });
-        temOpcoes = true;
-    }
-
-    if (temOpcoes) targetBox.style.display = 'flex';
-};
-
-// 4. MUTAÇÃO FINAL
-window.confirmarTransferenciaSub = function() {
+function confirmarTransferenciaSub() {
     if (!_menuSubAnotacaoCtx) return;
     
     const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
@@ -685,17 +641,9 @@ window.confirmarTransferenciaSub = function() {
     const cardDestino = topico.anotacoes[destinoIndex];
     let alvoFinal = cardDestino; 
     let alvoViewSource = 'main';
-    let isPilhaTarget = false;
-    let grupoIdTarget = null;
     
-    const selectVal = document.getElementById('transfer-sub-target-box').style.display !== 'none' 
-        ? document.getElementById('select-transferir-sub-alvo').value 
-        : 'main';
-
-    if (selectVal.startsWith('pilha|')) {
-        isPilhaTarget = true;
-        grupoIdTarget = selectVal.split('|')[1];
-    } else if (cardDestino.itensCorrelacionados && cardDestino.itensCorrelacionados.length > 0) {
+    if (cardDestino.itensCorrelacionados && cardDestino.itensCorrelacionados.length > 0) {
+        const selectVal = document.getElementById('select-transferir-sub-alvo').value;
         if (selectVal !== 'main') {
             alvoViewSource = selectVal;
             alvoFinal = cardDestino.itensCorrelacionados[parseInt(selectVal, 10)];
@@ -704,30 +652,25 @@ window.confirmarTransferenciaSub = function() {
 
     const alvoOrigem = _resolverSubAlvo(topico, _menuSubAnotacaoCtx.parentIndex, _menuSubAnotacaoCtx.viewSource);
 
-    // Impede mandar pro mesmo lugar, a menos que seja pra empilhar
-    if (!isPilhaTarget && destinoIndex === _menuSubAnotacaoCtx.parentIndex && alvoViewSource === String(_menuSubAnotacaoCtx.viewSource)) {
-        window.fecharModalTransferirSub();
+    // VALIDAÇÃO CRÍTICA: Auto-Colisão
+    // Se a origem e o destino apontam para a exata mesma posição do array e sub-card
+    if (destinoIndex === _menuSubAnotacaoCtx.parentIndex && alvoViewSource === String(_menuSubAnotacaoCtx.viewSource)) {
+        fecharModalTransferirSub();
         return exibirToast('O nó já pertence a esta prova. Nenhuma alteração realizada.', 'aviso');
     }
 
-    // EXTRAI O NÓ DA ORIGEM E ADICIONA NO DESTINO
+    // Mutação Segura: Extrai da origem e injeta no destino
     const noTransferido = alvoOrigem.subAnotacoes.splice(_menuSubAnotacaoCtx.localIndex, 1)[0];
-    
-    if (isPilhaTarget) {
-        noTransferido.grupoId = grupoIdTarget;
-    } else {
-        delete noTransferido.grupoId; // Se tirou da pilha, solta ele
-    }
     
     if (!alvoFinal.subAnotacoes) alvoFinal.subAnotacoes = [];
     alvoFinal.subAnotacoes.push(noTransferido);
     
-    window.fecharModalTransferirSub();
+    fecharModalTransferirSub();
     renderizarTopicos();
     salvarBackupAutomatico();
-    exibirToast(isPilhaTarget ? 'Nó empilhado com sucesso!' : 'Nó transferido com sucesso!', 'sucesso');
+    exibirToast(`Nó transferido com sucesso!`, 'sucesso');
     _menuSubAnotacaoCtx = null;
-};
+}
 
 function excluirItemCorrelacionado(topicoId, parentIndex, correlacionadoIndex) {
     if (!confirm('Excluir este item correlacionado?')) return;
