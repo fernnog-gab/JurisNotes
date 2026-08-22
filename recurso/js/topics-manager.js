@@ -1380,15 +1380,39 @@ window.TopicsManager = (function () {
 
     function abrirModoLeituraPilha(topicoId, grupoId, numeroRomano) {
         const topico = topicos.find(t => t.id === topicoId);
-        let htmlAgrupado = '';
+        if (!topico) return;
         
-        const processar = (subArr) => {
+        let htmlAgrupado = '';
+        let itemContador = 1;
+
+        // Mapeamento de rótulos e cores para os badges de intenção
+        const getIntencaoLabel = (intKey) => {
+            const mapa = {
+                'comando': { text: 'COMANDO', color: '#c62828', bg: '#ffebee' },
+                'texto': { text: 'TEXTO FIXO', color: '#1565c0', bg: '#e3f2fd' },
+                'premissa': { text: 'PREMISSA LÓGICA', color: '#7b1fa2', bg: '#f3e5f5' },
+                'fundamentacao': { text: 'FUNDAMENTAÇÃO LEGAL', color: '#00695c', bg: '#e0f2f1' },
+                'refutacao': { text: 'REFUTAÇÃO / MÉRITO', color: '#8B4513', bg: '#efebe9' },
+                'preliminar': { text: 'PREJUDICIAL / FILTRO', color: '#5d4037', bg: '#efebe9' },
+                'veredito': { text: 'VEREDITO', color: '#e65100', bg: '#fff3e0' },
+                'nota': { text: 'NOTA INTERNA', color: '#616161', bg: '#f5f5f5' }
+            };
+            return mapa[intKey] || { text: 'DIRETRIZ', color: '#475569', bg: '#f1f5f9' };
+        };
+
+        const processar = (subArr, origemHtml) => {
             if (subArr) {
-                subArr.filter(s => s.grupoId === grupoId).forEach((no, idx) => {
+                subArr.filter(s => s.grupoId === grupoId).forEach((no) => {
+                    const intencaoKey = no.intencao || 'premissa';
+                    const configInt = getIntencaoLabel(intencaoKey);
+                    const isRevisada = no.revisada ? ' <span title="Revisada" style="color:#48bb78; margin-left:4px;">✔</span>' : '';
+                    
                     htmlAgrupado += `
                     <div style="padding-bottom: 16px; border-bottom: 1px dashed #e2e8f0; margin-bottom: 16px;">
-                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-                            <span style="font-size:0.75rem; color:#64748b; font-weight:800; background:#f1f5f9; padding:2px 8px; border-radius:12px;">ITEM ${idx + 1}</span>
+                        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+                            <span style="font-size:0.75rem; color:#64748b; font-weight:800; background:#f1f5f9; padding:2px 8px; border-radius:12px;">ITEM ${itemContador++}</span>
+                            <span style="font-size:0.7rem; font-weight:800; color:${configInt.color}; background:${configInt.bg}; padding:2px 8px; border-radius:12px; border: 1px solid ${configInt.color}40; display:flex; align-items:center;">${configInt.text}${isRevisada}</span>
+                            <span style="font-size:0.8rem; color:#475569; display:flex; align-items:center; gap:4px; margin-left: 4px;">${origemHtml}</span>
                         </div>
                         <div style="font-size: 1rem; color: #334155; line-height: 1.6;">
                             ${renderizarMarkdownSeguro(escaparHTML(no.texto))}
@@ -1398,14 +1422,40 @@ window.TopicsManager = (function () {
             }
         };
 
+        // 1. Varre Diretrizes Globais (Corrigindo o ponto cego original)
+        processar(topico.diretrizesGlobais, '🌐 <strong>Diretriz Global</strong>');
+
+        // 2. Varre Teses e Provas
+        let ultimaTese = null;
         topico.anotacoes.forEach(an => {
-            processar(an.subAnotacoes);
-            if (an.itensCorrelacionados) an.itensCorrelacionados.forEach(ic => processar(ic.subAnotacoes));
+            const teseAtual = an.tese || "Provas sem agrupamento de tese";
+            
+            // Subnós de Tese (Corrigindo o ponto cego original)
+            if (teseAtual !== ultimaTese) {
+                if (topico.diretrizesPorTese && topico.diretrizesPorTese[teseAtual]) {
+                    processar(topico.diretrizesPorTese[teseAtual], `⚖️ Tese: <strong>${escaparHTML(teseAtual)}</strong>`);
+                }
+                ultimaTese = teseAtual;
+            }
+
+            // Subnós da Prova Master
+            const docMaster = an.documento || an.polo || 'Elemento Probatório';
+            const flMaster = an.pagina ? `(fl. ${an.pagina})` : '';
+            processar(an.subAnotacoes, `📄 ${escaparHTML(docMaster)} <em>${escaparHTML(flMaster)}</em>`);
+
+            // Subnós das Provas Correlacionadas (Agrupadas)
+            if (an.itensCorrelacionados) {
+                an.itensCorrelacionados.forEach(ic => {
+                    const docCorr = ic.documento || ic.polo || 'Elemento Correlacionado';
+                    const flCorr = ic.pagina ? `(fl. ${ic.pagina})` : '';
+                    processar(ic.subAnotacoes, `📄 ${escaparHTML(docCorr)} <em>${escaparHTML(flCorr)}</em>`);
+                });
+            }
         });
 
         const modal = document.getElementById('reading-mode-modal');
         document.getElementById('reading-mode-title-text').textContent = `Leitura da Pilha ${numeroRomano}`;
-        document.getElementById('reading-mode-content').innerHTML = htmlAgrupado;
+        document.getElementById('reading-mode-content').innerHTML = htmlAgrupado || '<p style="color:#666; font-style:italic;">Nenhuma ideia encontrada para este grupo.</p>';
         document.getElementById('reading-mode-backdrop').style.display = 'block';
         modal.style.display = 'flex';
     }
