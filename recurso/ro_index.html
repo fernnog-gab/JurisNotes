@@ -1210,6 +1210,24 @@
         <iframe id="balanca-iframe" style="flex: 1; border: none; width: 100%; display: block; background: var(--bg-page);" sandbox="allow-same-origin allow-scripts allow-forms allow-modals"></iframe>
     </div>
 
+    <!-- BACKDROP E MODAL: EDITAR PILHA (GRUPO DE IDEIAS) -->
+    <div id="pilha-modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.40); z-index: 4004;" onclick="TopicsManager.fecharModalPilha()"></div>
+
+    <div id="modal-editar-pilha" class="crop-wizard-popup" style="display:none; z-index: 4005; max-width: 450px; width: 90%;">
+        <div class="wizard-header">📚 Personalizar Grupo de Ideias</div>
+        
+        <p class="popup-label">Título do Grupo:</p>
+        <input type="text" id="input-pilha-titulo" class="topic-select" placeholder="Ex: Contradições da Testemunha">
+        
+        <p class="popup-label" style="margin-top: 12px;">Resumo / Observações:</p>
+        <textarea id="input-pilha-descricao" class="popup-textarea" style="display:block; min-height: 80px; width: 100%; box-sizing: border-box;" rows="3" placeholder="Digite uma breve explicação sobre as ideias agrupadas aqui..."></textarea>
+        
+        <div class="wizard-actions" style="margin-top: 16px;">
+            <button class="chip-btn chip-cancelar" onclick="TopicsManager.fecharModalPilha()">✕ Cancelar</button>
+            <button class="chip-btn chip-autora" style="background: #FFC107; color: #000; border-color: #E5C100;" onclick="TopicsManager.salvarEdicaoPilha()">✔ Salvar Grupo</button>
+        </div>
+    </div>
+
     <!-- MODAIS DO CONTRATO DE TRABALHO -->
     <div id="modal-contrato-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.40); z-index: 4004;" onclick="ContratoManager.fecharModal()"></div>
     <div id="modal-contrato-config" class="crop-wizard-popup" style="display:none; z-index: 4005; min-width: 340px;">

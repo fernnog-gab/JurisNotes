@@ -1365,3 +1365,70 @@
 .outline-audio-box { background: #fff8e1; border: 1px solid #ffe082; padding: 10px; border-radius: 6px; margin-top: 8px; font-size: 0.88rem; }
 .outline-content-text p { margin-bottom: 0.5em; }
 .outline-content-text b, .outline-content-text strong { color: var(--trt-blue); }
+
+/* ==========================================
+   ESTILOS: GRUPO DE IDEIAS (PILHAS) - TEMA DOSSIÊ
+   ========================================== */
+   
+/* Base da Pilha com tema amarelo */
+.sub-annotation-stack.tema-dossie {
+    border-color: #E5C100 !important;
+    padding-bottom: 36px; /* Espaço reservado para o botão de leitura inferior */
+}
+
+/* Badge Romano Amarelo/Preto */
+.sub-annotation-stack.tema-dossie .stack-roman-badge {
+    background-color: #FFC107;
+    color: #000000;
+    border: 1px solid #E5C100;
+}
+/* Feedback de perigo ao passar o mouse no romano (Ação de Desagrupar) */
+.sub-annotation-stack.tema-dossie .stack-roman-badge:hover {
+    background-color: #ef4444; 
+    color: #ffffff;
+    border-color: #ef4444;
+}
+
+/* Áreas de Texto Editáveis (Título e Descrição) */
+.pilha-editavel {
+    border-radius: 4px;
+    transition: background-color 0.2s, padding 0.2s;
+    cursor: pointer;
+    padding: 2px 4px;
+    margin-left: -4px; /* Compensação óptica do padding */
+    font-weight: 600; 
+    color: var(--trt-blue); 
+    margin-bottom: 8px; 
+    font-size: 0.85rem;
+}
+.pilha-editavel:hover { background-color: rgba(255, 193, 7, 0.15); }
+
+/* Descrição (com suporte a Scrollbar) */
+.pilha-editavel-desc {
+    max-height: 120px;
+    overflow-y: auto;
+    font-weight: 400 !important;
+    color: #666 !important;
+    line-height: 1.5;
+    font-size: 0.8rem !important;
+    margin-bottom: 0 !important;
+}
+.pilha-editavel-desc::-webkit-scrollbar { width: 4px; }
+.pilha-editavel-desc::-webkit-scrollbar-track { background: transparent; }
+.pilha-editavel-desc::-webkit-scrollbar-thumb { background: #FFC107; border-radius: 4px; }
+
+/* Botão Modo Leitura Minimalista (Canto Inferior Esquerdo) */
+.sub-annotation-stack.tema-dossie .sub-read-badge {
+    display: flex !important; /* Força exibição constante na pilha */
+    background: #FFC107;
+    color: #000000;
+    border: 1px solid #E5C100;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.sub-annotation-stack.tema-dossie .sub-read-badge:hover {
+    background: #E5B22D;
+    transform: scale(1.15);
+}
+
+/* Oculta o botão antigo e intrusivo (legado) */
+.sub-annotation-stack .stack-read-btn { display: none !important; }

@@ -222,6 +222,40 @@ window.TopicsManager = (function () {
                 </button>`;
     }
 
+    // --- FÁBRICA DE COMPONENTES: PILHA (GRUPO DE IDEIAS) ---
+    function _gerarHtmlPilha(sub, renderContext, activeTabId) {
+        // Gera/Resgata o numeral romano do contexto global da aba
+        if (!renderContext.romanMap.has(sub.grupoId)) {
+            renderContext.romanMap.set(sub.grupoId, obterRomano(renderContext.romanCounter++));
+        }
+        const numRomano = renderContext.romanMap.get(sub.grupoId);
+        
+        const tituloPilha = sub.grupoTitulo || "📚 Grupo de Ideias";
+        const descPilha = sub.grupoDescricao || "Nós empilhados para otimização espacial.";
+        const source = sub.viewSource || 'main';
+
+        return `
+        <div class="sub-annotation-item sub-stack-wrapper" data-source="${source}">
+            <div class="sub-annotation-card sub-annotation-stack tema-dossie">
+                <div class="stack-roman-badge" title="Desagrupar Pilha" onclick="TopicsManager.desagruparPilha('${activeTabId}', '${sub.grupoId}')">
+                    ${numRomano}
+                </div>
+                
+                <div class="pilha-editavel" title="Clique para editar metadados" onclick="TopicsManager.abrirModalPilha('${activeTabId}', '${sub.grupoId}')">
+                    ${escaparHTML(tituloPilha)}
+                </div>
+                
+                <div class="pilha-editavel pilha-editavel-desc" title="Clique para editar metadados" onclick="TopicsManager.abrirModalPilha('${activeTabId}', '${sub.grupoId}')">
+                    ${escaparHTML(descPilha).replace(/\n/g, '<br>')}
+                </div>
+                
+                <div class="btn-read-mode-trigger sub-read-badge" title="Modo Leitura do Grupo" onclick="TopicsManager.abrirModoLeituraPilha('${activeTabId}', '${sub.grupoId}', '${numRomano}')">
+                    <svg><use href="#icon-book-open"></use></svg>
+                </div>
+            </div>
+        </div>`;
+    }
+
     let activeTabId = null;
 
     /**
@@ -491,30 +525,7 @@ window.TopicsManager = (function () {
                 else {
                     if (!gruposProcessadosNesteCard.has(sub.grupoId)) {
                         gruposProcessadosNesteCard.add(sub.grupoId);
-                        
-                        // Busca ou gera o numeral romano no contexto global do tópico
-                        if (!renderContext.romanMap.has(sub.grupoId)) {
-                            renderContext.romanMap.set(sub.grupoId, obterRomano(renderContext.romanCounter++));
-                        }
-                        const numRomano = renderContext.romanMap.get(sub.grupoId);
-                        
-                        // CRÍTICO: .sub-annotation-card injetado para evitar crash no motor SVG
-                        subCardsHTMLArray.push(`
-                            <div class="sub-annotation-item sub-stack-wrapper" data-source="${sub.viewSource}">
-                                <div class="sub-annotation-card sub-annotation-stack">
-                                    <div class="stack-roman-badge" title="Desagrupar Pilha" onclick="TopicsManager.desagruparPilha('${activeTabId}', '${sub.grupoId}')">
-                                        ${numRomano}
-                                    </div>
-                                    <div style="font-weight: 600; color: var(--trt-blue); margin-bottom: 8px; font-size: 0.85rem;">
-                                        📚 Grupo de Ideias
-                                    </div>
-                                    <p style="font-size: 0.8rem; color: #666; margin-bottom: 12px; line-height:1.4;">Nós empilhados para otimização espacial.</p>
-                                    <button class="stack-read-btn" onclick="TopicsManager.abrirModoLeituraPilha('${activeTabId}', '${sub.grupoId}', '${numRomano}')">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
-                                        Modo Leitura
-                                    </button>
-                                </div>
-                            </div>`);
+                        subCardsHTMLArray.push(_gerarHtmlPilha(sub, renderContext, activeTabId));
                     }
                 }
             });
@@ -680,7 +691,7 @@ window.TopicsManager = (function () {
      * acumulou um número ímpar de cards, esta Tese nasce à direita, e
      * vice-versa. A regra é sempre recalculada a partir do dado real.
      */
-    function _gerarHtmlTeseGroup(teseAtual, diretrizes, tabId, corTema, indexGlobal) {
+    function _gerarHtmlTeseGroup(teseAtual, diretrizes, tabId, corTema, indexGlobal, renderContext) {
         const rgbaTeseFundo = hexToRgba(corTema, 0.15);
         const rgbaTeseBorda = hexToRgba(corTema, 0.4);
         const corTituloTese = escurecerCor(corTema, 0.6);
@@ -692,34 +703,46 @@ window.TopicsManager = (function () {
         const alignClass = isLeft ? 'align-left' : 'align-right';
         const teseViewSource = `tese:${teseAtual}`;
 
-        const tesesHtml = diretrizes.map((d, sIdx) => {
-            const intencao = d.intencao || 'premissa';
-            const iconSVG = obterIconeIntencao(intencao);
-            const isRevisada = d.revisada === true;
-            const itemWrapperClass = intencao === 'nota'
-                ? `sub-annotation-item is-nota-interna ${isRevisada ? 'is-revisada' : 'is-pendente'}`
-                : 'sub-annotation-item';
+        const gruposProcessadosNesteCard = new Set();
+        const subCardsHTMLArray = [];
 
-            return `
-            <div class="${itemWrapperClass}" data-source="${teseViewSource}">
-                <div class="sub-annotation-card" style="border-left: 5px solid ${corTema}; border-color: ${rgbaTeseBorda};">
-                    <div class="sub-badge has-intent intencao-${intencao}"
-                         title="Opções desta diretriz"
-                         onclick="abrirMenuSubAnotacao('${tabId}', null, '${teseViewSource.replace(/'/g, "\\'")}', ${sIdx}, event)">
-                         ${iconSVG} T.${sIdx + 1}
+        diretrizes.forEach((d, sIdx) => {
+            // CÓPIA SUPERFICIAL: Previne mutação do JSON original durante a renderização
+            const dRender = { ...d, viewSource: teseViewSource };
+
+            if (!dRender.grupoId) {
+                // Renderização normal de nó solto (usando dRender)
+                const intencao = dRender.intencao || 'premissa';
+                const iconSVG = obterIconeIntencao(intencao);
+                const isRevisada = dRender.revisada === true;
+                const itemWrapperClass = intencao === 'nota' ? `sub-annotation-item is-nota-interna ${isRevisada ? 'is-revisada' : 'is-pendente'}` : 'sub-annotation-item';
+
+                subCardsHTMLArray.push(`
+                <div class="${itemWrapperClass}" data-source="${teseViewSource}">
+                    <div class="sub-annotation-card" style="border-left: 5px solid ${corTema}; border-color: ${rgbaTeseBorda};">
+                        <div class="sub-badge has-intent intencao-${intencao}" title="Opções" onclick="abrirMenuSubAnotacao('${tabId}', null, '${teseViewSource.replace(/'/g, "\\'")}', ${sIdx}, event)">
+                             ${iconSVG} T.${sIdx + 1}
+                        </div>
+                        <div class="sub-text-content" data-raw-text="${escaparHTML(dRender.texto)}" data-raw-title="Diretriz de Tese" ondblclick="TopicsManager.abrirModoLeitura(this)">${renderizarMarkdownSeguro(escaparHTML(dRender.texto))}</div>
+                        <div class="btn-read-mode-trigger sub-read-badge" title="Modo Leitura" data-raw-text="${escaparHTML(dRender.texto)}" data-raw-title="Diretriz de Tese" onclick="TopicsManager.abrirModoLeitura(this)">
+                            <svg><use href="#icon-book-open"></use></svg>
+                        </div>
+                        <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(dRender.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            Copiar
+                        </button>
+                        ${_gerarBtnRevisaoHtml(tabId, null, teseViewSource, sIdx, intencao, isRevisada)}
                     </div>
-                    <div class="sub-text-content" data-raw-text="${escaparHTML(d.texto)}" data-raw-title="Diretriz de Tese" ondblclick="TopicsManager.abrirModoLeitura(this)">${renderizarMarkdownSeguro(escaparHTML(d.texto))}</div>
-                    <div class="btn-read-mode-trigger sub-read-badge" title="Modo Leitura" data-raw-text="${escaparHTML(d.texto)}" data-raw-title="Diretriz de Tese" onclick="TopicsManager.abrirModoLeitura(this)">
-                        <svg><use href="#icon-book-open"></use></svg>
-                    </div>
-                    <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(d.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto para a área de transferência">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                        Copiar Trecho
-                    </button>
-                    ${_gerarBtnRevisaoHtml(tabId, null, teseViewSource, sIdx, intencao, isRevisada)}
-                </div>
-            </div>`;
-        }).join('');
+                </div>`);
+            } else {
+                // Renderização da Pilha em Teses
+                if (!gruposProcessadosNesteCard.has(dRender.grupoId)) {
+                    gruposProcessadosNesteCard.add(dRender.grupoId);
+                    subCardsHTMLArray.push(_gerarHtmlPilha(dRender, renderContext, tabId));
+                }
+            }
+        });
+        const tesesHtml = subCardsHTMLArray.join('');
 
         return `
         <div class="timeline-item-master ${alignClass} nivel-hierarquico">
@@ -953,7 +976,7 @@ window.TopicsManager = (function () {
                     // 4. Ocultação Segura: Só desenha o card se a tese tiver nome OU se houver notas salvas nela
                     if (isTesePreenchida || diretrizes.length > 0) {
                         const tituloExibicao = isTesePreenchida ? an.tese : "Tese Não Nomeada";
-                        cardsHTML += _gerarHtmlTeseGroup(tituloExibicao, diretrizes, activeTabId, _activeTopicoCor, index);
+                        cardsHTML += _gerarHtmlTeseGroup(tituloExibicao, diretrizes, activeTabId, _activeTopicoCor, index, renderContext);
                     }
                     
                     // Atualiza a referência do agrupamento atual
@@ -970,31 +993,40 @@ window.TopicsManager = (function () {
 
             // Se existirem diretrizes, monta os nós de ideia
             if (topicoAtivo.diretrizesGlobais && topicoAtivo.diretrizesGlobais.length > 0) {
-                globaisHtml = topicoAtivo.diretrizesGlobais.map((d, sIdx) => {
-                    const intencao = d.intencao || 'premissa';
-                    const iconSVG = obterIconeIntencao(intencao);
-                    const isRevisada = d.revisada === true;
-                    const itemWrapperClass = intencao === 'nota' ? `sub-annotation-item is-nota-interna ${isRevisada ? 'is-revisada' : 'is-pendente'}` : 'sub-annotation-item';
-                    return `
-                    <div class="${itemWrapperClass}" data-source="global">
-                        <div class="sub-annotation-card borda-global">
-                            <div class="sub-badge has-intent intencao-${intencao}" 
-                                 title="Opções desta diretriz"
-                                 onclick="abrirMenuSubAnotacao('${activeTabId}', null, 'global', ${sIdx}, event)">
-                                 ${iconSVG} G.${sIdx + 1}
-                            </div>
-                            <div class="sub-text-content" data-raw-text="${escaparHTML(d.texto)}" data-raw-title="Diretriz Global" ondblclick="TopicsManager.abrirModoLeitura(this)">${renderizarMarkdownSeguro(escaparHTML(d.texto))}</div>
-                            <div class="btn-read-mode-trigger sub-read-badge" title="Modo Leitura" data-raw-text="${escaparHTML(d.texto)}" data-raw-title="Diretriz Global" onclick="TopicsManager.abrirModoLeitura(this)">
-                                <svg><use href="#icon-book-open"></use></svg>
-                            </div>
-                            <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(d.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto para a área de transferência">
+                const gruposGProcessados = new Set();
+                const globaisArray = [];
+
+                topicoAtivo.diretrizesGlobais.forEach((d, sIdx) => {
+                    // CÓPIA SUPERFICIAL: Previne mutação do JSON original
+                    const dRender = { ...d, viewSource: 'global' };
+
+                    if (!dRender.grupoId) {
+                        const intencao = dRender.intencao || 'premissa';
+                        const iconSVG = obterIconeIntencao(intencao);
+                        const isRevisada = dRender.revisada === true;
+                        const itemWrapperClass = intencao === 'nota' ? `sub-annotation-item is-nota-interna ${isRevisada ? 'is-revisada' : 'is-pendente'}` : 'sub-annotation-item';
+                        
+                        globaisArray.push(`
+                        <div class="${itemWrapperClass}" data-source="global">
+                            <div class="sub-annotation-card borda-global">
+                                <div class="sub-badge has-intent intencao-${intencao}" onclick="abrirMenuSubAnotacao('${activeTabId}', null, 'global', ${sIdx}, event)">${iconSVG} G.${sIdx + 1}</div>
+                                <div class="sub-text-content" data-raw-text="${escaparHTML(dRender.texto)}" data-raw-title="Diretriz Global" ondblclick="TopicsManager.abrirModoLeitura(this)">${renderizarMarkdownSeguro(escaparHTML(dRender.texto))}</div>
+                                <div class="btn-read-mode-trigger sub-read-badge" data-raw-text="${escaparHTML(dRender.texto)}" data-raw-title="Diretriz Global" onclick="TopicsManager.abrirModoLeitura(this)"><svg><use href="#icon-book-open"></use></svg></div>
+                                <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(dRender.texto).replace(/'/g, "\\'")}')" title="Copiar">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                                    Copiar Trecho
+                                    Copiar
                                 </button>
                                 ${_gerarBtnRevisaoHtml(activeTabId, null, 'global', sIdx, intencao, isRevisada)}
                             </div>
-                        </div>`;
-                    }).join('');
+                        </div>`);
+                    } else {
+                        if (!gruposGProcessados.has(dRender.grupoId)) {
+                            gruposGProcessados.add(dRender.grupoId);
+                            globaisArray.push(_gerarHtmlPilha(dRender, renderContext, activeTabId));
+                        }
+                    }
+                });
+                globaisHtml = globaisArray.join('');
             }
 
             // O CARD MESTRE É RENDERIZADO SEMPRE (Mesmo sem nós de ideia)
@@ -1396,9 +1428,83 @@ window.TopicsManager = (function () {
         if(window.exibirToast) exibirToast('Pilha desagrupada com sucesso.', 'sucesso');
     }
 
+    let _contextoEdicaoPilha = null;
+
+    function abrirModalPilha(topicoId, grupoId) {
+        _contextoEdicaoPilha = { topicoId, grupoId };
+        const topico = topicos.find(t => t.id === topicoId);
+        if (!topico) return;
+
+        let titAtual = "📚 Grupo de Ideias";
+        let descAtual = "Nós empilhados para otimização espacial.";
+
+        // Busca o valor atual varrendo a árvore rapidamente
+        const extrair = (arr) => {
+            if (!arr) return;
+            const no = arr.find(s => s.grupoId === grupoId);
+            if (no) {
+                if (no.grupoTitulo) titAtual = no.grupoTitulo;
+                if (no.grupoDescricao) descAtual = no.grupoDescricao;
+            }
+        };
+
+        topico.anotacoes.forEach(an => { 
+            extrair(an.subAnotacoes); 
+            if (an.itensCorrelacionados) an.itensCorrelacionados.forEach(ic => extrair(ic.subAnotacoes)); 
+        });
+        extrair(topico.diretrizesGlobais);
+        if (topico.diretrizesPorTese) Object.values(topico.diretrizesPorTese).forEach(arr => extrair(arr));
+
+        document.getElementById('input-pilha-titulo').value = titAtual;
+        document.getElementById('input-pilha-descricao').value = descAtual;
+
+        document.getElementById('pilha-modal-backdrop').style.display = 'block';
+        document.getElementById('modal-editar-pilha').style.display = 'flex';
+    }
+
+    function fecharModalPilha() {
+        document.getElementById('pilha-modal-backdrop').style.display = 'none';
+        document.getElementById('modal-editar-pilha').style.display = 'none';
+        _contextoEdicaoPilha = null;
+    }
+
+    function salvarEdicaoPilha() {
+        if (!_contextoEdicaoPilha) return;
+        const topico = topicos.find(t => t.id === _contextoEdicaoPilha.topicoId);
+        if (!topico) return;
+        
+        const nTit = document.getElementById('input-pilha-titulo').value.trim();
+        const nDesc = document.getElementById('input-pilha-descricao').value.trim();
+
+        const atualizar = (arr) => {
+            if (!arr) return;
+            arr.forEach(s => {
+                if (s.grupoId === _contextoEdicaoPilha.grupoId) {
+                    s.grupoTitulo = nTit;
+                    s.grupoDescricao = nDesc;
+                }
+            });
+        };
+
+        // Mutação segura na árvore inteira
+        topico.anotacoes.forEach(an => { 
+            atualizar(an.subAnotacoes); 
+            if (an.itensCorrelacionados) an.itensCorrelacionados.forEach(ic => atualizar(ic.subAnotacoes)); 
+        });
+        atualizar(topico.diretrizesGlobais);
+        if (topico.diretrizesPorTese) Object.values(topico.diretrizesPorTese).forEach(arr => atualizar(arr));
+
+        fecharModalPilha();
+        renderizarFichario(topicos);
+        if (window.salvarBackupAutomatico) salvarBackupAutomatico();
+    }
+
     // API pública do módulo
     return {
         obterCor,
+        abrirModalPilha,
+        fecharModalPilha,
+        salvarEdicaoPilha,
         obterCorContraste,
         renderizarFichario,
         abrirModoLeituraPilha,
