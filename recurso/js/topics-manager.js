@@ -5,6 +5,9 @@
 window.TopicsManager = (function () {
     'use strict';
 
+    const romanoCache = ["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV"];
+    function obterRomano(idx) { return romanoCache[idx] || String(idx + 1); }
+
     let _activeTopicoCor = '#ffffff';
 
     // Observer Otimizado (Debounce de ~16ms para agrupar Recalculate Styles)
@@ -335,7 +338,7 @@ window.TopicsManager = (function () {
      * Os três fragmentos são irmãos diretos no .timeline-container,
      * garantindo que align-self funcione corretamente nas sub-anotações.
      */
-    function criarCard(anotacao, index, arr) {
+    function criarCard(anotacao, index, arr, renderContext) {
         const total    = arr.length;
         const numero   = index + 1;
         const tagClass = poloParaClasse(anotacao.polo);
@@ -443,59 +446,37 @@ window.TopicsManager = (function () {
             });
         }
 
-        if (flatSubAnotacoes.length > 0) {
-            const subCardsHTML = flatSubAnotacoes.map((sub, sIdx) => {
+        let htmlSubAnotacoes = '';
+        const gruposProcessadosNesteCard = new Set();
+        const subCardsHTMLArray = [];
+
+        flatSubAnotacoes.forEach((sub, sIdx) => {
+            // NÓS SOLTOS
+            if (!sub.grupoId) {
                 const intencao = sub.intencao || 'premissa';
-                const isHasIntent = true; 
-                let iconSVG = '';
-
-                if (intencao === 'comando') {
-                    iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>`;
-                } else if (intencao === 'texto') {
-                    iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`;
-                } else if (intencao === 'nota') {
-                    iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
-                } else if (intencao === 'premissa') {
-                    iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>`;
-                } else if (intencao === 'fundamentacao') {
-                    iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>`;
-                } else if (intencao === 'alegacao') {
-                    iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
-                } else if (intencao === 'fundamento_sentenca') {
-                    iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16M4 2h16M6 6v12M10 6v12M14 6v12M18 6v12M2 6h20"></path></svg>`;
-                } else if (intencao === 'refutacao') {
-                    iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>`;
-                } else if (intencao === 'preliminar') {
-                    iconSVG = `<svg class="intencao-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
-                }
-
-                const badgeClass = isHasIntent ? `sub-badge has-intent intencao-${intencao}` : 'sub-badge';
-                // Note que o sIdx (índice global flat) continua sendo usado APENAS para gerar a letra alfabética (A, B, C)
-                const label = isHasIntent ? `${iconSVG} ${numero}.${gerarLetra(sIdx)}` : `${numero}.${gerarLetra(sIdx)}`;
-                
+                const iconSVG = obterIconeIntencao(intencao);
+                const isRevisada = sub.revisada === true;
                 const textoFormatado = renderizarMarkdownSeguro(escaparHTML(sub.texto));
                 
-                // Cálculo rigoroso da borda de fase com base na nova estrutura
-                let faseSub = faseDoCard;
+                let faseSub = typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(anotacao.documento) : 4;
                 if (sub.viewSource !== 'main' && anotacao.itensCorrelacionados) {
                     const cIdx = parseInt(sub.viewSource, 10);
                     if (!isNaN(cIdx) && anotacao.itensCorrelacionados[cIdx]) {
                          faseSub = typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(anotacao.itensCorrelacionados[cIdx].documento) : 4;
                     }
                 }
+                
                 const bordaFaseClass = `borda-fase-${faseSub}`;
+                const itemWrapperClass = intencao === 'nota' ? `sub-annotation-item is-nota-interna ${isRevisada ? 'is-revisada' : 'is-pendente'}` : `sub-annotation-item`;
+                
+                const isHasIntent = true;
+                const badgeClass = isHasIntent ? `sub-badge has-intent intencao-${intencao}` : 'sub-badge';
+                const label = isHasIntent ? `${iconSVG} ${numero}.${gerarLetra(sIdx)}` : `${numero}.${gerarLetra(sIdx)}`;
 
-                const isNotaInterna = intencao === 'nota';
-                const isRevisada = sub.revisada === true;
-                const itemWrapperClass = isNotaInterna ? `sub-annotation-item is-nota-interna ${isRevisada ? 'is-revisada' : 'is-pendente'}` : `sub-annotation-item`;
-
-                return `
+                subCardsHTMLArray.push(`
                     <div class="${itemWrapperClass}" data-source="${sub.viewSource}">
                         <div class="sub-annotation-card ${bordaFaseClass}">
-                            <!-- NOVO CONTRATO AQUI: Passamos viewSource E localIndex antes do event -->
-                            <div class="${badgeClass}"
-                                 title="Opções desta ideia secundária"
-                                 onclick="abrirMenuSubAnotacao('${activeTabId}', ${index}, '${sub.viewSource}', ${sub.localIndex}, event)">
+                            <div class="${badgeClass}" title="Opções desta ideia secundária" onclick="abrirMenuSubAnotacao('${activeTabId}', ${index}, '${sub.viewSource}', ${sub.localIndex}, event)">
                                 ${label}
                             </div>
                             <div class="sub-text-content" data-raw-text="${escaparHTML(sub.texto)}" data-raw-title="Nó de Ideia" ondblclick="TopicsManager.abrirModoLeitura(this)">${textoFormatado}</div>
@@ -508,10 +489,40 @@ window.TopicsManager = (function () {
                             </button>
                             ${_gerarBtnRevisaoHtml(activeTabId, index, sub.viewSource, sub.localIndex, intencao, isRevisada)}
                         </div>
-                    </div>`;
-            }).join('');
+                    </div>`);
+            } 
+            // NÓS AGRUPADOS (A PILHA)
+            else {
+                if (!gruposProcessadosNesteCard.has(sub.grupoId)) {
+                    gruposProcessadosNesteCard.add(sub.grupoId);
+                    
+                    if (!renderContext.romanMap.has(sub.grupoId)) {
+                        renderContext.romanMap.set(sub.grupoId, obterRomano(renderContext.romanCounter++));
+                    }
+                    const numRomano = renderContext.romanMap.get(sub.grupoId);
+                    
+                    subCardsHTMLArray.push(`
+                        <div class="sub-annotation-item sub-stack-wrapper" data-source="${sub.viewSource}">
+                            <div class="sub-annotation-card sub-annotation-stack">
+                                <div class="stack-roman-badge" title="Desagrupar Pilha" onclick="TopicsManager.desagruparPilha('${activeTabId}', '${sub.grupoId}')">
+                                    ${numRomano}
+                                </div>
+                                <div style="font-weight: 800; color: var(--trt-blue); margin-bottom: 6px; font-size: 0.95rem;">
+                                    📚 Pilha de Ideias
+                                </div>
+                                <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 12px; line-height: 1.4;">Nós empilhados para otimização de espaço.</p>
+                                <button class="stack-read-btn" onclick="TopicsManager.abrirModoLeituraPilha('${activeTabId}', '${sub.grupoId}', '${numRomano}')">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+                                    Modo Leitura
+                                </button>
+                            </div>
+                        </div>`);
+                }
+            }
+        });
 
-            htmlSubAnotacoes = `<div class="sub-annotations-wrapper">${subCardsHTML}</div>`;
+        if (subCardsHTMLArray.length > 0) {
+            htmlSubAnotacoes = `<div class="sub-annotations-wrapper">${subCardsHTMLArray.join('')}</div>`;
         }
 
         // NOVO: Processar itens agrupados
@@ -918,6 +929,11 @@ window.TopicsManager = (function () {
             }
             
             // Loop customizado com injeção condicional do Painel de Tese
+            const renderContext = {
+                romanCounter: 0,
+                romanMap: new Map() 
+            };
+
             let cardsHTML = '';
             let ultimaTeseRenderizada = null;
 
@@ -944,8 +960,8 @@ window.TopicsManager = (function () {
                     ultimaTeseRenderizada = chaveTeseCrua;
                 }
                 
-                // Desenha o card da prova e o número colorido exatamente como antes (Intocado)
-                cardsHTML += criarCard(an, index, topicoAtivo.anotacoes);
+                // Desenha o card da prova e o número colorido passando o renderContext
+                cardsHTML += criarCard(an, index, topicoAtivo.anotacoes, renderContext);
             });
             
             // --- RENDERIZAÇÃO: DIRETRIZES GLOBAIS (INCONDICIONAL) ---
@@ -1330,6 +1346,55 @@ window.TopicsManager = (function () {
         }, { passive: false });
     }
 
+    function abrirModoLeituraPilha(topicoId, grupoId, numeroRomano) {
+        const topico = topicos.find(t => t.id === topicoId);
+        let htmlAgrupado = '';
+        
+        topico.anotacoes.forEach(an => {
+            const processar = (subArr) => {
+                if (subArr) {
+                    subArr.filter(s => s.grupoId === grupoId).forEach((no, idx) => {
+                        const icon = obterIconeIntencao(no.intencao || 'premissa');
+                        htmlAgrupado += `
+                        <div style="padding-bottom: 16px; border-bottom: 1px dashed #e2e8f0; margin-bottom: 16px;">
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                <span style="font-size:0.75rem; color:#64748b; font-weight:800; background:#f1f5f9; padding:2px 8px; border-radius:12px;">CARTA ${idx + 1}</span>
+                            </div>
+                            <div style="font-size: 1.05rem; color: #334155; line-height: 1.6;">
+                                ${renderizarMarkdownSeguro(escaparHTML(no.texto))}
+                            </div>
+                        </div>`;
+                    });
+                }
+            };
+            processar(an.subAnotacoes);
+            if (an.itensCorrelacionados) an.itensCorrelacionados.forEach(ic => processar(ic.subAnotacoes));
+        });
+
+        const modal = document.getElementById('reading-mode-modal');
+        document.getElementById('reading-mode-title-text').textContent = `Leitura da Pilha ${numeroRomano}`;
+        document.getElementById('reading-mode-content').innerHTML = htmlAgrupado;
+        document.getElementById('reading-mode-backdrop').style.display = 'block';
+        modal.style.display = 'flex';
+    }
+
+    function desagruparPilha(topicoId, grupoId) {
+        if (!confirm('Deseja desfazer a pilha e espalhar as cartas novamente?')) return;
+        const topico = topicos.find(t => t.id === topicoId);
+        
+        const limparGrupo = (subArr) => {
+            if(subArr) subArr.forEach(s => { if (s.grupoId === grupoId) delete s.grupoId; });
+        };
+
+        topico.anotacoes.forEach(an => {
+            limparGrupo(an.subAnotacoes);
+            if (an.itensCorrelacionados) an.itensCorrelacionados.forEach(ic => limparGrupo(ic.subAnotacoes));
+        });
+
+        renderizarFichario(topicos); 
+        if(window.salvarBackupAutomatico) salvarBackupAutomatico();
+    }
+
     // API pública do módulo
     return {
         obterCor,
@@ -1343,7 +1408,9 @@ window.TopicsManager = (function () {
         fecharModoLeitura,
         copiarTextoModoLeitura,
         hexToRgba,
-        rolarParaProximaNotaOculta
+        rolarParaProximaNotaOculta,
+        abrirModoLeituraPilha,
+        desagruparPilha
     };
 
 })();
