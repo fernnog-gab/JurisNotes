@@ -564,6 +564,7 @@ function confirmarReordenacaoPosicao() {
    2. NOVA FUNCIONALIDADE: TRANSFERÊNCIA INTELIGENTE
    ================================================ */
 
+// 1. CRIAR A PILHA
 window.criarPilhaDeIdeias = function() {
     if (!_menuSubAnotacaoCtx) return;
     const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
@@ -578,24 +579,31 @@ window.criarPilhaDeIdeias = function() {
     document.getElementById('sub-annotation-context-menu').style.display = 'none';
 };
 
-function abrirModalTransferirSubAnotacao() {
+// 2. ABRIR MODAL COM AUTO-PREENCHIMENTO
+window.abrirModalTransferirSubAnotacao = function() {
     if (!_menuSubAnotacaoCtx) return;
     document.getElementById('sub-annotation-context-menu').style.display = 'none';
     
-    document.getElementById('input-transferir-sub-destino').value = '';
+    const inputDestino = document.getElementById('input-transferir-sub-destino');
+    // Preenche com o número do Card Mestre atual automaticamente!
+    inputDestino.value = _menuSubAnotacaoCtx.parentIndex + 1;
+    
     document.getElementById('transfer-sub-target-box').style.display = 'none';
     document.getElementById('select-transferir-sub-alvo').innerHTML = '';
     
     document.getElementById('transferir-sub-backdrop').style.display = 'block';
     document.getElementById('modal-transferir-sub').style.display = 'flex';
     
-    setTimeout(() => document.getElementById('input-transferir-sub-destino').focus(), 50);
-}
+    // Força a leitura imediata das pilhas existentes neste card
+    window.carregarSubAlvosTransferencia();
+    
+    setTimeout(() => inputDestino.focus(), 50);
+};
 
-function fecharModalTransferirSub() {
+window.fecharModalTransferirSub = function() {
     document.getElementById('transferir-sub-backdrop').style.display = 'none';
     document.getElementById('modal-transferir-sub').style.display = 'none';
-}
+};
 
 // Helper: Extrai um snippet seguro para montar os rótulos do select
 function _gerarSnippetCard(item) {
@@ -603,7 +611,6 @@ function _gerarSnippetCard(item) {
     let snippet = '';
     
     if (item.tipo === 'texto') {
-        // Remove quebras de linha e limita a 25 caracteres
         const limpo = item.conteudo.replace(/<[^>]*>?/gm, '').substring(0, 25);
         snippet = `[T] "${limpo}..."`;
     } else if (item.tipo === 'audio') {
@@ -614,7 +621,8 @@ function _gerarSnippetCard(item) {
     return `${docTag} - ${snippet}`;
 }
 
-function carregarSubAlvosTransferencia() {
+// 3. CARREGAR ALVOS (AGORA MOSTRA AS PILHAS)
+window.carregarSubAlvosTransferencia = function() {
     if (!_menuSubAnotacaoCtx) return;
     const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
     const inputVal = parseInt(document.getElementById('input-transferir-sub-destino').value, 10);
@@ -630,7 +638,7 @@ function carregarSubAlvosTransferencia() {
     const cardDestino = topico.anotacoes[inputVal - 1];
     let temOpcoes = false;
     
-    // LÓGICA ORIGINAL: Grupos de Provas (Mestre/Anexos)
+    // Lista os anexos
     if (cardDestino.itensCorrelacionados && cardDestino.itensCorrelacionados.length > 0) {
         select.appendChild(new Option(`🌟 Mestre: ${_gerarSnippetCard(cardDestino)}`, 'main'));
         cardDestino.itensCorrelacionados.forEach((item, idx) => {
@@ -639,7 +647,7 @@ function carregarSubAlvosTransferencia() {
         temOpcoes = true;
     }
 
-    // NOVA LÓGICA: Mapeamento de Pilhas (Grupos de Ideias) no Destino
+    // LISTA AS PILHAS
     const gruposEncontrados = new Set();
     const mapearGrupos = (subArr) => { if(subArr) subArr.forEach(s => { if(s.grupoId) gruposEncontrados.add(s.grupoId); }); };
     
@@ -649,7 +657,7 @@ function carregarSubAlvosTransferencia() {
     if (gruposEncontrados.size > 0) {
         if (temOpcoes) {
             const divider = document.createElement('option');
-            divider.disabled = true; divider.text = "── Pilhas (Empilhamento) ──";
+            divider.disabled = true; divider.text = "── Pilhas Existentes ──";
             select.appendChild(divider);
         }
         let counter = 1;
@@ -660,9 +668,10 @@ function carregarSubAlvosTransferencia() {
     }
 
     if (temOpcoes) targetBox.style.display = 'flex';
-}
+};
 
-function confirmarTransferenciaSub() {
+// 4. MUTAÇÃO FINAL
+window.confirmarTransferenciaSub = function() {
     if (!_menuSubAnotacaoCtx) return;
     
     const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
@@ -683,13 +692,10 @@ function confirmarTransferenciaSub() {
         ? document.getElementById('select-transferir-sub-alvo').value 
         : 'main';
 
-    // ROTEAMENTO: Identifica se o alvo é uma Pilha
     if (selectVal.startsWith('pilha|')) {
         isPilhaTarget = true;
         grupoIdTarget = selectVal.split('|')[1];
-    } 
-    // ROTEAMENTO ORIGINAL: Anexos
-    else if (cardDestino.itensCorrelacionados && cardDestino.itensCorrelacionados.length > 0) {
+    } else if (cardDestino.itensCorrelacionados && cardDestino.itensCorrelacionados.length > 0) {
         if (selectVal !== 'main') {
             alvoViewSource = selectVal;
             alvoFinal = cardDestino.itensCorrelacionados[parseInt(selectVal, 10)];
@@ -698,30 +704,30 @@ function confirmarTransferenciaSub() {
 
     const alvoOrigem = _resolverSubAlvo(topico, _menuSubAnotacaoCtx.parentIndex, _menuSubAnotacaoCtx.viewSource);
 
-    // VALIDAÇÃO DE AUTO-COLISÃO (Ignora se estiver apenas movendo para uma pilha do mesmo card)
+    // Impede mandar pro mesmo lugar, a menos que seja pra empilhar
     if (!isPilhaTarget && destinoIndex === _menuSubAnotacaoCtx.parentIndex && alvoViewSource === String(_menuSubAnotacaoCtx.viewSource)) {
-        fecharModalTransferirSub();
+        window.fecharModalTransferirSub();
         return exibirToast('O nó já pertence a esta prova. Nenhuma alteração realizada.', 'aviso');
     }
 
-    // MUTAÇÃO: Extrai e ajusta estado
+    // EXTRAI O NÓ DA ORIGEM E ADICIONA NO DESTINO
     const noTransferido = alvoOrigem.subAnotacoes.splice(_menuSubAnotacaoCtx.localIndex, 1)[0];
     
     if (isPilhaTarget) {
-        noTransferido.grupoId = grupoIdTarget; // Engata na pilha
+        noTransferido.grupoId = grupoIdTarget;
     } else {
-        delete noTransferido.grupoId; // Se tirou da pilha e jogou num card solto, limpa o estado
+        delete noTransferido.grupoId; // Se tirou da pilha, solta ele
     }
     
     if (!alvoFinal.subAnotacoes) alvoFinal.subAnotacoes = [];
     alvoFinal.subAnotacoes.push(noTransferido);
     
-    fecharModalTransferirSub();
+    window.fecharModalTransferirSub();
     renderizarTopicos();
     salvarBackupAutomatico();
     exibirToast(isPilhaTarget ? 'Nó empilhado com sucesso!' : 'Nó transferido com sucesso!', 'sucesso');
     _menuSubAnotacaoCtx = null;
-}
+};
 
 function excluirItemCorrelacionado(topicoId, parentIndex, correlacionadoIndex) {
     if (!confirm('Excluir este item correlacionado?')) return;

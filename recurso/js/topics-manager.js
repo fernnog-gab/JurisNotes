@@ -5,10 +5,19 @@
 window.TopicsManager = (function () {
     'use strict';
 
-    const romanoCache = ["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV"];
-    function obterRomano(idx) { return romanoCache[idx] || String(idx + 1); }
-
     let _activeTopicoCor = '#ffffff';
+
+    // GERENCIADOR DE ESTADO DAS PILHAS (ROMANOS)
+    const romanoCache = ["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV"];
+    const PilhaState = {
+        counter: 0,
+        map: new Map(),
+        reset: function() { this.counter = 0; this.map.clear(); },
+        getRomano: function(grupoId) {
+            if (!this.map.has(grupoId)) this.map.set(grupoId, romanoCache[this.counter++] || String(this.counter));
+            return this.map.get(grupoId);
+        }
+    };
 
     // Observer Otimizado (Debounce de ~16ms para agrupar Recalculate Styles)
     let _layoutDebounceTimer = null;
@@ -338,7 +347,7 @@ window.TopicsManager = (function () {
      * Os três fragmentos são irmãos diretos no .timeline-container,
      * garantindo que align-self funcione corretamente nas sub-anotações.
      */
-    function criarCard(anotacao, index, arr, renderContext) {
+    function criarCard(anotacao, index, arr) {
         const total    = arr.length;
         const numero   = index + 1;
         const tagClass = poloParaClasse(anotacao.polo);
@@ -432,12 +441,12 @@ window.TopicsManager = (function () {
         let htmlSubAnotacoes = '';
         let flatSubAnotacoes = [];
         
-        // 1. Achata os nós do Mestre
+        // Achata os nós do Mestre
         if (anotacao.subAnotacoes) {
             flatSubAnotacoes.push(...anotacao.subAnotacoes.map((s, idx) => ({ ...s, viewSource: 'main', localIndex: idx })));
         }
         
-        // 2. Achata os nós dos Filhos (Correlacionados)
+        // Achata os nós dos Filhos (Correlacionados)
         if (anotacao.itensCorrelacionados) {
             anotacao.itensCorrelacionados.forEach((item, fIdx) => {
                 if (item.subAnotacoes) {
@@ -446,6 +455,7 @@ window.TopicsManager = (function () {
             });
         }
 
+        let htmlSubAnotacoes = '';
         const gruposProcessadosNesteCard = new Set();
         const subCardsHTMLArray = [];
 
@@ -468,24 +478,13 @@ window.TopicsManager = (function () {
                 const bordaFaseClass = `borda-fase-${faseSub}`;
                 const itemWrapperClass = intencao === 'nota' ? `sub-annotation-item is-nota-interna ${isRevisada ? 'is-revisada' : 'is-pendente'}` : `sub-annotation-item`;
 
-                const isHasIntent = true;
-                const badgeClass = isHasIntent ? `sub-badge has-intent intencao-${intencao}` : 'sub-badge';
-                const label = isHasIntent ? `${iconSVG} ${numero}.${gerarLetra(sIdx)}` : `${numero}.${gerarLetra(sIdx)}`;
-
                 subCardsHTMLArray.push(`
                     <div class="${itemWrapperClass}" data-source="${sub.viewSource}">
                         <div class="sub-annotation-card ${bordaFaseClass}">
-                            <div class="${badgeClass}" title="Opções desta ideia secundária" onclick="abrirMenuSubAnotacao('${activeTabId}', ${index}, '${sub.viewSource}', ${sub.localIndex}, event)">
-                                ${label}
+                            <div class="sub-badge has-intent intencao-${intencao}" title="Opções" onclick="abrirMenuSubAnotacao('${activeTabId}', ${index}, '${sub.viewSource}', ${sub.localIndex}, event)">
+                                ${iconSVG} ${numero}.${gerarLetra(sIdx)}
                             </div>
-                            <div class="sub-text-content" data-raw-text="${escaparHTML(sub.texto)}" data-raw-title="Nó de Ideia" ondblclick="TopicsManager.abrirModoLeitura(this)">${textoFormatado}</div>
-                            <div class="btn-read-mode-trigger sub-read-badge" title="Modo Leitura" data-raw-text="${escaparHTML(sub.texto)}" data-raw-title="Nó de Ideia" onclick="TopicsManager.abrirModoLeitura(this)">
-                                <svg><use href="#icon-book-open"></use></svg>
-                            </div>
-                            <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(sub.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto para a área de transferência">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                                Copiar Trecho
-                            </button>
+                            <div class="sub-text-content" ondblclick="TopicsManager.abrirModoLeitura(this)">${textoFormatado}</div>
                             ${_gerarBtnRevisaoHtml(activeTabId, index, sub.viewSource, sub.localIndex, intencao, isRevisada)}
                         </div>
                     </div>`);
@@ -495,10 +494,7 @@ window.TopicsManager = (function () {
                 if (!gruposProcessadosNesteCard.has(sub.grupoId)) {
                     gruposProcessadosNesteCard.add(sub.grupoId);
                     
-                    if (!renderContext.romanMap.has(sub.grupoId)) {
-                        renderContext.romanMap.set(sub.grupoId, obterRomano(renderContext.romanCounter++));
-                    }
-                    const numRomano = renderContext.romanMap.get(sub.grupoId);
+                    const numRomano = PilhaState.getRomano(sub.grupoId);
                     
                     subCardsHTMLArray.push(`
                         <div class="sub-annotation-item sub-stack-wrapper" data-source="${sub.viewSource}">
@@ -750,6 +746,8 @@ window.TopicsManager = (function () {
      * Re-renderiza o fichário inteiro.
      */
     function renderizarFichario(topicosArray) {
+        PilhaState.reset(); // Zera os romanos toda vez que a tela for redesenhada
+        
         const headerEl  = document.getElementById('topics-tabs-header');
         const contentEl = document.getElementById('topics-tab-content');
 
@@ -928,11 +926,6 @@ window.TopicsManager = (function () {
             }
             
             // Loop customizado com injeção condicional do Painel de Tese
-            const renderContext = {
-                romanCounter: 0,
-                romanMap: new Map() 
-            };
-
             let cardsHTML = '';
             let ultimaTeseRenderizada = null;
 
@@ -959,8 +952,8 @@ window.TopicsManager = (function () {
                     ultimaTeseRenderizada = chaveTeseCrua;
                 }
                 
-                // Desenha o card da prova e o número colorido passando o renderContext
-                cardsHTML += criarCard(an, index, topicoAtivo.anotacoes, renderContext);
+                // Desenha o card da prova e o número colorido exatamente como antes
+                cardsHTML += criarCard(an, index, topicoAtivo.anotacoes);
             });
             
             // --- RENDERIZAÇÃO: DIRETRIZES GLOBAIS (INCONDICIONAL) ---
