@@ -446,12 +446,11 @@ window.TopicsManager = (function () {
             });
         }
 
-        let htmlSubAnotacoes = '';
         const gruposProcessadosNesteCard = new Set();
         const subCardsHTMLArray = [];
 
         flatSubAnotacoes.forEach((sub, sIdx) => {
-            // NÓS SOLTOS
+            // 1. NÓS SOLTOS
             if (!sub.grupoId) {
                 const intencao = sub.intencao || 'premissa';
                 const iconSVG = obterIconeIntencao(intencao);
@@ -468,7 +467,7 @@ window.TopicsManager = (function () {
                 
                 const bordaFaseClass = `borda-fase-${faseSub}`;
                 const itemWrapperClass = intencao === 'nota' ? `sub-annotation-item is-nota-interna ${isRevisada ? 'is-revisada' : 'is-pendente'}` : `sub-annotation-item`;
-                
+
                 const isHasIntent = true;
                 const badgeClass = isHasIntent ? `sub-badge has-intent intencao-${intencao}` : 'sub-badge';
                 const label = isHasIntent ? `${iconSVG} ${numero}.${gerarLetra(sIdx)}` : `${numero}.${gerarLetra(sIdx)}`;
@@ -491,7 +490,7 @@ window.TopicsManager = (function () {
                         </div>
                     </div>`);
             } 
-            // NÓS AGRUPADOS (A PILHA)
+            // 2. NÓS AGRUPADOS (A PILHA)
             else {
                 if (!gruposProcessadosNesteCard.has(sub.grupoId)) {
                     gruposProcessadosNesteCard.add(sub.grupoId);
