@@ -223,6 +223,31 @@ window.TopicsManager = (function () {
     }
 
     // --- FÁBRICA DE COMPONENTES: PILHA (GRUPO DE IDEIAS) ---
+    function _obterTextosDaPilha(topico, grupoId) {
+        if (!topico) return "";
+        let textos = [];
+        
+        const extrair = (arr) => {
+            if (!arr) return;
+            arr.forEach(s => {
+                // Verifica o grupo e garante que o texto existe e não é vazio
+                if (s.grupoId === grupoId && s.texto && s.texto.trim() !== '') {
+                    textos.push(s.texto.trim());
+                }
+            });
+        };
+
+        // Varredura O(N) linear
+        topico.anotacoes.forEach(an => {
+            extrair(an.subAnotacoes);
+            if (an.itensCorrelacionados) an.itensCorrelacionados.forEach(ic => extrair(ic.subAnotacoes));
+        });
+        extrair(topico.diretrizesGlobais);
+        if (topico.diretrizesPorTese) Object.values(topico.diretrizesPorTese).forEach(arr => extrair(arr));
+
+        return textos.join(' - ');
+    }
+
     function _gerarHtmlPilha(sub, renderContext, activeTabId) {
         // Gera/Resgata o numeral romano do contexto global da aba
         if (!renderContext.romanMap.has(sub.grupoId)) {
@@ -230,8 +255,14 @@ window.TopicsManager = (function () {
         }
         const numRomano = renderContext.romanMap.get(sub.grupoId);
         
+        // Motor Computed:
+        const topico = topicos.find(t => t.id === activeTabId);
+        const teorAutomatico = _obterTextosDaPilha(topico, sub.grupoId);
+        
         const tituloPilha = sub.grupoTitulo || "📚 Grupo de Ideias";
-        const descPilha = sub.grupoDescricao || "Nós empilhados para otimização espacial.";
+        
+        // Fallback Inteligente: Se existir descrição manual, usa ela. Senão, usa o automático.
+        const descPilha = sub.grupoDescricao || (teorAutomatico !== "" ? teorAutomatico : "Nós vazios.");
         const source = sub.viewSource || 'main';
 
         return `
@@ -1486,15 +1517,16 @@ window.TopicsManager = (function () {
         if (!topico) return;
 
         let titAtual = "📚 Grupo de Ideias";
-        let descAtual = "Nós empilhados para otimização espacial.";
+        let descManualSalva = ""; // Inicia vazia (Piloto automático ON)
 
-        // Busca o valor atual varrendo a árvore rapidamente
+        // Busca o valor ATUAL salvo no banco
         const extrair = (arr) => {
             if (!arr) return;
             const no = arr.find(s => s.grupoId === grupoId);
             if (no) {
                 if (no.grupoTitulo) titAtual = no.grupoTitulo;
-                if (no.grupoDescricao) descAtual = no.grupoDescricao;
+                // Só carrega se existir de fato uma edição manual no banco
+                if (no.grupoDescricao) descManualSalva = no.grupoDescricao;
             }
         };
 
@@ -1505,8 +1537,19 @@ window.TopicsManager = (function () {
         extrair(topico.diretrizesGlobais);
         if (topico.diretrizesPorTese) Object.values(topico.diretrizesPorTese).forEach(arr => extrair(arr));
 
-        document.getElementById('input-pilha-titulo').value = titAtual;
-        document.getElementById('input-pilha-descricao').value = descAtual;
+        const inputTitulo = document.getElementById('input-pilha-titulo');
+        const inputDesc = document.getElementById('input-pilha-descricao');
+        
+        inputTitulo.value = titAtual;
+        inputDesc.value = descManualSalva; 
+        
+        // Magia de UX: Se não tem edição manual, o placeholder recebe o preview automático
+        if (descManualSalva === "") {
+            const previewAuto = _obterTextosDaPilha(topico, grupoId);
+            inputDesc.placeholder = previewAuto !== "" ? previewAuto : "Nós vazios. O texto gerado aparecerá aqui...";
+        } else {
+            inputDesc.placeholder = "Deixe vazio para o sistema extrair os textos automaticamente.";
+        }
 
         document.getElementById('pilha-modal-backdrop').style.display = 'block';
         document.getElementById('modal-editar-pilha').style.display = 'flex';
@@ -1526,17 +1569,24 @@ window.TopicsManager = (function () {
         const nTit = document.getElementById('input-pilha-titulo').value.trim();
         const nDesc = document.getElementById('input-pilha-descricao').value.trim();
 
+        // MOTOR DE LIMPEZA DE ESTADO (State Sanitization)
         const atualizar = (arr) => {
             if (!arr) return;
             arr.forEach(s => {
                 if (s.grupoId === _contextoEdicaoPilha.grupoId) {
                     s.grupoTitulo = nTit;
-                    s.grupoDescricao = nDesc;
+                    
+                    if (nDesc === "") {
+                        // Se o usuário deixou vazio, DELETA a chave para manter o JSON limpo
+                        // e ativar a renderização automática no _gerarHtmlPilha
+                        delete s.grupoDescricao;
+                    } else {
+                        s.grupoDescricao = nDesc;
+                    }
                 }
             });
         };
 
-        // Mutação segura na árvore inteira
         topico.anotacoes.forEach(an => { 
             atualizar(an.subAnotacoes); 
             if (an.itensCorrelacionados) an.itensCorrelacionados.forEach(ic => atualizar(ic.subAnotacoes)); 
@@ -1545,8 +1595,8 @@ window.TopicsManager = (function () {
         if (topico.diretrizesPorTese) Object.values(topico.diretrizesPorTese).forEach(arr => atualizar(arr));
 
         fecharModalPilha();
-        renderizarFichario(topicos);
-        if (window.salvarBackupAutomatico) salvarBackupAutomatico();
+        renderizarFichario(topicos); // Dispara a view atualizada
+        if (window.salvarBackupAutomatico) salvarBackupAutomatico(); // Grava JSON limpo
     }
 
     // API pública do módulo

@@ -1219,8 +1219,16 @@
         <p class="popup-label">Título do Grupo:</p>
         <input type="text" id="input-pilha-titulo" class="topic-select" placeholder="Ex: Contradições da Testemunha">
         
-        <p class="popup-label" style="margin-top: 12px;">Resumo / Observações:</p>
-        <textarea id="input-pilha-descricao" class="popup-textarea" style="display:block; min-height: 80px; width: 100%; box-sizing: border-box;" rows="3" placeholder="Digite uma breve explicação sobre as ideias agrupadas aqui..."></textarea>
+        <!-- Novo Header Flex para acomodar o botão de Reset -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 12px; margin-bottom: 4px;">
+            <p class="popup-label" style="margin: 0;">Teor das Ideias (Resumo):</p>
+            <button class="chip-btn" style="background: none; border: 1px dashed #cbd5e1; color: #64748b; padding: 2px 8px; font-size: 0.7rem; cursor: pointer;" onclick="document.getElementById('input-pilha-descricao').value = '';" title="Apaga a edição manual e volta para a concatenação automática do sistema.">
+                🔄 Usar Automático
+            </button>
+        </div>
+        
+        <p style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 6px;">Deixe vazio para o sistema extrair os textos automaticamente.</p>
+        <textarea id="input-pilha-descricao" class="popup-textarea" style="display:block; min-height: 80px; width: 100%; box-sizing: border-box;" rows="3"></textarea>
         
         <div class="wizard-actions" style="margin-top: 16px;">
             <button class="chip-btn chip-cancelar" onclick="TopicsManager.fecharModalPilha()">✕ Cancelar</button>
