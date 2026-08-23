@@ -5,9 +5,6 @@
 window.TopicsManager = (function () {
     'use strict';
 
-    const romanoCache = ["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI","XVII","XVIII","XIX","XX"];
-    function obterRomano(idx) { return romanoCache[idx] || String(idx + 1); }
-
     // NOVA CAMADA DE CONFIGURAÇÃO: Dicionário Centralizado de Interface (ED)
     const ED_UI_LABELS = {
         alegacao: {
@@ -240,46 +237,6 @@ window.TopicsManager = (function () {
                 </button>`;
     }
 
-    // --- FÁBRICA DE COMPONENTES: PILHA (GRUPO DE IDEIAS) ---
-    function _gerarHtmlPilha(sub, renderContext, activeTabId) {
-        renderContext = renderContext || {};
-        renderContext.romanMap = renderContext.romanMap || new Map();
-        renderContext.romanCounter = renderContext.romanCounter || 0;
-
-        if (!renderContext.romanMap.has(sub.grupoId)) {
-            renderContext.romanMap.set(sub.grupoId, obterRomano(renderContext.romanCounter++));
-        }
-        const numRomano = renderContext.romanMap.get(sub.grupoId);
-        
-        const tituloPilha = sub.grupoTitulo || "📚 Grupo de Ideias";
-        const descPilha = sub.grupoDescricao || "Nós empilhados para otimização espacial.";
-        const source = sub.viewSource || 'main';
-
-        return `
-        <div class="sub-annotation-item sub-stack-wrapper" data-source="${source}">
-            <div class="sub-annotation-card sub-annotation-stack tema-ed">
-                <div class="stack-roman-badge" title="Desagrupar Pilha" onclick="TopicsManager.desagruparPilha('${activeTabId}', '${sub.grupoId}')">
-                    ${numRomano}
-                </div>
-                
-                <div class="pilha-editavel" title="Clique para editar metadados" onclick="TopicsManager.abrirModalPilha('${activeTabId}', '${sub.grupoId}')">
-                    ${escaparHTML(tituloPilha)}
-                </div>
-                
-                <div class="pilha-editavel pilha-editavel-desc" title="Clique para editar metadados" onclick="TopicsManager.abrirModalPilha('${activeTabId}', '${sub.grupoId}')">
-                    ${escaparHTML(descPilha).replace(/\n/g, '<br>')}
-                </div>
-                
-                <div class="btn-read-mode-trigger sub-read-badge" title="Modo Leitura do Grupo" onclick="TopicsManager.abrirModoLeituraPilha('${activeTabId}', '${sub.grupoId}', '${numRomano}')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                    </svg>
-                </div>
-            </div>
-        </div>`;
-    }
-
     let activeTabId = null;
 
     /**
@@ -447,7 +404,7 @@ window.TopicsManager = (function () {
      * Os três fragmentos são irmãos diretos no .timeline-container,
      * garantindo que align-self funcione corretamente nas sub-anotações.
      */
-    function criarCard(anotacao, index, arr, renderContext) {
+    function criarCard(anotacao, index, arr) {
         const total    = arr.length;
         const numero   = index + 1;
         const tagClass = poloParaClasse(anotacao.polo);
@@ -543,42 +500,27 @@ window.TopicsManager = (function () {
         }
 
         if (flatSubAnotacoes.length > 0) {
-            const subCardsHTMLArray = [];
-            const gruposProcessadosNesteCard = new Set();
-        
-            flatSubAnotacoes.forEach((sub, sIdx) => {
-                // 1. NÓS SOLTOS (Comportamento original preservado)
-                if (!sub.grupoId) {
-                    let faseSub = faseDoCard;
-                    if (sub.viewSource !== 'main' && anotacao.itensCorrelacionados) {
-                        const cIdx = parseInt(sub.viewSource, 10);
-                        if (!isNaN(cIdx) && anotacao.itensCorrelacionados[cIdx]) {
-                             faseSub = typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(anotacao.itensCorrelacionados[cIdx].documento) : 4;
-                        }
-                    }
-                    
-                    subCardsHTMLArray.push(_gerarTemplateSubNo(sub, sIdx, {
-                        topicoId: activeTabId,
-                        parentIndex: index,
-                        viewSource: sub.viewSource,
-                        bordaFaseClass: `borda-fase-${faseSub}`,
-                        prefixoBadge: `${numero}.`,
-                        usarLetra: true,
-                        tituloLeitura: 'Nó de Ideia'
-                    }));
-                }
-                // 2. NÓS AGRUPADOS (A PILHA)
-                else {
-                    if (!gruposProcessadosNesteCard.has(sub.grupoId)) {
-                        gruposProcessadosNesteCard.add(sub.grupoId);
-                        subCardsHTMLArray.push(_gerarHtmlPilha(sub, renderContext, activeTabId));
+            const subCardsHTML = flatSubAnotacoes.map((sub, sIdx) => {
+                let faseSub = faseDoCard;
+                if (sub.viewSource !== 'main' && anotacao.itensCorrelacionados) {
+                    const cIdx = parseInt(sub.viewSource, 10);
+                    if (!isNaN(cIdx) && anotacao.itensCorrelacionados[cIdx]) {
+                         faseSub = typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(anotacao.itensCorrelacionados[cIdx].documento) : 4;
                     }
                 }
-            });
+                
+                return _gerarTemplateSubNo(sub, sIdx, {
+                    topicoId: activeTabId,
+                    parentIndex: index,
+                    viewSource: sub.viewSource,
+                    bordaFaseClass: `borda-fase-${faseSub}`,
+                    prefixoBadge: `${numero}.`,
+                    usarLetra: true,
+                    tituloLeitura: 'Nó de Ideia'
+                });
+            }).join('');
 
-            if (subCardsHTMLArray.length > 0) {
-                htmlSubAnotacoes = `<div class="sub-annotations-wrapper">${subCardsHTMLArray.join('')}</div>`;
-            }
+            htmlSubAnotacoes = `<div class="sub-annotations-wrapper">${subCardsHTML}</div>`;
         }
 
         // NOVO: Processar itens agrupados
@@ -675,7 +617,7 @@ window.TopicsManager = (function () {
     /**
      * Renderiza o bloco de diretrizes visuais para a IA (Global ou Por Vício)
      */
-    function renderizarNivelHierarquico(tipo, titulo, subanotacoes, topicoId, tesesConsolidadas = [], indexGlobal = 0, renderContext) {
+    function renderizarNivelHierarquico(tipo, titulo, subanotacoes, topicoId, tesesConsolidadas = [], indexGlobal = 0) {
         const listaSegura = subanotacoes || [];
         const isGlobal = tipo === 'global';
         
@@ -714,33 +656,22 @@ window.TopicsManager = (function () {
         
         const tituloContexto = isGlobal ? 'Diretriz Global' : `Diretriz do Vício: ${titulo}`;
         
-        // RENDERIZAÇÃO SEGURA DOS NÓS COM SUPORTE A PILHAS E SHALLOW COPY
-        const gruposProcessadosNesteNivel = new Set();
-        const subCardsHTMLArray = [];
-
-        listaSegura.forEach((sub, idx) => {
-            const dRender = { ...sub, viewSource: isGlobal ? 'global' : `vicio:${titulo}`, localIndex: idx };
+        // RENDERIZAÇÃO DOS NÓS SEM FRASE DE EMPTY STATE E COM MENU ATIVO
+        const subCardsHTML = listaSegura.map((sub, idx) => {
+            // Garante o mapeamento local correto esperado pelo sistema de anotações
+            sub.localIndex = idx;
             
-            if (!dRender.grupoId) {
-                subCardsHTMLArray.push(_gerarTemplateSubNo(dRender, idx, {
-                    topicoId: topicoId,
-                    parentIndex: null,
-                    viewSource: dRender.viewSource,
-                    bordaClass: classSubBorda,
-                    bordaStyle: styleSubBorda,
-                    prefixoBadge: isGlobal ? 'G.' : 'V.',
-                    usarLetra: false,
-                    tituloLeitura: tituloContexto
-                }));
-            } else {
-                if (!gruposProcessadosNesteNivel.has(dRender.grupoId)) {
-                    gruposProcessadosNesteNivel.add(dRender.grupoId);
-                    subCardsHTMLArray.push(_gerarHtmlPilha(dRender, renderContext, topicoId));
-                }
-            }
-        });
-
-        const subCardsHTML = subCardsHTMLArray.join('');
+            return _gerarTemplateSubNo(sub, idx, {
+                topicoId: topicoId,
+                parentIndex: null,
+                viewSource: isGlobal ? 'global' : `vicio:${titulo}`,
+                bordaClass: classSubBorda,
+                bordaStyle: styleSubBorda,
+                prefixoBadge: isGlobal ? 'G.' : 'V.',
+                usarLetra: false,
+                tituloLeitura: tituloContexto
+            });
+        }).join('');
 
         const hierarquiaTitulo = isGlobal ? 'Diretrizes Globais (Auditoria)' : `Vício Alegado: ${escaparHTML(titulo)}`;
         const wrapperClass = isGlobal ? 'nivel-global' : 'nivel-vicio';
@@ -1065,15 +996,9 @@ window.TopicsManager = (function () {
             
             let htmlDiretrizes = '';
 
-            // Injeta o contexto de renderização isolado para a aba LOGO NO INÍCIO
-            const renderContext = {
-                romanCounter: 0,
-                romanMap: new Map() // Mapeia grupoId -> Numeral Romano
-            };
-
             // 1. Diretriz Global (Mantida fixa no topo)
             const diretrizesGlobaisSeguras = topicoAtivo.diretrizesGlobais || [];
-            htmlDiretrizes += renderizarNivelHierarquico('global', null, diretrizesGlobaisSeguras, activeTabId, [], 0, renderContext);
+            htmlDiretrizes += renderizarNivelHierarquico('global', null, diretrizesGlobaisSeguras, activeTabId, [], 0);
 
             // 2. Lógica Dinâmica: Cards do Vício (Ocultação Condicional)
             let cardsHTML = '';
@@ -1101,15 +1026,14 @@ window.TopicsManager = (function () {
                     if (isTesePreenchida || diretrizesDoVicio.length > 0) {
                         const tituloExibicao = isTesePreenchida ? anotacao.tese.trim() : "Provas não agrupadas";
                         
-                        // Injeta dinamicamente o card de Vício nativo no topo da Tese (com renderContext)
+                        // Injeta dinamicamente o card de Vício nativo no topo da Tese
                         cardsHTML += renderizarNivelHierarquico(
                             'vicio',
                             vicioFormatado,     // Nome bonito (com acento)
                             diretrizesDoVicio,  // Mantém os botões e regras de IA funcionando
                             activeTabId,
                             [tituloExibicao],   // Exibe apenas a tese deste grupo específico
-                            index,              // Índice sincronizado para alinhamento (Esquerda/Direita)
-                            renderContext       // INJEÇÃO DA FÁBRICA
+                            index               // Índice sincronizado para alinhamento (Esquerda/Direita)
                         );
                     }
 
@@ -1118,7 +1042,7 @@ window.TopicsManager = (function () {
                 }
 
                 // Renderiza a prova (Card 1, 2, 3...)
-                cardsHTML += criarCard(anotacao, index, topicoAtivo.anotacoes, renderContext);
+                cardsHTML += criarCard(anotacao, index, topicoAtivo.anotacoes);
             });
 
             // MONTAGEM FINAL DA TIMELINE
@@ -1415,198 +1339,11 @@ window.TopicsManager = (function () {
         }, { passive: false });
     }
 
-    function abrirModoLeituraPilha(topicoId, grupoId, numeroRomano) {
-        const topico = topicos.find(t => t.id === topicoId);
-        if (!topico) return;
-        
-        let htmlAgrupado = '';
-        let itemContador = 1;
-
-        // Mapeamento de rótulos e cores para os badges de intenção
-        const getIntencaoLabel = (intKey) => {
-            const mapa = {
-                'comando': { text: 'COMANDO', color: '#c62828', bg: '#ffebee' },
-                'texto': { text: 'TEXTO FIXO', color: '#1565c0', bg: '#e3f2fd' },
-                'premissa': { text: 'PREMISSA LÓGICA', color: '#7b1fa2', bg: '#f3e5f5' },
-                'fundamentacao': { text: 'FUNDAMENTAÇÃO LEGAL', color: '#00695c', bg: '#e0f2f1' },
-                'refutacao': { text: 'REFUTAÇÃO / MÉRITO', color: '#8B4513', bg: '#efebe9' },
-                'preliminar': { text: 'PREJUDICIAL / FILTRO', color: '#5d4037', bg: '#efebe9' },
-                'veredito': { text: 'VEREDITO', color: '#e65100', bg: '#fff3e0' },
-                'nota': { text: 'NOTA INTERNA', color: '#616161', bg: '#f5f5f5' }
-            };
-            return mapa[intKey] || { text: 'DIRETRIZ', color: '#475569', bg: '#f1f5f9' };
-        };
-
-        const processar = (subArr, origemHtml) => {
-            if (subArr) {
-                subArr.filter(s => s.grupoId === grupoId).forEach((no) => {
-                    const intencaoKey = no.intencao || 'premissa';
-                    const configInt = getIntencaoLabel(intencaoKey);
-                    const isRevisada = no.revisada ? ' <span title="Revisada" style="color:#48bb78; margin-left:4px;">✔</span>' : '';
-                    
-                    htmlAgrupado += `
-                    <div style="padding-bottom: 16px; border-bottom: 1px dashed #e2e8f0; margin-bottom: 16px;">
-                        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
-                            <span style="font-size:0.75rem; color:#64748b; font-weight:800; background:#f1f5f9; padding:2px 8px; border-radius:12px;">ITEM ${itemContador++}</span>
-                            <span style="font-size:0.7rem; font-weight:800; color:${configInt.color}; background:${configInt.bg}; padding:2px 8px; border-radius:12px; border: 1px solid ${configInt.color}40; display:flex; align-items:center;">${configInt.text}${isRevisada}</span>
-                            <span style="font-size:0.8rem; color:#475569; display:flex; align-items:center; gap:4px; margin-left: 4px;">${origemHtml}</span>
-                        </div>
-                        <div style="font-size: 1rem; color: #334155; line-height: 1.6;">
-                            ${renderizarMarkdownSeguro(escaparHTML(no.texto))}
-                        </div>
-                    </div>`;
-                });
-            }
-        };
-
-        // 1. Varre Diretrizes Globais
-        processar(topico.diretrizesGlobais, '🌐 <strong>Diretriz Global</strong>');
-
-        // 2. Varre Teses e Provas
-        let ultimaTese = null;
-        topico.anotacoes.forEach(an => {
-            const teseAtual = an.tese || "Provas sem agrupamento";
-            const vicioRaw = an.vicio || topico.vicio || 'omissao';
-            
-            // Subnós do Vício do ED
-            if (teseAtual !== ultimaTese) {
-                if (topico.diretrizesPorVicio && topico.diretrizesPorVicio[vicioRaw]) {
-                    processar(topico.diretrizesPorVicio[vicioRaw], `⚖️ Vício: <strong>${escaparHTML(window.JurisUtils?.formatarVicioED ? window.JurisUtils.formatarVicioED(vicioRaw) : vicioRaw)}</strong>`);
-                }
-                ultimaTese = teseAtual;
-            }
-
-            // Subnós da Prova Master
-            const docMaster = an.documento || an.polo || 'Elemento Probatório';
-            const flMaster = an.pagina ? `(fl. ${an.pagina})` : '';
-            processar(an.subAnotacoes, `📄 ${escaparHTML(docMaster)} <em>${escaparHTML(flMaster)}</em>`);
-
-            // Subnós das Provas Correlacionadas
-            if (an.itensCorrelacionados) {
-                an.itensCorrelacionados.forEach(ic => {
-                    const docCorr = ic.documento || ic.polo || 'Elemento Correlacionado';
-                    const flCorr = ic.pagina ? `(fl. ${ic.pagina})` : '';
-                    processar(ic.subAnotacoes, `📄 ${escaparHTML(docCorr)} <em>${escaparHTML(flCorr)}</em>`);
-                });
-            }
-        });
-
-        const modal = document.getElementById('reading-mode-modal');
-        document.getElementById('reading-mode-title-text').textContent = `Leitura da Pilha ${numeroRomano}`;
-        document.getElementById('reading-mode-content').innerHTML = htmlAgrupado || '<p style="color:#666; font-style:italic;">Nenhuma ideia encontrada para este grupo.</p>';
-        document.getElementById('reading-mode-backdrop').style.display = 'block';
-        modal.style.display = 'flex';
-    }
-
-    function desagruparPilha(topicoId, grupoId) {
-        if (!confirm('Deseja desagrupar esta pilha e restaurar os nós individualmente?')) return;
-        const topico = topicos.find(t => t.id === topicoId);
-        
-        const limparGrupo = (subArr) => {
-            if(subArr) subArr.forEach(s => { if (s.grupoId === grupoId) delete s.grupoId; });
-        };
-
-        topico.anotacoes.forEach(an => {
-            limparGrupo(an.subAnotacoes);
-            if (an.itensCorrelacionados) an.itensCorrelacionados.forEach(ic => limparGrupo(ic.subAnotacoes));
-        });
-        
-        // Adaptação segura para o ambiente de ED
-        limparGrupo(topico.diretrizesGlobais);
-        if (topico.diretrizesPorVicio) {
-            Object.values(topico.diretrizesPorVicio).forEach(lista => limparGrupo(lista));
-        }
-
-        renderizarFichario(topicos); 
-        if(window.salvarBackupAutomatico) salvarBackupAutomatico();
-        if(window.exibirToast) exibirToast('Pilha desagrupada com sucesso.', 'sucesso');
-    }
-
-    let _contextoEdicaoPilha = null;
-
-    function abrirModalPilha(topicoId, grupoId) {
-        _contextoEdicaoPilha = { topicoId, grupoId };
-        const topico = topicos.find(t => t.id === topicoId);
-        if (!topico) return;
-
-        let titAtual = "📚 Grupo de Ideias";
-        let descAtual = "Nós empilhados para otimização espacial.";
-
-        // Busca o valor atual varrendo a árvore rapidamente
-        const extrair = (arr) => {
-            if (!arr) return;
-            const no = arr.find(s => s.grupoId === grupoId);
-            if (no) {
-                if (no.grupoTitulo) titAtual = no.grupoTitulo;
-                if (no.grupoDescricao) descAtual = no.grupoDescricao;
-            }
-        };
-
-        topico.anotacoes.forEach(an => { 
-            extrair(an.subAnotacoes); 
-            if (an.itensCorrelacionados) an.itensCorrelacionados.forEach(ic => extrair(ic.subAnotacoes)); 
-        });
-        extrair(topico.diretrizesGlobais);
-        
-        // Adaptação ED: Varre as diretrizesPorVicio
-        if (topico.diretrizesPorVicio) Object.values(topico.diretrizesPorVicio).forEach(arr => extrair(arr));
-
-        document.getElementById('input-pilha-titulo').value = titAtual;
-        document.getElementById('input-pilha-descricao').value = descAtual;
-
-        document.getElementById('pilha-modal-backdrop').style.display = 'block';
-        document.getElementById('modal-editar-pilha').style.display = 'flex';
-    }
-
-    function fecharModalPilha() {
-        document.getElementById('pilha-modal-backdrop').style.display = 'none';
-        document.getElementById('modal-editar-pilha').style.display = 'none';
-        _contextoEdicaoPilha = null;
-    }
-
-    function salvarEdicaoPilha() {
-        if (!_contextoEdicaoPilha) return;
-        const topico = topicos.find(t => t.id === _contextoEdicaoPilha.topicoId);
-        if (!topico) return;
-        
-        const nTit = document.getElementById('input-pilha-titulo').value.trim();
-        const nDesc = document.getElementById('input-pilha-descricao').value.trim();
-
-        const atualizar = (arr) => {
-            if (!arr) return;
-            arr.forEach(s => {
-                if (s.grupoId === _contextoEdicaoPilha.grupoId) {
-                    s.grupoTitulo = nTit;
-                    s.grupoDescricao = nDesc;
-                }
-            });
-        };
-
-        // Mutação segura na árvore inteira
-        topico.anotacoes.forEach(an => { 
-            atualizar(an.subAnotacoes); 
-            if (an.itensCorrelacionados) an.itensCorrelacionados.forEach(ic => atualizar(ic.subAnotacoes)); 
-        });
-        atualizar(topico.diretrizesGlobais);
-        
-        // Adaptação ED: Atualiza as diretrizesPorVicio
-        if (topico.diretrizesPorVicio) Object.values(topico.diretrizesPorVicio).forEach(arr => atualizar(arr));
-
-        fecharModalPilha();
-        renderizarFichario(topicos);
-        if (window.salvarBackupAutomatico) salvarBackupAutomatico();
-    }
-
     // API pública do módulo
     return {
         obterCor,
-        abrirModalPilha,
-        fecharModalPilha,
-        salvarEdicaoPilha,
         obterCorContraste,
         renderizarFichario,
-        abrirModoLeituraPilha,
-        desagruparPilha,
         getActiveTabId: () => activeTabId,
         setActiveTabId: (id) => { activeTabId = id; },
         escaparHTML,
