@@ -1092,68 +1092,137 @@ body[data-context="ed"] .topics-content-area {
 .outline-content-text b, .outline-content-text strong { color: var(--trt-blue); }
 
 /* ==========================================
-   ESTILOS: GRUPO DE IDEIAS (PILHAS) - TEMA DOSSIÊ
+   ESTILOS: GRUPO DE IDEIAS (PILHAS) - TEMA ED (FÚCSIA)
    ========================================== */
    
-/* Base da Pilha com tema amarelo */
-.sub-annotation-stack.tema-dossie {
-    border-color: #E5C100 !important;
-    padding-bottom: 36px; /* Espaço reservado para o botão de leitura inferior */
+/* Isola o contexto de empilhamento (Z-index sandbox) para proteger o efeito 3D */
+.sub-stack-wrapper {
+    isolation: isolate;
 }
 
-/* Badge Romano Amarelo/Preto */
-.sub-annotation-stack.tema-dossie .stack-roman-badge {
-    background-color: #FFC107;
-    color: #000000;
-    border: 1px solid #E5C100;
+/* Base da Pilha com tema ED */
+.sub-annotation-stack.tema-ed {
+    position: relative; /* Fundamental para ancorar os badges absolutos */
+    border-color: var(--ed-neon-stroke, #A3008A) !important;
+    padding-bottom: 36px; /* Impede colisão do texto com o botão base */
+    background-color: var(--notes-bg-color, #ffffff);
 }
-/* Feedback de perigo ao passar o mouse no romano (Ação de Desagrupar) */
-.sub-annotation-stack.tema-dossie .stack-roman-badge:hover {
-    background-color: #ef4444; 
+
+/* Badge Romano Top-Left (Fúcsia/Branco) */
+.sub-annotation-stack.tema-ed .stack-roman-badge {
+    position: absolute;
+    top: -12px;
+    left: -12px;
+    width: 32px;
+    height: 32px;
+    background-color: var(--ed-neon-bg, #D500B5);
     color: #ffffff;
-    border-color: #ef4444;
+    border: 2px solid var(--notes-bg-color, #ffffff);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 800;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    cursor: pointer;
+    z-index: 5;
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s;
+    outline-offset: 2px;
 }
 
-/* Áreas de Texto Editáveis (Título e Descrição) */
-.pilha-editavel {
+.sub-annotation-stack.tema-ed .stack-roman-badge:hover,
+.sub-annotation-stack.tema-ed .stack-roman-badge:focus-visible {
+    background-color: #ef4444; /* Alerta visual de ação destrutiva */
+    border-color: #ef4444;
+    transform: scale(1.15);
+}
+
+/* Badge Modo Leitura Bottom-Left */
+.sub-annotation-stack.tema-ed .sub-read-badge {
+    position: absolute;
+    bottom: -14px;
+    left: -14px;
+    width: 34px;
+    height: 34px;
+    background-color: var(--ed-neon-bg, #D500B5);
+    color: #ffffff;
+    border: 2px solid var(--notes-bg-color, #ffffff);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    cursor: pointer;
+    z-index: 5;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.sub-annotation-stack.tema-ed .sub-read-badge svg {
+    width: 16px;
+    height: 16px;
+    stroke: #ffffff;
+}
+
+.sub-annotation-stack.tema-ed .sub-read-badge:hover,
+.sub-annotation-stack.tema-ed .sub-read-badge:focus-visible {
+    background-color: var(--ed-neon-stroke, #A3008A);
+    transform: scale(1.15);
+}
+
+/* Efeito 3D (Cartas inferiores) */
+.sub-annotation-stack.tema-ed::before,
+.sub-annotation-stack.tema-ed::after {
+    content: "";
+    position: absolute;
+    inset: 0; /* Substitui top/left/right/bottom 0 */
+    border-radius: inherit;
+    background-color: var(--notes-bg-color, #ffffff);
+    z-index: -1; /* Seguro agora devido ao isolation: isolate no pai */
+}
+
+.sub-annotation-stack.tema-ed::before {
+    transform: translateY(4px) translateX(4px);
+    border: 1px solid rgba(163, 0, 138, 0.4); 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.sub-annotation-stack.tema-ed::after {
+    transform: translateY(8px) translateX(8px);
+    border: 1px solid rgba(163, 0, 138, 0.15);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+/* Textos Editáveis - Remoção do azul do TRT e inserção de tons neutros/ED */
+.sub-annotation-stack.tema-ed .pilha-editavel {
     border-radius: 4px;
     transition: background-color 0.2s, padding 0.2s;
     cursor: pointer;
     padding: 2px 4px;
-    margin-left: -4px; /* Compensação óptica do padding */
+    margin-left: -4px; 
     font-weight: 600; 
-    color: var(--trt-blue); 
+    color: var(--ed-neon-stroke, #A3008A); 
     margin-bottom: 8px; 
     font-size: 0.85rem;
 }
-.pilha-editavel:hover { background-color: rgba(255, 193, 7, 0.15); }
+.sub-annotation-stack.tema-ed .pilha-editavel:hover { 
+    background-color: rgba(213, 0, 181, 0.08); 
+}
 
-/* Descrição (com suporte a Scrollbar) */
-.pilha-editavel-desc {
-    max-height: 120px;
-    overflow-y: auto;
-    font-weight: 400 !important;
-    color: #666 !important;
-    line-height: 1.5;
-    font-size: 0.8rem !important;
+.sub-annotation-stack.tema-ed .pilha-editavel-desc {
+    max-height: 120px; 
+    overflow-y: auto; 
+    font-weight: 400 !important; 
+    color: var(--text-dark, #2c2c2c) !important;
+    line-height: 1.5; 
+    font-size: 0.8rem !important; 
     margin-bottom: 0 !important;
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: var(--ed-neon-bg, #D500B5) transparent;
 }
-.pilha-editavel-desc::-webkit-scrollbar { width: 4px; }
-.pilha-editavel-desc::-webkit-scrollbar-track { background: transparent; }
-.pilha-editavel-desc::-webkit-scrollbar-thumb { background: #FFC107; border-radius: 4px; }
-
-/* Botão Modo Leitura Minimalista (Canto Inferior Esquerdo) */
-.sub-annotation-stack.tema-dossie .sub-read-badge {
-    display: flex !important; /* Força exibição constante na pilha */
-    background: #FFC107;
-    color: #000000;
-    border: 1px solid #E5C100;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-.sub-annotation-stack.tema-dossie .sub-read-badge:hover {
-    background: #E5B22D;
-    transform: scale(1.15);
-}
+.sub-annotation-stack.tema-ed .pilha-editavel-desc::-webkit-scrollbar { width: 4px; }
+.sub-annotation-stack.tema-ed .pilha-editavel-desc::-webkit-scrollbar-track { background: transparent; }
+.sub-annotation-stack.tema-ed .pilha-editavel-desc::-webkit-scrollbar-thumb { background: var(--ed-neon-bg, #D500B5); border-radius: 4px; }
 
 /* Oculta o botão antigo e intrusivo (legado) */
 .sub-annotation-stack .stack-read-btn { display: none !important; }
