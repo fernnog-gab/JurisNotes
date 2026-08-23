@@ -1248,9 +1248,15 @@ document.addEventListener('keydown', function (e) {
 
 document.addEventListener('click', function (e) {
     const popup = document.getElementById('classification-popup');
-    if (popup && popup.style.display === 'flex' && !popup.contains(e.target) && !e.target.closest('.icon-btn')) {
+    
+    // ARQUITETURA SSOT: Identifica se o clique nasceu dentro de um menu suspenso (portal)
+    // O(log n) na subida da árvore DOM.
+    const isClickInsidePortal = e.target.closest('.jcs-options-portal');
+    
+    if (popup && popup.style.display === 'flex' && !popup.contains(e.target) && !e.target.closest('.icon-btn') && !isClickInsidePortal) {
         if (typeof fecharPopupClassificacao === 'function') fecharPopupClassificacao();
     }
+    
     const menu = document.getElementById('annotation-context-menu');
     if (menu) menu.style.display = 'none';
 
