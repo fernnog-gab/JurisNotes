@@ -5,6 +5,9 @@
 window.TopicsManager = (function () {
     'use strict';
 
+    const romanoCache = ["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI","XVII","XVIII","XIX","XX"];
+    function obterRomano(idx) { return romanoCache[idx] || String(idx + 1); }
+
     // NOVA CAMADA DE CONFIGURAÇÃO: Dicionário Centralizado de Interface (ED)
     const ED_UI_LABELS = {
         alegacao: {
@@ -404,7 +407,7 @@ window.TopicsManager = (function () {
      * Os três fragmentos são irmãos diretos no .timeline-container,
      * garantindo que align-self funcione corretamente nas sub-anotações.
      */
-    function criarCard(anotacao, index, arr) {
+    function criarCard(anotacao, index, arr, renderContext) {
         const total    = arr.length;
         const numero   = index + 1;
         const tagClass = poloParaClasse(anotacao.polo);
@@ -500,27 +503,61 @@ window.TopicsManager = (function () {
         }
 
         if (flatSubAnotacoes.length > 0) {
-            const subCardsHTML = flatSubAnotacoes.map((sub, sIdx) => {
-                let faseSub = faseDoCard;
-                if (sub.viewSource !== 'main' && anotacao.itensCorrelacionados) {
-                    const cIdx = parseInt(sub.viewSource, 10);
-                    if (!isNaN(cIdx) && anotacao.itensCorrelacionados[cIdx]) {
-                         faseSub = typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(anotacao.itensCorrelacionados[cIdx].documento) : 4;
+            const subCardsHTMLArray = [];
+            const gruposProcessadosNesteCard = new Set();
+            
+            flatSubAnotacoes.forEach((sub, sIdx) => {
+                // 1. NÓS SOLTOS (Utiliza o template unificado do ED)
+                if (!sub.grupoId) {
+                    let faseSub = faseDoCard;
+                    if (sub.viewSource !== 'main' && anotacao.itensCorrelacionados) {
+                        const cIdx = parseInt(sub.viewSource, 10);
+                        if (!isNaN(cIdx) && anotacao.itensCorrelacionados[cIdx]) {
+                             faseSub = typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(anotacao.itensCorrelacionados[cIdx].documento) : 4;
+                        }
+                    }
+                    
+                    subCardsHTMLArray.push(_gerarTemplateSubNo(sub, sIdx, {
+                        topicoId: activeTabId,
+                        parentIndex: index,
+                        viewSource: sub.viewSource,
+                        bordaFaseClass: `borda-fase-${faseSub}`,
+                        prefixoBadge: `${numero}.`,
+                        usarLetra: true,
+                        tituloLeitura: 'Nó de Ideia'
+                    }));
+                }
+                // 2. NÓS AGRUPADOS (A PILHA)
+                else {
+                    if (!gruposProcessadosNesteCard.has(sub.grupoId)) {
+                        gruposProcessadosNesteCard.add(sub.grupoId);
+                        
+                        if (!renderContext.romanMap.has(sub.grupoId)) {
+                            renderContext.romanMap.set(sub.grupoId, obterRomano(renderContext.romanCounter++));
+                        }
+                        const numRomano = renderContext.romanMap.get(sub.grupoId);
+                        
+                        subCardsHTMLArray.push(`
+                            <div class="sub-annotation-item sub-stack-wrapper" data-source="${sub.viewSource}">
+                                <div class="sub-annotation-card sub-annotation-stack">
+                                    <div class="stack-roman-badge" title="Desagrupar Pilha" onclick="TopicsManager.desagruparPilha('${activeTabId}', '${sub.grupoId}')">
+                                        ${numRomano}
+                                    </div>
+                                    <div style="font-weight: 600; color: var(--trt-blue); margin-bottom: 8px; font-size: 0.85rem;">
+                                        📚 Grupo de Ideias
+                                    </div>
+                                    <p style="font-size: 0.8rem; color: #666; margin-bottom: 12px; line-height:1.4;">Nós empilhados para otimização espacial.</p>
+                                    <button class="stack-read-btn" onclick="TopicsManager.abrirModoLeituraPilha('${activeTabId}', '${sub.grupoId}', '${numRomano}')">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+                                        Modo Leitura
+                                    </button>
+                                </div>
+                            </div>`);
                     }
                 }
-                
-                return _gerarTemplateSubNo(sub, sIdx, {
-                    topicoId: activeTabId,
-                    parentIndex: index,
-                    viewSource: sub.viewSource,
-                    bordaFaseClass: `borda-fase-${faseSub}`,
-                    prefixoBadge: `${numero}.`,
-                    usarLetra: true,
-                    tituloLeitura: 'Nó de Ideia'
-                });
-            }).join('');
+            });
 
-            htmlSubAnotacoes = `<div class="sub-annotations-wrapper">${subCardsHTML}</div>`;
+            htmlSubAnotacoes = `<div class="sub-annotations-wrapper">${subCardsHTMLArray.join('')}</div>`;
         }
 
         // NOVO: Processar itens agrupados
@@ -1003,6 +1040,12 @@ window.TopicsManager = (function () {
             // 2. Lógica Dinâmica: Cards do Vício (Ocultação Condicional)
             let cardsHTML = '';
             let ultimaTeseRenderizada = null;
+            
+            // Injeta o contexto de renderização isolado para a aba
+            const renderContext = {
+                romanCounter: 0,
+                romanMap: new Map() // Mapeia grupoId -> Numeral Romano
+            };
 
             topicoAtivo.anotacoes.forEach((anotacao, index) => {
                 // 1. Busca os dados de forma segura (preserva notas já criadas)
@@ -1042,7 +1085,7 @@ window.TopicsManager = (function () {
                 }
 
                 // Renderiza a prova (Card 1, 2, 3...)
-                cardsHTML += criarCard(anotacao, index, topicoAtivo.anotacoes);
+                cardsHTML += criarCard(anotacao, index, topicoAtivo.anotacoes, renderContext);
             });
 
             // MONTAGEM FINAL DA TIMELINE
@@ -1339,11 +1382,63 @@ window.TopicsManager = (function () {
         }, { passive: false });
     }
 
+    function abrirModoLeituraPilha(topicoId, grupoId, numeroRomano) {
+        const topico = topicos.find(t => t.id === topicoId);
+        let htmlAgrupado = '';
+        
+        const processar = (subArr) => {
+            if (subArr) {
+                subArr.filter(s => s.grupoId === grupoId).forEach((no, idx) => {
+                    htmlAgrupado += `
+                    <div style="padding-bottom: 16px; border-bottom: 1px dashed #e2e8f0; margin-bottom: 16px;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                            <span style="font-size:0.75rem; color:#64748b; font-weight:800; background:#f1f5f9; padding:2px 8px; border-radius:12px;">ITEM ${idx + 1}</span>
+                        </div>
+                        <div style="font-size: 1rem; color: #334155; line-height: 1.6;">
+                            ${renderizarMarkdownSeguro(escaparHTML(no.texto))}
+                        </div>
+                    </div>`;
+                });
+            }
+        };
+
+        topico.anotacoes.forEach(an => {
+            processar(an.subAnotacoes);
+            if (an.itensCorrelacionados) an.itensCorrelacionados.forEach(ic => processar(ic.subAnotacoes));
+        });
+
+        const modal = document.getElementById('reading-mode-modal');
+        document.getElementById('reading-mode-title-text').textContent = `Leitura da Pilha ${numeroRomano}`;
+        document.getElementById('reading-mode-content').innerHTML = htmlAgrupado;
+        document.getElementById('reading-mode-backdrop').style.display = 'block';
+        modal.style.display = 'flex';
+    }
+
+    function desagruparPilha(topicoId, grupoId) {
+        if (!confirm('Deseja desagrupar esta pilha e restaurar os nós individualmente?')) return;
+        const topico = topicos.find(t => t.id === topicoId);
+        
+        const limparGrupo = (subArr) => {
+            if(subArr) subArr.forEach(s => { if (s.grupoId === grupoId) delete s.grupoId; });
+        };
+
+        topico.anotacoes.forEach(an => {
+            limparGrupo(an.subAnotacoes);
+            if (an.itensCorrelacionados) an.itensCorrelacionados.forEach(ic => limparGrupo(ic.subAnotacoes));
+        });
+
+        renderizarFichario(topicos); 
+        if(window.salvarBackupAutomatico) salvarBackupAutomatico();
+        if(window.exibirToast) exibirToast('Pilha desagrupada com sucesso.', 'sucesso');
+    }
+
     // API pública do módulo
     return {
         obterCor,
         obterCorContraste,
         renderizarFichario,
+        abrirModoLeituraPilha,
+        desagruparPilha,
         getActiveTabId: () => activeTabId,
         setActiveTabId: (id) => { activeTabId = id; },
         escaparHTML,
