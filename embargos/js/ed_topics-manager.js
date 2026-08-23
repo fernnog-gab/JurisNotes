@@ -242,14 +242,12 @@ window.TopicsManager = (function () {
 
     // --- FÁBRICA DE COMPONENTES: PILHA (GRUPO DE IDEIAS) ---
     function _gerarHtmlPilha(sub, renderContext, activeTabId) {
-        // INICIALIZAÇÃO DEFENSIVA: Previne quebra (TypeError) se o contexto vier incompleto
+        // Inicialização defensiva de contexto
         renderContext = renderContext || {};
         renderContext.romanMap = renderContext.romanMap || new Map();
         renderContext.romanCounter = renderContext.romanCounter || 0;
 
-        // Determinação determinística do numeral
         if (!renderContext.romanMap.has(sub.grupoId)) {
-            // Assume-se que 'obterRomano' está disponível no escopo de ED
             renderContext.romanMap.set(sub.grupoId, obterRomano(renderContext.romanCounter++));
         }
         const numRomano = renderContext.romanMap.get(sub.grupoId);
@@ -258,29 +256,27 @@ window.TopicsManager = (function () {
         const descPilha = sub.grupoDescricao || "Nós empilhados para otimização espacial.";
         const source = sub.viewSource || 'main';
 
-        // Melhoria A11y: Uso de <button> em vez de <div> para ações clicáveis
-        // O uso do onclick inline é mantido por coerência com o pattern atual do projeto
         return `
         <div class="sub-annotation-item sub-stack-wrapper" data-source="${source}">
             <div class="sub-annotation-card sub-annotation-stack tema-ed">
-                <button type="button" class="stack-roman-badge" title="Desagrupar Pilha" onclick="TopicsManager.desagruparPilha('${activeTabId}', '${escaparHTML(sub.grupoId)}')">
+                <div class="stack-roman-badge" title="Desagrupar Pilha" onclick="TopicsManager.desagruparPilha('${activeTabId}', '${sub.grupoId}')">
                     ${numRomano}
-                </button>
+                </div>
                 
-                <div class="pilha-editavel" title="Clique para editar metadados" onclick="TopicsManager.abrirModalPilha('${activeTabId}', '${escaparHTML(sub.grupoId)}')">
+                <div class="pilha-editavel" title="Clique para editar metadados" onclick="TopicsManager.abrirModalPilha('${activeTabId}', '${sub.grupoId}')">
                     ${escaparHTML(tituloPilha)}
                 </div>
                 
-                <div class="pilha-editavel pilha-editavel-desc" title="Clique para editar metadados" onclick="TopicsManager.abrirModalPilha('${activeTabId}', '${escaparHTML(sub.grupoId)}')">
+                <div class="pilha-editavel pilha-editavel-desc" title="Clique para editar metadados" onclick="TopicsManager.abrirModalPilha('${activeTabId}', '${sub.grupoId}')">
                     ${escaparHTML(descPilha).replace(/\n/g, '<br>')}
                 </div>
                 
-                <button type="button" class="btn-read-mode-trigger sub-read-badge" title="Modo Leitura do Grupo" onclick="TopicsManager.abrirModoLeituraPilha('${activeTabId}', '${escaparHTML(sub.grupoId)}', '${numRomano}')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <div class="btn-read-mode-trigger sub-read-badge" title="Modo Leitura do Grupo" onclick="TopicsManager.abrirModoLeituraPilha('${activeTabId}', '${sub.grupoId}', '${numRomano}')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
                         <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
                     </svg>
-                </button>
+                </div>
             </div>
         </div>`;
     }
