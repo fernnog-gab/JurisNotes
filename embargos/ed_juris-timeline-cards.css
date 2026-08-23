@@ -1095,124 +1095,63 @@ body[data-context="ed"] .topics-content-area {
    ESTILOS: GRUPO DE IDEIAS (PILHAS) - TEMA ED (FÚCSIA)
    ========================================== */
 
-/* Isola o contexto de empilhamento (Z-index sandbox) para proteger o efeito 3D */
-.sub-stack-wrapper {
-    isolation: isolate;
-}
-
-/* 1. O Card Principal (Garante que os botões não fujam da caixa) */
+/* ==========================================
+   ESTILOS: GRUPO DE IDEIAS (PILHAS) - TEMA ED (FÚCSIA)
+   ========================================== */
+   
+/* Base da Pilha com tema ED */
 .sub-annotation-stack.tema-ed {
-    position: relative !important; 
-    padding-bottom: 36px !important; 
     border-color: var(--ed-neon-stroke, #A3008A) !important;
-    background-color: var(--notes-bg-color, #ffffff) !important;
-    z-index: 1 !important; /* Contexto seguro para o efeito 3D */
-    margin-bottom: 24px !important;
+    padding-bottom: 36px; /* Espaço reservado para o botão de leitura inferior */
 }
 
-/* 2. Badge Romano Top-Left (Fúcsia/Branco) */
+/* Badge Romano Fúcsia/Branco */
 .sub-annotation-stack.tema-ed .stack-roman-badge {
-    position: absolute !important;
-    top: -12px !important;
-    left: -12px !important;
-    width: 32px !important;
-    height: 32px !important;
-    background-color: var(--ed-neon-bg, #D500B5) !important;
-    color: #ffffff !important;
-    border: 2px solid var(--notes-bg-color, #ffffff) !important;
-    border-radius: 50% !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font-size: 0.85rem !important;
-    font-weight: 800 !important;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15) !important;
-    cursor: pointer !important;
-    z-index: 10 !important;
-    transition: transform 0.2s, background-color 0.2s;
+    background-color: var(--ed-neon-bg, #D500B5);
+    color: #ffffff;
+    border: 1px solid var(--ed-neon-stroke, #A3008A);
 }
-
+/* Feedback de perigo ao passar o mouse no romano */
 .sub-annotation-stack.tema-ed .stack-roman-badge:hover {
-    background-color: #ef4444 !important;
-    border-color: #ef4444 !important;
-    transform: scale(1.15) !important;
+    background-color: #ef4444; 
+    color: #ffffff;
+    border-color: #ef4444;
 }
 
-/* 3. Badge Modo Leitura Bottom-Left (Fúcsia/Branco) */
-.sub-annotation-stack.tema-ed .sub-read-badge {
-    position: absolute !important;
-    bottom: -14px !important;
-    left: -14px !important;
-    width: 34px !important;
-    height: 34px !important;
-    background-color: var(--ed-neon-bg, #D500B5) !important;
-    color: #ffffff !important;
-    border: 2px solid var(--notes-bg-color, #ffffff) !important;
-    border-radius: 50% !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15) !important;
-    cursor: pointer !important;
-    z-index: 10 !important;
-    transition: transform 0.2s, background-color 0.2s;
-}
-
-.sub-annotation-stack.tema-ed .sub-read-badge svg {
-    width: 16px !important;
-    height: 16px !important;
-    stroke: #ffffff !important;
-    fill: none !important;
-}
-
-.sub-annotation-stack.tema-ed .sub-read-badge:hover {
-    background-color: var(--ed-neon-stroke, #A3008A) !important;
-    transform: scale(1.15) !important;
-}
-
-/* 4. Efeito 3D das Cartas Empilhadas */
-.sub-annotation-stack.tema-ed::before,
-.sub-annotation-stack.tema-ed::after {
-    content: "" !important;
-    position: absolute !important;
-    top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
-    border-radius: inherit !important;
-    background-color: var(--notes-bg-color, #ffffff) !important;
-    z-index: -1 !important;
-}
-
-.sub-annotation-stack.tema-ed::before {
-    transform: translateY(4px) translateX(4px) !important;
-    border: 1px solid rgba(163, 0, 138, 0.4) !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
-}
-
-.sub-annotation-stack.tema-ed::after {
-    transform: translateY(8px) translateX(8px) !important;
-    border: 1px solid rgba(163, 0, 138, 0.15) !important;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
-}
-
-/* 5. Cores dos Textos Editáveis Internos */
+/* Cores dos Textos Editáveis Internos para combinar com ED */
 .sub-annotation-stack.tema-ed .pilha-editavel {
-    border-radius: 4px;
-    padding: 2px 4px;
-    margin-left: -4px; 
-    font-weight: 600 !important; 
-    color: var(--ed-neon-stroke, #A3008A) !important; 
-    margin-bottom: 8px; 
-    font-size: 0.85rem;
-    cursor: pointer;
+    color: var(--ed-neon-stroke, #A3008A); 
 }
 .sub-annotation-stack.tema-ed .pilha-editavel:hover { 
-    background-color: rgba(213, 0, 181, 0.08) !important; 
+    background-color: rgba(213, 0, 181, 0.08); 
 }
-.sub-annotation-stack.tema-ed .pilha-editavel-desc {
-    color: #555555 !important;
-    font-weight: 400 !important;
-    max-height: 120px; 
-    overflow-y: auto; 
-    line-height: 1.5; 
+
+/* Botão Modo Leitura Minimalista (Canto Inferior Esquerdo) */
+.sub-annotation-stack.tema-ed .sub-read-badge {
+    display: flex !important; /* Força exibição constante na pilha */
+    background: var(--ed-neon-bg, #D500B5);
+    color: #ffffff;
+    border: 1px solid var(--ed-neon-stroke, #A3008A);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.sub-annotation-stack.tema-ed .sub-read-badge:hover {
+    background: var(--ed-neon-stroke, #A3008A);
+    transform: scale(1.15);
+}
+
+/* Garante que o ícone inline fique correto */
+.sub-annotation-stack.tema-ed .sub-read-badge svg {
+    width: 14px;
+    height: 14px;
+    stroke: #ffffff;
+}
+
+/* Colorização sutil do efeito 3D (cartas do fundo) */
+.sub-annotation-stack.tema-ed::before {
+    border-color: rgba(163, 0, 138, 0.4); 
+}
+.sub-annotation-stack.tema-ed::after {
+    border-color: rgba(163, 0, 138, 0.15);
 }
 
 /* Oculta o botão antigo e intrusivo (legado) */

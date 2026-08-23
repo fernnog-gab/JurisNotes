@@ -242,7 +242,6 @@ window.TopicsManager = (function () {
 
     // --- FÁBRICA DE COMPONENTES: PILHA (GRUPO DE IDEIAS) ---
     function _gerarHtmlPilha(sub, renderContext, activeTabId) {
-        // Inicialização defensiva de contexto
         renderContext = renderContext || {};
         renderContext.romanMap = renderContext.romanMap || new Map();
         renderContext.romanCounter = renderContext.romanCounter || 0;
