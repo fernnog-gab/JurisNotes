@@ -468,15 +468,6 @@
         <hr style="width: 100%; border: 0; border-top: 1px solid #eee; margin: 4px 0;">
 
         <!-- OPÇÕES: Movimentação (Mantidas, sem o título) -->
-        <button class="ann-action-btn" style="justify-content: flex-start; gap: 8px; width: 100%;" title="Agrupar Nó" onclick="criarPilhaDeIdeias()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px; height:16px;">
-                <path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-                <path d="M2 15h10"></path>
-                <path d="M2 9h10"></path>
-            </svg>
-            <span style="font-size: 0.8rem;">Criar Pilha (Agrupar)</span>
-        </button>
         <button class="ann-action-btn" style="justify-content: flex-start; gap: 8px; width: 100%;" title="Mover Posição" onclick="acionarReordenarSub()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><polyline points="8 7 12 3 16 7"></polyline><line x1="12" y1="12" x2="12" y2="3"></line></svg>
             <span style="font-size: 0.8rem;">Reordenar Posição</span>
@@ -856,24 +847,6 @@
         <div class="wizard-actions">
             <button class="chip-btn chip-cancelar" onclick="fecharModalTransferirSub()">✕ Cancelar</button>
             <button class="chip-btn chip-autora" onclick="confirmarTransferenciaSub()">✔ Confirmar</button>
-        </div>
-    </div>
-
-    <!-- BACKDROP E MODAL: EDITAR PILHA (GRUPO DE IDEIAS) -->
-    <div id="pilha-modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.40); z-index: 4004;" onclick="TopicsManager.fecharModalPilha()"></div>
-
-    <div id="modal-editar-pilha" class="crop-wizard-popup" style="display:none; z-index: 4005; max-width: 450px; width: 90%;">
-        <div class="wizard-header">📚 Personalizar Grupo de Ideias</div>
-        
-        <p class="popup-label">Título do Grupo:</p>
-        <input type="text" id="input-pilha-titulo" class="topic-select" placeholder="Ex: Contradições da Testemunha">
-        
-        <p class="popup-label" style="margin-top: 12px;">Resumo / Observações:</p>
-        <textarea id="input-pilha-descricao" class="popup-textarea" style="display:block; min-height: 80px; width: 100%; box-sizing: border-box;" rows="3" placeholder="Digite uma breve explicação sobre as ideias agrupadas aqui..."></textarea>
-        
-        <div class="wizard-actions" style="margin-top: 16px;">
-            <button class="chip-btn chip-cancelar" onclick="TopicsManager.fecharModalPilha()">✕ Cancelar</button>
-            <button class="chip-btn chip-autora" style="background: #FFC107; color: #000; border-color: #E5C100;" onclick="TopicsManager.salvarEdicaoPilha()">✔ Salvar Grupo</button>
         </div>
     </div>
 
