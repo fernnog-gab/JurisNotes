@@ -223,6 +223,40 @@ window.TopicsManager = (function () {
                 </button>`;
     }
 
+    // --- FÁBRICA DE COMPONENTES: PILHA (GRUPO DE IDEIAS) - TEMA AGRAVO ---
+    function _gerarHtmlPilha(sub, renderContext, activeTabId) {
+        if (!renderContext) return '';
+        if (!renderContext.romanMap.has(sub.grupoId)) {
+            renderContext.romanMap.set(sub.grupoId, obterRomano(renderContext.romanCounter++));
+        }
+        const numRomano = renderContext.romanMap.get(sub.grupoId);
+        
+        const tituloPilha = sub.grupoTitulo || "📚 Grupo de Ideias";
+        const descPilha = sub.grupoDescricao || "Nós empilhados para otimização espacial.";
+        const source = sub.viewSource || 'main';
+
+        return `
+        <div class="sub-annotation-item sub-stack-wrapper" data-source="${source}">
+            <div class="sub-annotation-card sub-annotation-stack tema-agravo">
+                <div class="stack-roman-badge" title="Desagrupar Pilha" onclick="TopicsManager.desagruparPilha('${activeTabId}', '${sub.grupoId}')">
+                    ${numRomano}
+                </div>
+                
+                <div class="pilha-editavel" title="Clique para editar metadados" onclick="TopicsManager.abrirModalPilha('${activeTabId}', '${sub.grupoId}')">
+                    ${escaparHTML(tituloPilha)}
+                </div>
+                
+                <div class="pilha-editavel pilha-editavel-desc" title="Clique para editar metadados" onclick="TopicsManager.abrirModalPilha('${activeTabId}', '${sub.grupoId}')">
+                    ${escaparHTML(descPilha).replace(/\n/g, '<br>')}
+                </div>
+                
+                <div class="btn-read-mode-trigger sub-read-badge" title="Modo Leitura do Grupo" onclick="TopicsManager.abrirModoLeituraPilha('${activeTabId}', '${sub.grupoId}', '${numRomano}')">
+                    <svg><use href="#icon-book-open"></use></svg>
+                </div>
+            </div>
+        </div>`;
+    }
+
     let activeTabId = null;
 
     /**
@@ -399,30 +433,7 @@ window.TopicsManager = (function () {
             else {
                 if (!gruposProcessadosNesteCard.has(sub.grupoId)) {
                     gruposProcessadosNesteCard.add(sub.grupoId);
-                    
-                    if (!renderContext) return; // Fallback seguro
-                    
-                    if (!renderContext.romanMap.has(sub.grupoId)) {
-                        renderContext.romanMap.set(sub.grupoId, obterRomano(renderContext.romanCounter++));
-                    }
-                    const numRomano = renderContext.romanMap.get(sub.grupoId);
-                    
-                    subCardsHTMLArray.push(`
-                        <div class="sub-annotation-item sub-stack-wrapper" data-source="${sub.viewSource}">
-                            <div class="sub-annotation-card sub-annotation-stack">
-                                <div class="stack-roman-badge" title="Desagrupar Pilha" onclick="TopicsManager.desagruparPilha('${activeTabId}', '${sub.grupoId}')">
-                                    ${numRomano}
-                                </div>
-                                <div style="font-weight: 600; color: #65a30d; margin-bottom: 8px; font-size: 0.85rem;">
-                                    📚 Grupo de Ideias
-                                </div>
-                                <p style="font-size: 0.8rem; color: #666; margin-bottom: 12px; line-height:1.4;">Nós empilhados para otimização espacial.</p>
-                                <button class="stack-read-btn" onclick="TopicsManager.abrirModoLeituraPilha('${activeTabId}', '${sub.grupoId}', '${numRomano}')">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
-                                    Modo Leitura
-                                </button>
-                            </div>
-                        </div>`);
+                    subCardsHTMLArray.push(_gerarHtmlPilha(sub, renderContext, activeTabId));
                 }
             }
         });
@@ -700,7 +711,7 @@ window.TopicsManager = (function () {
      * de anotações — não a um número fixo de grupo. Se o Óbice anterior
      * acumulou um número ímpar de cards, este nasce à direita, e vice-versa.
      */
-    function _gerarHtmlObiceGroup(teseAtual, diretrizes, tabId, corTema, indexGlobal) {
+    function _gerarHtmlObiceGroup(teseAtual, diretrizes, tabId, corTema, indexGlobal, renderContext) {
         const rgbaTeseFundo = hexToRgba(corTema, 0.15);
         const rgbaTeseBorda = hexToRgba(corTema, 0.4);
         const corTituloTese = escurecerCor(corTema, 0.6);
@@ -710,22 +721,33 @@ window.TopicsManager = (function () {
         const alignClass = isLeft ? 'align-left' : 'align-right';
         const teseViewSource = `obice:${teseAtual}`;
         const idObiceSeguro = teseAtual.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '_');
-
         const tituloContexto = `Diretriz do Óbice: ${teseAtual}`;
-        const tesesHtml = diretrizes.map((d, sIdx) => {
-            // Garante mapeamento local correto
-            d.localIndex = sIdx;
-            
-            return _gerarTemplateSubNo(d, sIdx, {
-                topicoId: tabId,
-                parentIndex: null,
-                viewSource: teseViewSource,
-                bordaStyle: `border-left: 5px solid ${corTema}; border-color: ${rgbaTeseBorda};`,
-                prefixoBadge: 'D.',
-                usarLetra: false,
-                tituloLeitura: tituloContexto
-            });
-        }).join('');
+
+        const subCardsHTMLArray = [];
+        const gruposProcessadosNesteCard = new Set();
+
+        diretrizes.forEach((d, sIdx) => {
+            // Shallow Copy Segura
+            const dRender = { ...d, viewSource: teseViewSource, localIndex: sIdx };
+
+            if (!dRender.grupoId) {
+                subCardsHTMLArray.push(_gerarTemplateSubNo(dRender, sIdx, {
+                    topicoId: tabId,
+                    parentIndex: null,
+                    viewSource: teseViewSource,
+                    bordaStyle: `border-left: 5px solid ${corTema}; border-color: ${rgbaTeseBorda};`,
+                    prefixoBadge: 'D.',
+                    usarLetra: false,
+                    tituloLeitura: tituloContexto
+                }));
+            } else {
+                if (!gruposProcessadosNesteCard.has(dRender.grupoId)) {
+                    gruposProcessadosNesteCard.add(dRender.grupoId);
+                    subCardsHTMLArray.push(_gerarHtmlPilha(dRender, renderContext, tabId));
+                }
+            }
+        });
+        const tesesHtml = subCardsHTMLArray.join('');
 
         return `
         <div class="timeline-item-master ${alignClass} nivel-hierarquico nivel-tese" id="timeline-wrapper-obice-${idObiceSeguro}">
@@ -973,7 +995,7 @@ window.TopicsManager = (function () {
                     // 4. Ocultação Segura: Só desenha o card se o óbice tiver nome OU se houver notas salvas nele
                     if (isObicePreenchido || diretrizes.length > 0) {
                         const tituloExibicao = isObicePreenchido ? an.tese : "Óbice Não Nomeado";
-                        cardsHTML += _gerarHtmlObiceGroup(tituloExibicao, diretrizes, activeTabId, _activeTopicoCor, index);
+                        cardsHTML += _gerarHtmlObiceGroup(tituloExibicao, diretrizes, activeTabId, _activeTopicoCor, index, renderContext);
                     }
                     
                     // Atualiza a referência do agrupamento atual
@@ -989,19 +1011,31 @@ window.TopicsManager = (function () {
             let globaisHtml = ''; 
 
             if (topicoAtivo.diretrizesGlobais && topicoAtivo.diretrizesGlobais.length > 0) {
-                globaisHtml = topicoAtivo.diretrizesGlobais.map((d, sIdx) => {
-                    d.localIndex = sIdx;
+                const globaisArray = [];
+                const gruposGProcessados = new Set();
+                
+                topicoAtivo.diretrizesGlobais.forEach((d, sIdx) => {
+                    // Shallow Copy
+                    const dRender = { ...d, viewSource: 'global', localIndex: sIdx };
                     
-                    return _gerarTemplateSubNo(d, sIdx, {
-                        topicoId: activeTabId,
-                        parentIndex: null,
-                        viewSource: 'global',
-                        bordaClass: 'borda-global',
-                        prefixoBadge: 'G.',
-                        usarLetra: false,
-                        tituloLeitura: 'Diretriz Global'
-                    });
-                }).join('');
+                    if (!dRender.grupoId) {
+                        globaisArray.push(_gerarTemplateSubNo(dRender, sIdx, {
+                            topicoId: activeTabId,
+                            parentIndex: null,
+                            viewSource: 'global',
+                            bordaClass: 'borda-global',
+                            prefixoBadge: 'G.',
+                            usarLetra: false,
+                            tituloLeitura: 'Diretriz Global'
+                        }));
+                    } else {
+                        if (!gruposGProcessados.has(dRender.grupoId)) {
+                            gruposGProcessados.add(dRender.grupoId);
+                            globaisArray.push(_gerarHtmlPilha(dRender, renderContext, activeTabId));
+                        }
+                    }
+                });
+                globaisHtml = globaisArray.join('');
             }
 
             htmlDiretrizesGlobais = `
@@ -1346,15 +1380,38 @@ window.TopicsManager = (function () {
 
     function abrirModoLeituraPilha(topicoId, grupoId, numeroRomano) {
         const topico = topicos.find(t => t.id === topicoId);
-        let htmlAgrupado = '';
+        if (!topico) return;
         
-        const processar = (subArr) => {
+        let htmlAgrupado = '';
+        let itemContador = 1;
+
+        const getIntencaoLabel = (intKey) => {
+            const mapa = {
+                'comando': { text: 'COMANDO', color: '#c62828', bg: '#ffebee' },
+                'texto': { text: 'TEXTO FIXO', color: '#1565c0', bg: '#e3f2fd' },
+                'premissa': { text: 'PREMISSA', color: '#7b1fa2', bg: '#f3e5f5' },
+                'fundamentacao': { text: 'BASE LEGAL', color: '#00695c', bg: '#e0f2f1' },
+                'refutacao': { text: 'REFUTAÇÃO', color: '#8B4513', bg: '#efebe9' },
+                'preliminar': { text: 'PREJUDICIAL', color: '#5d4037', bg: '#efebe9' },
+                'veredito': { text: 'VEREDITO', color: '#e65100', bg: '#fff3e0' },
+                'nota': { text: 'NOTA INTERNA', color: '#616161', bg: '#f5f5f5' }
+            };
+            return mapa[intKey] || { text: 'DIRETRIZ', color: '#475569', bg: '#f1f5f9' };
+        };
+
+        const processar = (subArr, origemHtml) => {
             if (subArr) {
-                subArr.filter(s => s.grupoId === grupoId).forEach((no, idx) => {
+                subArr.filter(s => s.grupoId === grupoId).forEach((no) => {
+                    const intencaoKey = no.intencao || 'premissa';
+                    const configInt = getIntencaoLabel(intencaoKey);
+                    const isRevisada = no.revisada ? ' <span title="Revisada" style="color:#48bb78; margin-left:4px;">✔</span>' : '';
+                    
                     htmlAgrupado += `
                     <div style="padding-bottom: 16px; border-bottom: 1px dashed #e2e8f0; margin-bottom: 16px;">
-                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-                            <span style="font-size:0.75rem; color:#64748b; font-weight:800; background:#f1f5f9; padding:2px 8px; border-radius:12px;">ITEM ${idx + 1}</span>
+                        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+                            <span style="font-size:0.75rem; color:#64748b; font-weight:800; background:#f1f5f9; padding:2px 8px; border-radius:12px;">ITEM ${itemContador++}</span>
+                            <span style="font-size:0.7rem; font-weight:800; color:${configInt.color}; background:${configInt.bg}; padding:2px 8px; border-radius:12px; border: 1px solid ${configInt.color}40; display:flex; align-items:center;">${configInt.text}${isRevisada}</span>
+                            <span style="font-size:0.8rem; color:#475569; display:flex; align-items:center; gap:4px; margin-left: 4px;">${origemHtml}</span>
                         </div>
                         <div style="font-size: 1rem; color: #334155; line-height: 1.6;">
                             ${renderizarMarkdownSeguro(escaparHTML(no.texto))}
@@ -1364,14 +1421,37 @@ window.TopicsManager = (function () {
             }
         };
 
+        // 1. Diretrizes Globais
+        processar(topico.diretrizesGlobais, '🌐 <strong>Diretriz Global</strong>');
+
+        // 2. Óbices (Teses do AI) e Provas
+        let ultimaTese = null;
         topico.anotacoes.forEach(an => {
-            processar(an.subAnotacoes);
-            if (an.itensCorrelacionados) an.itensCorrelacionados.forEach(ic => processar(ic.subAnotacoes));
+            const teseAtual = an.tese || "Provas sem agrupamento";
+            
+            if (teseAtual !== ultimaTese) {
+                if (topico.diretrizesPorObice && topico.diretrizesPorObice[teseAtual]) {
+                    processar(topico.diretrizesPorObice[teseAtual], `⚖️ Óbice: <strong>${escaparHTML(teseAtual)}</strong>`);
+                }
+                ultimaTese = teseAtual;
+            }
+
+            const docMaster = an.documento || an.polo || 'Elemento Probatório';
+            const flMaster = an.pagina ? `(fl. ${an.pagina})` : '';
+            processar(an.subAnotacoes, `📄 ${escaparHTML(docMaster)} <em>${escaparHTML(flMaster)}</em>`);
+
+            if (an.itensCorrelacionados) {
+                an.itensCorrelacionados.forEach(ic => {
+                    const docCorr = ic.documento || ic.polo || 'Elemento Correlacionado';
+                    const flCorr = ic.pagina ? `(fl. ${ic.pagina})` : '';
+                    processar(ic.subAnotacoes, `📄 ${escaparHTML(docCorr)} <em>${escaparHTML(flCorr)}</em>`);
+                });
+            }
         });
 
         const modal = document.getElementById('reading-mode-modal');
         document.getElementById('reading-mode-title-text').textContent = `Leitura da Pilha ${numeroRomano}`;
-        document.getElementById('reading-mode-content').innerHTML = htmlAgrupado;
+        document.getElementById('reading-mode-content').innerHTML = htmlAgrupado || '<p style="color:#666; font-style:italic;">Nenhuma ideia encontrada para este grupo.</p>';
         document.getElementById('reading-mode-backdrop').style.display = 'block';
         modal.style.display = 'flex';
     }
@@ -1388,14 +1468,88 @@ window.TopicsManager = (function () {
             limparGrupo(an.subAnotacoes);
             if (an.itensCorrelacionados) an.itensCorrelacionados.forEach(ic => limparGrupo(ic.subAnotacoes));
         });
+        limparGrupo(topico.diretrizesGlobais);
+        if (topico.diretrizesPorObice) Object.values(topico.diretrizesPorObice).forEach(arr => limparGrupo(arr));
 
         renderizarFichario(topicos); 
         if(window.salvarBackupAutomatico) salvarBackupAutomatico();
         if(window.exibirToast) exibirToast('Pilha desagrupada com sucesso.', 'sucesso');
     }
 
+    let _contextoEdicaoPilha = null;
+
+    function abrirModalPilha(topicoId, grupoId) {
+        _contextoEdicaoPilha = { topicoId, grupoId };
+        const topico = topicos.find(t => t.id === topicoId);
+        if (!topico) return;
+
+        let titAtual = "📚 Grupo de Ideias";
+        let descAtual = "Nós empilhados para otimização espacial.";
+
+        const extrair = (arr) => {
+            if (!arr) return;
+            const no = arr.find(s => s.grupoId === grupoId);
+            if (no) {
+                if (no.grupoTitulo) titAtual = no.grupoTitulo;
+                if (no.grupoDescricao) descAtual = no.grupoDescricao;
+            }
+        };
+
+        topico.anotacoes.forEach(an => { 
+            extrair(an.subAnotacoes); 
+            if (an.itensCorrelacionados) an.itensCorrelacionados.forEach(ic => extrair(ic.subAnotacoes)); 
+        });
+        extrair(topico.diretrizesGlobais);
+        if (topico.diretrizesPorObice) Object.values(topico.diretrizesPorObice).forEach(arr => extrair(arr));
+
+        document.getElementById('input-pilha-titulo').value = titAtual;
+        document.getElementById('input-pilha-descricao').value = descAtual;
+
+        document.getElementById('pilha-modal-backdrop').style.display = 'block';
+        document.getElementById('modal-editar-pilha').style.display = 'flex';
+    }
+
+    function fecharModalPilha() {
+        document.getElementById('pilha-modal-backdrop').style.display = 'none';
+        document.getElementById('modal-editar-pilha').style.display = 'none';
+        _contextoEdicaoPilha = null;
+    }
+
+    function salvarEdicaoPilha() {
+        if (!_contextoEdicaoPilha) return;
+        const topico = topicos.find(t => t.id === _contextoEdicaoPilha.topicoId);
+        if (!topico) return;
+        
+        const nTit = document.getElementById('input-pilha-titulo').value.trim();
+        const nDesc = document.getElementById('input-pilha-descricao').value.trim();
+
+        const atualizar = (arr) => {
+            if (!arr) return;
+            arr.forEach(s => {
+                if (s.grupoId === _contextoEdicaoPilha.grupoId) {
+                    s.grupoTitulo = nTit;
+                    s.grupoDescricao = nDesc;
+                }
+            });
+        };
+
+        topico.anotacoes.forEach(an => { 
+            atualizar(an.subAnotacoes); 
+            if (an.itensCorrelacionados) an.itensCorrelacionados.forEach(ic => atualizar(ic.subAnotacoes)); 
+        });
+        atualizar(topico.diretrizesGlobais);
+        if (topico.diretrizesPorObice) Object.values(topico.diretrizesPorObice).forEach(arr => atualizar(arr));
+
+        fecharModalPilha();
+        renderizarFichario(topicos);
+        if (window.salvarBackupAutomatico) salvarBackupAutomatico();
+    }
+
     // API pública do módulo
     return {
+        abrirModalPilha,
+        fecharModalPilha,
+        salvarEdicaoPilha,
         obterCor,
         obterCorContraste,
         renderizarFichario,
