@@ -1228,7 +1228,6 @@ body[data-context="ed"] .topics-content-area {
    10. EMPILHAMENTO DE NÓS DE IDEIAS (PILHAS ED)
    ================================================ */
 .sub-annotation-stack {
-    border-color: var(--trt-blue-mid) !important;
     will-change: transform;
     cursor: default;
     background-color: #ffffff;
@@ -1249,12 +1248,18 @@ body[data-context="ed"] .topics-content-area {
 .sub-annotation-stack::before { transform: translateY(4px) translateX(4px); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 .sub-annotation-stack::after { transform: translateY(8px) translateX(8px); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
 
-.stack-roman-badge {
+/* ==========================================
+   ESTILOS: GRUPO DE IDEIAS (PILHAS) - TEMA ED (FÚCSIA)
+   ========================================== */
+.sub-annotation-stack.tema-dossie-ed {
+    border-color: var(--ed-neon-stroke, #A3008A) !important;
+    padding-bottom: 36px; /* Espaço para o badge de leitura */
+}
+
+.sub-annotation-stack.tema-dossie-ed .stack-roman-badge {
     position: absolute;
     top: -12px; left: -12px;
     width: 32px; height: 32px;
-    background-color: var(--trt-blue);
-    color: #ffffff;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -1263,20 +1268,53 @@ body[data-context="ed"] .topics-content-area {
     box-shadow: var(--shadow-sm);
     cursor: pointer; z-index: 5;
     transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s;
+    background-color: var(--ed-neon-bg, #D500B5);
+    color: #ffffff;
+    border: 1px solid var(--ed-neon-stroke, #A3008A);
+}
+.sub-annotation-stack.tema-dossie-ed .stack-roman-badge:hover {
+    background-color: #ef4444; 
+    border-color: #ef4444;
+    transform: scale(1.15);
 }
 
-.stack-roman-badge:hover { transform: scale(1.15); background-color: #ef4444; }
-
-.stack-read-btn {
-    width: 100%;
-    margin-top: 4px; padding: 8px;
-    background: #f1f5f9;
-    border: 1px dashed var(--trt-blue-mid);
-    color: var(--trt-blue);
-    border-radius: 6px;
-    font-size: 0.8rem; font-weight: 700;
+.pilha-editavel {
+    border-radius: 4px;
+    transition: background-color 0.2s, padding 0.2s;
     cursor: pointer;
-    transition: background 0.2s, color 0.2s;
-    display: flex; justify-content: center; align-items: center; gap: 8px;
+    padding: 2px 4px;
+    margin-left: -4px;
+    font-weight: 600; 
+    color: var(--trt-blue); 
+    margin-bottom: 8px; 
+    font-size: 0.85rem;
 }
-.stack-read-btn:hover { background: var(--trt-blue); color: #ffffff; border-style: solid; }
+.pilha-editavel:hover { background-color: rgba(213, 0, 181, 0.08); }
+
+.pilha-editavel-desc {
+    max-height: 120px;
+    overflow-y: auto;
+    font-weight: 400 !important;
+    color: #666 !important;
+    line-height: 1.5;
+    font-size: 0.8rem !important;
+    margin-bottom: 0 !important;
+}
+.pilha-editavel-desc::-webkit-scrollbar { width: 4px; }
+.pilha-editavel-desc::-webkit-scrollbar-track { background: transparent; }
+.pilha-editavel-desc::-webkit-scrollbar-thumb { background: var(--ed-neon-bg, #D500B5); border-radius: 4px; }
+
+.sub-annotation-stack.tema-dossie-ed .sub-read-badge {
+    display: flex !important;
+    background: var(--ed-neon-bg, #D500B5);
+    color: #ffffff;
+    border: 1px solid var(--ed-neon-stroke, #A3008A);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.sub-annotation-stack.tema-dossie-ed .sub-read-badge:hover {
+    filter: brightness(1.1);
+    transform: scale(1.15);
+}
+
+/* Oculta botão antigo */
+.sub-annotation-stack .stack-read-btn { display: none !important; }

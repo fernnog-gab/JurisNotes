@@ -812,6 +812,24 @@
         </div>
     </div>
 
+    <!-- BACKDROP E MODAL: EDITAR PILHA (GRUPO DE IDEIAS) -->
+    <div id="pilha-modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.40); z-index: 4004;" onclick="TopicsManager.fecharModalPilha()"></div>
+
+    <div id="modal-editar-pilha" class="crop-wizard-popup" style="display:none; z-index: 4005; max-width: 450px; width: 90%;">
+        <div class="wizard-header">📚 Personalizar Grupo de Ideias</div>
+        
+        <p class="popup-label">Título do Grupo:</p>
+        <input type="text" id="input-pilha-titulo" class="topic-select" placeholder="Ex: Contradições da Testemunha">
+        
+        <p class="popup-label" style="margin-top: 12px;">Resumo / Observações:</p>
+        <textarea id="input-pilha-descricao" class="popup-textarea" style="display:block; min-height: 80px; width: 100%; box-sizing: border-box;" rows="3" placeholder="Digite uma breve explicação sobre as ideias agrupadas aqui..."></textarea>
+        
+        <div class="wizard-actions" style="margin-top: 16px;">
+            <button class="chip-btn chip-cancelar" onclick="TopicsManager.fecharModalPilha()">✕ Cancelar</button>
+            <button class="chip-btn chip-autora" style="background: var(--ed-neon-bg, #D500B5); color: white; border-color: var(--ed-neon-stroke, #A3008A);" onclick="TopicsManager.salvarEdicaoPilha()">✔ Salvar Grupo</button>
+        </div>
+    </div>
+
     <!-- BACKDROP E MODAL DO GUIA METODOLÓGICO -->
     <div id="ajuda-modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.40); z-index: 4004;" onclick="fecharModalAjuda()"></div>
 
