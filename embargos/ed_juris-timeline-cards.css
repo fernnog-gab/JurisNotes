@@ -1305,15 +1305,32 @@ body[data-context="ed"] .topics-content-area {
 .pilha-editavel-desc::-webkit-scrollbar-thumb { background: var(--ed-neon-bg, #D500B5); border-radius: 4px; }
 
 .sub-annotation-stack.tema-dossie-ed .sub-read-badge {
+    position: absolute;
+    bottom: -14px;
+    left: -14px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
     display: flex !important;
+    align-items: center;
+    justify-content: center;
     background: var(--ed-neon-bg, #D500B5);
     color: #ffffff;
-    border: 1px solid var(--ed-neon-stroke, #A3008A);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: none;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    cursor: pointer;
+    z-index: 10;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s;
 }
 .sub-annotation-stack.tema-dossie-ed .sub-read-badge:hover {
     filter: brightness(1.1);
     transform: scale(1.15);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.25);
+}
+.sub-annotation-stack.tema-dossie-ed .sub-read-badge svg {
+    width: 16px;
+    height: 16px;
+    stroke-width: 2.5px;
 }
 
 /* Oculta botão antigo */
