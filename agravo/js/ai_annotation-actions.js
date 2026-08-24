@@ -418,6 +418,21 @@ function confirmarReordenacaoPosicao() {
    2. NOVA FUNCIONALIDADE: TRANSFERÊNCIA INTELIGENTE
    ================================================ */
 
+window.criarPilhaDeIdeias = function() {
+    if (!_menuSubAnotacaoCtx) return;
+    const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
+    const alvo = _resolverSubAlvo(topico, _menuSubAnotacaoCtx.parentIndex, _menuSubAnotacaoCtx.viewSource);
+    const sub = alvo.subAnotacoes[_menuSubAnotacaoCtx.localIndex];
+    
+    if (sub.grupoId) return exibirToast('Este nó já está agrupado.', 'aviso');
+
+    sub.grupoId = 'grp-' + Date.now().toString(36);
+    renderizarTopicos(); 
+    salvarBackupAutomatico();
+    document.getElementById('sub-annotation-context-menu').style.display = 'none';
+    exibirToast('Pilha criada! Transfira outros nós para ela.', 'sucesso');
+};
+
 function abrirModalTransferirSubAnotacao() {
     if (!_menuSubAnotacaoCtx) return;
     document.getElementById('sub-annotation-context-menu').style.display = 'none';
@@ -458,7 +473,6 @@ function carregarSubAlvosTransferencia() {
     if (!_menuSubAnotacaoCtx) return;
     const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
     const inputVal = parseInt(document.getElementById('input-transferir-sub-destino').value, 10);
-    
     const targetBox = document.getElementById('transfer-sub-target-box');
     const select = document.getElementById('select-transferir-sub-alvo');
     
@@ -469,21 +483,42 @@ function carregarSubAlvosTransferencia() {
 
     const cardDestino = topico.anotacoes[inputVal - 1];
     
-    // Identificou um Grupo. Requisita especificação do usuário com rótulos ricos.
+    // Mapeamento dinâmico de pilhas (Grupos) existentes no card alvo
+    const gruposEncontrados = new Set();
+    const mapearGrupos = (subArr) => {
+        if(subArr) subArr.forEach(s => { if(s.grupoId) gruposEncontrados.add(s.grupoId); });
+    };
+    
+    mapearGrupos(cardDestino.subAnotacoes);
+    if(cardDestino.itensCorrelacionados) cardDestino.itensCorrelacionados.forEach(ic => mapearGrupos(ic.subAnotacoes));
+
+    // Adiciona opções padrão (Mestre e Anexos)
     if (cardDestino.itensCorrelacionados && cardDestino.itensCorrelacionados.length > 0) {
         select.appendChild(new Option(`🌟 Mestre: ${_gerarSnippetCard(cardDestino)}`, 'main'));
-        
         cardDestino.itensCorrelacionados.forEach((item, idx) => {
             select.appendChild(new Option(`↳ Anexo: ${_gerarSnippetCard(item)}`, idx));
         });
-        
-        targetBox.style.display = 'flex';
+    } else {
+        select.appendChild(new Option(`🌟 Mestre: ${_gerarSnippetCard(cardDestino)}`, 'main'));
     }
+
+    // Injeta as Pilhas encontradas
+    if (gruposEncontrados.size > 0) {
+        const divider = document.createElement('option');
+        divider.disabled = true; divider.text = "── Pilhas Existentes ──";
+        select.appendChild(divider);
+        
+        let counter = 1;
+        gruposEncontrados.forEach(grpId => {
+            select.appendChild(new Option(`📚 Transferir para a Pilha (${counter++})`, `pilha|${grpId}`));
+        });
+    }
+    
+    targetBox.style.display = 'flex';
 }
 
 function confirmarTransferenciaSub() {
     if (!_menuSubAnotacaoCtx) return;
-    
     const topico = topicos.find(t => t.id === _menuSubAnotacaoCtx.topicoId);
     const destinoTarget = parseInt(document.getElementById('input-transferir-sub-destino').value, 10);
     
@@ -493,28 +528,46 @@ function confirmarTransferenciaSub() {
     
     const destinoIndex = destinoTarget - 1;
     const cardDestino = topico.anotacoes[destinoIndex];
+    const selectVal = document.getElementById('select-transferir-sub-alvo').value;
+    
+    // Se o usuário selecionou enviar para uma Pilha
+    if (selectVal.startsWith('pilha|')) {
+        const grupoAlvo = selectVal.split('|')[1];
+        const alvoOrigem = _resolverSubAlvo(topico, _menuSubAnotacaoCtx.parentIndex, _menuSubAnotacaoCtx.viewSource);
+        
+        // Remove da origem
+        const noTransferido = alvoOrigem.subAnotacoes.splice(_menuSubAnotacaoCtx.localIndex, 1)[0];
+        
+        // Aplica o grupo e joga na raiz do Card Mestre de destino
+        noTransferido.grupoId = grupoAlvo;
+        if (!cardDestino.subAnotacoes) cardDestino.subAnotacoes = [];
+        cardDestino.subAnotacoes.push(noTransferido);
+        
+        fecharModalTransferirSub();
+        renderizarTopicos();
+        salvarBackupAutomatico();
+        exibirToast('Nó empilhado com sucesso!', 'sucesso');
+        _menuSubAnotacaoCtx = null;
+        return;
+    }
+    
+    // Fluxo Padrão (Mestre ou Anexo)
     let alvoFinal = cardDestino; 
     let alvoViewSource = 'main';
-    
-    if (cardDestino.itensCorrelacionados && cardDestino.itensCorrelacionados.length > 0) {
-        const selectVal = document.getElementById('select-transferir-sub-alvo').value;
-        if (selectVal !== 'main') {
-            alvoViewSource = selectVal;
-            alvoFinal = cardDestino.itensCorrelacionados[parseInt(selectVal, 10)];
-        }
+    if (selectVal !== 'main') {
+        alvoViewSource = selectVal;
+        alvoFinal = cardDestino.itensCorrelacionados[parseInt(selectVal, 10)];
     }
 
     const alvoOrigem = _resolverSubAlvo(topico, _menuSubAnotacaoCtx.parentIndex, _menuSubAnotacaoCtx.viewSource);
-
-    // VALIDAÇÃO CRÍTICA: Auto-Colisão
-    // Se a origem e o destino apontam para a exata mesma posição do array e sub-card
+    
     if (destinoIndex === _menuSubAnotacaoCtx.parentIndex && alvoViewSource === String(_menuSubAnotacaoCtx.viewSource)) {
         fecharModalTransferirSub();
         return exibirToast('O nó já pertence a esta prova. Nenhuma alteração realizada.', 'aviso');
     }
 
-    // Mutação Segura: Extrai da origem e injeta no destino
     const noTransferido = alvoOrigem.subAnotacoes.splice(_menuSubAnotacaoCtx.localIndex, 1)[0];
+    delete noTransferido.grupoId; // Remove grupoId se estiver sendo movido para fora de uma pilha
     
     if (!alvoFinal.subAnotacoes) alvoFinal.subAnotacoes = [];
     alvoFinal.subAnotacoes.push(noTransferido);

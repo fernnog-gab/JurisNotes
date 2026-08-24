@@ -5,6 +5,9 @@
 window.TopicsManager = (function () {
     'use strict';
 
+    const romanoCache = ["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI","XVII","XVIII","XIX","XX"];
+    function obterRomano(idx) { return romanoCache[idx] || String(idx + 1); }
+
     // NOVA CAMADA DE CONFIGURAÇÃO: Dicionário Centralizado de Interface (AI)
     const AI_UI_LABELS = {
         alegacao: {
@@ -371,24 +374,60 @@ window.TopicsManager = (function () {
     }
 
     // NOVO HELPER: Extraído de criarCard para suportar reaproveitamento
-    function _gerarCartoesSubAnotacao(arrayDeNos, faseDoCardBase, activeTabId, topicoIndex) {
+    function _gerarCartoesSubAnotacao(arrayDeNos, faseDoCardBase, activeTabId, topicoIndex, renderContext) {
         if (!arrayDeNos || arrayDeNos.length === 0) return '';
         
-        const subCardsHTML = arrayDeNos.map((sub, sIdx) => {
+        const subCardsHTMLArray = [];
+        const gruposProcessadosNesteCard = new Set();
+        
+        arrayDeNos.forEach((sub, sIdx) => {
             const bordaFaseClass = faseDoCardBase === 0 ? 'borda-fase-ai-diretriz' : `borda-fase-${faseDoCardBase}`;
 
-            return _gerarTemplateSubNo(sub, sIdx, {
-                topicoId: activeTabId,
-                parentIndex: topicoIndex,
-                viewSource: sub.viewSource,
-                bordaFaseClass: bordaFaseClass,
-                prefixoBadge: `${sIdx + 1}.`,
-                usarLetra: true,
-                tituloLeitura: 'Nó de Ideia'
-            });
-        }).join('');
+            // 1. NÓS SOLTOS
+            if (!sub.grupoId) {
+                subCardsHTMLArray.push(_gerarTemplateSubNo(sub, sIdx, {
+                    topicoId: activeTabId,
+                    parentIndex: topicoIndex,
+                    viewSource: sub.viewSource,
+                    bordaFaseClass: bordaFaseClass,
+                    prefixoBadge: `${sIdx + 1}.`,
+                    usarLetra: true,
+                    tituloLeitura: 'Nó de Ideia'
+                }));
+            } 
+            // 2. NÓS AGRUPADOS (A PILHA)
+            else {
+                if (!gruposProcessadosNesteCard.has(sub.grupoId)) {
+                    gruposProcessadosNesteCard.add(sub.grupoId);
+                    
+                    if (!renderContext) return; // Fallback seguro
+                    
+                    if (!renderContext.romanMap.has(sub.grupoId)) {
+                        renderContext.romanMap.set(sub.grupoId, obterRomano(renderContext.romanCounter++));
+                    }
+                    const numRomano = renderContext.romanMap.get(sub.grupoId);
+                    
+                    subCardsHTMLArray.push(`
+                        <div class="sub-annotation-item sub-stack-wrapper" data-source="${sub.viewSource}">
+                            <div class="sub-annotation-card sub-annotation-stack">
+                                <div class="stack-roman-badge" title="Desagrupar Pilha" onclick="TopicsManager.desagruparPilha('${activeTabId}', '${sub.grupoId}')">
+                                    ${numRomano}
+                                </div>
+                                <div style="font-weight: 600; color: #65a30d; margin-bottom: 8px; font-size: 0.85rem;">
+                                    📚 Grupo de Ideias
+                                </div>
+                                <p style="font-size: 0.8rem; color: #666; margin-bottom: 12px; line-height:1.4;">Nós empilhados para otimização espacial.</p>
+                                <button class="stack-read-btn" onclick="TopicsManager.abrirModoLeituraPilha('${activeTabId}', '${sub.grupoId}', '${numRomano}')">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+                                    Modo Leitura
+                                </button>
+                            </div>
+                        </div>`);
+                }
+            }
+        });
 
-        return `<div class="sub-annotations-wrapper">${subCardsHTML}</div>`;
+        return `<div class="sub-annotations-wrapper">${subCardsHTMLArray.join('')}</div>`;
     }
 
     /**
@@ -397,7 +436,7 @@ window.TopicsManager = (function () {
      * Os três fragmentos são irmãos diretos no .timeline-container,
      * garantindo que align-self funcione corretamente nas sub-anotações.
      */
-    function criarCard(anotacao, index, arr) {
+    function criarCard(anotacao, index, arr, renderContext) {
         const total    = arr.length;
         const numero   = index + 1;
         const tagClass = poloParaClasse(anotacao.polo);
@@ -493,7 +532,7 @@ window.TopicsManager = (function () {
         }
 
         if (flatSubAnotacoes.length > 0) {
-            htmlSubAnotacoes = _gerarCartoesSubAnotacao(flatSubAnotacoes, faseDoCard, activeTabId, index);
+            htmlSubAnotacoes = _gerarCartoesSubAnotacao(flatSubAnotacoes, faseDoCard, activeTabId, index, renderContext);
         }
 
         // NOVO: Processar itens agrupados
@@ -911,6 +950,12 @@ window.TopicsManager = (function () {
             let cardsHTML = '';
             let ultimaTeseRenderizada = null;
 
+            // Injeta o contexto de renderização isolado para a aba
+            const renderContext = {
+                romanCounter: 0,
+                romanMap: new Map() // Mapeia grupoId -> Numeral Romano
+            };
+
             // 1. LOOP DE PROVAS E DIRETRIZES POR ÓBICE (TESE) - Ocultação Segura
             topicoAtivo.anotacoes.forEach((an, index) => {
                 // 1. Busca os dados de forma segura (preserva notas já criadas)
@@ -936,7 +981,7 @@ window.TopicsManager = (function () {
                 }
                 
                 // Desenha o card da prova e o número colorido exatamente como antes (Intocado)
-                cardsHTML += criarCard(an, index, topicoAtivo.anotacoes);
+                cardsHTML += criarCard(an, index, topicoAtivo.anotacoes, renderContext);
             });
             
             // 2. RENDERIZAÇÃO INCONDICIONAL: DIRETRIZES GLOBAIS (TOPO)
@@ -1299,11 +1344,63 @@ window.TopicsManager = (function () {
         }, { passive: false });
     }
 
+    function abrirModoLeituraPilha(topicoId, grupoId, numeroRomano) {
+        const topico = topicos.find(t => t.id === topicoId);
+        let htmlAgrupado = '';
+        
+        const processar = (subArr) => {
+            if (subArr) {
+                subArr.filter(s => s.grupoId === grupoId).forEach((no, idx) => {
+                    htmlAgrupado += `
+                    <div style="padding-bottom: 16px; border-bottom: 1px dashed #e2e8f0; margin-bottom: 16px;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                            <span style="font-size:0.75rem; color:#64748b; font-weight:800; background:#f1f5f9; padding:2px 8px; border-radius:12px;">ITEM ${idx + 1}</span>
+                        </div>
+                        <div style="font-size: 1rem; color: #334155; line-height: 1.6;">
+                            ${renderizarMarkdownSeguro(escaparHTML(no.texto))}
+                        </div>
+                    </div>`;
+                });
+            }
+        };
+
+        topico.anotacoes.forEach(an => {
+            processar(an.subAnotacoes);
+            if (an.itensCorrelacionados) an.itensCorrelacionados.forEach(ic => processar(ic.subAnotacoes));
+        });
+
+        const modal = document.getElementById('reading-mode-modal');
+        document.getElementById('reading-mode-title-text').textContent = `Leitura da Pilha ${numeroRomano}`;
+        document.getElementById('reading-mode-content').innerHTML = htmlAgrupado;
+        document.getElementById('reading-mode-backdrop').style.display = 'block';
+        modal.style.display = 'flex';
+    }
+
+    function desagruparPilha(topicoId, grupoId) {
+        if (!confirm('Deseja desagrupar esta pilha e restaurar os nós individualmente?')) return;
+        const topico = topicos.find(t => t.id === topicoId);
+        
+        const limparGrupo = (subArr) => {
+            if(subArr) subArr.forEach(s => { if (s.grupoId === grupoId) delete s.grupoId; });
+        };
+
+        topico.anotacoes.forEach(an => {
+            limparGrupo(an.subAnotacoes);
+            if (an.itensCorrelacionados) an.itensCorrelacionados.forEach(ic => limparGrupo(ic.subAnotacoes));
+        });
+
+        renderizarFichario(topicos); 
+        if(window.salvarBackupAutomatico) salvarBackupAutomatico();
+        if(window.exibirToast) exibirToast('Pilha desagrupada com sucesso.', 'sucesso');
+    }
+
     // API pública do módulo
     return {
         obterCor,
         obterCorContraste,
         renderizarFichario,
+        abrirModoLeituraPilha,
+        desagruparPilha,
         getActiveTabId: () => activeTabId,
         setActiveTabId: (id) => { activeTabId = id; },
         escaparHTML,

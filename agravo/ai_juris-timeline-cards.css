@@ -1025,3 +1025,87 @@ body[data-context="ed"] .topics-content-area {
 .outline-audio-box { background: #fff8e1; border: 1px solid #ffe082; padding: 10px; border-radius: 6px; margin-top: 8px; font-size: 0.88rem; }
 .outline-content-text p { margin-bottom: 0.5em; }
 .outline-content-text b, .outline-content-text strong { color: var(--trt-blue); }
+
+/* ================================================
+   EMPILHAMENTO DE NÓS DE IDEIAS (PILHAS AI)
+   ================================================ */
+.sub-annotation-stack {
+    border-color: #84cc16 !important;
+    will-change: transform;
+    cursor: default;
+    background-color: #ffffff;
+    position: relative;
+}
+
+/* Efeito de Volume com Pseudo-elementos */
+.sub-annotation-stack::before,
+.sub-annotation-stack::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: inherit;
+    border: 1px solid #cbd5e1;
+    background-color: #f8fafc;
+    z-index: -1;
+}
+
+.sub-annotation-stack::before {
+    transform: translateY(4px) translateX(4px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.sub-annotation-stack::after {
+    transform: translateY(8px) translateX(8px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+/* Badge Numérico Flutuante - Tema Verde Limão (Agravo) */
+.stack-roman-badge {
+    position: absolute;
+    top: -12px;
+    left: -12px;
+    width: 32px;
+    height: 32px;
+    background-color: #84cc16; /* Verde Limão AI */
+    color: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 800;
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    z-index: 5;
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s;
+}
+
+.stack-roman-badge:hover {
+    transform: scale(1.15);
+    background-color: #ef4444; /* Vermelho alerta para Desagrupar */
+}
+
+/* Botão Interno de Abertura do Modo Leitura */
+.stack-read-btn {
+    width: 100%;
+    margin-top: 4px;
+    padding: 8px;
+    background: #f1f5f9;
+    border: 1px dashed #65a30d;
+    color: #65a30d;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+.stack-read-btn:hover {
+    background: #84cc16;
+    color: #ffffff;
+    border-style: solid;
+}
