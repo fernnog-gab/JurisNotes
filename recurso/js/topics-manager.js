@@ -286,7 +286,9 @@ window.TopicsManager = (function () {
         return `
         <div class="sub-annotation-item sub-stack-wrapper" data-source="${source}">
             <div class="sub-annotation-card sub-annotation-stack tema-dossie">
-                <div class="stack-roman-badge" title="Desagrupar Pilha" onclick="event.stopPropagation(); TopicsManager.desagruparPilha('${activeTabId}', '${sub.grupoId}')">
+                <!-- A assinatura do onclick foi restaurada ao original para compatibilidade com o script do Modal -->
+                <!-- Adicionado data-grupo-id para tornar o HTML mais robusto para leituras futuras -->
+                <div class="stack-roman-badge" data-grupo-id="${sub.grupoId}" title="Desagrupar Pilha" onclick="TopicsManager.desagruparPilha('${activeTabId}', '${sub.grupoId}')">
                     ${numRomano}
                 </div>
                 
@@ -1510,6 +1512,11 @@ window.TopicsManager = (function () {
     }
 
     function desagruparPilha(topicoId, grupoId) {
+        // Bloqueia o vazamento de clique capturando o evento globalmente (sem sujar o HTML)
+        if (typeof window.event !== 'undefined' && window.event) {
+            window.event.stopPropagation();
+        }
+        
         if (!confirm('Deseja desagrupar esta pilha e restaurar os nós individualmente?')) return;
         const topico = topicos.find(t => t.id === topicoId);
         
