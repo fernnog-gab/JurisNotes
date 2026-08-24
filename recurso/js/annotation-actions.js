@@ -629,16 +629,7 @@ function carregarSubAlvosTransferencia() {
 
     const cardDestino = topico.anotacoes[inputVal - 1];
     
-    // Mapeamento dinâmico de pilhas (Grupos) existentes no card alvo
-    const gruposEncontrados = new Set();
-    const mapearGrupos = (subArr) => {
-        if(subArr) subArr.forEach(s => { if(s.grupoId) gruposEncontrados.add(s.grupoId); });
-    };
-    
-    mapearGrupos(cardDestino.subAnotacoes);
-    if(cardDestino.itensCorrelacionados) cardDestino.itensCorrelacionados.forEach(ic => mapearGrupos(ic.subAnotacoes));
-
-    // Adiciona opções padrão (Mestre e Anexos)
+    // Adiciona opções padrão (Mestre e Anexos) baseadas no card de destino
     if (cardDestino.itensCorrelacionados && cardDestino.itensCorrelacionados.length > 0) {
         select.appendChild(new Option(`🌟 Mestre: ${_gerarSnippetCard(cardDestino)}`, 'main'));
         cardDestino.itensCorrelacionados.forEach((item, idx) => {
@@ -648,19 +639,69 @@ function carregarSubAlvosTransferencia() {
         select.appendChild(new Option(`🌟 Mestre: ${_gerarSnippetCard(cardDestino)}`, 'main'));
     }
 
-    // Injeta as Pilhas encontradas
-    if (gruposEncontrados.size > 0) {
+    // NOVO: Mapeamento Global de Pilhas (Resolve o ponto cego de Teses e traz números Romanos precisos)
+    const pilhasMapeadas = new Map();
+    let contadorRomano = 0;
+    const romanos = ["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV"];
+
+    const registrarPilha = (subArr) => {
+        if (!subArr) return;
+        subArr.forEach(s => {
+            if (s.grupoId && !pilhasMapeadas.has(s.grupoId)) {
+                const rom = romanos[contadorRomano] || String(contadorRomano + 1);
+                const label = s.grupoTitulo ? s.grupoTitulo : (s.texto ? s.texto.substring(0, 25) + '...' : 'Ideias Agrupadas');
+                pilhasMapeadas.set(s.grupoId, { romano: rom, label: label });
+                contadorRomano++;
+            }
+        });
+    };
+
+    // Varredura rigorosa respeitando a ordem visual da interface
+    if (topico.anotacoes) {
+        topico.anotacoes.forEach(an => {
+            if (an.tese && topico.diretrizesPorTese && topico.diretrizesPorTese[an.tese]) {
+                registrarPilha(topico.diretrizesPorTese[an.tese]);
+            }
+            registrarPilha(an.subAnotacoes);
+            if (an.itensCorrelacionados) {
+                an.itensCorrelacionados.forEach(ic => registrarPilha(ic.subAnotacoes));
+            }
+        });
+    }
+    registrarPilha(topico.diretrizesGlobais);
+
+    if (pilhasMapeadas.size > 0) {
         const divider = document.createElement('option');
-        divider.disabled = true; divider.text = "── Pilhas Existentes ──";
+        divider.disabled = true; divider.text = "── Pilhas Existentes no Tópico ──";
         select.appendChild(divider);
         
-        let counter = 1;
-        gruposEncontrados.forEach(grpId => {
-            select.appendChild(new Option(`📚 Transferir para a Pilha (${counter++})`, `pilha|${grpId}`));
+        pilhasMapeadas.forEach((dados, grpId) => {
+            select.appendChild(new Option(`📚 Pilha ${dados.romano} - "${dados.label}"`, `pilha|${grpId}`));
         });
     }
     
     targetBox.style.display = 'flex';
+}
+
+// Helper Privado: Localiza exatamente em qual gaveta (array) uma Pilha reside, prevenindo duplicação fantasma
+function _encontrarArrayDoGrupo(topico, grupoId) {
+    let arrayDestino = null;
+    const varrer = (arr) => {
+        if (arr && arr.some(s => s.grupoId === grupoId)) arrayDestino = arr;
+    };
+
+    varrer(topico.diretrizesGlobais);
+    if (topico.diretrizesPorTese) Object.values(topico.diretrizesPorTese).forEach(varrer);
+    
+    if (topico.anotacoes && !arrayDestino) {
+        topico.anotacoes.forEach(an => {
+            if (!arrayDestino) varrer(an.subAnotacoes);
+            if (an.itensCorrelacionados && !arrayDestino) {
+                an.itensCorrelacionados.forEach(ic => varrer(ic.subAnotacoes));
+            }
+        });
+    }
+    return arrayDestino;
 }
 
 function confirmarTransferenciaSub() {
@@ -681,13 +722,23 @@ function confirmarTransferenciaSub() {
         const grupoAlvo = selectVal.split('|')[1];
         const alvoOrigem = _resolverSubAlvo(topico, _menuSubAnotacaoCtx.parentIndex, _menuSubAnotacaoCtx.viewSource);
         
+        // Localiza a matriz real onde a pilha já reside
+        const arrayDestino = _encontrarArrayDoGrupo(topico, grupoAlvo);
+        
         // Remove da origem
         const noTransferido = alvoOrigem.subAnotacoes.splice(_menuSubAnotacaoCtx.localIndex, 1)[0];
         
-        // Aplica o grupo e joga na raiz do Card Mestre de destino
+        // Aplica o ID do grupo
         noTransferido.grupoId = grupoAlvo;
-        if (!cardDestino.subAnotacoes) cardDestino.subAnotacoes = [];
-        cardDestino.subAnotacoes.push(noTransferido);
+        
+        // Joga no array exato para manter a coesão estrutural e evitar duplicação
+        if (arrayDestino) {
+            arrayDestino.push(noTransferido);
+        } else {
+            // Fallback de segurança caso a pilha tenha sido corrompida
+            if (!cardDestino.subAnotacoes) cardDestino.subAnotacoes = [];
+            cardDestino.subAnotacoes.push(noTransferido);
+        }
         
         fecharModalTransferirSub();
         renderizarTopicos();
