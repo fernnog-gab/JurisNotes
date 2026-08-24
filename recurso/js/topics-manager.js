@@ -223,27 +223,45 @@ window.TopicsManager = (function () {
     }
 
     // --- FÁBRICA DE COMPONENTES: PILHA (GRUPO DE IDEIAS) ---
+    
+    /**
+     * Iterador Estrutural O(N): Varre todos os subnós de um tópico.
+     * Centraliza a lógica de busca do JSON previnindo nós órfãos.
+     */
+    function _percorrerTodosOsNos(topico, callback) {
+        if (!topico) return;
+        
+        const processar = (arr) => {
+            if (arr) arr.forEach(callback);
+        };
+
+        // 1. Ramos Principais e Correlacionados
+        if (topico.anotacoes) {
+            topico.anotacoes.forEach(an => {
+                processar(an.subAnotacoes);
+                if (an.itensCorrelacionados) {
+                    an.itensCorrelacionados.forEach(ic => processar(ic.subAnotacoes));
+                }
+            });
+        }
+        
+        // 2. Ramos Globais e de Tese (Correção do Ponto Cego)
+        processar(topico.diretrizesGlobais);
+        
+        if (topico.diretrizesPorTese) {
+            Object.values(topico.diretrizesPorTese).forEach(arr => processar(arr));
+        }
+    }
+
     function _obterTextosDaPilha(topico, grupoId) {
         if (!topico) return "";
         let textos = [];
         
-        const extrair = (arr) => {
-            if (!arr) return;
-            arr.forEach(s => {
-                // Verifica o grupo e garante que o texto existe e não é vazio
-                if (s.grupoId === grupoId && s.texto && s.texto.trim() !== '') {
-                    textos.push(s.texto.trim());
-                }
-            });
-        };
-
-        // Varredura O(N) linear
-        topico.anotacoes.forEach(an => {
-            extrair(an.subAnotacoes);
-            if (an.itensCorrelacionados) an.itensCorrelacionados.forEach(ic => extrair(ic.subAnotacoes));
+        _percorrerTodosOsNos(topico, (no) => {
+            if (no.grupoId === grupoId && no.texto && no.texto.trim() !== '') {
+                textos.push(no.texto.trim());
+            }
         });
-        extrair(topico.diretrizesGlobais);
-        if (topico.diretrizesPorTese) Object.values(topico.diretrizesPorTese).forEach(arr => extrair(arr));
 
         return textos.join(' - ');
     }
@@ -268,7 +286,7 @@ window.TopicsManager = (function () {
         return `
         <div class="sub-annotation-item sub-stack-wrapper" data-source="${source}">
             <div class="sub-annotation-card sub-annotation-stack tema-dossie">
-                <div class="stack-roman-badge" title="Desagrupar Pilha" onclick="TopicsManager.desagruparPilha('${activeTabId}', '${sub.grupoId}')">
+                <div class="stack-roman-badge" title="Desagrupar Pilha" onclick="event.stopPropagation(); TopicsManager.desagruparPilha('${activeTabId}', '${sub.grupoId}')">
                     ${numRomano}
                 </div>
                 
@@ -1495,13 +1513,8 @@ window.TopicsManager = (function () {
         if (!confirm('Deseja desagrupar esta pilha e restaurar os nós individualmente?')) return;
         const topico = topicos.find(t => t.id === topicoId);
         
-        const limparGrupo = (subArr) => {
-            if(subArr) subArr.forEach(s => { if (s.grupoId === grupoId) delete s.grupoId; });
-        };
-
-        topico.anotacoes.forEach(an => {
-            limparGrupo(an.subAnotacoes);
-            if (an.itensCorrelacionados) an.itensCorrelacionados.forEach(ic => limparGrupo(ic.subAnotacoes));
+        _percorrerTodosOsNos(topico, (no) => {
+            if (no.grupoId === grupoId) delete no.grupoId;
         });
 
         renderizarFichario(topicos); 
@@ -1520,22 +1533,13 @@ window.TopicsManager = (function () {
         let descManualSalva = ""; // Inicia vazia (Piloto automático ON)
 
         // Busca o valor ATUAL salvo no banco
-        const extrair = (arr) => {
-            if (!arr) return;
-            const no = arr.find(s => s.grupoId === grupoId);
-            if (no) {
+        _percorrerTodosOsNos(topico, (no) => {
+            if (no.grupoId === grupoId) {
                 if (no.grupoTitulo) titAtual = no.grupoTitulo;
                 // Só carrega se existir de fato uma edição manual no banco
                 if (no.grupoDescricao) descManualSalva = no.grupoDescricao;
             }
-        };
-
-        topico.anotacoes.forEach(an => { 
-            extrair(an.subAnotacoes); 
-            if (an.itensCorrelacionados) an.itensCorrelacionados.forEach(ic => extrair(ic.subAnotacoes)); 
         });
-        extrair(topico.diretrizesGlobais);
-        if (topico.diretrizesPorTese) Object.values(topico.diretrizesPorTese).forEach(arr => extrair(arr));
 
         const inputTitulo = document.getElementById('input-pilha-titulo');
         const inputDesc = document.getElementById('input-pilha-descricao');
@@ -1570,29 +1574,19 @@ window.TopicsManager = (function () {
         const nDesc = document.getElementById('input-pilha-descricao').value.trim();
 
         // MOTOR DE LIMPEZA DE ESTADO (State Sanitization)
-        const atualizar = (arr) => {
-            if (!arr) return;
-            arr.forEach(s => {
-                if (s.grupoId === _contextoEdicaoPilha.grupoId) {
-                    s.grupoTitulo = nTit;
-                    
-                    if (nDesc === "") {
-                        // Se o usuário deixou vazio, DELETA a chave para manter o JSON limpo
-                        // e ativar a renderização automática no _gerarHtmlPilha
-                        delete s.grupoDescricao;
-                    } else {
-                        s.grupoDescricao = nDesc;
-                    }
+        _percorrerTodosOsNos(topico, (no) => {
+            if (no.grupoId === _contextoEdicaoPilha.grupoId) {
+                no.grupoTitulo = nTit;
+                
+                if (nDesc === "") {
+                    // Se o usuário deixou vazio, DELETA a chave para manter o JSON limpo
+                    // e ativar a renderização automática no _gerarHtmlPilha
+                    delete no.grupoDescricao;
+                } else {
+                    no.grupoDescricao = nDesc;
                 }
-            });
-        };
-
-        topico.anotacoes.forEach(an => { 
-            atualizar(an.subAnotacoes); 
-            if (an.itensCorrelacionados) an.itensCorrelacionados.forEach(ic => atualizar(ic.subAnotacoes)); 
+            }
         });
-        atualizar(topico.diretrizesGlobais);
-        if (topico.diretrizesPorTese) Object.values(topico.diretrizesPorTese).forEach(arr => atualizar(arr));
 
         fecharModalPilha();
         renderizarFichario(topicos); // Dispara a view atualizada
