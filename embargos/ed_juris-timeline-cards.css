@@ -1258,19 +1258,24 @@ body[data-context="ed"] .topics-content-area {
 
 .sub-annotation-stack.tema-dossie-ed .stack-roman-badge {
     position: absolute;
-    top: -12px; left: -12px;
-    width: 32px; height: 32px;
+    top: -10px; left: -10px;
+    width: 28px; height: 28px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.85rem; font-weight: 800;
+    font-size: 0.75rem; font-weight: 800;
     box-shadow: var(--shadow-sm);
     cursor: pointer; z-index: 5;
     transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s;
     background-color: var(--ed-neon-bg, #D500B5);
     color: #ffffff;
     border: 1px solid var(--ed-neon-stroke, #A3008A);
+}
+
+#input-pilha-descricao::placeholder {
+    color: #94a3b8;
+    font-style: italic;
 }
 .sub-annotation-stack.tema-dossie-ed .stack-roman-badge:hover {
     background-color: #ef4444; 
@@ -1294,11 +1299,35 @@ body[data-context="ed"] .topics-content-area {
 .pilha-editavel-desc {
     max-height: 120px;
     overflow-y: auto;
-    font-weight: 400 !important;
-    color: #666 !important;
+    font-weight: 400;
+    color: #666;
     line-height: 1.5;
-    font-size: 0.8rem !important;
-    margin-bottom: 0 !important;
+    font-size: 0.8rem;
+    margin-bottom: 0;
+}
+
+/* Suporte às tags inline geradas pelo renderizarMarkdownSeguro */
+.pilha-editavel-desc b,
+.pilha-editavel-desc strong {
+    font-weight: 700;
+    color: var(--trt-blue);
+}
+
+.pilha-editavel-desc i,
+.pilha-editavel-desc em {
+    font-style: italic;
+}
+
+.pilha-editavel-desc u {
+    text-decoration: underline;
+}
+
+.pilha-editavel-desc .txt-largo-1 {
+    font-size: 1.15em;
+}
+
+.pilha-editavel-desc .txt-largo-2 {
+    font-size: 1.3em;
 }
 .pilha-editavel-desc::-webkit-scrollbar { width: 4px; }
 .pilha-editavel-desc::-webkit-scrollbar-track { background: transparent; }

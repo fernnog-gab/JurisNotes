@@ -241,14 +241,42 @@ window.TopicsManager = (function () {
     }
 
     // --- FÁBRICA DE COMPONENTES: PILHA (GRUPO DE IDEIAS) ED ---
+    function _obterTextosDaPilha(topico, grupoId) {
+        if (!topico) return "";
+        let textos = [];
+        
+        const extrair = (arr) => {
+            if (!arr) return;
+            arr.forEach(s => {
+                if (s.grupoId === grupoId && s.texto && s.texto.trim() !== '') {
+                    textos.push(s.texto.trim());
+                }
+            });
+        };
+
+        topico.anotacoes.forEach(an => {
+            extrair(an.subAnotacoes);
+            if (an.itensCorrelacionados) an.itensCorrelacionados.forEach(ic => extrair(ic.subAnotacoes));
+        });
+        extrair(topico.diretrizesGlobais);
+        // Usa diretrizesPorVicio (específico do ED)
+        if (topico.diretrizesPorVicio) Object.values(topico.diretrizesPorVicio).forEach(arr => extrair(arr));
+
+        return textos.join(' - ');
+    }
+
     function _gerarHtmlPilha(sub, renderContext, activeTabId) {
         if (!renderContext.romanMap.has(sub.grupoId)) {
             renderContext.romanMap.set(sub.grupoId, obterRomano(renderContext.romanCounter++));
         }
         const numRomano = renderContext.romanMap.get(sub.grupoId);
         
+        // Motor Computed:
+        const topico = topicos.find(t => t.id === activeTabId);
+        const teorAutomatico = _obterTextosDaPilha(topico, sub.grupoId);
+        
         const tituloPilha = sub.grupoTitulo || "📚 Grupo de Ideias";
-        const descPilha = sub.grupoDescricao || "Nós empilhados para otimização espacial.";
+        const descPilha = sub.grupoDescricao || (teorAutomatico !== "" ? teorAutomatico : "Nós vazios.");
         const source = sub.viewSource || 'main';
 
         return `
@@ -263,7 +291,7 @@ window.TopicsManager = (function () {
                 </div>
                 
                 <div class="pilha-editavel pilha-editavel-desc" title="Clique para editar metadados" onclick="TopicsManager.abrirModalPilha('${activeTabId}', '${sub.grupoId}')">
-                    ${escaparHTML(descPilha).replace(/\n/g, '<br>')}
+                    ${renderizarMarkdownSeguro(escaparHTML(descPilha)).replace(/\n/g, '<br>')}
                 </div>
                 
                 <div class="btn-read-mode-trigger sub-read-badge" title="Modo Leitura do Grupo" onclick="TopicsManager.abrirModoLeituraPilha('${activeTabId}', '${sub.grupoId}', '${numRomano}')">
@@ -1519,14 +1547,14 @@ window.TopicsManager = (function () {
         if (!topico) return;
 
         let titAtual = "📚 Grupo de Ideias";
-        let descAtual = "Nós empilhados para otimização espacial.";
+        let descManualSalva = ""; 
 
         const extrair = (arr) => {
             if (!arr) return;
             const no = arr.find(s => s.grupoId === grupoId);
             if (no) {
                 if (no.grupoTitulo) titAtual = no.grupoTitulo;
-                if (no.grupoDescricao) descAtual = no.grupoDescricao;
+                if (no.grupoDescricao) descManualSalva = no.grupoDescricao;
             }
         };
 
@@ -1537,8 +1565,18 @@ window.TopicsManager = (function () {
         extrair(topico.diretrizesGlobais);
         if (topico.diretrizesPorVicio) Object.values(topico.diretrizesPorVicio).forEach(arr => extrair(arr));
 
-        document.getElementById('input-pilha-titulo').value = titAtual;
-        document.getElementById('input-pilha-descricao').value = descAtual;
+        const inputTitulo = document.getElementById('input-pilha-titulo');
+        const inputDesc = document.getElementById('input-pilha-descricao');
+        
+        inputTitulo.value = titAtual;
+        inputDesc.value = descManualSalva;
+        
+        if (descManualSalva === "") {
+            const previewAuto = _obterTextosDaPilha(topico, grupoId);
+            inputDesc.placeholder = previewAuto !== "" ? previewAuto : "Nós vazios. O texto gerado aparecerá aqui...";
+        } else {
+            inputDesc.placeholder = "Deixe vazio para o sistema extrair os textos automaticamente.";
+        }
 
         document.getElementById('pilha-modal-backdrop').style.display = 'block';
         document.getElementById('modal-editar-pilha').style.display = 'flex';
@@ -1563,7 +1601,12 @@ window.TopicsManager = (function () {
             arr.forEach(s => {
                 if (s.grupoId === _contextoEdicaoPilha.grupoId) {
                     s.grupoTitulo = nTit;
-                    s.grupoDescricao = nDesc;
+                    
+                    if (nDesc === "") {
+                        delete s.grupoDescricao;
+                    } else {
+                        s.grupoDescricao = nDesc;
+                    }
                 }
             });
         };
