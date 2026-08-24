@@ -1086,12 +1086,18 @@ body[data-context="ed"] .topics-content-area {
 .pilha-editavel-desc::-webkit-scrollbar-track { background: transparent; }
 .pilha-editavel-desc::-webkit-scrollbar-thumb { background: #84cc16; border-radius: 4px; }
 
-/* Botão Modo Leitura Minimalista (Canto Inferior Esquerdo) */
-.sub-annotation-stack.tema-agravo .sub-read-badge {
-    display: flex !important; background: #f1f5f9; color: #65a30d; border: 1px solid #65a30d; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+/* Botão Modo Leitura Minimalista (Canto Inferior Esquerdo) - Tema Agravo */
+.sub-annotation-stack.tema-agravo .btn-leitura-pilha {
+    background-color: #84cc16; /* Verde limão base */
+    color: #ffffff;
+    border: 1px solid #65a30d;
 }
-.sub-annotation-stack.tema-agravo .sub-read-badge:hover {
-    background: #84cc16; color: #ffffff; transform: scale(1.15); border-color: #84cc16;
+.sub-annotation-stack.tema-agravo .btn-leitura-pilha:hover {
+    background-color: #65a30d; /* Verde mais escuro no hover */
+    transform: scale(1.1);
+}
+.sub-annotation-stack.tema-agravo .btn-leitura-pilha:active {
+    transform: scale(0.95);
 }
 
 /* Oculta o botão antigo e intrusivo (legado) */
