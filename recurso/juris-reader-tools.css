@@ -58,19 +58,17 @@ body.modo-extrator-ativo #crop-overlay { display: block; cursor: crosshair; back
    ESTILOS DO ALFINETE VISUAL E ESTADO DO BOTÃO
    ================================================ */
 
-/* Estado concluído do botão Extrator (Fúcsia ED) - Correção de Identidade Visual */
-button#btn-ferramenta-extrator.extrator-completo:not(:disabled) {
-    background-color: var(--ed-neon-bg, #D500B5);
-    border-color: var(--ed-neon-stroke, #A3008A);
-    color: white;
-    /* Utilização de color-mix nativo para herdar o brilho proporcionalmente da variável principal */
-    box-shadow: 0 4px 10px color-mix(in srgb, var(--ed-neon-bg, #D500B5) 40%, transparent);
+/* Estado concluído do botão Extrator (Fúcsia ED) - Override Blindado */
+#btn-ferramenta-extrator.extrator-completo:not(:disabled) {
+    background-color: var(--ed-neon-bg, #D500B5) !important;
+    border-color: var(--ed-neon-stroke, #A3008A) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 10px color-mix(in srgb, var(--ed-neon-bg, #D500B5) 40%, transparent) !important;
 }
 
-/* Garante a inversão do ícone SVG para contraste em fundos escuros/vibrantes */
-button#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
-    stroke: white;
-    fill: white;
+#btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
+    stroke: #ffffff !important;
+    fill: #ffffff !important;
 }
 
 /* Refatoração da classe existente: Pino colorido por dado (Inline Style) */
