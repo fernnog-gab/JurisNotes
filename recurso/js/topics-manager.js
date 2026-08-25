@@ -498,6 +498,10 @@ window.TopicsManager = (function () {
             const btnEditar = (tipoDoItem === 'texto' || tipoDoItem === 'audio') 
                 ? `<button title="Editar" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}${ctxCidx}}; ${acaoEditar}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>` 
                 : '';
+                
+            const btnAgrupar = isCorrelacionado && !anotacao.itensCorrelacionados[cIdx].pilhaInfoId
+                ? `<button title="Empilhar Fragmentos Semelhantes" onclick="agruparPilhaInfoProcessual('${activeTabId}', ${index}, ${cIdx})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M2 15h10"></path><path d="M2 9h10"></path></svg></button>`
+                : '';
             
             const paramMove = isCorrelacionado ? `'${activeTabId}', ${index}, ${cIdx}` : `'${activeTabId}', ${index}, null`;
             
@@ -505,6 +509,7 @@ window.TopicsManager = (function () {
             <div class="card-actions-bar">
                 ${btnLeitura}
                 ${btnEditar}
+                ${btnAgrupar}
                 <button title="Adicionar Nó de Ideia" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}${ctxCidx}}; acionarNovoNoIdeia()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
                 <button title="Mover / Reordenar" onclick="abrirModalSmartMove(${paramMove})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><polyline points="8 7 12 3 16 7"></polyline><line x1="12" y1="12" x2="12" y2="3"></line></svg></button>
                 <button class="delete-btn" title="Excluir" onclick="${isCorrelacionado ? `excluirItemCorrelacionado('${activeTabId}', ${index}, ${cIdx})` : `_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}}; excluirAnotacao()`}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
@@ -525,7 +530,7 @@ window.TopicsManager = (function () {
         // 2. Achata os nós dos Filhos (Correlacionados)
         if (anotacao.itensCorrelacionados) {
             anotacao.itensCorrelacionados.forEach((item, fIdx) => {
-                if (item.subAnotacoes) {
+                if (item.subAnotacoes && !item.pilhaInfoId) {
                     flatSubAnotacoes.push(...item.subAnotacoes.map((s, idx) => ({ ...s, viewSource: fIdx, localIndex: idx })));
                 }
             });
@@ -589,9 +594,14 @@ window.TopicsManager = (function () {
         // NOVO: Processar itens agrupados
         let htmlCorrelacionados = '';
         if (anotacao.itensCorrelacionados && anotacao.itensCorrelacionados.length > 0) {
-            htmlCorrelacionados = anotacao.itensCorrelacionados.map((item, cIdx) => {
+            let currentStackId = null;
+            let currentStackHtml = '';
+            let currentStackFase = 4;
+
+            anotacao.itensCorrelacionados.forEach((item, cIdx) => {
                 const itemTag = poloParaClasse(item.polo);
                 const itemMeta = _obterMetaTexto(item);
+                const faseItem = typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(item.documento) : 4;
                 
                 let cConteudo = '';
                 let cComent = '';
@@ -610,8 +620,30 @@ window.TopicsManager = (function () {
                     cConteudo = audioData.htmlConteudo;
                     cComent = audioData.htmlComentario;
                 }
+
+                // Renderização interna dos Nós de Ideia para itens empilhados
+                let innerSubNodesHtml = '';
+                let expandBtn = '';
+                if (item.pilhaInfoId && item.subAnotacoes && item.subAnotacoes.length > 0) {
+                    expandBtn = `<button class="btn-expand-nodes" style="font-size:0.75rem; color:var(--trt-blue-mid); background:none; border:none; cursor:pointer; padding:6px; width:100%; text-align:center; border-top:1px dashed var(--border-color); margin-top:8px; font-weight: 600;" onclick="this.closest('.annotation-card').classList.toggle('expanded-nodes')">💬 Alternar Notas Ocultas (${item.subAnotacoes.length})</button>`;
                     
-                return `
+                    innerSubNodesHtml = `<div class="sub-annotations-wrapper stacked-sub-nodes">`;
+                    item.subAnotacoes.forEach((sub, sIdx) => {
+                        const intencao = sub.intencao || 'premissa';
+                        const iconSVG = obterIconeIntencao(intencao);
+                        
+                        innerSubNodesHtml += `
+                        <div class="sub-annotation-card" style="margin-top: 6px; border-left: 3px solid var(--trt-blue-mid); padding: 8px; border-radius: 4px;">
+                            <div class="sub-badge has-intent intencao-${intencao}" style="position:static; display:inline-flex; transform:none; margin-bottom:4px; margin-right:4px;" onclick="abrirMenuSubAnotacao('${activeTabId}', ${index}, '${cIdx}', ${sIdx}, event)">
+                                ${iconSVG}
+                            </div>
+                            <span class="sub-text-content" style="display:inline;" ondblclick="TopicsManager.abrirModoLeitura(this)">${renderizarMarkdownSeguro(escaparHTML(sub.texto))}</span>
+                        </div>`;
+                    });
+                    innerSubNodesHtml += `</div>`;
+                }
+
+                const cardHtml = `
                 <div class="correlated-item-wrapper" data-cidx="${cIdx}"
                      draggable="true"
                      ondragstart="DnDManager.dragStart(event, '${activeTabId}', ${index}, ${cIdx})"
@@ -625,7 +657,7 @@ window.TopicsManager = (function () {
                             <path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l-4-4m4 4l4-4" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </div>
-                    <div class="annotation-card correlated-card fase-${typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(item.documento) : 4}">
+                    <div class="annotation-card correlated-card ${item.pilhaInfoId ? 'is-stacked' : ''} fase-${faseItem}">
                         <div class="card-header">
                             <div style="display:flex; gap:6px;">
                                 <span class="polo-tag doc-tag">${item.documento ? escaparHTML(item.documento) : escaparHTML(item.polo)}</span>
@@ -636,9 +668,53 @@ window.TopicsManager = (function () {
                         ${cConteudo}
                         ${cComent}
                         ${gerarBarraAcoes(true, cIdx)}
+                        ${expandBtn}
+                        ${innerSubNodesHtml}
                     </div>
                 </div>`;
-            }).join('');
+
+                if (item.pilhaInfoId) {
+                    if (currentStackId !== item.pilhaInfoId) {
+                        if (currentStackId) {
+                            htmlCorrelacionados += `<div class="main-info-stack fase-${currentStackFase}">
+                                <div class="stack-info-badge" title="Desagrupar Documentos" onclick="desagruparPilhaInfoProcessual('${activeTabId}', ${index}, '${currentStackId}')">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                                    Pasta Sanfonada
+                                </div>
+                                ${currentStackHtml}
+                            </div>`;
+                        }
+                        currentStackId = item.pilhaInfoId;
+                        currentStackHtml = cardHtml;
+                        currentStackFase = faseItem;
+                    } else {
+                        currentStackHtml += cardHtml;
+                    }
+                } else {
+                    if (currentStackId) {
+                        htmlCorrelacionados += `<div class="main-info-stack fase-${currentStackFase}">
+                            <div class="stack-info-badge" title="Desagrupar Documentos" onclick="desagruparPilhaInfoProcessual('${activeTabId}', ${index}, '${currentStackId}')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                                Pasta Sanfonada
+                            </div>
+                            ${currentStackHtml}
+                        </div>`;
+                        currentStackId = null;
+                        currentStackHtml = '';
+                    }
+                    htmlCorrelacionados += cardHtml;
+                }
+            });
+
+            if (currentStackId) {
+                htmlCorrelacionados += `<div class="main-info-stack fase-${currentStackFase}">
+                    <div class="stack-info-badge" title="Desagrupar Documentos" onclick="desagruparPilhaInfoProcessual('${activeTabId}', ${index}, '${currentStackId}')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                        Pasta Sanfonada
+                    </div>
+                    ${currentStackHtml}
+                </div>`;
+            }
         }
 
         // Wrapper Master Flex atualizado para envelopar a hierarquia inteira
