@@ -54,21 +54,21 @@
 /* Cursor dinâmico informando o estado da aplicação */
 body.modo-extrator-ativo #crop-overlay { display: block; cursor: crosshair; background: rgba(46, 125, 50, 0.05); z-index: var(--z-crop-overlay); }
 
-/* ================================================
-   ESTILOS DO ALFINETE VISUAL E ESTADO DO BOTÃO
-   ================================================ */
+/* =========================================================
+   ESTILOS DO ALFINETE VISUAL E ESTADO DO BOTÃO (RO - AMARELO)
+   ========================================================= */
 
-/* Estado concluído do botão Extrator (Fúcsia ED) - Override Blindado */
+/* Estado concluído do botão Extrator (Amarelo Ouro RO) */
 #btn-ferramenta-extrator.extrator-completo:not(:disabled) {
-    background-color: var(--ed-neon-bg, #D500B5) !important;
-    border-color: var(--ed-neon-stroke, #A3008A) !important;
+    background-color: #fbc02d !important;
+    border-color: #f57f17 !important;
     color: #ffffff !important;
-    box-shadow: 0 4px 10px color-mix(in srgb, var(--ed-neon-bg, #D500B5) 40%, transparent) !important;
+    box-shadow: 0 4px 10px rgba(251, 192, 45, 0.45) !important;
 }
 
 #btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
     stroke: #ffffff !important;
-    fill: #ffffff !important;
+    fill: none !important;
 }
 
 /* Refatoração da classe existente: Pino colorido por dado (Inline Style) */
