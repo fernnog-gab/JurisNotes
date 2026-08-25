@@ -1018,62 +1018,10 @@ function confirmarSmartMove() {
     }
 
     renderizarTopicos(); 
-        salvarBackupAutomatico(); 
-        if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
-        fecharModalSmartMove();
-    }
-
-/* ================================================
-   NOVO: EMPILHAMENTO NÃO-DESTRUTIVO (CONTÊINERES DE ROLAGEM)
-   ================================================ */
-window.agruparPilhaInfoProcessual = function(topicoId, parentIndex, correlacionadoIndex) {
-    const topico = topicos.find(t => t.id === topicoId);
-    if (!topico) return;
-    
-    const mestre = topico.anotacoes[parentIndex];
-    if (!mestre || !mestre.itensCorrelacionados) return;
-
-    if (correlacionadoIndex === null || correlacionadoIndex === undefined || correlacionadoIndex === 'main') {
-        return exibirToast('O Card Principal (Mestre) não pode ser empilhado.', 'erro');
-    }
-
-    const cardAlvo = mestre.itensCorrelacionados[correlacionadoIndex];
-    if (cardAlvo.pilhaInfoId) {
-        return exibirToast('Este item já pertence a uma pilha.', 'aviso');
-    }
-
-    const compativeis = mestre.itensCorrelacionados.filter(item => 
-        item.documento === cardAlvo.documento && 
-        item.polo === cardAlvo.polo &&
-        !item.pilhaInfoId
-    );
-
-    if (compativeis.length < 2) {
-        return exibirToast('Não há outros fragmentos idênticos deste documento para empilhar.', 'aviso');
-    }
-
-    const novaPilhaId = 'info-grp-' + Date.now().toString(36);
-    compativeis.forEach(item => item.pilhaInfoId = novaPilhaId);
-
-    renderizarTopicos();
-    if(window.salvarBackupAutomatico) salvarBackupAutomatico();
-    exibirToast(`🗂️ ${compativeis.length} itens empilhados com sucesso.`, 'sucesso');
-};
-
-window.desagruparPilhaInfoProcessual = function(topicoId, parentIndex, pilhaId) {
-    const topico = topicos.find(t => t.id === topicoId);
-    const mestre = topico.anotacoes[parentIndex];
-    
-    mestre.itensCorrelacionados.forEach(item => {
-        if (item.pilhaInfoId === pilhaId) {
-            delete item.pilhaInfoId;
-        }
-    });
-
-    renderizarTopicos();
-    if(window.salvarBackupAutomatico) salvarBackupAutomatico();
-    exibirToast('Pilha desagrupada com sucesso.', 'sucesso');
-};
+    salvarBackupAutomatico(); 
+    if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
+    fecharModalSmartMove();
+}
 
 /* --- TEMA E DRAG & DROP --- */
 window.toggleSubmenuTemas = function() {
