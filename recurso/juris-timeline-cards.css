@@ -1544,3 +1544,96 @@
     height: 16px;
     pointer-events: none;
 }
+
+/* ================================================
+   MODO LEITURA (MODAL) - PILHA PROCESSUAL
+   ================================================ */
+.reading-modal-item {
+    padding-bottom: 16px; 
+    border-bottom: 1px dashed var(--border-color, #e2e8f0); 
+    margin-bottom: 16px;
+}
+.reading-modal-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+.reading-modal-header {
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+    margin-bottom: 8px;
+}
+.reading-modal-badge {
+    font-size: 0.75rem; 
+    color: #64748b; 
+    font-weight: 800; 
+    background: #f1f5f9; 
+    padding: 2px 8px; 
+    border-radius: 12px;
+}
+.reading-modal-text {
+    font-size: 1.05rem; 
+    color: #334155; 
+    line-height: 1.6; 
+    font-style: italic;
+}
+
+/* ================================================
+   INTERATIVIDADE E DELEGAÇÃO DE EVENTOS
+   ================================================ */
+.interactive-meta {
+    cursor: pointer; 
+    font-size: 0.75rem; 
+    color: var(--trt-blue); 
+    font-weight: 700;
+    text-decoration: underline dashed; 
+    text-underline-offset: 3px;
+    transition: color 0.2s ease;
+}
+.interactive-meta:hover {
+    color: var(--trt-blue-mid, #2b6cb0);
+}
+
+/* ================================================
+   SCROLL INTERNO DE TRANSCRIÇÕES (ÁUDIO)
+   ================================================ */
+.audio-transcription-wrapper {
+    display: flex; 
+    flex-direction: column; 
+    gap: 6px; 
+    width: 100%; 
+    margin-top: 4px;
+}
+.audio-transcription-header {
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center;
+}
+.audio-scrollable-text {
+    max-height: 150px;
+    overflow-y: auto;
+    width: 100%;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 6px;
+    box-sizing: border-box;
+    font-size: 0.85rem;
+    color: #444;
+}
+.audio-scrollable-text::-webkit-scrollbar { width: 6px; }
+.audio-scrollable-text::-webkit-scrollbar-track { background: transparent; }
+.audio-scrollable-text::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 4px; }
+
+.btn-copy-degravacao {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #64748b;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s;
+}
+.btn-copy-degravacao:hover { color: var(--trt-blue); }
+.btn-copy-degravacao svg { width: 14px; height: 14px; }

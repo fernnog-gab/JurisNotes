@@ -372,14 +372,26 @@ window.TopicsManager = (function () {
             let comentarios = [];
             if (anotacao.comentario) comentarios.push(`<strong>Contexto:</strong> ${escaparHTML(anotacao.comentario)}`);
             if (dadosAudio.transcricao) {
+                // Escapa o texto para ser seguro dentro de um atributo HTML data-*
+                const textoSeguroParaAtributo = _escaparAtributo(dadosAudio.transcricao);
+                
                 comentarios.push(`
-                    <div style="display:flex; align-items:flex-start; gap:4px;">
-                        <div><strong>Degravação:</strong> <em>"${escaparHTML(dadosAudio.transcricao)}"</em></div>
-                        <button class="btn-copy-degravacao" title="Copiar Degravação" onclick="window.copiarDegravacao('${anotacao.topicoIdOrigem || activeTabId}', '${anotacao.uuid || ''}')">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                            </svg>
-                        </button>
+                    <div class="audio-transcription-wrapper">
+                        <div class="audio-transcription-header">
+                            <strong>Degravação:</strong>
+                            <button class="btn-copy-degravacao interactive-meta-delegate" 
+                                    data-action="copy-transcription" 
+                                    data-text-to-copy="${textoSeguroParaAtributo}" 
+                                    title="Copiar Degravação">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="audio-scrollable-text">
+                            <em>"${escaparHTML(dadosAudio.transcricao)}"</em>
+                        </div>
                     </div>
                 `);
             }
@@ -416,12 +428,46 @@ window.TopicsManager = (function () {
     }
 
     /**
-     * Fábrica de Componente: Gera o HTML do meta-texto (ID/Folha) com interatividade.
-     * @param {boolean} isModalLeitura - Se true, encadeia o fechamento síncrono do modal antes de saltar para o PDF.
+     * Helper centralizado para extrair texto legível de anotações.
+     * Previne vazamento de JSON bruto na UI.
      */
-    function _gerarMetaInterativo(topicoId, parentIndex, originalCIdx, metaTexto, isModalLeitura = false) {
-        const acaoFechamento = isModalLeitura ? 'TopicsManager.fecharModoLeitura(); ' : '';
-        return `<span class="card-meta" style="cursor:pointer; font-size:0.85rem; color:var(--trt-blue); font-weight:700; text-decoration: underline dashed; text-underline-offset: 3px;" title="Clique: Copiar | Shift+Clique: Editar folha | Ctrl+Clique: Ir ao PDF" onclick="${acaoFechamento}handleMetaClick(event, '${topicoId}', ${parentIndex}, true, ${originalCIdx})">${metaTexto}</span>`;
+    function _extrairTextoExibicao(item) {
+        if (!item || !item.conteudo) return '';
+        if (item.tipo === 'audio') {
+            try {
+                const dadosAudio = JSON.parse(item.conteudo);
+                let texto = dadosAudio.transcricao || '[Áudio sem degravação registrada]';
+                if (item.comentario) {
+                    texto = `Contexto: ${item.comentario}\n\nDegravação: "${texto}"`;
+                }
+                return texto;
+            } catch (e) {
+                console.warn("Falha ao processar JSON de áudio", e);
+                return '[Erro na leitura do áudio]';
+            }
+        }
+        return item.conteudo;
+    }
+
+    /**
+     * Helper para escapar aspas em atributos HTML (Previne quebra de DOM e XSS)
+     */
+    function _escaparAtributo(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    /**
+     * Fábrica de Componente: Gera o HTML do meta-texto com atributos para Event Delegation.
+     */
+    function _gerarMetaInterativo(topicoId, parentIndex, uuid, metaTexto, isModalLeitura = false) {
+        const delegationClass = isModalLeitura ? 'interactive-meta-delegate' : '';
+        return `<span class="card-meta interactive-meta ${delegationClass}" 
+                      data-action="navigate-pdf" 
+                      data-topico-id="${topicoId}" 
+                      data-parent-idx="${parentIndex}" 
+                      data-uuid="${uuid}"
+                      title="Clique: Copiar | Shift+Clique: Editar folha | Ctrl+Clique: Ir ao PDF">${metaTexto}</span>`;
     }
 
     // Função estática gerarSVGConector removida (substituída pelo motor dinâmico desenharConexoes)
@@ -1608,51 +1654,44 @@ window.TopicsManager = (function () {
     function abrirModoLeituraPilhaProcessual(topicoId, parentIndex, pilhaProcId) {
         const topico = topicos.find(t => t.id === topicoId);
         if (!topico) return;
+        
         const mestre = topico.anotacoes[parentIndex];
+        const itensDestaPilha = mestre.itensCorrelacionados.filter(ic => ic.pilhaProcId === pilhaProcId);
+        if (itensDestaPilha.length === 0) return;
         
-        // Otimização O(N) e Preservação do Índice Original
-        const itensDestaPilhaObj = mestre.itensCorrelacionados
-            .map((ic, originalCIdx) => ({ ic, originalCIdx }))
-            .filter(obj => obj.ic.pilhaProcId === pilhaProcId);
-        
-        if (itensDestaPilhaObj.length === 0) return;
-        const docSeguro = escaparHTML(itensDestaPilhaObj[0].ic.documento || itensDestaPilhaObj[0].ic.polo || 'Pastinha de Provas');
+        const docSeguro = escaparHTML(itensDestaPilha[0].documento || itensDestaPilha[0].polo || 'Pastinha de Provas');
         
         let htmlAgrupado = '';
         let markdownAcumulado = `### 🗂️ Leitura: ${docSeguro}\n\n`;
-        
-        // COMPATIBILIDADE CRÍTICA: O motor nativo \`copiarTextoModoLeitura\` quebra o HTML a cada '\\n' 
-        // e envolve em <p>. Usamos APENAS tags inline (<strong>, <i>, <br>) para evitar HTML inválido no Word/PJe.
         let htmlAcumulado = `<strong>🗂️ Leitura: ${docSeguro}</strong>\n`;
         
-        itensDestaPilhaObj.forEach((obj, i) => {
-            const ic = obj.ic;
+        itensDestaPilha.forEach((ic, i) => {
             const metaTexto = _obterMetaTexto(ic);
+            const textoExibicao = _extrairTextoExibicao(ic);
             
-            // HTML de Tela: Componente interativo com UX de fechamento automático síncrono
-            const metaInterativoTela = _gerarMetaInterativo(topicoId, parentIndex, obj.originalCIdx, metaTexto, true);
+            // Gera o meta-texto apontando para o UUID, não para o índice original
+            const metaInterativoTela = _gerarMetaInterativo(topicoId, parentIndex, ic.uuid, metaTexto, true);
             
             htmlAgrupado += `
-            <div style="padding-bottom: 16px; border-bottom: 1px dashed #e2e8f0; margin-bottom: 16px;">
-                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-                    <span style="font-size:0.75rem; color:#64748b; font-weight:800; background:#f1f5f9; padding:2px 8px; border-radius:12px;">ITEM ${i + 1}</span>
+            <div class="reading-modal-item">
+                <div class="reading-modal-header">
+                    <span class="reading-modal-badge">ITEM ${i + 1}</span>
                     ${metaInterativoTela}
                 </div>
-                <div style="font-size: 1.05rem; color: #334155; line-height: 1.6; font-style: italic;">
-                    "${renderizarMarkdownSeguro(escaparHTML(ic.conteudo))}"
+                <div class="reading-modal-text">
+                    "${renderizarMarkdownSeguro(escaparHTML(textoExibicao))}"
                 </div>
             </div>`;
             
             // Sincronização de Estado (Copy-Safe)
-            markdownAcumulado += `**ITEM ${i + 1}** ${metaTexto}\n"${ic.conteudo}"\n\n`;
-            htmlAcumulado += `<strong>ITEM ${i + 1}</strong> ${metaTexto}<br><i>"${renderizarMarkdownSeguro(escaparHTML(ic.conteudo))}"</i>\n`;
+            markdownAcumulado += `**ITEM ${i + 1}** ${metaTexto}\n"${textoExibicao}"\n\n`;
+            htmlAcumulado += `<strong>ITEM ${i + 1}</strong> ${metaTexto}<br><i>"${renderizarMarkdownSeguro(escaparHTML(textoExibicao))}"</i>\n`;
         });
         
-        // Mutação das Variáveis Globais (Resolve o Stale State)
+        // Mutação das Variáveis Globais (Resolve o Stale State da Cópia)
         _textoLeituraAtualMarkdown = markdownAcumulado.trim();
         _textoLeituraAtualHTML = htmlAcumulado;
-        
-        // Renderização Visual no Modal
+
         const modal = document.getElementById('reading-mode-modal');
         document.getElementById('reading-mode-title-text').innerHTML = `🗂️ Leitura: ${docSeguro}`;
         document.getElementById('reading-mode-content').innerHTML = htmlAgrupado;
@@ -1857,6 +1896,60 @@ window.TopicsManager = (function () {
     };
 
 })();
+
+// Motor Global de Delegação de Eventos (Event Delegation Engine)
+// Anexado ao document para sobreviver a injeções dinâmicas de DOM e roteamento.
+document.addEventListener('click', (event) => {
+    // 1. Identifica se o clique veio de um elemento delegável
+    const target = event.target.closest('.interactive-meta-delegate');
+    if (!target) return;
+
+    const { action, topicoId, parentIdx, uuid, textToCopy } = target.dataset;
+
+    // 2. Roteamento: Navegação para o PDF (Ctrl+Click)
+    if (action === 'navigate-pdf') {
+        if (typeof topicos === 'undefined') return;
+        const topico = topicos.find(t => t.id === topicoId);
+        if (!topico) return;
+        
+        const mestre = topico.anotacoes[parseInt(parentIdx, 10)];
+        if (!mestre) return;
+
+        // A MÁGICA DO UUID: Recalcula o índice exato no momento do clique.
+        // Isso anula qualquer bug causado por Drag & Drop (Stale State).
+        const currentCIdx = mestre.itensCorrelacionados.findIndex(i => i.uuid === uuid);
+        if (currentCIdx === -1) return; // Item não encontrado
+
+        // UX: Se for Ctrl+Click (Ir ao PDF), fecha o modal ANTES de saltar
+        const readingModal = document.getElementById('reading-mode-modal');
+        if ((event.ctrlKey || event.metaKey) && readingModal && readingModal.style.display !== 'none') {
+            if (typeof TopicsManager.fecharModoLeitura === 'function') {
+                TopicsManager.fecharModoLeitura();
+            }
+        }
+
+        // Delega para o handler original da aplicação raiz com o índice fresco
+        if (typeof window.handleMetaClick === 'function') {
+            window.handleMetaClick(event, topicoId, parseInt(parentIdx, 10), true, currentCIdx);
+        }
+    }
+
+    // 3. Roteamento: Cópia de Degravação (Áudio)
+    if (action === 'copy-transcription') {
+        // Decodifica as entidades HTML salvas no atributo
+        const textoLimpo = textToCopy.replace(/&quot;/g, '"')
+                                     .replace(/&#39;/g, "'")
+                                     .replace(/&lt;/g, '<')
+                                     .replace(/&gt;/g, '>')
+                                     .replace(/&amp;/g, '&');
+        
+        navigator.clipboard.writeText(textoLimpo).then(() => {
+            const originalTitle = target.title;
+            target.title = "Copiado!";
+            setTimeout(() => { target.title = originalTitle; }, 1500);
+        }).catch(err => console.error('Falha ao copiar para a área de transferência:', err));
+    }
+});
 
 /* ================================================
    VISÃO ESTRUTURADA (OUTLINE MODE) - REFINADO v3.1.0
