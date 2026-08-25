@@ -1018,11 +1018,10 @@ function confirmarSmartMove() {
     }
 
     renderizarTopicos(); 
-    salvarBackupAutomatico(); 
-    if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
-    fecharModalSmartMove();
+        salvarBackupAutomatico(); 
+        if (window.sincronizarHighlightsGerais) window.sincronizarHighlightsGerais();
+        fecharModalSmartMove();
     }
-}
 
 /* ================================================
    NOVO: EMPILHAMENTO NÃO-DESTRUTIVO (CONTÊINERES DE ROLAGEM)
