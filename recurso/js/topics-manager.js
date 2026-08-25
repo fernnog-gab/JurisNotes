@@ -471,7 +471,7 @@ window.TopicsManager = (function () {
             tagsHtml += ` <span class="polo-tag ${poloParaClasse(anotacao.polo)}">${poloSeguro}</span>`;
         }
 
-        function gerarBarraAcoes(isCorrelacionado, cIdx, isInStack = false) {
+        function gerarBarraAcoes(isCorrelacionado, cIdx) {
             // Injeção segura do cIdx no contexto do botão (resolve o bug da falta de índice)
             const ctxCidx = isCorrelacionado && cIdx != null ? `, cIdx: ${cIdx}` : '';
             
@@ -498,10 +498,6 @@ window.TopicsManager = (function () {
             const btnEditar = (tipoDoItem === 'texto' || tipoDoItem === 'audio') 
                 ? `<button title="Editar" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}${ctxCidx}}; ${acaoEditar}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>` 
                 : '';
-                
-            const btnEmpilhar = (isCorrelacionado && cIdx != null && !isInStack)
-                ? `<button title="Empilhar fragmentos idênticos deste documento" onclick="if(window.TopicsManager && window.TopicsManager.agruparPilhaInfoProcessual) window.TopicsManager.agruparPilhaInfoProcessual('${activeTabId}', ${index}, ${cIdx});"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg></button>`
-                : '';
             
             const paramMove = isCorrelacionado ? `'${activeTabId}', ${index}, ${cIdx}` : `'${activeTabId}', ${index}, null`;
             
@@ -509,7 +505,6 @@ window.TopicsManager = (function () {
             <div class="card-actions-bar">
                 ${btnLeitura}
                 ${btnEditar}
-                ${btnEmpilhar}
                 <button title="Adicionar Nó de Ideia" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}${ctxCidx}}; acionarNovoNoIdeia()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
                 <button title="Mover / Reordenar" onclick="abrirModalSmartMove(${paramMove})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><polyline points="8 7 12 3 16 7"></polyline><line x1="12" y1="12" x2="12" y2="3"></line></svg></button>
                 <button class="delete-btn" title="Excluir" onclick="${isCorrelacionado ? `excluirItemCorrelacionado('${activeTabId}', ${index}, ${cIdx})` : `_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}}; excluirAnotacao()`}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
@@ -527,10 +522,10 @@ window.TopicsManager = (function () {
             flatSubAnotacoes.push(...anotacao.subAnotacoes.map((s, idx) => ({ ...s, viewSource: 'main', localIndex: idx })));
         }
         
-        // 2. Achata os nós dos Filhos (Correlacionados) - Ignora itens empilhados
+        // 2. Achata os nós dos Filhos (Correlacionados)
         if (anotacao.itensCorrelacionados) {
             anotacao.itensCorrelacionados.forEach((item, fIdx) => {
-                if (item.subAnotacoes && !item.pilhaInfoId) {
+                if (item.subAnotacoes) {
                     flatSubAnotacoes.push(...item.subAnotacoes.map((s, idx) => ({ ...s, viewSource: fIdx, localIndex: idx })));
                 }
             });
@@ -591,152 +586,59 @@ window.TopicsManager = (function () {
             }
         }
 
-        // NOVO: Processar itens agrupados (Com suporte a Pilhas Sanfonadas)
+        // NOVO: Processar itens agrupados
         let htmlCorrelacionados = '';
         if (anotacao.itensCorrelacionados && anotacao.itensCorrelacionados.length > 0) {
-            const pilhasVistas = new Set();
-            const fragments = [];
-
-            anotacao.itensCorrelacionados.forEach((item, cIdx) => {
+            htmlCorrelacionados = anotacao.itensCorrelacionados.map((item, cIdx) => {
                 const itemTag = poloParaClasse(item.polo);
                 const itemMeta = _obterMetaTexto(item);
-                const faseDoc = typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(item.documento) : 4;
                 
-                // Helper para o miolo dos cards
-                const _gerarMiolos = (it) => {
-                    let cConteudo = '', cComent = '';
-                    if (it.tipo === 'texto') {
-                        cConteudo = `<div style="position: relative;"><p class="card-texto" data-raw-text="${escaparHTML(it.conteudo)}" data-raw-title="${escaparHTML(it.documento || it.polo || 'Agrupamento')}" ondblclick="TopicsManager.abrirModoLeitura(this)">"${renderizarMarkdownSeguro(escaparHTML(it.conteudo))}"</p></div>`;
-                        if (it.comentario) cComent = `<div class="card-comentario"><strong>Observação:</strong> ${escaparHTML(it.comentario)}</div>`;
-                    } else if (it.tipo === 'imagem') {
-                        cConteudo = `<div class="image-resize-wrapper" title="Arraste para redimensionar"><img class="card-imagem" src="${it.conteudo}" alt="Agrupamento"></div>`;
-                        if (it.comentario) cComent = `<div class="card-comentario"><strong>Descrição:</strong> ${escaparHTML(it.comentario)}</div>`;
-                    } else if (it.tipo === 'audio') {
-                        const audioData = _gerarHtmlCardAudio(it);
-                        cConteudo = audioData.htmlConteudo;
-                        cComent = audioData.htmlComentario;
-                    }
-                    return { cConteudo, cComent };
-                };
-
-                // Helper para inserir os nós de ideias encapsulados nas pilhas
-                const _gerarNosDaProva = (it, cIdxLocal) => {
-                    if (!it.subAnotacoes || it.subAnotacoes.length === 0) return '';
-                    let htmlNos = '';
-                    it.subAnotacoes.forEach((sub, sIdx) => {
-                        const intencao = sub.intencao || 'premissa';
-                        const iconSVG = obterIconeIntencao(intencao);
-                        const isRevisada = sub.revisada === true;
-                        const textoFormatado = renderizarMarkdownSeguro(escaparHTML(sub.texto));
-                        const itemWrapperClass = intencao === 'nota' ? `sub-annotation-item is-nota-interna ${isRevisada ? 'is-revisada' : 'is-pendente'}` : `sub-annotation-item`;
-                        
-                        htmlNos += `
-                        <div class="${itemWrapperClass}" data-source="${cIdxLocal}" style="position: relative; margin-bottom: 8px;">
-                            <div class="sub-annotation-card borda-fase-${faseDoc}">
-                                <div class="sub-badge has-intent intencao-${intencao}" title="Opções" onclick="abrirMenuSubAnotacao('${activeTabId}', ${index}, '${cIdxLocal}', ${sIdx}, event)">
-                                    ${iconSVG} ${numero}.${gerarLetra(sIdx)}
-                                </div>
-                                <div class="sub-text-content" data-raw-text="${escaparHTML(sub.texto)}" data-raw-title="Nó de Ideia" ondblclick="TopicsManager.abrirModoLeitura(this)">${textoFormatado}</div>
-                                <div class="btn-read-mode-trigger sub-read-badge" title="Modo Leitura" data-raw-text="${escaparHTML(sub.texto)}" data-raw-title="Nó de Ideia" onclick="TopicsManager.abrirModoLeitura(this)">
-                                    <svg><use href="#icon-book-open"></use></svg>
-                                </div>
-                                <button class="btn-copiar-zen" onclick="navigator.clipboard.writeText('${escaparHTML(sub.texto).replace(/'/g, "\\'")}')" title="Copiar texto bruto">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                                    Copiar
-                                </button>
-                                ${_gerarBtnRevisaoHtml(activeTabId, index, cIdxLocal, sIdx, intencao, isRevisada)}
-                            </div>
-                        </div>`;
-                    });
-                    return htmlNos;
-                };
-
-                if (!item.pilhaInfoId) {
-                    // Fluxo normal
-                    const { cConteudo, cComent } = _gerarMiolos(item);
-                    fragments.push(`
-                    <div class="correlated-item-wrapper" data-cidx="${cIdx}"
-                         draggable="true"
-                         ondragstart="DnDManager.dragStart(event, '${activeTabId}', ${index}, ${cIdx})"
-                         ondragover="DnDManager.dragOver(event)"
-                         ondrop="DnDManager.drop(event, '${activeTabId}', ${index}, ${cIdx})"
-                         ondragenter="DnDManager.dragEnter(event)"
-                         ondragleave="DnDManager.dragLeave(event)"
-                         ondragend="DnDManager.dragEnd(event)">
-                        <div class="two-way-arrow-container correlated-drag-handle" title="Arraste para reordenar">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l-4-4m4 4l4-4" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </div>
-                        <div class="annotation-card correlated-card fase-${faseDoc}">
-                            <div class="card-header">
-                                <div style="display:flex; gap:6px;">
-                                    <span class="polo-tag doc-tag">${item.documento ? escaparHTML(item.documento) : escaparHTML(item.polo)}</span>
-                                    ${(item.documento && item.polo && item.polo !== item.documento) ? `<span class="polo-tag ${itemTag}">${escaparHTML(item.polo)}</span>` : ''}
-                                </div>
-                                <span class="card-meta" style="cursor:pointer;" title="Clique: Copiar | Shift+Clique: Editar folha | Ctrl+Clique: Ir ao PDF" onclick="handleMetaClick(event, '${activeTabId}', ${index}, true, ${cIdx})">${itemMeta}</span>
-                            </div>
-                            ${cConteudo}
-                            ${cComent}
-                            ${gerarBarraAcoes(true, cIdx, false)}
-                        </div>
-                    </div>`);
-                } else {
-                    // Fluxo de Empilhamento (Sanfonado)
-                    if (pilhasVistas.has(item.pilhaInfoId)) return;
-                    pilhasVistas.add(item.pilhaInfoId);
-
-                    const membros = anotacao.itensCorrelacionados.map((it, i) => ({ it, i })).filter(m => m.it.pilhaInfoId === item.pilhaInfoId);
-                    
-                    const cardsPilhaHtml = membros.map((membro) => {
-                        const { it, i: cIdxLocal } = membro;
-                        const expanded = !!it.nosExpandidos;
-                        const nosHTML = _gerarNosDaProva(it, cIdxLocal);
-                        const qtdNos = it.subAnotacoes ? it.subAnotacoes.length : 0;
-                        const hintLabel = expanded
-                            ? `💬 Esconder ${qtdNos} nota${qtdNos === 1 ? '' : 's'}`
-                            : `💬 ${qtdNos} nota${qtdNos === 1 ? '' : 's'} oculta${qtdNos === 1 ? '' : 's'}`;
-                        
-                        const itTag = poloParaClasse(it.polo);
-                        const itMeta = _obterMetaTexto(it);
-                        const { cConteudo, cComent } = _gerarMiolos(it);
-
-                        return `
-                        <div class="annotation-card is-stacked ${expanded ? 'expanded-nodes' : ''}" data-item-id="${escaparHTML(it.uuid || it.id || cIdxLocal)}">
-                            <div class="card-header">
-                                <div style="display:flex; gap:6px;">
-                                    <span class="polo-tag doc-tag">${it.documento ? escaparHTML(it.documento) : escaparHTML(it.polo)}</span>
-                                    ${(it.documento && it.polo && it.polo !== it.documento) ? `<span class="polo-tag ${itTag}">${escaparHTML(it.polo)}</span>` : ''}
-                                </div>
-                                <span class="card-meta" style="cursor:pointer;" title="Clique: Copiar | Shift+Clique: Editar folha | Ctrl+Clique: Ir ao PDF" onclick="handleMetaClick(event, '${activeTabId}', ${index}, true, ${cIdxLocal})">${itMeta}</span>
-                            </div>
-                            ${cConteudo}
-                            ${cComent}
-                            ${gerarBarraAcoes(true, cIdxLocal, true)}
-                            
-                            ${qtdNos > 0 ? `
-                                <button type="button" class="stack-collapsed-hint" data-action="toggle-nos-card" data-topico-id="${activeTabId}" data-parent-index="${index}" data-item-id="${escaparHTML(it.uuid || it.id || String(cIdxLocal))}" aria-expanded="${expanded}">
-                                    ${hintLabel}
-                                </button>
-                            ` : ''}
-                            <div class="sub-annotations-wrapper" style="${qtdNos === 0 ? 'display:none;' : ''}">
-                                ${nosHTML}
-                            </div>
-                        </div>`;
-                    }).join('');
-
-                    fragments.push(`
-                    <div class="correlated-item-wrapper stack-shell fase-${faseDoc}" data-pilha-id="${escaparHTML(item.pilhaInfoId)}">
-                        <button type="button" class="stack-info-badge" data-action="desagrupar-pilha" data-topico-id="${activeTabId}" data-parent-index="${index}" data-pilha-id="${escaparHTML(item.pilhaInfoId)}" aria-label="Desagrupar pilha com ${membros.length} fragmentos">
-                            🗂️ ${membros.length}
-                        </button>
-                        <div class="main-info-stack">
-                            ${cardsPilhaHtml}
-                        </div>
-                    </div>`);
+                let cConteudo = '';
+                let cComent = '';
+                
+                if (item.tipo === 'texto') {
+                    cConteudo = `
+                    <div style="position: relative;">
+                        <p class="card-texto" data-raw-text="${escaparHTML(item.conteudo)}" data-raw-title="${escaparHTML(item.documento || item.polo || 'Agrupamento')}" ondblclick="TopicsManager.abrirModoLeitura(this)">"${renderizarMarkdownSeguro(escaparHTML(item.conteudo))}"</p>
+                    </div>`;
+                    if (item.comentario) cComent = `<div class="card-comentario"><strong>Observação:</strong> ${escaparHTML(item.comentario)}</div>`;
+                } else if (item.tipo === 'imagem') {
+                    cConteudo = `<div class="image-resize-wrapper" title="Arraste para redimensionar"><img class="card-imagem" src="${item.conteudo}" alt="Agrupamento"></div>`;
+                    if (item.comentario) cComent = `<div class="card-comentario"><strong>Descrição:</strong> ${escaparHTML(item.comentario)}</div>`;
+                } else if (item.tipo === 'audio') {
+                    const audioData = _gerarHtmlCardAudio(item);
+                    cConteudo = audioData.htmlConteudo;
+                    cComent = audioData.htmlComentario;
                 }
-            });
-            htmlCorrelacionados = fragments.join('');
+                    
+                return `
+                <div class="correlated-item-wrapper" data-cidx="${cIdx}"
+                     draggable="true"
+                     ondragstart="DnDManager.dragStart(event, '${activeTabId}', ${index}, ${cIdx})"
+                     ondragover="DnDManager.dragOver(event)"
+                     ondrop="DnDManager.drop(event, '${activeTabId}', ${index}, ${cIdx})"
+                     ondragenter="DnDManager.dragEnter(event)"
+                     ondragleave="DnDManager.dragLeave(event)"
+                     ondragend="DnDManager.dragEnd(event)">
+                    <div class="two-way-arrow-container correlated-drag-handle" title="Arraste para reordenar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l-4-4m4 4l4-4" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div class="annotation-card correlated-card fase-${typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(item.documento) : 4}">
+                        <div class="card-header">
+                            <div style="display:flex; gap:6px;">
+                                <span class="polo-tag doc-tag">${item.documento ? escaparHTML(item.documento) : escaparHTML(item.polo)}</span>
+                                ${(item.documento && item.polo && item.polo !== item.documento) ? `<span class="polo-tag ${itemTag}">${escaparHTML(item.polo)}</span>` : ''}
+                            </div>
+                            <span class="card-meta" style="cursor:pointer;" title="Clique: Copiar | Shift+Clique: Editar folha | Ctrl+Clique: Ir ao PDF" onclick="handleMetaClick(event, '${activeTabId}', ${index}, true, ${cIdx})">${itemMeta}</span>
+                        </div>
+                        ${cConteudo}
+                        ${cComent}
+                        ${gerarBarraAcoes(true, cIdx)}
+                    </div>
+                </div>`;
+            }).join('');
         }
 
         // Wrapper Master Flex atualizado para envelopar a hierarquia inteira

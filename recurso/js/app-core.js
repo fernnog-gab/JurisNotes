@@ -1947,21 +1947,3 @@ window.TaskManager = (function() {
 
     return { abrirModal, fecharModal, adicionarTarefa, toggleConcluido, atualizarBadge, abrirSeletorTemas, getTarefasState, setTarefasState };
 })();
-
-// Delegação de cliques para a Nova Arquitetura de Pilhas de Provas
-document.addEventListener('click', (e) => {
-    const alvo = e.target.closest('[data-action]');
-    if (!alvo) return;
-
-    const action  = alvo.dataset.action;
-    const topico  = alvo.dataset.topicoId;
-    const parent  = parseInt(alvo.dataset.parentIndex, 10);
-    const pilhaId = alvo.dataset.pilhaId;
-    const itemId  = alvo.dataset.itemId;
-
-    if (action === 'desagrupar-pilha' && window.TopicsManager?.desagruparPilhaInfoProcessual) {
-        window.TopicsManager.desagruparPilhaInfoProcessual(topico, parent, pilhaId);
-    } else if (action === 'toggle-nos-card' && window.TopicsManager?.toggleNosCardEmpilhado) {
-        window.TopicsManager.toggleNosCardEmpilhado(topico, parent, itemId);
-    }
-});
