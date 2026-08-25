@@ -134,7 +134,7 @@
 /* ================================================
    2. TIMELINE VISUAL (MAPA MENTAL)
    ================================================ */
-.timeline-container { position: relative; padding: 24px 15px 10px; display: flex; flex-direction: column; }
+.timeline-container { position: relative; padding: 24px 15px 10px; display: flex; flex-direction: column; isolation: isolate; }
 #connections-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
 .timeline-item-master { position: relative; z-index: 2; display: flex; gap: 32px; width: 100%; margin-bottom: 112px; align-items: stretch; overflow: visible; }
 .timeline-item-master.align-left { flex-direction: row; }
@@ -1461,3 +1461,100 @@
 
 /* Oculta o botão antigo e intrusivo (legado) */
 .sub-annotation-stack .stack-read-btn { display: none !important; }
+
+/* ======================================================
+   11. PILHAS DE PROVAS (CONTÊINERES ENVELOPADOS)
+   ====================================================== */
+.stack-shell {
+    position: relative;
+    margin: 12px 0 20px 0;
+    padding: 8px;
+    width: 100%;
+}
+.stack-shell::before,
+.stack-shell::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: inherit;
+    border: 1px solid;
+    border-color: inherit;
+    background: inherit;
+    pointer-events: none;
+    z-index: -1;
+}
+.stack-shell::before { transform: translate(4px, 4px); opacity: 0.55; }
+.stack-shell::after { transform: translate(8px, 8px); opacity: 0.25; }
+
+.stack-shell.fase-1 { border-color: var(--fase-1-color); background: var(--fase-1-bg); }
+.stack-shell.fase-2 { border-color: var(--fase-2-color); background: var(--fase-2-bg); }
+.stack-shell.fase-3 { border-color: var(--fase-3-color); background: var(--fase-3-bg); }
+.stack-shell.fase-4 { border-color: var(--fase-4-color); background: var(--fase-4-bg); }
+
+.main-info-stack {
+    position: relative;
+    max-height: 380px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--notes-bg-color, #ffffff);
+    scrollbar-width: thin;
+    scrollbar-color: var(--trt-blue-mid) transparent;
+}
+.main-info-stack::-webkit-scrollbar { width: 6px; }
+.main-info-stack::-webkit-scrollbar-track { background: transparent; }
+.main-info-stack::-webkit-scrollbar-thumb { background: var(--trt-blue-mid); border-radius: 4px; }
+
+.stack-info-badge {
+    position: absolute;
+    top: -14px;
+    left: -14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: #ffffff;
+    color: var(--trt-blue-mid);
+    border: 2px solid var(--trt-blue-mid);
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    z-index: 5;
+    transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.15s;
+}
+.stack-info-badge:hover {
+    background: #ef4444; color: #ffffff; border-color: #ef4444; transform: scale(1.05);
+}
+
+.annotation-card.is-stacked {
+    box-shadow: none;
+    border-radius: 4px;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    width: 100%;
+}
+.annotation-card.is-stacked .sub-annotations-wrapper { display: none; animation: stackReveal 0.2s ease-out; }
+.annotation-card.is-stacked.expanded-nodes .sub-annotations-wrapper {
+    display: flex; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color);
+}
+@keyframes stackReveal { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+.stack-collapsed-hint {
+    display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; padding: 4px 10px;
+    font-size: 0.75rem; font-weight: 600; color: var(--trt-blue-mid); background: transparent;
+    border: 1px solid var(--trt-blue-mid); border-radius: 999px; cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.stack-collapsed-hint:hover { background: var(--trt-blue-mid); color: #ffffff; }
+
+@media (prefers-reduced-motion: reduce) {
+    .stack-shell::before, .stack-shell::after, .stack-info-badge, .stack-collapsed-hint, .annotation-card.is-stacked.expanded-nodes .sub-annotations-wrapper { transition: none !important; animation: none !important; }
+}
