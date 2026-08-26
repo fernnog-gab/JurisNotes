@@ -7,20 +7,8 @@
    1. FICHÁRIO E SISTEMA DE ABAS INTERNAS
    ================================================ */
 #history-container { flex: 1; overflow: auto; padding: 20px 24px; display: none; }
-.topics-tab-bar { 
-    display: flex; 
-    flex-wrap: nowrap; 
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding-top: 8px; 
-    scrollbar-width: none; /* Esconde no Firefox */
-    position: relative;
-    z-index: 50;
-    transform: translateZ(0); /* Força camada de hardware para evitar sobreposição */
-}
-.topics-tab-bar::-webkit-scrollbar { 
-    display: none; /* Esconde no Chrome/Edge/Safari */
-}
+.topics-tab-bar { display: flex; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; padding-top: 8px; scrollbar-width: none; /* Firefox */ position: relative; z-index: 50; transform: translateZ(0); }
+.topics-tab-bar::-webkit-scrollbar { display: none; }
 
 .topic-tab-btn { 
     position: relative; 
@@ -240,14 +228,7 @@
 /* ================================================
    10. EMPILHAMENTO DE NÓS DE IDEIAS (PILHAS)
    ================================================ */
-.sub-annotation-stack {
-    border-color: var(--trt-blue-mid) !important;
-    cursor: default;
-    background-color: #ffffff;
-    position: relative; 
-    isolation: isolate; /* Blindagem de contexto de empilhamento */
-    will-change: auto;  /* Desativado para estabilizar GPU */
-}
+.sub-annotation-stack { border-color: var(--trt-blue-mid) !important; cursor: default; background-color: #ffffff; position: relative; isolation: isolate; will-change: auto; }
 
 /* Efeito de Volume com Pseudo-elementos (GPU renderizado) */
 .sub-annotation-stack::before,
@@ -407,24 +388,7 @@
 }
 
 /* --- BADGE DE VIDRO FLUTUANTE (NÓ DE IDEIA) --- */
-.sub-read-badge {
-    position: absolute;
-    bottom: -10px;
-    left: -10px;
-    width: 28px;
-    height: 28px;
-    background: rgba(26, 58, 92, 0.85); /* Glassmorphism Elegante */
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    color: #ffffff;
-    border-radius: 50%;
-    align-items: center;
-    justify-content: center;
-    z-index: 5;
-    box-shadow: var(--shadow-sm);
-    cursor: pointer;
-    transition: transform 0.15s ease, background-color 0.2s, box-shadow 0.2s;
-}
+.sub-read-badge { position: absolute; bottom: -10px; left: -10px; width: 28px; height: 28px; background: rgba(26,58,92,0.85); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); color: #ffffff; border-radius: 50%; align-items: center; justify-content: center; z-index: 5; box-shadow: var(--shadow-sm); cursor: pointer; transition: transform 0.15s ease, background-color 0.2s, box-shadow 0.2s; }
 
 .sub-read-badge:hover {
     transform: scale(1.15);
@@ -517,27 +481,7 @@
 /* ================================================
    6. PAINEL DE PREÂMBULO (RELATÓRIO FIXO)
    ================================================ */
-.topic-preamble-panel { 
-    display: flex; 
-    flex-direction: column; 
-    gap: 8px; 
-    /* Compensação arquitetural de padding do pai (.topics-content-area tem 18px de top padding) */
-    margin-top: -18px; 
-    padding: 18px 24px 12px 24px; 
-    margin-bottom: 12px; 
-    
-    /* Configuração de Ancoragem Ergonômica */
-    position: sticky;
-    top: 0;
-    z-index: 10; /* Proteção contra overlap de cards (z:2) sem afetar modais (z:1000+) */
-    
-    /* Remoção do Blurring/Fundo para limpeza visual */
-    background: transparent;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    border-bottom: none;
-    border-radius: 0 6px 0 0;
-}
+.topic-preamble-panel { display: flex; flex-direction: column; gap: 8px; margin-top: -18px; padding: 18px 24px 12px 24px; margin-bottom: 12px; position: sticky; top: 0; z-index: 10; background: transparent; border-radius: 0 6px 0 0; }
 
 .preamble-card {
     background: #ffffff;
@@ -977,22 +921,7 @@
 /* ================================================
    NOVO: Botão de Revisão da Nota Oculta (Tracking)
    ================================================ */
-.btn-revisao-nota {
-    position: absolute;
-    bottom: 12px;
-    right: 12px;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    border: 1px solid transparent;
-    transition: all 0.25s ease;
-    z-index: 5;
-    background: rgba(255, 255, 255, 0.05); /* Sutil para o dark mode */
-}
+.btn-revisao-nota { position: absolute; bottom: 12px; right: 12px; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid transparent; transition: all 0.25s ease; z-index: 5; background: rgba(255,255,255,0.05); }
 
 .btn-revisao-nota svg {
     width: 14px;
@@ -1378,10 +1307,7 @@
    ========================================== */
    
 /* Base da Pilha com tema amarelo */
-.sub-annotation-stack.tema-dossie {
-    border-color: #E5C100 !important;
-    padding-bottom: 36px; /* Espaço reservado para o botão de leitura inferior */
-}
+.sub-annotation-stack.tema-dossie { border-color: #E5C100 !important; padding-bottom: 36px; }
 
 /* Badge Romano Amarelo/Preto */
 .sub-annotation-stack.tema-dossie .stack-roman-badge {

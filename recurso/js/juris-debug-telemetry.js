@@ -141,6 +141,7 @@ window.DebugTelemetry = (function () {
 
     if (enabled) {
         document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', buildHud) : buildHud();
+        document.addEventListener('DOMContentLoaded', () => setTimeout(cssProbe, 1500));
     }
 
     return { mark, snapshot, toggle, selfTest, cssProbe, isEnabled: () => enabled };
