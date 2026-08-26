@@ -226,9 +226,16 @@
 .master-drag-handle:active { cursor: grabbing !important; }
 
 /* ================================================
-   10. EMPILHAMENTO DE NÓS DE IDEIAS (PILHAS)
-   ================================================ */
-.sub-annotation-stack { border-color: var(--trt-blue-mid) !important; cursor: default; background-color: #ffffff; position: relative; isolation: isolate; will-change: auto; }
+10. EMPILHAMENTO DE NÓS DE IDEIAS (PILHAS)
+================================================ */
+.sub-annotation-stack {
+    border-color: var(--trt-blue-mid) !important;
+    cursor: default;
+    background-color: #ffffff;
+    position: relative;
+    isolation: isolate; /* Blindagem de contexto de empilhamento */
+    will-change: auto;  /* Desativado para estabilizar GPU */
+}
 
 /* Efeito de Volume com Pseudo-elementos (GPU renderizado) */
 .sub-annotation-stack::before,
