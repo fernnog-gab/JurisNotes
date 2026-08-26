@@ -1225,10 +1225,9 @@ window.TopicsManager = (function () {
         }
             
         requestAnimationFrame(() => {
-            // 1. Observer unificado: vigia as mudanças dimensionais de ambos os tipos de cards
+            // 1. CORREÇÃO: Removemos a linha "resizeObserver.observe(el)" daqui.
+            // O sistema checa o tamanho do texto 1 VEZ ao carregar a aba, barrando o loop de reflow.
             document.querySelectorAll('.sub-text-content, .card-texto').forEach(el => {
-                if (typeof resizeObserver !== 'undefined') resizeObserver.observe(el);
-                
                 if (el.scrollHeight > el.clientHeight) {
                     el.classList.add('is-truncated');
                     const parentCard = el.closest('.annotation-card, .sub-annotation-card');
@@ -1240,10 +1239,15 @@ window.TopicsManager = (function () {
                 }
             });
 
+            // 2. O Observer agora vigia APENAS o container pai (e não dezenas de textos pequenos)
             const historyContainer = document.getElementById('history-container');
-                if (historyContainer && typeof resizeObserver !== 'undefined') resizeObserver.observe(historyContainer);
+            if (historyContainer && typeof resizeObserver !== 'undefined') {
+                resizeObserver.observe(historyContainer);
+            }
             
-            if (headerEl && typeof resizeObserver !== 'undefined') resizeObserver.observe(headerEl);
+            if (headerEl && typeof resizeObserver !== 'undefined') {
+                resizeObserver.observe(headerEl);
+            }
 
             document.querySelectorAll('.image-resize-wrapper').forEach(wrapper => {
                 wrapper.addEventListener('mouseup', () => desenharConexoes());
