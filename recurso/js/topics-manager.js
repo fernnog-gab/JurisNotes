@@ -15,6 +15,10 @@ window.TopicsManager = (function () {
     let _isUpdatingLayout = false;
     
     const resizeObserver = new ResizeObserver((entries) => {
+        window.DebugTelemetry?.mark('M1-RO', {
+            n: entries.length,
+            h: Math.round(entries[0]?.contentRect?.height || 0)
+        });
         if (_isUpdatingLayout) return;
         
         clearTimeout(_layoutDebounceTimer);
@@ -918,6 +922,9 @@ window.TopicsManager = (function () {
      * Re-renderiza o fichário inteiro.
      */
     function renderizarFichario(topicosArray) {
+        const _t0 = performance.now();
+        window.DebugTelemetry?.mark('M2-RENDER', { morph: typeof morphdom !== 'undefined' });
+        
         const headerEl  = document.getElementById('topics-tabs-header');
         const contentEl = document.getElementById('topics-tab-content');
 
@@ -1218,6 +1225,10 @@ window.TopicsManager = (function () {
                 childrenOnly: true,
                 getNodeKey: function(node) {
                     if (node.id) return node.id;
+                },
+                onBeforeElUpdated: function() { 
+                    window.DebugTelemetry?.mark('M6-MORPH'); 
+                    return true; 
                 }
             });
         } else {
@@ -1250,8 +1261,8 @@ window.TopicsManager = (function () {
             }
 
             document.querySelectorAll('.image-resize-wrapper').forEach(wrapper => {
-                wrapper.addEventListener('mouseup', () => desenharConexoes());
-                wrapper.addEventListener('mouseleave', () => desenharConexoes());
+                wrapper.addEventListener('mouseup', () => { window.DebugTelemetry?.mark('M8-IMG'); desenharConexoes(); });
+                wrapper.addEventListener('mouseleave', () => { window.DebugTelemetry?.mark('M8-IMG'); desenharConexoes(); });
             });
 
             const container = document.getElementById('timeline-container');
@@ -1266,6 +1277,7 @@ window.TopicsManager = (function () {
             atualizarContadorNotasOcultas();
             
             // _ajustarAbasFantasmas(); // Desativado - Scroll horizontal nativo
+            window.DebugTelemetry?.mark('M2-RENDER-FIM', { ms: Math.round(performance.now() - _t0) });
         });
     }
 
@@ -1274,6 +1286,7 @@ window.TopicsManager = (function () {
      * Evita Layout Thrashing através de leitura em massa (Passe A) seguida de mutação (Passe B)
      */
     function posicionarNosDeIdeia(container) {
+        window.DebugTelemetry?.mark('M3-POS', { masters: container.querySelectorAll('.timeline-item-master').length });
         const masterItems = container.querySelectorAll('.timeline-item-master');
         
         masterItems.forEach(master => {
@@ -1422,6 +1435,7 @@ window.TopicsManager = (function () {
         });
 
         svg.innerHTML = svgContent;
+        window.DebugTelemetry?.mark('M4-SVG', { ms: 0, paths: (svgContent.match(/<path/g) || []).length });
     }
 
     /**
@@ -1520,6 +1534,7 @@ window.TopicsManager = (function () {
     const _headerEl = document.getElementById('topics-tabs-header');
     if (_headerEl) {
         _headerEl.addEventListener('wheel', (evt) => {
+            window.DebugTelemetry?.mark('M7-WHEEL');
             if (evt.deltaY !== 0) {
                 evt.preventDefault();
                 _headerEl.scrollLeft += evt.deltaY * 2;

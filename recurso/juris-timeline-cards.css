@@ -1546,3 +1546,26 @@
     height: 16px;
     pointer-events: none;
 }
+
+/* ================================================
+   HUD DE TELEMETRIA (DIAGNÓSTICO DEBUG)
+   ================================================ */
+#dbg-telemetry-hud {
+    position: fixed; right: 12px; bottom: 12px; z-index: 99999;
+    width: 270px; background: rgba(15, 37, 61, 0.92); color: #e2e8f0;
+    border: 1px solid #2dd4bf; border-radius: 8px;
+    font-family: 'Consolas', monospace; font-size: 0.72rem;
+    padding: 10px 12px; backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+#dbg-telemetry-hud h4 { margin: 0 0 6px; color: #2dd4bf; letter-spacing: 1px; font-weight: bold; }
+#dbg-telemetry-hud .dbg-row { display: flex; justify-content: space-between; padding: 1px 0; }
+#dbg-telemetry-hud .dbg-row b { color: #fbbf24; font-variant-numeric: tabular-nums; }
+#dbg-telemetry-hud .dbg-actions { display: flex; gap: 6px; margin-top: 8px; }
+#dbg-telemetry-hud button {
+    flex: 1; background: #1e3a5f; color: #e2e8f0; border: 1px solid #2dd4bf;
+    border-radius: 4px; font-size: 0.68rem; padding: 4px 0; cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+#dbg-telemetry-hud button:hover { background: #2dd4bf; color: #0f253d; }
