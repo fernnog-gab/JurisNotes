@@ -1562,6 +1562,8 @@
 #dbg-telemetry-hud h4 { margin: 0 0 6px; color: #2dd4bf; letter-spacing: 1px; font-weight: bold; }
 #dbg-telemetry-hud .dbg-row { display: flex; justify-content: space-between; padding: 1px 0; }
 #dbg-telemetry-hud .dbg-row b { color: #fbbf24; font-variant-numeric: tabular-nums; }
+#dbg-telemetry-hud .dbg-row.hot b { color: #ef4444 !important; }
+#dbg-telemetry-hud .dbg-row.ok b  { color: #48bb78 !important; }
 #dbg-telemetry-hud .dbg-actions { display: flex; gap: 6px; margin-top: 8px; }
 #dbg-telemetry-hud button {
     flex: 1; background: #1e3a5f; color: #e2e8f0; border: 1px solid #2dd4bf;
