@@ -777,3 +777,47 @@ body[data-active-tab="leitura"] #idea-markers-list {
 }
 
 /* Limpeza Arquitetural: Tokens de skeleton transferidos para a matriz principal de temas acima */
+
+/* ================================================
+   GPU-ACCELERATED KEYFRAMES & ACESSIBILIDADE GLOBAL
+   ================================================ */
+@keyframes pulse-ring-gpu {
+    0% { transform: scale(0.95); opacity: 1; }
+    100% { transform: scale(1.5); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #active-audio-indicator::after,
+    .floating-pill-dark.alerta-prescricao::before,
+    #btn-encerrar-sessao.confirmando::after,
+    #btn-balanca-justica.is-loaded::after,
+    .sidebar-logo-container::before {
+        animation: none !important;
+        opacity: 0.6 !important;
+        transform: scale(1) !important;
+    }
+}
+
+/* OTIMIZAÇÃO: Botão Encerrar Sessão (GPU) */
+#btn-encerrar-sessao.confirmando {
+    animation: none !important;
+    position: relative;
+    overflow: visible;
+}
+#btn-encerrar-sessao.confirmando::after {
+    content: ''; position: absolute; inset: 0;
+    border-radius: inherit;
+    border: 2px solid rgba(239, 83, 80, 0.6);
+    animation: pulse-ring-gpu 0.9s infinite ease-out;
+    pointer-events: none;
+}
+
+/* OTIMIZAÇÃO: Botão Balança (GPU) */
+#btn-balanca-justica.is-loaded { animation: none !important; position: relative; }
+#btn-balanca-justica.is-loaded::after {
+    content: ''; position: absolute; inset: 0;
+    border-radius: inherit;
+    border: 2px solid #fbc02d;
+    animation: pulse-ring-gpu 0.5s ease-out forwards;
+    pointer-events: none;
+}

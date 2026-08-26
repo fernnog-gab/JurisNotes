@@ -1309,3 +1309,12 @@ body.modo-extrator-ativo #crop-overlay { display: block; cursor: crosshair; back
         opacity: 0.6; /* Feedback passivo ao invés de rotação brusca */
     }
 }
+
+/* ================================================
+   TRANSCRIPT SCROLL (ATA DE AUDIÊNCIA) - LAYOUT CONTAINMENT
+   ================================================ */
+.audio-scrollable-text {
+    max-height: 150px;
+    overflow-y: auto;
+    contain: layout style; 
+}
