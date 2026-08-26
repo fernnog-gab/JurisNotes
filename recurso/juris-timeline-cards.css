@@ -1434,10 +1434,13 @@
 .annotation-card.pilha-processual-card::after {
     content: "";
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
+    top: 0; 
+    left: 0; 
+    right: 0; 
+    bottom: 0;
     border-radius: inherit;
     border: 1px solid rgba(0,0,0,0.1);
-    background-color: var(--notes-bg-color, #ffffff); /* Substituído background-color: inherit; por cor sólida */
+    background-color: var(--notes-bg-color, #ffffff);
     z-index: -1;
 }
 
