@@ -10,21 +10,25 @@ window.TopicsManager = (function () {
 
     let _activeTopicoCor = '#ffffff';
 
-    // Observer Otimizado (Debounce de ~16ms para agrupar Recalculate Styles)
+    // Observer Otimizado com Trava de Estado (Prevenção de Loop de Reflow)
     let _layoutDebounceTimer = null;
+    let _isUpdatingLayout = false;
+    
     const resizeObserver = new ResizeObserver((entries) => {
-        console.warn('🚨 ALERTA DEBUG: ResizeObserver disparou! O layout foi recalculado.', entries);
+        if (_isUpdatingLayout) return;
+        
         clearTimeout(_layoutDebounceTimer);
         _layoutDebounceTimer = setTimeout(() => {
+            _isUpdatingLayout = true;
             requestAnimationFrame(() => {
                 const container = document.getElementById('timeline-container');
                 if (container) {
                     posicionarNosDeIdeia(container);
-                    requestAnimationFrame(() => desenharConexoes());
+                    desenharConexoes();
                 }
-                // _ajustarAbasFantasmas(); // Desativado - Scroll horizontal nativo
+                setTimeout(() => { _isUpdatingLayout = false; }, 60);
             });
-        }, 16); 
+        }, 32); 
     });
 
     // Funções Privadas do Modo de Leitura Centralizado
