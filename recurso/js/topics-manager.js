@@ -13,6 +13,7 @@ window.TopicsManager = (function () {
     // Observer Otimizado (Debounce de ~16ms para agrupar Recalculate Styles)
     let _layoutDebounceTimer = null;
     const resizeObserver = new ResizeObserver((entries) => {
+        console.warn('🚨 ALERTA DEBUG: ResizeObserver disparou! O layout foi recalculado.', entries);
         clearTimeout(_layoutDebounceTimer);
         _layoutDebounceTimer = setTimeout(() => {
             requestAnimationFrame(() => {

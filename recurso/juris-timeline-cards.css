@@ -1544,3 +1544,37 @@
     height: 16px;
     pointer-events: none;
 }
+
+/* =======================================================
+   MODO DEBUG / RAIO-X (ATIVADO VIA CONSOLE)
+   ======================================================= */
+body.debug-layout * {
+    /* 1. Traça uma linha fina vermelha em TODOS os elementos para ver quem está vazando */
+    outline: 1px solid rgba(255, 0, 0, 0.15) !important;
+}
+
+/* 2. Destaca as Abas (Top Bar) que estão sumindo (Azul) */
+body.debug-layout .topics-tab-bar { 
+    outline: 3px solid blue !important; 
+    background-color: rgba(0, 0, 255, 0.1) !important;
+}
+
+/* 3. Destaca os Grupos de Ideias/Pilhas (Verde Limão) e desativa GPU pesado */
+body.debug-layout .sub-annotation-stack,
+body.debug-layout .pilha-processual-card { 
+    outline: 3px solid lime !important; 
+    will-change: auto !important; /* Desliga o gatilho da GPU que pode causar flickering */
+    transition: none !important; /* Desliga transições no hover temporariamente */
+}
+
+/* 4. Destaca o Canvas de SVG (Linhas) que pode estar engolindo os cliques (Laranja) */
+body.debug-layout #connections-canvas { 
+    outline: 3px dashed orange !important; 
+    background-color: rgba(255, 165, 0, 0.1) !important; 
+    z-index: 9999 !important; /* Joga pra frente para vermos o real tamanho dele */
+}
+
+/* 5. Destaca a área de conteúdo (O Fundo Jasmine) (Roxo) */
+body.debug-layout .topics-content-area {
+    outline: 4px solid purple !important;
+}
