@@ -49,6 +49,30 @@
     
     /* Variável da Espinha Dorsal (Vermelho sólido primário) */
     --theme-spine-line: #d32f2f;
+    
+    /* ================================================
+       NOVO: TOKENS DE IDENTIDADE DOS MÓDULOS (CONTEXT-AWARE)
+       ================================================ */
+    --module-primary: var(--trt-blue, #1a3a5c);
+    --module-border: var(--trt-blue-mid, #25527f);
+}
+
+/* Identidade: Recurso Ordinário (Amarelo Ouro) */
+body[data-module="ro"] {
+    --module-primary: #fbc02d;
+    --module-border: #f57f17;
+}
+
+/* Identidade: Embargos de Declaração (Fúcsia) */
+body[data-module="ed"] {
+    --module-primary: #D500B5;
+    --module-border: #A3008A;
+}
+
+/* Identidade: Agravo de Instrumento (Verde Lima) */
+body[data-module="ai"] {
+    --module-primary: #aeea00;
+    --module-border: #7cb342;
 }
 
 *, *::before, *::after {

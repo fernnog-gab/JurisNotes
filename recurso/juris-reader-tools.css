@@ -58,12 +58,13 @@ body.modo-extrator-ativo #crop-overlay { display: block; cursor: crosshair; back
    ESTILOS DO ALFINETE VISUAL E ESTADO DO BOTÃO
    ================================================ */
 
-/* Estado concluído do botão Extrator (Fúcsia ED) - Override Blindado */
+/* Estado concluído do botão Extrator - Dinâmico via Contexto */
 #btn-ferramenta-extrator.extrator-completo:not(:disabled) {
-    background-color: var(--ed-neon-bg, #D500B5) !important;
-    border-color: var(--ed-neon-stroke, #A3008A) !important;
+    background-color: var(--module-primary) !important;
+    border-color: var(--module-border) !important;
     color: #ffffff !important;
-    box-shadow: 0 4px 10px color-mix(in srgb, var(--ed-neon-bg, #D500B5) 40%, transparent) !important;
+    /* Retomada do color-mix para brilho paramétrico em GPU */
+    box-shadow: 0 4px 10px color-mix(in srgb, var(--module-primary) 40%, transparent) !important;
 }
 
 #btn-ferramenta-extrator.extrator-completo:not(:disabled) svg {
