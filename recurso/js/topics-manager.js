@@ -10,66 +10,20 @@ window.TopicsManager = (function () {
 
     let _activeTopicoCor = '#ffffff';
 
-    // Observer Otimizado com Trava de Estado (Prevenção de Loop de Reflow)
+    // Observer Otimizado (Debounce de ~16ms para agrupar Recalculate Styles)
     let _layoutDebounceTimer = null;
-    let _isUpdatingLayout = false;
-    
-    // Mapeamento isolado de estado geométrico por elemento (Evita colisão de dados)
-    const _elementHeights = new Map(); 
-
     const resizeObserver = new ResizeObserver((entries) => {
-        if (_isUpdatingLayout) return;
-
-        let requiresTimelineRedraw = false;
-
-        for (const entry of entries) {
-            // 1. GUARDA DE ESTADO: Aborta leitura se o elemento estiver oculto (ex: display: none)
-            // Isso aniquila o loop crônico de "h: 0" relatado na telemetria.
-            if (entry.target.offsetParent === null) {
-                continue;
-            }
-
-            const currentHeight = Math.round(entry.contentRect.height);
-            const targetId = entry.target.id;
-            const lastHeight = _elementHeights.get(targetId) || 0;
-
-            // 2. FILTRO ANTI-RUÍDO: Ignora colapsos (< 10px) e mutações sub-pixel (< 3px)
-            if (currentHeight > 10 && Math.abs(currentHeight - lastHeight) > 3) {
-                
-                // Atualiza o registro isolado deste elemento específico
-                _elementHeights.set(targetId, currentHeight);
-                
-                window.DebugTelemetry?.mark('M1-RO', {
-                    id: targetId,
-                    h: currentHeight
-                });
-
-                // 3. ROTEAMENTO DE RENDERIZAÇÃO: Apenas mudanças na timeline acionam a CPU.
-                // O crescimento do header (topics-tabs-header) não exige recálculo do SVG.
-                if (targetId === 'history-container') {
-                    requiresTimelineRedraw = true;
+        clearTimeout(_layoutDebounceTimer);
+        _layoutDebounceTimer = setTimeout(() => {
+            requestAnimationFrame(() => {
+                const container = document.getElementById('timeline-container');
+                if (container) {
+                    posicionarNosDeIdeia(container);
+                    requestAnimationFrame(() => desenharConexoes());
                 }
-            }
-        }
-
-        // 4. AGENDAMENTO SEGURO: Apenas executa a matemática complexa se estritamente necessário.
-        if (requiresTimelineRedraw) {
-            clearTimeout(_layoutDebounceTimer);
-            
-            // Debounce em 64ms engloba múltiplas injeções de DOM em um único ciclo de pintura
-            _layoutDebounceTimer = setTimeout(() => {
-                _isUpdatingLayout = true;
-                
-                requestAnimationFrame(() => {
-                    const container = document.getElementById('timeline-container');
-                    if (container) {
-                        posicionarNosDeIdeia(container);
-                        desenharConexoes();
-                    }
-                    setTimeout(() => { _isUpdatingLayout = false; }, 60);
-                });
-            }, 64); 
-        }
+                // _ajustarAbasFantasmas(); // Desativado - Scroll horizontal nativo
+            });
+        }, 16); 
     });
 
     // Funções Privadas do Modo de Leitura Centralizado
@@ -554,7 +508,6 @@ window.TopicsManager = (function () {
                 ? `<button title="Editar" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}${ctxCidx}}; ${acaoEditar}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>` 
                 : '';
             
-            // NOVO: Lógica de Elegibilidade para Pilha
             const isElegivelParaPilha = isCorrelacionado && cIdx != null && !anotacao.itensCorrelacionados[cIdx].pilhaProcId;
             const btnAgrupar = isElegivelParaPilha 
                 ? `<button title="Criar Pilha Processual" onclick="TopicsManager.abrirModalPilhaProcessual('${activeTabId}', ${index}, ${cIdx})">🗂️</button>` 
@@ -657,7 +610,7 @@ window.TopicsManager = (function () {
             }
         }
 
-        // NOVO: Processar itens agrupados
+        // NOVO: Processar itens agrupados (Com suporte O(1) a Pilha Processual)
         let htmlCorrelacionados = '';
         if (anotacao.itensCorrelacionados && anotacao.itensCorrelacionados.length > 0) {
             const processadosPilha = new Set();
@@ -736,8 +689,12 @@ window.TopicsManager = (function () {
                 // --- FLUXO B: RENDERIZAR CARD NORMAL ---
                 let cConteudo = '';
                 let cComent = '';
+                
                 if (item.tipo === 'texto') {
-                    cConteudo = `<div style="position: relative;"><p class="card-texto" data-raw-text="${escaparHTML(item.conteudo)}" data-raw-title="${escaparHTML(item.documento || item.polo || 'Agrupamento')}" ondblclick="TopicsManager.abrirModoLeitura(this)">"${renderizarMarkdownSeguro(escaparHTML(item.conteudo))}"</p></div>`;
+                    cConteudo = `
+                    <div style="position: relative;">
+                        <p class="card-texto" data-raw-text="${escaparHTML(item.conteudo)}" data-raw-title="${escaparHTML(item.documento || item.polo || 'Agrupamento')}" ondblclick="TopicsManager.abrirModoLeitura(this)">"${renderizarMarkdownSeguro(escaparHTML(item.conteudo))}"</p>
+                    </div>`;
                     if (item.comentario) cComent = `<div class="card-comentario"><strong>Observação:</strong> ${escaparHTML(item.comentario)}</div>`;
                 } else if (item.tipo === 'imagem') {
                     cConteudo = `<div class="image-resize-wrapper" title="Arraste para redimensionar"><img class="card-imagem" src="${item.conteudo}" alt="Agrupamento"></div>`;
@@ -747,7 +704,7 @@ window.TopicsManager = (function () {
                     cConteudo = audioData.htmlConteudo;
                     cComent = audioData.htmlComentario;
                 }
-                
+                    
                 return `
                 <div class="correlated-item-wrapper" data-cidx="${cIdx}"
                      draggable="true"
@@ -757,21 +714,23 @@ window.TopicsManager = (function () {
                      ondragenter="DnDManager.dragEnter(event)"
                      ondragleave="DnDManager.dragLeave(event)"
                      ondragend="DnDManager.dragEnd(event)">
-                     <div class="two-way-arrow-container correlated-drag-handle" title="Arraste para reordenar">
-                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l-4-4m4 4l4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                     </div>
-                     <div class="annotation-card correlated-card fase-${typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(item.documento) : 4}">
-                         <div class="card-header">
-                             <div style="display:flex; gap:6px;">
-                                 <span class="polo-tag doc-tag">${docSeguro}</span>
-                                 ${(poloSeguro && poloSeguro !== docSeguro) ? `<span class="polo-tag ${itemTag}">${poloSeguro}</span>` : ''}
-                             </div>
-                             <span class="card-meta" style="cursor:pointer;" title="Clique: Copiar | Shift+Clique: Editar folha | Ctrl+Clique: Ir ao PDF" onclick="handleMetaClick(event, '${activeTabId}', ${index}, true, ${cIdx})">${itemMeta}</span>
-                         </div>
-                         ${cConteudo}
-                         ${cComent}
-                         ${gerarBarraAcoes(true, cIdx)}
-                     </div>
+                    <div class="two-way-arrow-container correlated-drag-handle" title="Arraste para reordenar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l-4-4m4 4l4-4" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div class="annotation-card correlated-card fase-${typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(item.documento) : 4}">
+                        <div class="card-header">
+                            <div style="display:flex; gap:6px;">
+                                <span class="polo-tag doc-tag">${docSeguro}</span>
+                                ${(poloSeguro && poloSeguro !== docSeguro) ? `<span class="polo-tag ${itemTag}">${poloSeguro}</span>` : ''}
+                            </div>
+                            <span class="card-meta" style="cursor:pointer;" title="Clique: Copiar | Shift+Clique: Editar folha | Ctrl+Clique: Ir ao PDF" onclick="handleMetaClick(event, '${activeTabId}', ${index}, true, ${cIdx})">${itemMeta}</span>
+                        </div>
+                        ${cConteudo}
+                        ${cComent}
+                        ${gerarBarraAcoes(true, cIdx)}
+                    </div>
                 </div>`;
             }).join('');
         }
@@ -959,9 +918,6 @@ window.TopicsManager = (function () {
      * Re-renderiza o fichário inteiro.
      */
     function renderizarFichario(topicosArray) {
-        const _t0 = performance.now();
-        window.DebugTelemetry?.mark('M2-RENDER', { morph: typeof morphdom !== 'undefined' });
-        
         const headerEl  = document.getElementById('topics-tabs-header');
         const contentEl = document.getElementById('topics-tab-content');
 
@@ -1262,10 +1218,6 @@ window.TopicsManager = (function () {
                 childrenOnly: true,
                 getNodeKey: function(node) {
                     if (node.id) return node.id;
-                },
-                onBeforeElUpdated: function() { 
-                    window.DebugTelemetry?.mark('M6-MORPH'); 
-                    return true; 
                 }
             });
         } else {
@@ -1273,9 +1225,10 @@ window.TopicsManager = (function () {
         }
             
         requestAnimationFrame(() => {
-            // 1. CORREÇÃO: Removemos a linha "resizeObserver.observe(el)" daqui.
-            // O sistema checa o tamanho do texto 1 VEZ ao carregar a aba, barrando o loop de reflow.
+            // 1. Observer unificado: vigia as mudanças dimensionais de ambos os tipos de cards
             document.querySelectorAll('.sub-text-content, .card-texto').forEach(el => {
+                if (typeof resizeObserver !== 'undefined') resizeObserver.observe(el);
+                
                 if (el.scrollHeight > el.clientHeight) {
                     el.classList.add('is-truncated');
                     const parentCard = el.closest('.annotation-card, .sub-annotation-card');
@@ -1287,19 +1240,14 @@ window.TopicsManager = (function () {
                 }
             });
 
-            // 2. O Observer agora vigia APENAS o container pai (e não dezenas de textos pequenos)
             const historyContainer = document.getElementById('history-container');
-            if (historyContainer && typeof resizeObserver !== 'undefined') {
-                resizeObserver.observe(historyContainer);
-            }
+                if (historyContainer && typeof resizeObserver !== 'undefined') resizeObserver.observe(historyContainer);
             
-            if (headerEl && typeof resizeObserver !== 'undefined') {
-                resizeObserver.observe(headerEl);
-            }
+            if (headerEl && typeof resizeObserver !== 'undefined') resizeObserver.observe(headerEl);
 
             document.querySelectorAll('.image-resize-wrapper').forEach(wrapper => {
-                wrapper.addEventListener('mouseup', () => { window.DebugTelemetry?.mark('M8-IMG'); desenharConexoes(); });
-                wrapper.addEventListener('mouseleave', () => { window.DebugTelemetry?.mark('M8-IMG'); desenharConexoes(); });
+                wrapper.addEventListener('mouseup', () => desenharConexoes());
+                wrapper.addEventListener('mouseleave', () => desenharConexoes());
             });
 
             const container = document.getElementById('timeline-container');
@@ -1314,7 +1262,6 @@ window.TopicsManager = (function () {
             atualizarContadorNotasOcultas();
             
             // _ajustarAbasFantasmas(); // Desativado - Scroll horizontal nativo
-            window.DebugTelemetry?.mark('M2-RENDER-FIM', { ms: Math.round(performance.now() - _t0) });
         });
     }
 
@@ -1323,7 +1270,6 @@ window.TopicsManager = (function () {
      * Evita Layout Thrashing através de leitura em massa (Passe A) seguida de mutação (Passe B)
      */
     function posicionarNosDeIdeia(container) {
-        window.DebugTelemetry?.mark('M3-POS', { masters: container.querySelectorAll('.timeline-item-master').length });
         const masterItems = container.querySelectorAll('.timeline-item-master');
         
         masterItems.forEach(master => {
@@ -1472,7 +1418,6 @@ window.TopicsManager = (function () {
         });
 
         svg.innerHTML = svgContent;
-        window.DebugTelemetry?.mark('M4-SVG', { ms: 0, paths: (svgContent.match(/<path/g) || []).length });
     }
 
     /**
@@ -1571,7 +1516,6 @@ window.TopicsManager = (function () {
     const _headerEl = document.getElementById('topics-tabs-header');
     if (_headerEl) {
         _headerEl.addEventListener('wheel', (evt) => {
-            window.DebugTelemetry?.mark('M7-WHEEL');
             if (evt.deltaY !== 0) {
                 evt.preventDefault();
                 _headerEl.scrollLeft += evt.deltaY * 2;
