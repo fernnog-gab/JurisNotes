@@ -1372,7 +1372,11 @@ window.TopicsManager = (function () {
     function desenharConexoes(isZenActive = false) {
         const container = document.getElementById('timeline-container');
         const svg = document.getElementById('connections-canvas');
-        if (!container || !svg) return;
+        // SAFEGUARD: Se o container não tem dimensões (aba oculta), aborta o loop de desenho
+        if (!container || !svg || container.offsetHeight === 0) {
+            if (svg) svg.innerHTML = '';
+            return; 
+        }
 
         const containerRect = container.getBoundingClientRect();
         let svgContent = '';
