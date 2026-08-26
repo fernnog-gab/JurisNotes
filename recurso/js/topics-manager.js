@@ -13,38 +13,53 @@ window.TopicsManager = (function () {
     // Observer Otimizado com Trava de Estado (Prevenção de Loop de Reflow)
     let _layoutDebounceTimer = null;
     let _isUpdatingLayout = false;
-    let _lastTimelineHeight = 0; // Armazena estado apenas do container alvo
     
+    // Mapeamento isolado de estado geométrico por elemento (Evita colisão de dados)
+    const _elementHeights = new Map(); 
+
     const resizeObserver = new ResizeObserver((entries) => {
-        // Ignora chamadas se já estivermos desenhando para evitar loops
         if (_isUpdatingLayout) return;
 
-        let timelineHeightChanged = false;
+        let requiresTimelineRedraw = false;
 
-        // Iteração segura O(n): Garante que avaliaremos o elemento correto
         for (const entry of entries) {
-            if (entry.target.id === 'history-container') {
-                const currentHeight = Math.round(entry.contentRect.height);
+            // 1. GUARDA DE ESTADO: Aborta leitura se o elemento estiver oculto (ex: display: none)
+            // Isso aniquila o loop crônico de "h: 0" relatado na telemetria.
+            if (entry.target.offsetParent === null) {
+                continue;
+            }
+
+            const currentHeight = Math.round(entry.contentRect.height);
+            const targetId = entry.target.id;
+            const lastHeight = _elementHeights.get(targetId) || 0;
+
+            // 2. FILTRO ANTI-RUÍDO: Ignora colapsos (< 10px) e mutações sub-pixel (< 3px)
+            if (currentHeight > 10 && Math.abs(currentHeight - lastHeight) > 3) {
                 
-                // Heurística de mutação cosmética (Delta de 3px)
-                // Ignora mudanças microscópicas causadas por CSS :hover (transform: scale)
-                if (Math.abs(currentHeight - _lastTimelineHeight) > 3) {
-                    _lastTimelineHeight = currentHeight;
-                    timelineHeightChanged = true;
-                    
-                    window.DebugTelemetry?.mark('M1-RO', {
-                        id: 'history-container',
-                        h: currentHeight
-                    });
+                // Atualiza o registro isolado deste elemento específico
+                _elementHeights.set(targetId, currentHeight);
+                
+                window.DebugTelemetry?.mark('M1-RO', {
+                    id: targetId,
+                    h: currentHeight
+                });
+
+                // 3. ROTEAMENTO DE RENDERIZAÇÃO: Apenas mudanças na timeline acionam a CPU.
+                // O crescimento do header (topics-tabs-header) não exige recálculo do SVG.
+                if (targetId === 'history-container') {
+                    requiresTimelineRedraw = true;
                 }
             }
         }
 
-        // Só agenda o redesenho pesado se houver mudança estrutural real
-        if (timelineHeightChanged) {
+        // 4. AGENDAMENTO SEGURO: Apenas executa a matemática complexa se estritamente necessário.
+        if (requiresTimelineRedraw) {
             clearTimeout(_layoutDebounceTimer);
+            
+            // Debounce em 64ms engloba múltiplas injeções de DOM em um único ciclo de pintura
             _layoutDebounceTimer = setTimeout(() => {
                 _isUpdatingLayout = true;
+                
                 requestAnimationFrame(() => {
                     const container = document.getElementById('timeline-container');
                     if (container) {
@@ -53,7 +68,7 @@ window.TopicsManager = (function () {
                     }
                     setTimeout(() => { _isUpdatingLayout = false; }, 60);
                 });
-            }, 32); 
+            }, 64); 
         }
     });
 
