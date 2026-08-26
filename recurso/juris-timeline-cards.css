@@ -29,7 +29,7 @@
     border: 1px solid rgba(0,0,0,0.1);
     border-top: 3px solid transparent; 
     border-bottom: none;
-    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), filter 0.2s; 
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s; 
     z-index: 1;
     display: flex;
     align-items: center;
@@ -45,7 +45,7 @@
 }
 
 .topic-tab-btn:hover:not(.active) { 
-    filter: brightness(1.05); 
+    background-color: color-mix(in srgb, var(--tab-bg, #eee) 90%, #fff); 
     transform: translateY(-1px);
 }
 
@@ -1406,6 +1406,7 @@
     border-radius: 8px;
     z-index: 2;
     padding-bottom: 36px; /* Espaço reservado para o botão amarelo flutuante */
+    isolation: isolate; /* ADICIONADO: Isola o contexto 3D. Nada sai daqui de dentro. */
 }
 
 /* Efeito de Pastas Empilhadas usando herança da fase */
@@ -1416,7 +1417,7 @@
     top: 0; left: 0; right: 0; bottom: 0;
     border-radius: inherit;
     border: 1px solid rgba(0,0,0,0.1);
-    background-color: inherit; 
+    background-color: var(--notes-bg-color, #ffffff); /* Substituído background-color: inherit; por cor sólida */
     z-index: -1;
 }
 

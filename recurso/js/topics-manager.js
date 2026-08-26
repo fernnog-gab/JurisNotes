@@ -13,26 +13,48 @@ window.TopicsManager = (function () {
     // Observer Otimizado com Trava de Estado (Prevenção de Loop de Reflow)
     let _layoutDebounceTimer = null;
     let _isUpdatingLayout = false;
+    let _lastTimelineHeight = 0; // Armazena estado apenas do container alvo
     
     const resizeObserver = new ResizeObserver((entries) => {
-        window.DebugTelemetry?.mark('M1-RO', {
-            n: entries.length,
-            h: Math.round(entries[0]?.contentRect?.height || 0)
-        });
+        // Ignora chamadas se já estivermos desenhando para evitar loops
         if (_isUpdatingLayout) return;
-        
-        clearTimeout(_layoutDebounceTimer);
-        _layoutDebounceTimer = setTimeout(() => {
-            _isUpdatingLayout = true;
-            requestAnimationFrame(() => {
-                const container = document.getElementById('timeline-container');
-                if (container) {
-                    posicionarNosDeIdeia(container);
-                    desenharConexoes();
+
+        let timelineHeightChanged = false;
+
+        // Iteração segura O(n): Garante que avaliaremos o elemento correto
+        for (const entry of entries) {
+            if (entry.target.id === 'history-container') {
+                const currentHeight = Math.round(entry.contentRect.height);
+                
+                // Heurística de mutação cosmética (Delta de 3px)
+                // Ignora mudanças microscópicas causadas por CSS :hover (transform: scale)
+                if (Math.abs(currentHeight - _lastTimelineHeight) > 3) {
+                    _lastTimelineHeight = currentHeight;
+                    timelineHeightChanged = true;
+                    
+                    window.DebugTelemetry?.mark('M1-RO', {
+                        id: 'history-container',
+                        h: currentHeight
+                    });
                 }
-                setTimeout(() => { _isUpdatingLayout = false; }, 60);
-            });
-        }, 32); 
+            }
+        }
+
+        // Só agenda o redesenho pesado se houver mudança estrutural real
+        if (timelineHeightChanged) {
+            clearTimeout(_layoutDebounceTimer);
+            _layoutDebounceTimer = setTimeout(() => {
+                _isUpdatingLayout = true;
+                requestAnimationFrame(() => {
+                    const container = document.getElementById('timeline-container');
+                    if (container) {
+                        posicionarNosDeIdeia(container);
+                        desenharConexoes();
+                    }
+                    setTimeout(() => { _isUpdatingLayout = false; }, 60);
+                });
+            }, 32); 
+        }
     });
 
     // Funções Privadas do Modo de Leitura Centralizado
