@@ -1364,3 +1364,86 @@ body[data-context="ed"] .topics-content-area {
 
 /* Oculta botão antigo */
 .sub-annotation-stack .stack-read-btn { display: none !important; }
+
+/* ================================================
+   ESTILOS DA PILHA DE INFORMAÇÃO PROCESSUAL
+   ================================================ */
+
+.annotation-card.pilha-processual-card {
+    position: relative;
+    border-radius: 8px;
+    z-index: 2;
+    padding-bottom: 36px; /* Espaço reservado para o botão amarelo flutuante */
+}
+
+/* Efeito de Pastas Empilhadas usando herança da fase */
+.annotation-card.pilha-processual-card::before,
+.annotation-card.pilha-processual-card::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: inherit;
+    border: 1px solid rgba(0,0,0,0.1);
+    background-color: inherit; 
+    z-index: -1;
+}
+
+.annotation-card.pilha-processual-card::before {
+    transform: translateY(3px) translateX(3px);
+    opacity: 0.7;
+}
+.annotation-card.pilha-processual-card::after {
+    transform: translateY(6px) translateX(6px);
+    opacity: 0.4;
+}
+
+/* Scroll interno com UX refinada */
+.scrollable-stack-text {
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 8px;
+    margin-top: 12px;
+    margin-bottom: 8px;
+    border: 1px solid rgba(0,0,0,0.05);
+    background: rgba(255,255,255,0.4);
+    border-radius: 6px;
+    padding: 8px;
+}
+.scrollable-stack-text::-webkit-scrollbar { width: 6px; }
+.scrollable-stack-text::-webkit-scrollbar-track { background: transparent; }
+.scrollable-stack-text::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 4px; }
+
+.stack-text-divider {
+    border: 0;
+    border-top: 1px dashed rgba(0,0,0,0.15);
+    margin: 12px 0;
+}
+
+/* Botão de Leitura (Amarelo) adaptado para a Pilha Processual */
+.pilha-read-badge {
+    position: absolute;
+    bottom: -10px;
+    left: -10px;
+    width: 32px;
+    height: 32px;
+    background: #FFC107;
+    color: #000000;
+    border: 1px solid #E5C100;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.2s;
+}
+.pilha-read-badge:hover {
+    background: #E5B22D;
+    transform: scale(1.15);
+}
+.pilha-read-badge svg {
+    width: 16px;
+    height: 16px;
+    pointer-events: none;
+}
