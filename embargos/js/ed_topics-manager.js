@@ -412,6 +412,15 @@ window.TopicsManager = (function () {
         return item.pagina ? `(${idFormt}fl. ${item.pagina})` : '';
     }
 
+    /**
+     * Fábrica de Componente: Gera o HTML do meta-texto (ID/Folha) com interatividade.
+     * @param {boolean} isModalLeitura - Se true, encadeia o fechamento síncrono do modal antes de saltar para o PDF.
+     */
+    function _gerarMetaInterativo(topicoId, parentIndex, originalCIdx, metaTexto, isModalLeitura = false) {
+        const acaoFechamento = isModalLeitura ? 'TopicsManager.fecharModoLeitura(); ' : '';
+        return `<span class="card-meta" style="cursor:pointer; font-size:0.85rem; color:var(--trt-blue); font-weight:700; text-decoration: underline dashed; text-underline-offset: 3px;" title="Clique: Copiar | Shift+Clique: Editar folha | Ctrl+Clique: Ir ao PDF" onclick="${acaoFechamento}handleMetaClick(event, '${topicoId}', ${parentIndex}, true, ${originalCIdx})">${metaTexto}</span>`;
+    }
+
     // Função estática gerarSVGConector removida (substituída pelo motor dinâmico desenharConexoes)
 
     /**
@@ -642,21 +651,24 @@ window.TopicsManager = (function () {
                 if (item.pilhaProcId) {
                     if (processadosPilha.has(item.pilhaProcId)) return ''; 
                     processadosPilha.add(item.pilhaProcId);
-
                     const anchorCidx = pilhaAnchorMap.get(item.pilhaProcId);
-                    const itensDestaPilha = anotacao.itensCorrelacionados.filter(ic => ic.pilhaProcId === item.pilhaProcId);
+                    
+                    // OTIMIZAÇÃO O(N): Mapeamento nativo preservando o índice original
+                    const itensDestaPilhaObj = anotacao.itensCorrelacionados
+                        .map((ic, originalCIdx) => ({ ic, originalCIdx }))
+                        .filter(obj => obj.ic.pilhaProcId === item.pilhaProcId);
+                    
                     const faseClass = `fase-${typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(item.documento) : 4}`;
-
-                    let rawTextAglutinado = '';
-                    let htmlTextosInternos = itensDestaPilha.map(ic => {
-                        rawTextAglutinado += ic.conteudo + '\n\n';
+                    
+                    let htmlTextosInternos = itensDestaPilhaObj.map(obj => {
+                        const metaText = _obterMetaTexto(obj.ic);
                         return `
                         <div style="margin-bottom:8px;">
-                            <span style="font-size:0.7rem; color:#888;">${_obterMetaTexto(ic)}</span>
-                            <p style="font-size:0.85rem;">"${renderizarMarkdownSeguro(escaparHTML(ic.conteudo))}"</p>
+                            <span class="card-meta" style="cursor:pointer; font-size:0.75rem; color:var(--trt-blue); font-weight:700;" title="Clique: Copiar | Shift+Clique: Editar folha | Ctrl+Clique: Ir ao PDF" onclick="handleMetaClick(event, '${activeTabId}', ${index}, true, ${obj.originalCIdx})">${metaText}</span>
+                            <p style="font-size:0.85rem; margin-top:4px;">"${renderizarMarkdownSeguro(escaparHTML(obj.ic.conteudo))}"</p>
                         </div>`;
                     }).join('<hr class="stack-text-divider">');
-
+                    
                     return `
                     <div class="correlated-item-wrapper" data-cidx="${anchorCidx}"
                          draggable="true"
@@ -680,10 +692,10 @@ window.TopicsManager = (function () {
                             </div>
                             <div class="scrollable-stack-text">${htmlTextosInternos}</div>
                             
-                            <div class="btn-read-mode-trigger pilha-read-badge" title="Ler Pastinha Completa" data-raw-text="${escaparHTML(rawTextAglutinado)}" data-raw-title="🗂️ ${docSeguro}" onclick="TopicsManager.abrirModoLeitura(this)">
+                            <!-- BOTÃO ATUALIZADO: Dispara o novo motor de leitura estruturada -->
+                            <div class="btn-read-mode-trigger pilha-read-badge" title="Ler Pastinha Completa" onclick="TopicsManager.abrirModoLeituraPilhaProcessual('${activeTabId}', ${index}, '${item.pilhaProcId}')">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
                             </div>
-
                             <div class="card-actions-bar">
                                 <button title="Adicionar Nó de Ideia" onclick="_menuAnotacaoCtx={topicoId:'${activeTabId}', index:${index}, cIdx:${anchorCidx}}; acionarNovoNoIdeia()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
                                 <button class="delete-btn" title="Desagrupar" onclick="TopicsManager.desagruparPilhaProcessual('${activeTabId}', ${index}, '${item.pilhaProcId}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 22L2 22 2 14M22 2L14 2 14 10" stroke-linecap="round" stroke-linejoin="round"/><line x1="22" y1="2" x2="10" y2="14" stroke-linecap="round" stroke-linejoin="round"/><line x1="2" y1="22" x2="14" y2="10" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -1603,6 +1615,61 @@ window.TopicsManager = (function () {
         modal.style.display = 'flex';
     }
 
+    function abrirModoLeituraPilhaProcessual(topicoId, parentIndex, pilhaProcId) {
+        const topico = topicos.find(t => t.id === topicoId);
+        if (!topico) return;
+        const mestre = topico.anotacoes[parentIndex];
+        
+        // Otimização O(N) e Preservação do Índice Original
+        const itensDestaPilhaObj = mestre.itensCorrelacionados
+            .map((ic, originalCIdx) => ({ ic, originalCIdx }))
+            .filter(obj => obj.ic.pilhaProcId === pilhaProcId);
+        
+        if (itensDestaPilhaObj.length === 0) return;
+        const docSeguro = escaparHTML(itensDestaPilhaObj[0].ic.documento || itensDestaPilhaObj[0].ic.polo || 'Pastinha de Provas');
+        
+        let htmlAgrupado = '';
+        let markdownAcumulado = `### 🗂️ Leitura: ${docSeguro}\n\n`;
+        
+        // COMPATIBILIDADE CRÍTICA: O motor nativo \`copiarTextoModoLeitura\` quebra o HTML a cada '\\n' 
+        // e envolve em <p>. Usamos APENAS tags inline (<strong>, <i>, <br>) para evitar HTML inválido no Word/PJe.
+        let htmlAcumulado = `<strong>🗂️ Leitura: ${docSeguro}</strong>\n`;
+        
+        itensDestaPilhaObj.forEach((obj, i) => {
+            const ic = obj.ic;
+            const metaTexto = _obterMetaTexto(ic);
+            
+            // HTML de Tela: Componente interativo com UX de fechamento automático síncrono
+            const metaInterativoTela = _gerarMetaInterativo(topicoId, parentIndex, obj.originalCIdx, metaTexto, true);
+            
+            htmlAgrupado += `
+            <div style="padding-bottom: 16px; border-bottom: 1px dashed #e2e8f0; margin-bottom: 16px;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                    <span style="font-size:0.75rem; color:#64748b; font-weight:800; background:#f1f5f9; padding:2px 8px; border-radius:12px;">ITEM ${i + 1}</span>
+                    ${metaInterativoTela}
+                </div>
+                <div style="font-size: 1.05rem; color: #334155; line-height: 1.6; font-style: italic;">
+                    "${renderizarMarkdownSeguro(escaparHTML(ic.conteudo))}"
+                </div>
+            </div>`;
+            
+            // Sincronização de Estado (Copy-Safe)
+            markdownAcumulado += `**ITEM ${i + 1}** ${metaTexto}\n"${ic.conteudo}"\n\n`;
+            htmlAcumulado += `<strong>ITEM ${i + 1}</strong> ${metaTexto}<br><i>"${renderizarMarkdownSeguro(escaparHTML(ic.conteudo))}"</i>\n`;
+        });
+        
+        // Mutação das Variáveis Globais (Resolve o Stale State)
+        _textoLeituraAtualMarkdown = markdownAcumulado.trim();
+        _textoLeituraAtualHTML = htmlAcumulado;
+        
+        // Renderização Visual no Modal
+        const modal = document.getElementById('reading-mode-modal');
+        document.getElementById('reading-mode-title-text').innerHTML = `🗂️ Leitura: ${docSeguro}`;
+        document.getElementById('reading-mode-content').innerHTML = htmlAgrupado;
+        document.getElementById('reading-mode-backdrop').style.display = 'block';
+        modal.style.display = 'flex';
+    }
+
     function desagruparPilha(topicoId, grupoId) {
         if (!confirm('Deseja desagrupar esta pilha e restaurar os nós individualmente?')) return;
         const topico = topicos.find(t => t.id === topicoId);
@@ -1805,6 +1872,7 @@ window.TopicsManager = (function () {
         hexToRgba,
         rolarParaProximaNotaOculta,
         // NOVAS EXPORTAÇÕES DA PILHA PROCESSUAL
+        abrirModoLeituraPilhaProcessual,
         abrirModalPilhaProcessual,
         fecharModalPilhaProcessual,
         salvarPilhaProcessual,
