@@ -73,6 +73,31 @@
             <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
             <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
         </symbol>
+        <!-- Ícones de Classificação de Tese (Padrão FAB) -->
+        <symbol id="icon-tese-neutro" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+        </symbol>
+        <symbol id="icon-tese-autora" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14.5 17.5L3 6V3h3l11.5 11.5"></path>
+            <path d="M13 19l6-6"></path>
+            <path d="M16 16l4 4"></path>
+            <path d="M19 21l2-2"></path>
+        </symbol>
+        <symbol id="icon-tese-re" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14.5 17.5L3 6V3h3l11.5 11.5"></path>
+            <path d="M13 19l6-6"></path>
+            <path d="M16 16l4 4"></path>
+            <path d="M19 21l2-2"></path>
+        </symbol>
+        <symbol id="icon-tese-juizo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3v18"></path>
+            <path d="M7 21h10"></path>
+            <path d="M3 7h18"></path>
+            <path d="M6 7l-3 7h6l-3-7Z"></path>
+            <path d="M18 7l-3 7h6l-3-7Z"></path>
+            <path d="M6 7c2 0 4-.5 6-2"></path>
+            <path d="M18 7c-2 0-4-.5-6-2"></path>
+        </symbol>
     </svg>
 
     <!-- ========================================== -->
@@ -788,14 +813,43 @@
     <!-- NOVOS MODAIS: TESES E SMART MOVE           -->
     <!-- ========================================== -->
     
-    <!-- Modal Editar Tese -->
-    <div id="modal-editar-tese" class="crop-wizard-popup" style="display:none; z-index: 4005;">
-        <div class="wizard-header">💡 Nomear Tese (Ideia <span id="tese-ideia-num"></span>)</div>
-        <p class="popup-label">Descreva brevemente a tese jurídica deste grupo de provas:</p>
-        <textarea id="input-texto-tese" class="popup-textarea" style="display:block;" rows="3" placeholder="Ex: Nulidade por cerceamento de defesa..."></textarea>
-        <div class="wizard-actions">
+    <!-- ========================================== -->
+    <!-- MODAL EDITAR TESE (REESTRUTURADO v3.2.0)   -->
+    <!-- ========================================== -->
+    <div id="modal-editar-tese" class="crop-wizard-popup" style="display:none; z-index: 4005; min-width: 420px; max-width: 90vw;">
+        <div class="wizard-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 8px;">
+            <span style="font-weight: 700; color: var(--trt-blue); display: flex; align-items: center; gap: 8px;">
+                💡 Nomear Tese (Ideia <span id="tese-ideia-num"></span>)
+            </span>
+            <button style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b;" onclick="fecharModalTese()">✕</button>
+        </div>
+        
+        <!-- ÁREA DE CLASSIFICAÇÃO: Chip horizontal minimalista -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; margin-bottom: 8px;">
+            <p class="popup-label" style="margin: 0;">Origem / Classificação:</p>
+            
+            <button type="button" id="btn-classificacao-tese" class="chip-btn" 
+                    style="width: auto; height: 36px; padding: 0 14px 0 4px; display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem; border-radius: 20px; transition: all 0.2s ease; cursor: pointer; background: transparent; border: 1px solid var(--border-color);" 
+                    onclick="ciclarClassificacaoTese(event)" 
+                    data-classificacao="neutro" 
+                    title="Clique para alternar: Neutro ➔ Autora ➔ Ré ➔ Juízo">
+                <span id="icone-classificacao-tese" class="tese-icon-circle tese-neutro">
+                    <svg><use href="#icon-tese-neutro"></use></svg>
+                </span>
+                <span id="texto-classificacao-tese" style="font-weight: 700; color: #64748b;">Tese Neutra</span>
+            </button>
+        </div>
+        
+        <!-- ÁREA DE TEXTO: Desobstruída e forçada a display block -->
+        <p class="popup-label" style="margin-bottom: 6px;">Descrição / Resumo da Tese:</p>
+        <textarea id="input-texto-tese" 
+                  class="popup-textarea" 
+                  style="display: block !important; width: 100%; min-height: 100px; padding: 10px; font-family: inherit; font-size: 0.9rem; line-height: 1.5; border: 1px solid var(--border-color); border-radius: 6px; resize: vertical; box-sizing: border-box;" 
+                  placeholder="Ex: Nulidade por cerceamento de defesa decorrente do indeferimento de oitiva testemunhal..."></textarea>
+        
+        <div class="wizard-actions" style="margin-top: 16px; border-top: 1px solid #eee; padding-top: 12px; display: flex; justify-content: flex-end; gap: 10px;">
             <button class="chip-btn chip-cancelar" onclick="fecharModalTese()">✕ Cancelar</button>
-            <button class="chip-btn chip-autora" onclick="salvarTese()">✔ Salvar Tese</button>
+            <button class="chip-btn chip-autora" style="background: var(--trt-blue); color: white; border: none; padding: 8px 18px;" onclick="salvarTese()">✔ Salvar Tese</button>
         </div>
     </div>
 
