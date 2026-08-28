@@ -1,6 +1,7 @@
 /* ================================================
    annotation-actions.js
    Gerenciamento de Menus, Formatação Segura (Markdown) e Ações
+   Versão: 2.1 (Refatoração: Single Source of Truth para Teses)
    ================================================ */
 
 let _menuAnotacaoCtx = null;
@@ -860,17 +861,92 @@ function confirmarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
     exibirToast('Observação secundária vinculada.', 'sucesso');
 }
 
-/* --- MODAL DE TESE --- */
+/* ================================================
+   SISTEMA DE CLASSIFICAÇÃO E REDAÇÃO DE TESES
+   ================================================ */
 let _ideiaContextoTese = null;
+
+function _aplicarVisualBotaoTese(chave) {
+    const btn = document.getElementById('btn-classificacao-tese');
+    const iconSpan = document.getElementById('icone-classificacao-tese');
+    const textSpan = document.getElementById('texto-classificacao-tese');
+    
+    if (!btn || !window.TopicsManager || !TopicsManager.MAPA_TESE_ICONES) {
+        console.warn('[Tese] TopicsManager.MAPA_TESE_ICONES não disponível.');
+        return;
+    }
+    
+    const config = TopicsManager.MAPA_TESE_ICONES[chave] || TopicsManager.MAPA_TESE_ICONES['neutro'];
+    
+    // Atualiza estado
+    btn.dataset.classificacao = chave;
+    btn.title = config.title;
+    
+    // Atualiza visual via classes CSS (não inline styles)
+    if (iconSpan) {
+        iconSpan.className = `tese-icon-circle ${config.classeCss}`;
+        iconSpan.innerHTML = `<svg><use href="${config.spriteId}"></use></svg>`;
+    }
+    
+    // Atualiza label e cor do texto
+    if (textSpan) {
+        textSpan.textContent = config.label;
+        textSpan.style.color = config.textColor;
+    }
+}
+
+window.ciclarClassificacaoTese = function(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    
+    const btn = document.getElementById('btn-classificacao-tese');
+    if (!btn || !window.TopicsManager || !TopicsManager.MAPA_TESE_ICONES) {
+        console.warn('[Tese] Não foi possível ciclar: TopicsManager não disponível.');
+        return;
+    }
+    
+    const ordem = ['neutro', 'autora', 're', 'juizo'];
+    const classeAtual = btn.dataset.classificacao || 'neutro';
+    const proxIndex = (ordem.indexOf(classeAtual) + 1) % ordem.length;
+    const novaClasse = ordem[proxIndex];
+    
+    // Aplica o novo estado visual
+    _aplicarVisualBotaoTese(novaClasse);
+    
+    // Microinteração: "Pulinho" visual para indicar o clique
+    const iconSpan = document.getElementById('icone-classificacao-tese');
+    if (iconSpan) {
+        iconSpan.style.transform = 'scale(0.8)';
+        setTimeout(() => {
+            iconSpan.style.transform = 'scale(1)';
+        }, 100);
+    }
+};
 
 function abrirModalTese(topicoId, index) {
     _ideiaContextoTese = { topicoId, index };
+    const topico = topicos.find(t => t.id === topicoId);
+    if (!topico || !topico.anotacoes[index]) return;
+
+    const anotacao = topico.anotacoes[index];
+    
     document.getElementById('tese-ideia-num').textContent = index + 1;
-    const anotacao = topicos.find(t => t.id === topicoId).anotacoes[index];
-    document.getElementById('input-texto-tese').value = anotacao.tese || '';
+    
+    const textarea = document.getElementById('input-texto-tese');
+    textarea.value = anotacao.tese || '';
+    
+    _aplicarVisualBotaoTese(anotacao.teseClassificacao || 'neutro');
     
     document.getElementById('wizard-backdrop').style.display = 'block';
     document.getElementById('modal-editar-tese').style.display = 'flex';
+    
+    // Auto-focus com preservação de scroll
+    setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    }, 50);
 }
 
 function fecharModalTese() {
@@ -881,12 +957,19 @@ function fecharModalTese() {
 
 function salvarTese() {
     if (!_ideiaContextoTese) return;
-    const teseTxt = document.getElementById('input-texto-tese').value.trim();
     const topico = topicos.find(t => t.id === _ideiaContextoTese.topicoId);
-    topico.anotacoes[_ideiaContextoTese.index].tese = teseTxt;
+    if (!topico || !topico.anotacoes[_ideiaContextoTese.index]) return;
     
-    renderizarTopicos(); salvarBackupAutomatico();
-    exibirToast('Tese salva com sucesso!', 'sucesso');
+    const textoTese = document.getElementById('input-texto-tese').value.trim();
+    const classificacao = document.getElementById('btn-classificacao-tese').dataset.classificacao;
+    
+    topico.anotacoes[_ideiaContextoTese.index].tese = textoTese;
+    topico.anotacoes[_ideiaContextoTese.index].teseClassificacao = classificacao;
+    
+    renderizarTopicos(); 
+    salvarBackupAutomatico();
+    
+    exibirToast('Tese recursal atualizada com sucesso!', 'sucesso');
     fecharModalTese();
 }
 

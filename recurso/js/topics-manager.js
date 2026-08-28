@@ -1,5 +1,5 @@
 /* ================================================
-   topics-manager.js  —  v2.0
+   topics-manager.js  —  v2.1
    Gerenciador do Fichário de Tópicos e Anotações
    ================================================ */
 window.TopicsManager = (function () {
@@ -10,20 +10,47 @@ window.TopicsManager = (function () {
 
     let _activeTopicoCor = '#ffffff';
 
-    // Observer Otimizado (Debounce de ~16ms para agrupar Recalculate Styles)
+    /* ================================================
+       OBSERVER DE LAYOUT OTIMIZADO (ANTI-THRASING)
+       ================================================ */
     let _layoutDebounceTimer = null;
+    let _isUpdatingLayout = false;
+    const _lastHeights = new Map(); 
+
     const resizeObserver = new ResizeObserver((entries) => {
-        clearTimeout(_layoutDebounceTimer);
-        _layoutDebounceTimer = setTimeout(() => {
-            requestAnimationFrame(() => {
-                const container = document.getElementById('timeline-container');
-                if (container) {
-                    posicionarNosDeIdeia(container);
-                    requestAnimationFrame(() => desenharConexoes());
-                }
-                // _ajustarAbasFantasmas(); // Desativado - Scroll horizontal nativo
-            });
-        }, 16); 
+        if (_isUpdatingLayout) return;
+        let needsRedraw = false;
+
+        for (const entry of entries) {
+            // 1. FILTRO DE ELEMENTOS OCULTOS: Ignora abas inativas ou nós desmontados
+            if (!entry.target || entry.target.offsetParent === null) continue;
+
+            const currentHeight = Math.round(entry.contentRect.height);
+            const elementId = entry.target.id || entry.target.dataset.uuid || 'dom-node';
+            const lastHeight = _lastHeights.get(elementId) || 0;
+
+            // 2. THRESHOLD DELTA: Ignora variações sub-pixel que geram loop infinito
+            if (currentHeight > 10 && Math.abs(currentHeight - lastHeight) >= 3) {
+                _lastHeights.set(elementId, currentHeight);
+                needsRedraw = true;
+            }
+        }
+
+        // 3. EXECUÇÃO EM LOTE VIA REQUEST ANIMATION FRAME
+        if (needsRedraw) {
+            clearTimeout(_layoutDebounceTimer);
+            _layoutDebounceTimer = setTimeout(() => {
+                _isUpdatingLayout = true;
+                requestAnimationFrame(() => {
+                    const container = document.getElementById('timeline-container');
+                    if (container && container.offsetParent !== null) {
+                        posicionarNosDeIdeia(container);
+                        desenharConexoes();
+                    }
+                    setTimeout(() => { _isUpdatingLayout = false; }, 50);
+                });
+            }, 32); 
+        }
     });
 
     // Funções Privadas do Modo de Leitura Centralizado
@@ -308,6 +335,38 @@ window.TopicsManager = (function () {
     }
 
     let activeTabId = null;
+
+    // Dicionário Global de Identidade Visual das Teses (Fonte Única da Verdade)
+    const MAPA_TESE_ICONES = {
+        'neutro': { 
+            classeCss: 'tese-neutro', 
+            spriteId: '#icon-tese-neutro', 
+            label: 'Tese Neutra', 
+            textColor: '#64748b',
+            title: 'Tese Mista / Não especificada'
+        },
+        'autora': { 
+            classeCss: 'tese-autora', 
+            spriteId: '#icon-tese-autora', 
+            label: 'Recurso Autora', 
+            textColor: '#2e7d32',
+            title: 'Recurso da Parte Autora'
+        },
+        're': { 
+            classeCss: 'tese-re', 
+            spriteId: '#icon-tese-re', 
+            label: 'Recurso Ré', 
+            textColor: '#c62828',
+            title: 'Recurso da Parte Ré'
+        },
+        'juizo': { 
+            classeCss: 'tese-juizo', 
+            spriteId: '#icon-tese-juizo', 
+            label: 'Diretriz do Juízo', 
+            textColor: '#0d47a1',
+            title: 'Diretriz / Fundamento da Sentença'
+        }
+    };
 
     /**
      * Retorna uma cor da paleta com suporte a módulo (infinitos tópicos).
@@ -848,6 +907,20 @@ window.TopicsManager = (function () {
         const alignClass = isLeft ? 'align-left' : 'align-right';
         const teseViewSource = `tese:${teseAtual}`;
 
+        // BUSCA SEGURA (Fallback para 'neutro' se for backup antigo)
+        const topico = topicos.find(t => t.id === tabId);
+        const cardRef = topico.anotacoes.find(a => a.tese === teseAtual);
+        const teseClassificacao = (cardRef && cardRef.teseClassificacao) ? cardRef.teseClassificacao : 'neutro';
+
+        // Consome o dicionário centralizado para identidade visual
+        const configTese = MAPA_TESE_ICONES[teseClassificacao] || MAPA_TESE_ICONES['neutro'];
+        
+        // Constrói o HTML usando a classe CSS e o Sprite SVG
+        const iconSvgTese = `
+            <span class="tese-icon-circle ${configTese.classeCss}" style="margin-right: 6px; transform: scale(0.9);">
+                <svg><use href="${configTese.spriteId}"></use></svg>
+            </span>`;
+
         const gruposProcessadosNesteCard = new Set();
         const subCardsHTMLArray = [];
 
@@ -899,7 +972,7 @@ window.TopicsManager = (function () {
                 </div>
                 <div class="annotation-card" style="border-left: 4px solid ${corTema}; background-color: #ffffff; background-image: linear-gradient(${rgbaTeseFundo}, ${rgbaTeseFundo});">
                     <div class="card-header" style="justify-content: space-between; margin-bottom: 0;">
-                        <div class="hierarquia-titulo" style="color: ${corTituloTese}; font-weight: bold;">Tese: ${escaparHTML(teseAtual)}</div>
+                        <div class="hierarquia-titulo" style="color: ${corTituloTese}; font-weight: bold; display: flex; align-items: center; gap: 8px;">${iconSvgTese} Tese: ${escaparHTML(teseAtual)}</div>
                         <div class="card-actions-bar" style="margin-top: 0; padding-top: 0; border-top: none;">
                             <button title="Adicionar Diretriz à Tese" onclick="adicionarDiretrizEstrutural('tese', '${tabId}', '${escaparHTML(teseAtual).replace(/'/g, "\\'")}', event)">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -1831,6 +1904,7 @@ window.TopicsManager = (function () {
 
     // API pública do módulo
     return {
+        MAPA_TESE_ICONES,
         obterCor,
         abrirModalPilha,
         fecharModalPilha,
