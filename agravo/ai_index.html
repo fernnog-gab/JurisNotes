@@ -1581,6 +1581,28 @@ Crie um sumário hierárquico enxuto com as Grandes Categorias e Subcategorias q
         </div>
     </div>
 
+    <!-- BACKDROP E MODAL: CRIAR PILHA PROCESSUAL -->
+    <div id="pilha-processual-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.50); z-index: 4004;" onclick="TopicsManager.fecharModalPilhaProcessual()"></div>
+
+    <div id="modal-pilha-processual" class="crop-wizard-popup" style="display:none; z-index: 4005; max-width: 500px; width: 90vw;">
+        <div class="wizard-header">
+            <span style="display:flex; align-items:center; gap:8px;">🗂️ Criar Pilha de Informação Processual</span>
+            <button style="background:none; border:none; cursor:pointer; color:#64748b;" onclick="TopicsManager.fecharModalPilhaProcessual()">✕</button>
+        </div>
+        
+        <p class="popup-label" style="margin-top: 12px;">Selecione as provas que deseja empilhar:</p>
+        <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 12px;">Itens já agrupados ou de origens distintas estão ocultos por segurança.</p>
+        
+        <div id="lista-checklist-pilha" class="doc-list-container" style="max-height: 250px; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: 8px;">
+            <!-- Checkboxes injetados dinamicamente via JS -->
+        </div>
+
+        <div class="wizard-actions" style="margin-top: 16px;">
+            <button class="chip-btn chip-cancelar" onclick="TopicsManager.fecharModalPilhaProcessual()">Cancelar</button>
+            <button class="chip-btn chip-autora" style="background: var(--trt-blue); color: white; border: none;" onclick="TopicsManager.salvarPilhaProcessual()">✔ Empilhar Selecionados</button>
+        </div>
+    </div>
+
     <!-- SCRIPT DE AUTENTICAÇÃO E ACERVO -->
     <script type="module" src="js/ai_firebase-auth.js"></script>
     <script type="module" src="js/ai_firebase-acervo.js"></script>
