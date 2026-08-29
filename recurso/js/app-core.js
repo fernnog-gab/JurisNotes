@@ -185,6 +185,11 @@ window.JurisUtils = (function() {
                 .trim();
         },
 
+        limparEscapeMarkdown: function(texto) {
+            if (!texto || typeof texto !== 'string') return '';
+            return texto.replace(/\\([\\`*_{}\[\]()#+\-.!])/g, '$1');
+        },
+
         processarTextoParaExtracao: function(textoOriginal) {
             if (!textoOriginal) return { textoLimpo: '', indicesExcluidos: [] };
             

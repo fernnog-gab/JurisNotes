@@ -145,7 +145,8 @@ window.TopicsManager = (function () {
 
     function renderizarMarkdownSeguro(strEscapada) {
         if (!strEscapada) return '';
-        let processado = strEscapada;
+        
+        let processado = window.JurisUtils.limparEscapeMarkdown(strEscapada);
 
         processado = processado.replace(/\*\*([\s\S]*?)\*\*/g, '<b>$1</b>');
         processado = processado.replace(/\*([\s\S]*?)\*/g, '<i>$1</i>');
