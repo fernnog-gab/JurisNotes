@@ -562,11 +562,14 @@
         </div>
     </div>
 
-    <!-- BACKDROP DEDICADO PARA EDIÇÃO DE TEXTO -->
-    <div id="text-edit-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.40); z-index: 4000;" onclick="fecharModalEdicao()"></div>
-    
-    <!-- MODAL DE EDIÇÃO DE TEXTO -->
-    <div id="text-edit-modal" class="text-edit-modal" style="display:none;">
+    <!-- 1. Backdrop Modernizado (Transição via CSS, sem display:none) -->
+    <div id="text-edit-backdrop" class="modal-backdrop-modern" onclick="fecharModalEdicaoSeguro()"></div>
+
+    <!-- 2. Modal com Acessibilidade (ARIA) e Atalhos de Teclado -->
+    <div id="text-edit-modal" class="text-edit-modal" style="display:none;" 
+         role="dialog" aria-modal="true" aria-labelledby="edit-modal-title" 
+         onkeydown="handleModalEditorKeydown(event)">
+        
         <div class="edit-header" id="edit-modal-title">✏️ Editar Texto</div>
     
         <div class="edit-toolbar" id="edit-toolbar">
