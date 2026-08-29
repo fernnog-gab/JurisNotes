@@ -7,7 +7,11 @@
 let _menuAnotacaoCtx = null;
 let _menuSubAnotacaoCtx = null;
 let _editContext = null;
-let _inputDiretrizCtx = null;
+
+function gerarUUIDSeguro() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+    return 'id-' + Math.random().toString(36).substring(2, 11) + '-' + Date.now().toString(36);
+}
 
 /* --- MENUS CONTEXTUAIS --- */
 function abrirMenuAnotacao(topicoId, index, event) {
@@ -55,95 +59,14 @@ window.toggleRevisaoNotaOculta = function(topicoId, parentIndex, viewSource, loc
 
 function adicionarDiretrizEstrutural(tipo, topicoId, teseNome, event) {
     event.stopPropagation();
-
-    // 1. Prevenção de Perda de Dados (UX)
-    const existing = document.getElementById('sub-input-active');
-    if (existing) {
-        const textareaAtual = document.getElementById('sub-input-text');
-        if (textareaAtual && textareaAtual.value.trim() !== '') {
-            exibirToast('Conclua ou cancele a anotação atual primeiro.', 'aviso');
-            textareaAtual.focus();
-            return;
-        }
-        existing.remove();
-    }
-
-    // 2. Armazenamento Seguro de Contexto em Memória
-    _inputDiretrizCtx = { tipo, topicoId, teseNome };
-
-    // 3. Construção do Painel (Sem dados do usuário no HTML)
-    const painel = document.createElement('div');
-    painel.id = 'sub-input-active'; 
-    painel.className = 'sub-input-panel';
-    
-    painel.innerHTML = `
-        <textarea id="sub-input-text" class="sub-input-textarea" placeholder="Digite a diretriz para a IA..." rows="3"></textarea>
-        <div class="sub-input-actions">
-            <button class="sub-input-btn-icon confirm" title="Confirmar (Ctrl+Enter)" onclick="confirmarDiretrizEstrutural()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            </button>
-            <button class="sub-input-btn-icon cancel" title="Cancelar (Esc)" onclick="cancelarDiretrizEstrutural()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
-        </div>`;
-
-    // 4. Ancoragem Determinística (DOM Traversal via Event)
-    const mountPoint = event.currentTarget.closest('.main-card-wrapper');
-    
-    if (mountPoint) {
-        mountPoint.appendChild(painel);
-        const textarea = document.getElementById('sub-input-text');
-        textarea.focus();
-        
-        textarea.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') cancelarDiretrizEstrutural();
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') confirmarDiretrizEstrutural();
-        });
-    } else {
-        console.error("Falha ao encontrar mountPoint para adicionar a diretriz.");
-    }
-}
-
-function cancelarDiretrizEstrutural() {
-    const painel = document.getElementById('sub-input-active');
-    if (painel) painel.remove();
-    _inputDiretrizCtx = null;
-}
-
-function confirmarDiretrizEstrutural() {
-    if (!_inputDiretrizCtx) return;
-
-    const textarea = document.getElementById('sub-input-text');
-    const texto = textarea ? textarea.value.trim() : '';
-    
-    if (!texto) {
-        return exibirToast('Digite uma diretriz válida.', 'aviso');
-    }
-
-    const { tipo, topicoId, teseNome } = _inputDiretrizCtx;
-    const topico = topicos.find(t => t.id === topicoId);
-    
-    const noIdeia = {
-        uuid: 'id-' + Math.random().toString(36).substr(2, 9),
-        texto: texto,
-        intencao: 'premissa', // Default inicial
-        revisada: false,
-        timestamp: Date.now()
+    _editContext = { 
+        acao: 'adicionar', 
+        tipoAdicao: 'diretriz', 
+        escopo: tipo, 
+        topicoId: topicoId, 
+        teseNome: teseNome 
     };
-
-    if (tipo === 'global') {
-        if (!topico.diretrizesGlobais) topico.diretrizesGlobais = [];
-        topico.diretrizesGlobais.push(noIdeia);
-    } else if (tipo === 'tese') {
-        if (!topico.diretrizesPorTese) topico.diretrizesPorTese = {};
-        if (!topico.diretrizesPorTese[teseNome]) topico.diretrizesPorTese[teseNome] = [];
-        topico.diretrizesPorTese[teseNome].push(noIdeia);
-    }
-
-    cancelarDiretrizEstrutural(); // Limpa DOM e Memória
-    renderizarTopicos();
-    salvarBackupAutomatico();
-    exibirToast('Diretriz adicionada com sucesso.', 'sucesso');
+    abrirModalEdicao(_editContext, '', '', '✨ Nova Diretriz Estrutural', 'Digite a instrução para a IA...');
 }
 
 function abrirMenuSubAnotacao(topicoId, parentIndex, viewSource, localIndex, event) {
@@ -260,53 +183,81 @@ function editarItemCorrelacionado() {
     abrirModalEdicao({ tipo: 'correlated', topicoId: _menuAnotacaoCtx.topicoId, parentIndex: _menuAnotacaoCtx.index, cIdx: _menuAnotacaoCtx.cIdx, tipoAnotacao: item.tipo }, textoContexto, item.comentario);
 }
 
-function abrirModalEdicao(contexto, textoAtual, comentarioAtual = '') {
+function abrirModalEdicao(contexto, textoAtual, comentarioAtual = '', tituloModal = null, placeholderText = null) {
     _editContext = contexto;
+    _editContext.textoOriginal = textoAtual || '';
+    _editContext.isDirty = false; // Flag crítica para o Guard
+
     const editor = document.getElementById('edit-text-input');
     const commentArea = document.getElementById('edit-comentario-input');
     const toolbar = document.getElementById('edit-toolbar');
     const title = document.getElementById('edit-modal-title');
+    const backdrop = document.getElementById('text-edit-backdrop');
     const isAudio = contexto.tipoAnotacao === 'audio';
 
+    // Monitoramento de alteração (Input Event)
+    editor.oninput = () => { _editContext.isDirty = true; };
+    if (commentArea) commentArea.oninput = () => { _editContext.isDirty = true; };
+
     if (isAudio) {
-        // Transcrição de áudio permanece em texto puro, sem WYSIWYG
         editor.innerText = textoAtual || '';
         editor.dataset.placeholder = 'Degravação literal do áudio...';
-        commentArea.value = comentarioAtual || '';
-        commentArea.style.display = 'block';
-        if (toolbar) toolbar.style.display = 'none';
-        title.innerHTML = '🎙️ Editar Áudio e Observação';
-    } else {
-        // Converte o Markdown salvo em formatação visual real
-        editor.innerHTML = window.JurisEditor.markdownParaHtml(textoAtual || '');
-        editor.dataset.placeholder = 'Selecione um trecho e aplique formatação...';
         if (commentArea) {
-            commentArea.value = '';
+            commentArea.value = comentarioAtual || '';
+            commentArea.style.display = 'block';
+        }
+        if (toolbar) toolbar.style.display = 'none';
+        title.innerHTML = tituloModal || '🎙️ Editar Áudio e Observação';
+    } else {
+        editor.innerHTML = window.JurisEditor.markdownParaHtml(textoAtual || '');
+        editor.dataset.placeholder = placeholderText || 'Selecione um trecho e aplique formatação...';
+        if (commentArea) {
+            commentArea.value = comentarioAtual || '';
             commentArea.style.display = 'none';
         }
         if (toolbar) toolbar.style.display = 'flex';
-        title.innerHTML = '✏️ Editar Texto';
+        title.innerHTML = tituloModal || '✏️ Editar Texto';
     }
 
-    editor.dispatchEvent(new Event('input')); // reavalia o estado vazio/placeholder
-
-    document.getElementById('text-edit-backdrop').style.display = 'block';
+    editor.dispatchEvent(new Event('input')); // Reavalia placeholder
+    backdrop.classList.add('is-visible');
     document.getElementById('text-edit-modal').style.display = 'flex';
-    
-    // UX Recovery: Foca no elemento e reseta a posição da scrollbar com segurança
+
     setTimeout(() => {
         editor.focus();
-        if (typeof editor.scrollTop === 'number') {
-            editor.scrollTop = 0;
-        }
+        if (typeof editor.scrollTop === 'number') editor.scrollTop = 0;
     }, 50);
 }
 
+// Guard de Perda de Dados
+window.fecharModalEdicaoSeguro = function() {
+    if (_editContext && _editContext.isDirty) {
+        if (!confirm("Você tem alterações não salvas. Deseja realmente fechar e perder o rascunho?")) {
+            document.getElementById('edit-text-input').focus();
+            return;
+        }
+    }
+    fecharModalEdicao();
+};
+
 function fecharModalEdicao() {
     _editContext = null;
-    document.getElementById('text-edit-backdrop').style.display = 'none';
+    const backdrop = document.getElementById('text-edit-backdrop');
+    backdrop.classList.remove('is-visible');
     document.getElementById('text-edit-modal').style.display = 'none';
 }
+
+// Atalhos de Teclado (Ctrl+Enter e Esc)
+window.handleModalEditorKeydown = function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        salvarEdicaoTexto();
+    }
+    if (e.key === 'Escape') {
+        e.preventDefault();
+        fecharModalEdicaoSeguro();
+    }
+};
 
 function aplicarNegritoTextarea() {
     const textarea = document.getElementById('edit-text-input');
@@ -333,64 +284,102 @@ document.getElementById('edit-text-input').addEventListener('keydown', function(
 
 function salvarEdicaoTexto() {
     if (!_editContext) return;
-
     const topico = topicos.find(t => t.id === _editContext.topicoId);
     if (!topico) return;
 
     const editor = document.getElementById('edit-text-input');
     const isAudio = _editContext.tipoAnotacao === 'audio';
 
-    // Extrai o conteúdo: texto puro para áudio, conversão HTML->Markdown para o restante
-    let novoTexto = isAudio
-        ? editor.innerText.trim()
-        : window.JurisEditor.htmlParaMarkdown(editor.innerHTML);
-
-    // LÓGICA DO PREÂMBULO (idêntica ao comportamento original: sem sanitizador de PDF)
+    // FASE 1 & 2: EARLY RETURNS DE EXCEÇÕES (Preâmbulo e Áudio)
     if (_editContext.tipo === 'preambulo') {
-        topico[_editContext.campo] = novoTexto;
-        renderizarTopicos();
-        salvarBackupAutomatico();
+        topico[_editContext.campo] = window.JurisEditor.htmlParaMarkdown(editor.innerHTML);
+        renderizarTopicos(); salvarBackupAutomatico();
         exibirToast('Preâmbulo salvo.', 'sucesso');
+        _editContext.isDirty = false;
         return fecharModalEdicao();
     }
 
-    // Pipeline de Higienização Restrito (regra original preservada, agora sobre texto puro)
-    const tiposPermitidosParaLimpeza = ['texto', 'sub', 'correlated'];
-    if (!isAudio && (tiposPermitidosParaLimpeza.includes(_editContext.tipo) || _editContext.tipoAnotacao === 'texto')) {
-        novoTexto = window.JurisUtils.limparTextoPDF(novoTexto);
-    }
+    if (isAudio) {
+        let alvo;
+        if (_editContext.tipo === 'main') alvo = topico.anotacoes[_editContext.parentIndex];
+        else if (_editContext.tipo === 'correlated') alvo = topico.anotacoes[_editContext.parentIndex].itensCorrelacionados[_editContext.cIdx];
+        if (!alvo) return;
 
-    if (_editContext.tipoAnotacao === 'texto' && !novoTexto) {
-        return exibirToast('O texto da prova não pode ficar vazio.', 'aviso');
-    }
-
-    let alvo;
-    if (_editContext.tipo === 'main') {
-        alvo = topico.anotacoes[_editContext.parentIndex];
-    } else if (_editContext.tipo === 'sub') {
-        alvo = _resolverSubAlvo(topico, _editContext.parentIndex, _editContext.viewSource).subAnotacoes[_editContext.localIndex];
-    } else if (_editContext.tipo === 'correlated') {
-        alvo = topico.anotacoes[_editContext.parentIndex].itensCorrelacionados[_editContext.cIdx];
-    }
-    if (!alvo) return;
-
-    if (_editContext.tipo === 'sub') {
-        alvo.texto = novoTexto;
-    } else if (isAudio) {
+        const novoTextoAudio = editor.innerText.trim();
         const novoComentario = document.getElementById('edit-comentario-input').value.trim();
         try {
             const d = JSON.parse(alvo.conteudo);
-            d.transcricao = novoTexto;
+            d.transcricao = novoTextoAudio;
             alvo.conteudo = JSON.stringify(d);
         } catch (e) { console.error('Erro de parse', e); }
         alvo.comentario = novoComentario;
-    } else {
-        alvo.conteudo = novoTexto;
+        
+        renderizarTopicos(); salvarBackupAutomatico();
+        exibirToast('Áudio atualizado!', 'sucesso');
+        _editContext.isDirty = false;
+        return fecharModalEdicao();
     }
 
+    // FASE 3: PIPELINE DE TEXTO COMUM E SANITIZAÇÃO
+    let novoTexto = window.JurisEditor.htmlParaMarkdown(editor.innerHTML);
+    const tiposPermitidosParaLimpeza = ['texto', 'sub', 'correlated'];
+    if (tiposPermitidosParaLimpeza.includes(_editContext.tipo) || _editContext.tipoAnotacao === 'texto' || _editContext.acao === 'adicionar') {
+        novoTexto = window.JurisUtils.limparTextoPDF(novoTexto);
+    }
+
+    // FASE 4: VALIDAÇÃO DE VAZIO (Apenas "main cards" impedem vazio na edição)
+    if (_editContext.tipoAnotacao === 'texto' && _editContext.acao !== 'adicionar' && !novoTexto) {
+        return exibirToast('O texto da prova não pode ficar vazio.', 'aviso');
+    }
+
+    // FASE 5: PERSISTÊNCIA (BIFURCAÇÃO ADD vs EDIT)
+    if (_editContext.acao === 'adicionar') {
+        if (!novoTexto) return exibirToast('Digite um conteúdo válido.', 'aviso');
+
+        const noIdeia = {
+            uuid: gerarUUIDSeguro(),
+            texto: novoTexto,
+            revisada: false,
+            timestamp: Date.now()
+        };
+
+        // REGRA DE OURO DA SEMÂNTICA: Diretrizes ganham intenção; Sub-nós permanecem undefined.
+        if (_editContext.tipoAdicao === 'diretriz') {
+            noIdeia.intencao = 'premissa';
+            if (_editContext.escopo === 'global') {
+                if (!topico.diretrizesGlobais) topico.diretrizesGlobais = [];
+                topico.diretrizesGlobais.push(noIdeia);
+            } else if (_editContext.escopo === 'tese') {
+                if (!topico.diretrizesPorTese) topico.diretrizesPorTese = {};
+                if (!topico.diretrizesPorTese[_editContext.teseNome]) topico.diretrizesPorTese[_editContext.teseNome] = [];
+                topico.diretrizesPorTese[_editContext.teseNome].push(noIdeia);
+            }
+        } else if (_editContext.tipoAdicao === 'sub') {
+            const alvo = _resolverSubAlvo(topico, _editContext.parentIndex, _editContext.viewSource);
+            if (!alvo.subAnotacoes) alvo.subAnotacoes = [];
+            alvo.subAnotacoes.push(noIdeia);
+        }
+        exibirToast('Ideia adicionada com sucesso!', 'sucesso');
+    } 
+    else {
+        // Fluxo padrão Editar Existente
+        let alvo;
+        if (_editContext.tipo === 'main') alvo = topico.anotacoes[_editContext.parentIndex];
+        else if (_editContext.tipo === 'sub') alvo = _resolverSubAlvo(topico, _editContext.parentIndex, _editContext.viewSource).subAnotacoes[_editContext.localIndex];
+        else if (_editContext.tipo === 'correlated') alvo = topico.anotacoes[_editContext.parentIndex].itensCorrelacionados[_editContext.cIdx];
+        
+        if (!alvo) return;
+        
+        if (_editContext.tipo === 'sub') alvo.texto = novoTexto;
+        else alvo.conteudo = novoTexto;
+        
+        exibirToast('Anotação atualizada!', 'sucesso');
+    }
+
+    // FASE 6: COMMIT DE ESTADO
     renderizarTopicos();
     salvarBackupAutomatico();
-    exibirToast('Anotação atualizada!', 'sucesso');
+    _editContext.isDirty = false; // Reseta o Guard
     fecharModalEdicao();
 }
 
@@ -786,79 +775,15 @@ function excluirItemCorrelacionado(topicoId, parentIndex, correlacionadoIndex) {
 }
 
 function adicionarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
-    const existing = document.getElementById('sub-input-active');
-    if (existing) {
-        const mesmoCont = existing.dataset.forTopico === topicoId && existing.dataset.forIndex === String(anotacaoIndex);
-        existing.remove();
-        if (mesmoCont) return;
-    }
-    
-    const painel = document.createElement('div');
-    painel.id = 'sub-input-active'; 
-    painel.className = 'sub-input-panel';
-    painel.dataset.forTopico = topicoId; 
-    painel.dataset.forIndex = anotacaoIndex;
-    
-    // Tratamento de tipo seguro para injetar como string no HTML
-    const argCidx = cIdx != null ? cIdx : 'null';
-    
-    painel.innerHTML = `
-        <textarea id="sub-input-text" class="sub-input-textarea" placeholder="Digite a ideia secundária..." rows="3"></textarea>
-        <div class="sub-input-actions">
-            <button class="sub-input-btn-icon confirm" title="Confirmar (Ctrl+Enter)" onclick="confirmarSubAnotacao('${topicoId}', ${anotacaoIndex}, ${argCidx})">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            </button>
-            <button class="sub-input-btn-icon cancel" title="Cancelar (Esc)" onclick="document.getElementById('sub-input-active').remove()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
-        </div>`;
-        
-    // Ancoragem dinâmica: anexa o input logo abaixo do card que gerou a ação
-    const topicoTarget = topicos.find(t => t.id === topicoId);
-    const uuidTarget = topicoTarget && topicoTarget.anotacoes[anotacaoIndex] ? topicoTarget.anotacoes[anotacaoIndex].uuid : null;
-    const masterWrapper = document.getElementById(uuidTarget ? `timeline-wrapper-${uuidTarget}` : `timeline-wrapper-${anotacaoIndex}`);
-    if (masterWrapper) {
-        let mountPoint = masterWrapper.querySelector('.main-card-wrapper');
-        if (cIdx != null) {
-            const correlatedItem = mountPoint.querySelector(`.correlated-item-wrapper[data-cidx="${cIdx}"]`);
-            if (correlatedItem) mountPoint = correlatedItem;
-        }
-        mountPoint.appendChild(painel); 
-        
-        const textarea = document.getElementById('sub-input-text');
-        textarea.focus();
-        textarea.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') document.getElementById('sub-input-active').remove();
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') confirmarSubAnotacao(topicoId, anotacaoIndex, cIdx);
-        });
-    }
-}
-
-function confirmarSubAnotacao(topicoId, anotacaoIndex, cIdx = null) {
-    const textarea = document.getElementById('sub-input-text');
-    
-    // [NOVO] Higieniza o texto colado/digitado no Nó de Ideia
-    let texto = textarea ? textarea.value.trim() : '';
-    texto = window.JurisUtils.limparTextoPDF(texto);
-    
-    if (!texto) return exibirToast('Digite uma observação.', 'aviso');
-    
-    const topico = topicos.find(t => t.id === topicoId);
     const viewSource = cIdx !== null ? cIdx : 'main';
-    const alvo = _resolverSubAlvo(topico, anotacaoIndex, viewSource);
-    
-    if (!alvo.subAnotacoes) alvo.subAnotacoes = [];
-    alvo.subAnotacoes.push({ 
-        uuid: 'id-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now().toString(36),
-        texto, 
-        revisada: false,
-        timestamp: Date.now() 
-    });
-    
-    document.getElementById('sub-input-active').remove();
-    renderizarTopicos(); 
-    salvarBackupAutomatico();
-    exibirToast('Observação secundária vinculada.', 'sucesso');
+    _editContext = { 
+        acao: 'adicionar', 
+        tipoAdicao: 'sub', 
+        topicoId: topicoId, 
+        parentIndex: anotacaoIndex, 
+        viewSource: viewSource 
+    };
+    abrirModalEdicao(_editContext, '', '', '✨ Novo Nó de Ideia', 'Descreva o argumento ou observação...');
 }
 
 /* ================================================
