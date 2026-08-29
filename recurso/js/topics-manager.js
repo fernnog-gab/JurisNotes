@@ -127,6 +127,40 @@ window.TopicsManager = (function () {
         return (yiq >= 128) ? '#1a1a1a' : '#ffffff';
     }
 
+    // --- HELPERS DE ÁUDIO (NORMALIZAÇÃO E SEGURANÇA) ---
+    function _limparEscapesResiduais(str) {
+        if (!str) return '';
+        // A ordem é crítica: resolve \\ primeiro para não quebrar \" subsequente
+        return str.replace(/\\\\/g, '\\').replace(/\\"/g, '"').replace(/\\'/g, "'");
+    }
+
+    function _obterDadosAudioSeguros(item) {
+        if (!item || item.tipo !== 'audio') return null;
+        try {
+            const dados = JSON.parse(item.conteudo);
+            const safeFormatTime = (sec) => window.AudioManager?.formatTime ? window.AudioManager.formatTime(sec) : `${Math.floor(sec/60)}' ${Math.floor(sec%60)}''`;
+            
+            // Fallback robusto para backups antigos sem labelInicio/labelFim
+            const tempoInicio = dados.labelInicio || safeFormatTime(dados.inicio || 0);
+            const tempoFim = dados.labelFim || safeFormatTime(dados.fim || 0);
+            const orador = dados.role || dados.oradorStr || 'Orador Desconhecido';
+            
+            return {
+                isCorrompido: false,
+                inicioNum: dados.inicio || 0,
+                fimNum: dados.fim || 0,
+                rotuloTempo: `⏱️ ${tempoInicio} a ${tempoFim}`,
+                orador: orador,
+                role: dados.role,
+                poloTag: dados.poloTag,
+                transcricao: _limparEscapesResiduais(dados.transcricao),
+                comentario: item.comentario ? _limparEscapesResiduais(item.comentario) : ''
+            };
+        } catch (e) {
+            return { isCorrompido: true };
+        }
+    }
+
     /**
      * Sanitizador de HTML — previne XSS ao interpolar dados do usuário
      * em template literals. Escapa os 5 metacaracteres fundamentais do HTML.
@@ -392,63 +426,56 @@ window.TopicsManager = (function () {
      * Motor unificado para construção de cards de áudio.
      * Desacopla o parseamento do JSON do loop principal de renderização.
      */
-    function _gerarHtmlCardAudio(anotacao) {
+    function _gerarHtmlCardAudio(anotacao, opts = { ocultarCopiar: false }) {
         let htmlConteudo = '';
         let htmlComentario = '';
+
+        const dados = _obterDadosAudioSeguros(anotacao);
+
+        if (!dados || dados.isCorrompido) {
+            return { htmlConteudo: `<p class="card-texto" style="color:#c62828;">[Erro: metadados do áudio corrompidos]</p>`, htmlComentario: '' };
+        }
+            
+        const classePolo = dados.poloTag ? poloParaClasse(dados.poloTag) : 'doc-tag';
+        let tagVisual = `<span class="polo-tag ${classePolo}">${escaparHTML(dados.orador)}</span>`;
+        if ((dados.role === 'Testemunha' || dados.role === 'Advogado') && dados.poloTag) {
+            tagVisual = `<span class="polo-tag doc-tag">${escaparHTML(dados.role)}</span> <span class="polo-tag ${classePolo}">${escaparHTML(dados.poloTag)}</span>`;
+        }
+
+        htmlConteudo = `
+            <div class="card-audio">
+                <div class="audio-icon-box clickable-audio" title="Ouvir este trecho específico" onclick="AudioManager.tocarTrecho(${dados.inicioNum}, ${dados.fimNum})">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                </div>
+                <div class="audio-card-meta">
+                    <strong>Oitiva:</strong> ${tagVisual}<br>
+                    <span class="audio-time-badge">${dados.rotuloTempo}</span>
+                </div>
+            </div>`;
+
+        let comentarios = [];
+        if (dados.comentario) comentarios.push(`<strong>Contexto:</strong> ${escaparHTML(dados.comentario)}`);
+        if (dados.transcricao) {
+            // Guarda robusta: oculta se for contexto de pilha OU se o item não possuir UUID
+            const btnCopiar = (opts.ocultarCopiar || !anotacao.uuid) ? '' : `
+                <button class="btn-copy-degravacao" title="Copiar Degravação" onclick="window.copiarDegravacao('${anotacao.topicoIdOrigem || activeTabId}', '${anotacao.uuid || ''}')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                </button>`;
+
+            comentarios.push(`
+                <div style="display:flex; align-items:flex-start; gap:4px;">
+                    <div><strong>Degravação:</strong> <em>"${escaparHTML(dados.transcricao)}"</em></div>
+                    ${btnCopiar}
+                </div>
+            `);
+        }
         
-        try {
-            const dadosAudio = JSON.parse(anotacao.conteudo);
-            
-            // Fallback unificado para nomenclatura segura
-            const nomePapel = dadosAudio.role || dadosAudio.oradorStr || 'Orador não idt.';
-            const classePolo = dadosAudio.poloTag ? poloParaClasse(dadosAudio.poloTag) : 'doc-tag';
-            
-            let tagVisual = `<span class="polo-tag ${classePolo}">${escaparHTML(nomePapel)}</span>`;
-            if ((dadosAudio.role === 'Testemunha' || dadosAudio.role === 'Advogado') && dadosAudio.poloTag) {
-                tagVisual = `<span class="polo-tag doc-tag">${escaparHTML(dadosAudio.role)}</span> <span class="polo-tag ${classePolo}">${escaparHTML(dadosAudio.poloTag)}</span>`;
-            }
-
-            // Garante extração segura de tempos matemáticos (fallback para 0)
-            const inicioNum = dadosAudio.inicio || 0;
-            const fimNum = dadosAudio.fim || 0;
-            
-            const safeFormatTime = (sec) => window.AudioManager?.formatTime ? window.AudioManager.formatTime(sec) : `${Math.floor(sec/60)}' ${Math.floor(sec%60)}''`;
-
-            // Renderiza o cabeçalho com o botão Clickable e Ícone de Play
-            htmlConteudo = `
-                <div class="card-audio">
-                    <div class="audio-icon-box clickable-audio" title="Ouvir este trecho específico" onclick="AudioManager.tocarTrecho(${inicioNum}, ${fimNum})">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                        </svg>
-                    </div>
-                    <div class="audio-card-meta">
-                        <strong>Oitiva:</strong> ${tagVisual}<br>
-                        <span class="audio-time-badge">⏱️ ${safeFormatTime(inicioNum)} a ${safeFormatTime(fimNum)}</span>
-                    </div>
-                </div>`;
-
-            // PRESERVAÇÃO CRÍTICA: Lógica de Comentários e Degravações
-            let comentarios = [];
-            if (anotacao.comentario) comentarios.push(`<strong>Contexto:</strong> ${escaparHTML(anotacao.comentario)}`);
-            if (dadosAudio.transcricao) {
-                comentarios.push(`
-                    <div style="display:flex; align-items:flex-start; gap:4px;">
-                        <div><strong>Degravação:</strong> <em>"${escaparHTML(dadosAudio.transcricao)}"</em></div>
-                        <button class="btn-copy-degravacao" title="Copiar Degravação" onclick="window.copiarDegravacao('${anotacao.topicoIdOrigem || activeTabId}', '${anotacao.uuid || ''}')">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                            </svg>
-                        </button>
-                    </div>
-                `);
-            }
-            
-            if (comentarios.length > 0) {
-                htmlComentario = `<div class="card-comentario" style="display:flex; flex-direction:column; gap:6px;">${comentarios.join('<br>')}</div>`;
-            }
-        } catch (e) {
-            htmlConteudo = `<p class="card-texto" style="color:#c62828;">[Erro: metadados do áudio corrompidos]</p>`;
+        if (comentarios.length > 0) {
+            htmlComentario = `<div class="card-comentario" style="display:flex; flex-direction:column; gap:6px;">${comentarios.join('<br>')}</div>`;
         }
         
         return { htmlConteudo, htmlComentario };
@@ -460,17 +487,12 @@ window.TopicsManager = (function () {
      */
     function _obterMetaTexto(item) {
         if (item.tipo === 'audio') {
-            try {
-                const dados = JSON.parse(item.conteudo);
-                const safeFormatTime = (sec) => window.AudioManager?.formatTime ? window.AudioManager.formatTime(sec) : `${Math.floor(sec/60)}' ${Math.floor(sec%60)}''`;
-                // Retorna exatamente o formato que o usuário quer copiar para a minuta
-                return `(⏱️ ${safeFormatTime(dados.inicio)} a ${safeFormatTime(dados.fim)})`;
-            } catch (e) {
-                return '(Oitiva)';
+            const dados = _obterDadosAudioSeguros(item);
+            if (dados && !dados.isCorrompido) {
+                return `(${dados.rotuloTempo})`;
             }
+            return '(Oitiva)';
         }
-        
-        // Tratamento padrão para documentos e imagens
         const idFormt = item.pjeId ? `Id. ${item.pjeId} - ` : '';
         return item.pagina ? `(${idFormt}fl. ${item.pagina})` : '';
     }
@@ -704,10 +726,21 @@ window.TopicsManager = (function () {
                     
                     let htmlTextosInternos = itensDestaPilhaObj.map(obj => {
                         const metaText = _obterMetaTexto(obj.ic);
+                        let conteudoVisual = '';
+
+                        if (obj.ic.tipo === 'audio') {
+                            const audioData = _gerarHtmlCardAudio(obj.ic, { ocultarCopiar: true });
+                            conteudoVisual = `<div style="margin-top:4px; margin-bottom:8px;">${audioData.htmlConteudo}${audioData.htmlComentario}</div>`;
+                        } else if (obj.ic.tipo === 'imagem') {
+                            conteudoVisual = `<div class="image-resize-wrapper" style="margin-top:4px; margin-bottom:8px;"><img class="card-imagem" src="${obj.ic.conteudo}"></div>`;
+                        } else {
+                            conteudoVisual = `<p style="font-size:0.85rem; margin-top:4px; margin-bottom:8px;">"${renderizarMarkdownSeguro(escaparHTML(obj.ic.conteudo))}"</p>`;
+                        }
+
                         return `
-                        <div style="margin-bottom:8px;">
+                        <div>
                             <span class="card-meta" style="cursor:pointer; font-size:0.75rem; color:var(--trt-blue); font-weight:700;" title="Clique: Copiar | Shift+Clique: Editar folha | Ctrl+Clique: Ir ao PDF" onclick="handleMetaClick(event, '${activeTabId}', ${index}, true, ${obj.originalCIdx})">${metaText}</span>
-                            <p style="font-size:0.85rem; margin-top:4px;">"${renderizarMarkdownSeguro(escaparHTML(obj.ic.conteudo))}"</p>
+                            ${conteudoVisual}
                         </div>`;
                     }).join('<hr class="stack-text-divider">');
                     
@@ -1702,10 +1735,30 @@ window.TopicsManager = (function () {
         itensDestaPilhaObj.forEach((obj, i) => {
             const ic = obj.ic;
             const metaTexto = _obterMetaTexto(ic);
-            
-            // HTML de Tela: Componente interativo com UX de fechamento automático síncrono
             const metaInterativoTela = _gerarMetaInterativo(topicoId, parentIndex, obj.originalCIdx, metaTexto, true);
             
+            let textoMarkdown = "";
+
+            if (ic.tipo === 'audio') {
+                const dados = _obterDadosAudioSeguros(ic);
+                if (dados && !dados.isCorrompido) {
+                    const transcricao = dados.transcricao ? dados.transcricao : "(Sem degravação)";
+                    textoMarkdown = dados.comentario 
+                        ? `**Contexto:** ${dados.comentario}\n\n**Degravação:** "${transcricao}"` 
+                        : `**Degravação:** "${transcricao}"`;
+                } else {
+                    textoMarkdown = "Erro ao processar áudio.";
+                }
+            } else if (ic.tipo === 'imagem') {
+                textoMarkdown = "[Documento Visual / Imagem]";
+            } else {
+                textoMarkdown = `"${ic.conteudo}"`; // Restaura aspas para textos puros
+            }
+
+            // PIPELINE ÚNICO: Escapar -> Renderizar -> Quebrar Linhas
+            // Garante que <br> não vire &lt;br&gt; e que o HTML seja válido para o Word/PJe
+            const htmlLinhaUnica = renderizarMarkdownSeguro(escaparHTML(textoMarkdown)).replace(/\n/g, '<br>');
+
             htmlAgrupado += `
             <div style="padding-bottom: 16px; border-bottom: 1px dashed #e2e8f0; margin-bottom: 16px;">
                 <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
@@ -1713,13 +1766,13 @@ window.TopicsManager = (function () {
                     ${metaInterativoTela}
                 </div>
                 <div style="font-size: 1.05rem; color: #334155; line-height: 1.6; font-style: italic;">
-                    "${renderizarMarkdownSeguro(escaparHTML(ic.conteudo))}"
+                    ${htmlLinhaUnica}
                 </div>
             </div>`;
             
-            // Sincronização de Estado (Copy-Safe)
-            markdownAcumulado += `**ITEM ${i + 1}** ${metaTexto}\n"${ic.conteudo}"\n\n`;
-            htmlAcumulado += `<strong>ITEM ${i + 1}</strong> ${metaTexto}<br><i>"${renderizarMarkdownSeguro(escaparHTML(ic.conteudo))}"</i>\n`;
+            // Sincronização Copy-Safe: HTML validado e encapsulado numa única linha por item
+            markdownAcumulado += `**ITEM ${i + 1}** ${metaTexto}\n${textoMarkdown}\n\n`;
+            htmlAcumulado += `<strong>ITEM ${i + 1}</strong> ${metaTexto}<br><i>${htmlLinhaUnica}</i>\n`;
         });
         
         // Mutação das Variáveis Globais (Resolve o Stale State)
@@ -1846,7 +1899,24 @@ window.TopicsManager = (function () {
         let html = '';
 
         elegiveis.forEach(obj => {
-            const textoBruto = obj.item.conteudo.replace(/<[^>]*>?/gm, '').substring(0, 70) + '...';
+            let textoParaExibicao = "";
+            
+            if (obj.item.tipo === 'audio') {
+                const dados = _obterDadosAudioSeguros(obj.item);
+                if (dados && !dados.isCorrompido) {
+                    const desc = dados.transcricao || dados.comentario || "Sem degravação";
+                    textoParaExibicao = `🎙️ ${dados.rotuloTempo} • ${dados.orador} — "${desc}"`;
+                } else {
+                    textoParaExibicao = "Áudio (dados corrompidos)";
+                }
+            } else if (obj.item.tipo === 'imagem') {
+                const descImg = obj.item.comentario ? ` — ${obj.item.comentario}` : '';
+                textoParaExibicao = `🖼️ Documento Visual${descImg}`;
+            } else {
+                textoParaExibicao = obj.item.conteudo;
+            }
+
+            const textoBruto = textoParaExibicao.replace(/<[^>]*>?/gm, '').substring(0, 90) + '...';
             const textoSeguro = escaparHTML(textoBruto); 
 
             html += `
