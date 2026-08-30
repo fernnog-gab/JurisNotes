@@ -562,6 +562,9 @@ function trocarAba(aba) {
     const btnAcervo = document.getElementById('btn-acervo-modelos');
     if (btnAcervo) btnAcervo.style.display = isAnotacoes ? 'flex' : 'none';
 
+    const btnGlobais = document.getElementById('btn-toggle-globais');
+    if (btnGlobais) btnGlobais.style.display = isAnotacoes ? 'flex' : 'none';
+
     const btnTexto = document.getElementById('btn-ferramenta-texto');
     if (btnTexto) btnTexto.style.display = isLeitura ? 'flex' : 'none';
 
@@ -687,6 +690,10 @@ function encerrarSessao() {
     topicos      = [];
     modoRetomada = false;
     sessionStorage.removeItem('juris_active_session');
+
+    if (window.TopicsManager && typeof window.TopicsManager.resetVisibilidadeGlobais === 'function') {
+        window.TopicsManager.resetVisibilidadeGlobais();
+    }
     
     if (window.PdfEngine) window.PdfEngine.encerrar();
     BackupManager.encerrar();
