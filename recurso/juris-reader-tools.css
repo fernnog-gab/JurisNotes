@@ -219,6 +219,81 @@ body.modo-extrator-ativo #crop-overlay { display: block; cursor: crosshair; back
 /* ================================================
    3.5 ILHA DE FERRAMENTAS (HEADER MÓDULO ED)
    ================================================ */
+
+/* Variável Global para Ícones Inativos no Header */
+.header-tools-area {
+    --header-ghost-alpha: 0.45;
+    flex-shrink: 0;
+}
+
+/* Expansão Total das Abas Principais (Processo/Anotações) */
+.tabs-nav {
+    flex: 1;
+    display: flex;
+    gap: 4px;
+    align-self: stretch; /* Garante que o bloco de abas encoste no teto e no piso do cabeçalho */
+    margin-right: 12px; /* NOVO: Descola a última aba da ilha de ferramentas, criando um respiro visual */
+}
+
+.tabs-nav .tab-btn {
+    flex: 1;
+    max-width: none; 
+    height: 100%; /* Força as abas a ocuparem 100% da altura disponível */
+    margin: 0;
+    padding: 0 16px; /* Padding vertical zerado: o Flexbox fará a centralização perfeita sozinho */
+    font-size: 0.95rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Separador Físico da Ilha de Ferramentas */
+.tool-separator {
+    width: 1px;
+    height: 18px;
+    background-color: rgba(255, 255, 255, 0.15);
+    margin: 0 6px;
+    flex-shrink: 0;
+}
+
+/* Base do Botão de Ícone */
+.header-tools-area .header-icon-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.header-tools-area .header-icon-btn svg { width: 16px; height: 16px; }
+
+.header-tools-area .header-icon-btn:not(.is-active) {
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, var(--header-ghost-alpha));
+}
+.header-tools-area .header-icon-btn:not(.is-active):hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.header-tools-area .header-icon-btn.is-active {
+    background-color: #fbc02d; 
+    color: #1a1a1a; 
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+.header-tools-area .header-icon-btn.is-active:hover {
+    background-color: #f9a825;
+    transform: scale(1.08);
+}
+
 /* 1. Estilos do Berço Fantasma (Microfone) */
 .header-tools-area .ghost-mic-wrapper {
     position: relative;
@@ -235,7 +310,7 @@ body.modo-extrator-ativo #crop-overlay { display: block; cursor: crosshair; back
 .header-tools-area .ghost-mic-wrapper .ghost-svg {
     width: 16px;
     height: 16px;
-    color: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, var(--header-ghost-alpha)) !important;
     position: absolute;
 }
 
