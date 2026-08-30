@@ -442,10 +442,36 @@ window.TopicsManager = (function () {
             tagVisual = `<span class="polo-tag doc-tag">${escaparHTML(dados.role)}</span> <span class="polo-tag ${classePolo}">${escaparHTML(dados.poloTag)}</span>`;
         }
 
+        const inicioNum = Number(dados.inicioNum);
+        const fimNum = Number(dados.fimNum);
+        const trechoValido = Number.isFinite(inicioNum) && Number.isFinite(fimNum) && fimNum > inicioNum;
+
+        if (!trechoValido) {
+            return {
+                htmlConteudo: `<p class="card-texto" style="color:#c62828;">[Erro: intervalo do áudio inválido]</p>`,
+                htmlComentario: ''
+            };
+        }
+
+        const tituloMini = `Oitiva: ${dados.orador}`;
+        // Escapamento duplo para sobreviver ao parser HTML e ao dataset do JS
+        const tituloMiniAttr = escaparHTML(tituloMini).replace(/'/g, '&apos;');
+        
+        // Injeção condicional: só cria o atributo se houver transcrição
+        const degravacaoAttr = dados.transcricao ? `data-audio-degravacao="${escaparHTML(dados.transcricao).replace(/'/g, '&apos;')}"` : '';
+
         htmlConteudo = `
             <div class="card-audio">
-                <div class="audio-icon-box clickable-audio" title="Ouvir este trecho específico" onclick="AudioManager.tocarTrecho(${dados.inicioNum}, ${dados.fimNum})">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <div class="audio-icon-box clickable-audio" 
+                     role="button" 
+                     tabindex="0" 
+                     title="Ouvir este trecho em player focado"
+                     aria-label="${tituloMiniAttr}"
+                     data-audio-inicio="${inicioNum}" 
+                     data-audio-fim="${fimNum}" 
+                     data-audio-titulo="${tituloMiniAttr}"
+                     ${degravacaoAttr}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <polygon points="5 3 19 12 5 21 5 3"></polygon>
                     </svg>
                 </div>
@@ -466,9 +492,10 @@ window.TopicsManager = (function () {
                     </svg>
                 </button>`;
 
+            // A MÁGICA DA QUEBRA DE LINHA ACONTECE NO STYLE ABAIXO (white-space: pre-wrap)
             comentarios.push(`
                 <div style="display:flex; align-items:flex-start; gap:4px;">
-                    <div><strong>Degravação:</strong> <em>"${escaparHTML(dados.transcricao)}"</em></div>
+                    <div style="flex: 1; white-space: pre-wrap; overflow-wrap: break-word;"><strong>Degravação:</strong> <em>"${escaparHTML(dados.transcricao)}"</em></div>
                     ${btnCopiar}
                 </div>
             `);
@@ -2081,7 +2108,10 @@ window.OutlineViewManager = (function() {
                 const role = TopicsManager.escaparHTML(ad.role || ad.oradorStr || 'Orador Desconhecido');
                 const safeFormatTime = (sec) => window.AudioManager?.formatTime ? window.AudioManager.formatTime(sec) : `${Math.floor(sec/60)}' ${Math.floor(sec%60)}''`;
                 const tempoStr = `${safeFormatTime(ad.inicio)} a ${safeFormatTime(ad.fim)}`;
-                const transcricao = ad.transcricao ? `<strong>Degravação:</strong> "${_render(ad.transcricao)}"` : '<em>Sem degravação cadastrada.</em>';
+                // Adicionado .replace(/\n/g, '<br>') para respeitar quebras na Visão Estruturada
+                const transcricao = ad.transcricao 
+                    ? `<strong>Degravação:</strong> "${_render(ad.transcricao).replace(/\n/g, '<br>')}"` 
+                    : '<em>Sem degravação cadastrada.</em>';
 
                 return `
                 <div class="outline-audio-box">
