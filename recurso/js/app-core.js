@@ -244,28 +244,115 @@ window.toggleLoginMenu = function(event) {
 };
 
 /* ================================================
-   MÓDULO DE ATALHOS FLUTUANTES (SHORTCUT MANAGER)
+   MÓDULO DE ATALHOS FLUTUANTES (SHORTCUT MANAGER V2.1 - SMART FABS REVISED)
    ================================================ */
 window.ShortcutManager = (function() {
-    let state = { favorito: null, recursoAutora: null, recursoReu: null, recursoReu2: null, contestacao: null, contestacaoRe2: null, sentenca: null };
+    // Estado Rico: Suporta objetos { page, isCustom, label, color }
+    let state = { 
+        favorito: null, recursoAutora: null, recursoReu: null, 
+        recursoReu2: null, contestacao: null, contestacaoRe2: null, sentenca: null 
+    };
     let currentEditingType = null;
+    let isCustomizing = false;
+    let hoveredType = null; // Controle de hover nativo
     
-    const colors = { favorito: 'is-active-favorito', recursoAutora: 'is-active-autora', recursoReu: 'is-active-re', recursoReu2: 'is-active-re2', contestacao: 'is-active-re', contestacaoRe2: 'is-active-re2', sentenca: 'is-active-juizo' };
-    const rotulos = { favorito: 'Favorito (Coringa)', recursoAutora: 'Recurso (Autora)', recursoReu: 'Recurso (Ré 1)', recursoReu2: 'Recurso (Ré 2)', contestacao: 'Contestação (Ré 1)', contestacaoRe2: 'Contestação (Ré 2)', sentenca: 'Sentença/Acórdão' };
+    // IconRegistry: Blindagem contra State Leak (Perda de ícones no Reload)
+    const originalIcons = {};
 
-    // NOVA ARQUITETURA: Centralizador de Mutação de Estado e Persistência
-    async function _commitShortcut(type, pageNum) {
-        state[type] = pageNum;
-        updateUI();
+    const baseColors = { 
+        favorito: 'is-active-favorito', recursoAutora: 'is-active-autora', 
+        recursoReu: 'is-active-re', recursoReu2: 'is-active-re2', 
+        contestacao: 'is-active-re', contestacaoRe2: 'is-active-re2', 
+        sentenca: 'is-active-juizo' 
+    };
+    const baseRotulos = { 
+        favorito: 'Favorito (Coringa)', recursoAutora: 'Recurso (Autora)', 
+        recursoReu: 'Recurso (Ré 1)', recursoReu2: 'Recurso (Ré 2)', 
+        contestacao: 'Contestação (Ré 1)', contestacaoRe2: 'Contestação (Ré 2)', 
+        sentenca: 'Sentença/Acórdão' 
+    };
+
+    const STAR_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+
+    function init() {
+        Object.keys(state).forEach(type => {
+            const btn = document.getElementById(getFabId(type));
+            if (btn && !originalIcons[type]) {
+                originalIcons[type] = btn.innerHTML;
+            }
+        });
         
-        // Mensagem semântica dependendo se é inclusão ou exclusão
-        if (pageNum === null) {
-            exibirToast('Atalho removido.', 'sucesso');
-        } else {
-            exibirToast(`${rotulos[type]} atualizado para fl. ${pageNum}!`, 'sucesso');
-        }
+        bindSmartFabEvents();
+        updateUI();
+    }
+    
+    function getTypeFromFabId(id) {
+        const map = {
+            favorito: 'fab-favorito', recursoAutora: 'fab-recurso-autora',
+            recursoReu: 'fab-recurso-re', recursoReu2: 'fab-recurso-re2',
+            contestacao: 'fab-contestacao', contestacaoRe2: 'fab-contestacao-re2',
+            sentenca: 'fab-sentenca'
+        };
+        return Object.keys(map).find(type => map[type] === id) || null;
+    }
+    
+    function bindSmartFabEvents() {
+        Object.keys(state).forEach(type => {
+            const btn = document.getElementById(getFabId(type));
+            if (!btn) return;
 
-        // Desacoplamento seguro (Call by string check)
+            // Controle de hover para permitir Ctrl+Shift+K
+            btn.addEventListener('mouseenter', () => { hoveredType = type; });
+            btn.addEventListener('mouseleave', () => { if (hoveredType === type) hoveredType = null; });
+
+            // Botão direito abre customização
+            btn.addEventListener('contextmenu', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                abrirCustomizacao(type);
+            });
+        });
+
+        // Atalho de teclado puro: Ctrl + Shift + K
+        document.addEventListener('keydown', (event) => {
+            if (!event.ctrlKey || !event.shiftKey || event.code !== 'KeyK') return;
+
+            // Não interfere quando o usuário estiver digitando em campos
+            const activeEl = document.activeElement;
+            if (activeEl && (
+                activeEl.tagName === 'INPUT' ||
+                activeEl.tagName === 'TEXTAREA' ||
+                activeEl.tagName === 'SELECT' ||
+                activeEl.isContentEditable
+            )) { return; }
+
+            // Ignora se o próprio modal de atalho já estiver aberto
+            const modal = document.getElementById('shortcut-modal');
+            if (modal && modal.style.display === 'flex') return;
+
+            // Prioridade: botão com hover; depois, botão com foco
+            let targetType = hoveredType;
+            if (!targetType && activeEl && activeEl.classList.contains('fab-shortcut')) {
+                targetType = getTypeFromFabId(activeEl.id);
+            }
+
+            if (!targetType) {
+                exibirToast('Passe o mouse sobre o botão que deseja customizar.', 'aviso');
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            abrirCustomizacao(targetType);
+        });
+    }
+
+    async function _commitShortcut(type, payload) {
+        state[type] = payload;
+        updateUI();
+        const pageNum = payload ? payload.page : null;
+        const msg = pageNum === null ? 'Atalho removido.' : `Atalho atualizado para fl. ${pageNum}!`;
+        exibirToast(msg, 'sucesso');
         if (typeof salvarBackupAutomatico === 'function') await salvarBackupAutomatico();
     }
 
@@ -274,95 +361,162 @@ window.ShortcutManager = (function() {
             const btn = document.getElementById(getFabId(type));
             if (!btn) return;
             
-            btn.classList.remove('is-empty', 'is-active-favorito', 'is-active-autora', 'is-active-re', 'is-active-re2', 'is-active-juizo');
+            if (!originalIcons[type]) originalIcons[type] = btn.innerHTML;
+
+            btn.className = 'fab-btn fab-shortcut'; 
+            btn.removeAttribute('data-tooltip');
+            btn.title = ''; 
             
-            // Single Source of Truth para Tooltips (UX dinâmica)
-            if (state[type] === null) {
+            const data = state[type];
+            const config = (typeof data === 'number') ? { page: data } : data;
+
+            if (!config || !config.page) {
                 btn.classList.add('is-empty');
-                btn.title = `Marcar página: ${rotulos[type]}\n[Ctrl + Clique] p/ capturar a página atual`;
+                btn.setAttribute(
+                    'data-tooltip', 
+                    `${baseRotulos[type]} — sem página\n[Ctrl+Clique] Capturar página atual\n[Botão direito] ou [Ctrl+Shift+K] Customizar`
+                );
+                btn.innerHTML = originalIcons[type];
             } else {
-                btn.classList.add(colors[type]);
-                btn.title = `${rotulos[type]} (Pág. ${state[type]})\n[Shift + Clique] p/ editar\n[Ctrl + Clique] p/ capturar a página atual`;
+                const isCustom = config.isCustom;
+                const corClass = isCustom ? `is-active-${config.color}` : baseColors[type];
+                const rotulo = isCustom ? (config.label || 'Favorito') : baseRotulos[type];
+
+                btn.classList.add(corClass);
+                btn.setAttribute(
+                    'data-tooltip', 
+                    `⭐ ${rotulo} (fl. ${config.page})\n[Shift+Clique] Editar\n[Botão direito] ou [Ctrl+Shift+K] Customizar/Remover`
+                );
+                btn.innerHTML = isCustom ? STAR_SVG : originalIcons[type];
             }
         });
     }
+    
+    function abrirCustomizacao(type) {
+        if (!window.PdfEngine || !PdfEngine.getPdfDoc()) {
+            exibirToast('Carregue um documento primeiro.', 'aviso');
+            return;
+        }
+        const currentPage = PdfEngine.getCurrentPage();
+        const dadoAtual = state[type];
+        const paginaAtualDoAtalho = dadoAtual === null || dadoAtual === undefined
+            ? currentPage
+            : (typeof dadoAtual === 'number' ? dadoAtual : dadoAtual.page);
+
+        abrirModal(type, true, paginaAtualDoAtalho || currentPage);
+    }
 
     async function handleClick(type, event) {
-        if (!window.PdfEngine || !PdfEngine.getPdfDoc()) {
-            exibirToast('Carregue um documento primeiro.', 'aviso'); return;
+        if (!window.PdfEngine || !PdfEngine.getPdfDoc()) { 
+            exibirToast('Carregue um documento primeiro.', 'aviso'); 
+            return; 
         }
 
-        // FLUXO DE CAPTURA RÁPIDA (Early Return com Isolamento de Evento)
-        // Utilizando apenas Ctrl estrito (evitando falsos positivos com AltGr/Shift)
+        const currentPage = PdfEngine.getCurrentPage();
+
+        // Captura rápida: Ctrl + Clique
         if (event.ctrlKey && !event.shiftKey && !event.altKey) {
-            event.preventDefault();
-            event.stopPropagation(); // Impede o "Event Bubbling" que fecha modais
-            
-            const currentPage = PdfEngine.getCurrentPage();
-            
-            // Validação defensiva rápida
+            event.preventDefault(); 
+            event.stopPropagation();
             if (currentPage > 0) {
-                await _commitShortcut(type, currentPage);
-            } else {
-                exibirToast('Não foi possível identificar a página atual.', 'erro');
+                await _commitShortcut(type, { page: currentPage });
             }
             return; 
         }
 
-        // FLUXO ORIGINAL (Modal de Edição ou Navegação)
+        // Editar: Shift + Clique ou abrir modal se estiver vazio
         if (state[type] === null || event.shiftKey) {
-            abrirModal(type);
+            const paginaExistente = state[type] === null
+                ? ''
+                : (typeof state[type] === 'number' ? state[type] : state[type].page);
+            abrirModal(type, false, paginaExistente);
         } else {
-            PdfEngine.goToPage(state[type]);
+            const targetPage = typeof state[type] === 'number' ? state[type] : state[type].page;
+            PdfEngine.goToPage(targetPage);
         }
     }
 
-    function abrirModal(type) {
+    function abrirModal(type, customMode = false, suggestedPage = '') {
         currentEditingType = type;
-        document.getElementById('shortcut-modal-title').textContent = `Página para: ${rotulos[type]}`;
-        const input = document.getElementById('shortcut-page-input');
-        input.value = state[type] || '';
+        isCustomizing = customMode || (state[type] && state[type].isCustom);
+
+        const titleEl = document.getElementById('shortcut-modal-title');
+        if(titleEl) titleEl.textContent = isCustomizing ? 'Customizar Favorito - Página:' : `Página para: ${baseRotulos[type]}`;
+        
+        const inputEl = document.getElementById('shortcut-page-input');
+        if(inputEl) inputEl.value = suggestedPage;
+        
+        const customFields = document.getElementById('shortcut-custom-fields');
+        if(customFields) customFields.style.display = isCustomizing ? 'block' : 'none';
+        
+        if (isCustomizing && state[type] && state[type].isCustom) {
+            const labelInput = document.getElementById('shortcut-label-input');
+            if(labelInput) labelInput.value = state[type].label || '';
+            
+            const radio = document.querySelector(`input[name="shortcut_color"][value="${state[type].color}"]`);
+            if(radio) radio.checked = true;
+        } else {
+            const labelInput = document.getElementById('shortcut-label-input');
+            if(labelInput) labelInput.value = '';
+            const firstRadio = document.querySelector('input[name="shortcut_color"]');
+            if(firstRadio) firstRadio.checked = true;
+        }
         
         document.getElementById('shortcut-modal-backdrop').style.display = 'block';
         document.getElementById('shortcut-modal').style.display = 'flex';
-        setTimeout(() => input.focus(), 50);
+        setTimeout(() => inputEl?.focus(), 50);
     }
 
+    async function salvarModal() {
+        if (!currentEditingType) return;
+        const pageVal = document.getElementById('shortcut-page-input').value.trim();
+        const parsedPage = parseInt(pageVal, 10);
+        
+        if (pageVal === '') {
+            await _commitShortcut(currentEditingType, null);
+        } else if (!isNaN(parsedPage) && parsedPage > 0) {
+            let payload = { page: parsedPage };
+            
+            if (isCustomizing) {
+                const label = document.getElementById('shortcut-label-input').value.trim() || 'Favorito';
+                const colorRadio = document.querySelector('input[name="shortcut_color"]:checked');
+                const color = colorRadio ? colorRadio.value : 'fuchsia';
+                payload = { page: parsedPage, isCustom: true, label, color };
+            }
+            
+            await _commitShortcut(currentEditingType, payload);
+        } else {
+            exibirToast('Número de página inválido.', 'erro'); 
+            return;
+        }
+        fecharModal();
+    }
+    
     function fecharModal() {
         currentEditingType = null;
         document.getElementById('shortcut-modal-backdrop').style.display = 'none';
         document.getElementById('shortcut-modal').style.display = 'none';
     }
 
-    async function salvarModal() {
-        if (!currentEditingType) return;
-        const val = document.getElementById('shortcut-page-input').value.trim();
-        const parsed = parseInt(val, 10);
-        
-        // Delegação de mutação para o orquestrador
-        if (val === '') {
-            await _commitShortcut(currentEditingType, null);
-        } else if (!isNaN(parsed) && parsed > 0) {
-            await _commitShortcut(currentEditingType, parsed);
-        } else {
-            exibirToast('Número de página inválido.', 'erro');
-            return;
-        }
-        
-        fecharModal();
-    }
-
     function getFabId(type) {
-        const map = { favorito: 'fab-favorito', recursoAutora: 'fab-recurso-autora', recursoReu: 'fab-recurso-re', recursoReu2: 'fab-recurso-re2', contestacao: 'fab-contestacao', contestacaoRe2: 'fab-contestacao-re2', sentenca: 'fab-sentenca' };
+        const map = { 
+            favorito: 'fab-favorito', recursoAutora: 'fab-recurso-autora', 
+            recursoReu: 'fab-recurso-re', recursoReu2: 'fab-recurso-re2', 
+            contestacao: 'fab-contestacao', contestacaoRe2: 'fab-contestacao-re2', 
+            sentenca: 'fab-sentenca' 
+        };
         return map[type];
     }
 
     return { 
-        handleClick, updateUI, fecharModal, salvarModal,
+        init, handleClick, updateUI, fecharModal, salvarModal,
         getState: () => state,
         setState: (newState) => { if (newState) { state = { ...state, ...newState }; updateUI(); } },
-        reset: () => { state = { favorito: null, recursoAutora: null, recursoReu: null, recursoReu2: null, contestacao: null, contestacaoRe2: null, sentenca: null }; updateUI(); },
-        toggleVisibility: (show) => {
+        reset: () => { 
+            state = { favorito: null, recursoAutora: null, recursoReu: null, recursoReu2: null, contestacao: null, contestacaoRe2: null, sentenca: null }; 
+            updateUI(); 
+        },
+        toggleVisibility: (show) => { 
             Object.keys(state).forEach(type => {
                 const btn = document.getElementById(getFabId(type));
                 if (btn) btn.style.display = show ? 'flex' : 'none';
@@ -478,6 +632,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (window.AudioManager) AudioManager.init({ getTopicos: () => topicos, exibirToast, salvarAnotacao });
     if (window.ExportManager) ExportManager.init({ getTopicos: () => topicos, exibirToast, getActiveTabId: () => TopicsManager.getActiveTabId() });
+    if (window.ShortcutManager) window.ShortcutManager.init(); // <-- INICIALIZA O ICON REGISTRY DOS FABS
 
     const historyContainer = document.getElementById('history-container');
     if (historyContainer) historyContainer.addEventListener('scroll', checkScrollFabState, { passive: true });
