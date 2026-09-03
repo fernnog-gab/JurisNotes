@@ -753,3 +753,74 @@ body.theme-processo-jasmine {
     --pdf-skeleton-highlight: rgba(255, 248, 225, 0.65); /* Feixe de luz quente e sutil */
     --pdf-skeleton-spinner: #a9712a; /* Marrom sóbrio para o spinner, mantendo elegância */
 }
+
+/* ================================================
+   SMART FABS: FAVORITOS CUSTOMIZADOS E TOOLTIPS
+   ================================================ */
+
+/* 1. Sistema de Tooltip Instantâneo (CSS-Only com Suporte a Quebra de Linha) */
+[data-tooltip] {
+    position: relative;
+}
+[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: var(--trt-blue);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    white-space: pre-line;
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: var(--z-toast);
+    box-shadow: var(--shadow-sm);
+    min-width: 120px;
+}
+[data-tooltip]:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* 2. Novas Paletas de Cores para Favoritos Customizados (Shared Classes) */
+.fab-shortcut.is-active-fuchsia { background-color: #D500B5 !important; border-color: #F500D0 !important; color: white !important; }
+.fab-shortcut.is-active-purple  { background-color: #6a1b9a !important; border-color: #9c27b0 !important; color: white !important; }
+.fab-shortcut.is-active-teal    { background-color: #00897B !important; border-color: #26A69A !important; color: white !important; }
+.fab-shortcut.is-active-orange  { background-color: #E65100 !important; border-color: #FF9800 !important; color: white !important; }
+.fab-shortcut.is-active-cyan    { background-color: #0288D1 !important; border-color: #03A9F4 !important; color: white !important; }
+
+/* 3. Estilização do Modal de Customização (Color Picker) */
+.color-picker-grid {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+.color-swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.color-swatch input[type="radio"] {
+    display: none;
+}
+.color-swatch:has(input:checked) {
+    transform: scale(1.15);
+    border-color: var(--text-dark);
+    box-shadow: 0 0 0 2px white, 0 4px 8px rgba(0,0,0,0.2);
+}
+.sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; 
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}

@@ -269,6 +269,18 @@
                     </div>
                 </div>
         
+                <!-- Separador Semântico -->
+                <div class="tool-separator"></div>
+
+                <!-- Nova Ferramenta: Toggle Diretrizes Globais -->
+                <button id="btn-toggle-globais" class="header-icon-btn" aria-pressed="false" aria-label="Alternar Diretrizes Globais" style="display:none;" onclick="TopicsManager.toggleDiretrizesGlobais()" title="Ativar/Ocultar Diretrizes Globais do Tópico">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="2" y1="12" x2="22" y2="12"></line>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                    </svg>
+                </button>
+        
                 <div class="tool-separator"></div>
         
                 <!-- Módulo: Contrato de Trabalho (Injetado para ED) -->
@@ -969,11 +981,26 @@
     <!-- MODAL SMART SHORTCUTS -->
     <div id="shortcut-modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.40); z-index: 4004;" onclick="ShortcutManager.fecharModal()"></div>
     <div id="shortcut-modal" class="crop-wizard-popup" style="display:none; z-index: 4005;">
-        <div class="wizard-header">📍 Configurar Atalho</div>
+        <div class="wizard-header" id="shortcut-modal-header">📍 Configurar Atalho</div>
         <p class="popup-label" id="shortcut-modal-title">Página do documento:</p>
-        <p style="font-size: 0.8rem; color: #666; margin-bottom: 8px;">Deixe em branco para remover o atalho.</p>
         <input type="number" id="shortcut-page-input" class="topic-select" placeholder="Ex: 15" min="1">
-        <div class="wizard-actions">
+        
+        <!-- NOVOS CAMPOS PARA FAVORITO CUSTOMIZADO (Iniciam ocultos via JS) -->
+        <div id="shortcut-custom-fields" style="display: none; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+            <p class="popup-label">Resumo do Favorito (Tooltip):</p>
+            <input type="text" id="shortcut-label-input" class="topic-select" placeholder="Ex: Laudo Pericial Médico..." maxlength="40">
+            
+            <p class="popup-label" style="margin-top: 12px;">Cor do Ícone:</p>
+            <div class="color-picker-grid" id="shortcut-color-picker">
+                <label class="color-swatch" style="background: #D500B5;"><input type="radio" name="shortcut_color" value="fuchsia" class="sr-only"></label>
+                <label class="color-swatch" style="background: #6a1b9a;"><input type="radio" name="shortcut_color" value="purple" class="sr-only"></label>
+                <label class="color-swatch" style="background: #00897B;"><input type="radio" name="shortcut_color" value="teal" class="sr-only"></label>
+                <label class="color-swatch" style="background: #E65100;"><input type="radio" name="shortcut_color" value="orange" class="sr-only"></label>
+                <label class="color-swatch" style="background: #0288D1;"><input type="radio" name="shortcut_color" value="cyan" class="sr-only"></label>
+            </div>
+        </div>
+        
+        <div class="wizard-actions" style="margin-top: 20px; display: flex; gap: 10px;">
             <button class="chip-btn chip-cancelar" onclick="ShortcutManager.fecharModal()">✕ Cancelar</button>
             <button class="chip-btn chip-autora" style="background: var(--trt-blue); color: white; border-color: var(--trt-blue);" onclick="ShortcutManager.salvarModal()">✔ Confirmar</button>
         </div>
