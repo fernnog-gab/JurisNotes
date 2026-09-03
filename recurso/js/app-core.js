@@ -356,6 +356,29 @@ window.ShortcutManager = (function() {
         if (typeof salvarBackupAutomatico === 'function') await salvarBackupAutomatico();
     }
 
+    // NOVA CONFIGURAÇÃO: Define de forma escalável quais botões exibem atalhos
+    const VERBOSE_TOOLTIP_TYPES = ['favorito'];
+
+    /**
+     * NOVA FUNÇÃO PURA: Isola a regra de negócio da geração do texto do tooltip.
+     * Facilita testes e remove lógica de domínio da camada de manipulação de DOM.
+     */
+    function _buildTooltipText(type, rotulo, page, isEmpty) {
+        const isVerbose = VERBOSE_TOOLTIP_TYPES.includes(type);
+        let tooltip = isEmpty ? `${rotulo} — sem página` : `⭐ ${rotulo} (fl. ${page})`;
+
+        if (isVerbose) {
+            if (isEmpty) {
+                tooltip += `\n[Ctrl+Clique] Capturar página atual\n[Botão direito] ou [Ctrl+Shift+K] Customizar`;
+            } else {
+                tooltip += `\n[Shift+Clique] Editar\n[Botão direito] ou [Ctrl+Shift+K] Customizar/Remover`;
+            }
+        }
+        
+        return tooltip;
+    }
+
+    // REFATORAÇÃO: updateUI agora lida estritamente com estado e DOM
     function updateUI() {
         Object.keys(state).forEach(type => {
             const btn = document.getElementById(getFabId(type));
@@ -369,24 +392,21 @@ window.ShortcutManager = (function() {
             
             const data = state[type];
             const config = (typeof data === 'number') ? { page: data } : data;
+            const isEmpty = !config || !config.page;
+            const isCustom = !isEmpty && config.isCustom;
+            
+            // Definição do rótulo e delegação para a função pura
+            const rotulo = isCustom ? (config.label || 'Favorito') : baseRotulos[type];
+            const tooltipText = _buildTooltipText(type, rotulo, config?.page, isEmpty);
 
-            if (!config || !config.page) {
+            if (isEmpty) {
                 btn.classList.add('is-empty');
-                btn.setAttribute(
-                    'data-tooltip', 
-                    `${baseRotulos[type]} — sem página\n[Ctrl+Clique] Capturar página atual\n[Botão direito] ou [Ctrl+Shift+K] Customizar`
-                );
+                btn.setAttribute('data-tooltip', tooltipText);
                 btn.innerHTML = originalIcons[type];
             } else {
-                const isCustom = config.isCustom;
                 const corClass = isCustom ? `is-active-${config.color}` : baseColors[type];
-                const rotulo = isCustom ? (config.label || 'Favorito') : baseRotulos[type];
-
                 btn.classList.add(corClass);
-                btn.setAttribute(
-                    'data-tooltip', 
-                    `⭐ ${rotulo} (fl. ${config.page})\n[Shift+Clique] Editar\n[Botão direito] ou [Ctrl+Shift+K] Customizar/Remover`
-                );
+                btn.setAttribute('data-tooltip', tooltipText);
                 btn.innerHTML = isCustom ? STAR_SVG : originalIcons[type];
             }
         });
