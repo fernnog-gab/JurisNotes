@@ -26,6 +26,68 @@ window.TopicsManager = (function () {
 
     let _activeTopicoCor = '#ffffff';
 
+    const _topicosComGlobaisAbertas = new Set();
+
+    function _sincronizarBtnGlobais(temDados, aberto) {
+        const btn = document.getElementById('btn-toggle-globais');
+        if (!btn) return;
+        
+        const isAtivo = temDados || aberto;
+        btn.classList.toggle('is-active', isAtivo);
+        btn.setAttribute('aria-pressed', isAtivo ? 'true' : 'false');
+        
+        if (temDados) {
+            btn.title = "Diretrizes Globais estão em uso (Trancado)";
+        } else if (aberto) {
+            btn.title = "Ocultar Diretrizes Globais (Vazio)";
+        } else {
+            btn.title = "Ativar Card de Diretrizes Globais";
+        }
+    }
+
+    function toggleDiretrizesGlobais() {
+        const activeId = activeTabId;
+        if (!activeId) return;
+        const topico = topicos.find(t => t.id === activeId);
+        if (!topico) return;
+
+        const temDiretrizes = topico.diretrizesGlobais && topico.diretrizesGlobais.length > 0;
+        
+        if (temDiretrizes) {
+            if(window.exibirToast) exibirToast('Não é possível ocultar: existem diretrizes cadastradas. Remova-as primeiro.', 'aviso');
+            return;
+        }
+
+        const ativando = !_topicosComGlobaisAbertas.has(activeId);
+        
+        if (ativando) {
+            _topicosComGlobaisAbertas.add(activeId);
+        } else {
+            _topicosComGlobaisAbertas.delete(activeId);
+        }
+        
+        renderizarFichario(topicos); 
+
+        if (ativando) {
+            requestAnimationFrame(() => {
+                const globalCard = document.querySelector('.nivel-global .annotation-card');
+                if (globalCard) {
+                    const scrollContainer = document.getElementById('history-container');
+                    const offset = (globalCard.getBoundingClientRect().top - scrollContainer.getBoundingClientRect().top) + scrollContainer.scrollTop - 40;
+                    scrollContainer.scrollTo({ top: offset, behavior: 'smooth' });
+                    
+                    globalCard.classList.remove('card-flash-focus');
+                    void globalCard.offsetWidth;
+                    globalCard.classList.add('card-flash-focus');
+                }
+            });
+        }
+    }
+    
+    function resetVisibilidadeGlobais() {
+        _topicosComGlobaisAbertas.clear();
+    }
+
     // Observer Otimizado (Debounce de ~16ms para agrupar Recalculate Styles)
     let _layoutDebounceTimer = null;
     const resizeObserver = new ResizeObserver(() => {
@@ -352,26 +414,47 @@ window.TopicsManager = (function () {
             const safeFormatTime = (sec) => window.AudioManager?.formatTime ? window.AudioManager.formatTime(sec) : `${Math.floor(sec/60)}' ${Math.floor(sec%60)}''`;
 
             // Renderiza o cabeçalho com o botão Clickable e Ícone de Play
-            htmlConteudo = `
-                <div class="card-audio">
-                    <div class="audio-icon-box clickable-audio" title="Ouvir este trecho específico" onclick="AudioManager.tocarTrecho(${inicioNum}, ${fimNum})">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                        </svg>
-                    </div>
-                    <div class="audio-card-meta">
-                        <strong>Oitiva:</strong> ${tagVisual}<br>
-                        <span class="audio-time-badge">⏱️ ${safeFormatTime(inicioNum)} a ${safeFormatTime(fimNum)}</span>
-                    </div>
-                </div>`;
+            const trechoValido = Number.isFinite(inicioNum) && Number.isFinite(fimNum) && fimNum > inicioNum;
+
+            if (!trechoValido) {
+                htmlConteudo = `<p class="card-texto" style="color:#c62828;">[Erro: intervalo do áudio inválido]</p>`;
+            } else {
+                const tituloMini = `Oitiva: ${nomePapel}`;
+                const tituloMiniAttr = escaparHTML(tituloMini).replace(/'/g, '&apos;');
+                
+                // Injeção condicional: só cria o atributo se houver transcrição
+                const degravacaoAttr = dadosAudio.transcricao ? `data-audio-degravacao="${escaparHTML(dadosAudio.transcricao).replace(/'/g, '&apos;')}"` : '';
+
+                htmlConteudo = `
+                    <div class="card-audio">
+                        <div class="audio-icon-box clickable-audio" 
+                             role="button" 
+                             tabindex="0" 
+                             title="Ouvir este trecho em player focado"
+                             aria-label="${tituloMiniAttr}"
+                             data-audio-inicio="${inicioNum}" 
+                             data-audio-fim="${fimNum}" 
+                             data-audio-titulo="${tituloMiniAttr}"
+                             ${degravacaoAttr}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                            </svg>
+                        </div>
+                        <div class="audio-card-meta">
+                            <strong>Oitiva:</strong> ${tagVisual}<br>
+                            <span class="audio-time-badge">⏱️ ${safeFormatTime(inicioNum)} a ${safeFormatTime(fimNum)}</span>
+                        </div>
+                    </div>`;
+            }
 
             // PRESERVAÇÃO CRÍTICA: Lógica de Comentários e Degravações
             let comentarios = [];
             if (anotacao.comentario) comentarios.push(`<strong>Contexto:</strong> ${escaparHTML(anotacao.comentario)}`);
             if (dadosAudio.transcricao) {
+                // A MÁGICA DA QUEBRA DE LINHA ACONTECE NO STYLE ABAIXO (white-space: pre-wrap)
                 comentarios.push(`
                     <div style="display:flex; align-items:flex-start; gap:4px;">
-                        <div><strong>Degravação:</strong> <em>"${escaparHTML(dadosAudio.transcricao)}"</em></div>
+                        <div style="flex: 1; white-space: pre-wrap; overflow-wrap: break-word;"><strong>Degravação:</strong> <em>"${escaparHTML(dadosAudio.transcricao)}"</em></div>
                         <button class="btn-copy-degravacao" title="Copiar Degravação" onclick="window.copiarDegravacao('${anotacao.topicoIdOrigem || activeTabId}', '${anotacao.uuid || ''}')">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
                                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
@@ -994,7 +1077,6 @@ window.TopicsManager = (function () {
 
         if (!headerEl || !contentEl) return;
 
-        // Estado vazio: nenhum tópico criado ainda
         if (topicosArray.length === 0) {
             headerEl.innerHTML = '';
             contentEl.innerHTML = `
@@ -1007,16 +1089,13 @@ window.TopicsManager = (function () {
             return;
         }
 
-        // Resiliência: garante que sempre há uma aba ativa válida
         if (!activeTabId || !topicosArray.some(t => t.id === activeTabId)) {
             activeTabId = topicosArray[0].id;
         }
 
-        // Cache do scroll atual antes da destruição
         const scrollAnterior = headerEl.scrollLeft;
         let abaAtivaNode = null;
 
-        // 1. Construir as abas do fichário (com inversão de ordem: Mais recentes à esquerda)
         headerEl.innerHTML = '';
         [...topicosArray].reverse().forEach(topico => {
             const isActive = topico.id === activeTabId;
@@ -1026,7 +1105,6 @@ window.TopicsManager = (function () {
             btn.textContent      = topico.nome;
             btn.title            = topico.nome; 
             
-            // Injeção declarativa de variáveis CSS (Padronizado com o painel de Recurso)
             const corContraste = obterCorContraste(topico.cor);
             btn.style.setProperty('--tab-bg', topico.cor);
             btn.style.setProperty('--tab-color', corContraste);
@@ -1041,18 +1119,13 @@ window.TopicsManager = (function () {
             if (isActive) abaAtivaNode = btn;
         });
 
-        // 2. Construir o conteúdo do tópico ativo
         const topicoAtivo = topicosArray.find(t => t.id === activeTabId);
         if (!topicoAtivo) return;
 
         _activeTopicoCor = topicoAtivo.cor;
-        
-        // Define a cor da linha superior dinâmica para amarrar a aba ao conteúdo
         contentEl.style.setProperty('--active-tab-color', escurecerCor(_activeTopicoCor, 0.85));
-        
         const corTextoTese = obterCorContraste(_activeTopicoCor);
 
-        // Restauração do estado de scroll após o paint do DOM
         requestAnimationFrame(() => {
             headerEl.scrollLeft = scrollAnterior;
             if (abaAtivaNode) {
@@ -1060,7 +1133,6 @@ window.TopicsManager = (function () {
             }
         });
 
-        // NOVO: Painel Preâmbulo Estático gerado incondicionalmente
         const preambleHtml = `
             <div class="topic-preamble-panel" style="position: sticky; top: 0; z-index: 10;">
                 <div class="preamble-card preamble-alegacao ${!topicoAtivo.alegacoes ? 'is-empty' : ''}" onclick="abrirEdicaoPreambulo('${activeTabId}', 'alegacoes')">
@@ -1101,158 +1173,156 @@ window.TopicsManager = (function () {
 
         let conteudoCentralHtml = '';
 
-        if (topicoAtivo.anotacoes.length === 0) {
+        const temAnotacoes = topicoAtivo.anotacoes && topicoAtivo.anotacoes.length > 0;
+        const temGlobais = topicoAtivo.diretrizesGlobais && topicoAtivo.diretrizesGlobais.length > 0;
+        const forcadoAberto = _topicosComGlobaisAbertas.has(activeTabId);
+
+        if (!temAnotacoes && !temGlobais && !forcadoAberto) {
             conteudoCentralHtml = `
                 <p class="empty-state" style="margin-top: 20px;">
-                    A Matriz Dialética está vazia. Adicione extrações das provas.
+                    A Matriz Dialética está vazia. Adicione extrações das provas ou clique no Globo no cabeçalho para inserir Diretrizes Globais.
                 </p>`;
-        } else {
-            let sumarioHtml = '';
-            const tesesValidas = topicoAtivo.anotacoes.filter(an => an.tese && an.tese.trim() !== '');
-            if (tesesValidas.length > 0) {
-                sumarioHtml = `
-                <div class="thesis-summary-panel">`;
-
-                topicoAtivo.anotacoes.forEach((an, idx) => {
-                    if (an.tese && an.tese.trim() !== '') {
-                        const fasesPresentes = new Set();
-                        
-                        fasesPresentes.add(typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(an.documento) : 4);
-                        
-                        if (an.itensCorrelacionados?.length) {
-                            an.itensCorrelacionados.forEach(ic => fasesPresentes.add(typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(ic.documento) : 4));
-                        }
-
-                        if (an.itensCorrelacionados?.length) {
-                            an.itensCorrelacionados.forEach(ic => {
-                                if (ic.subAnotacoes && ic.subAnotacoes.length > 0) {
-                                    fasesPresentes.add(typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(ic.documento) : 4);
-                                }
-                            });
-                        }
-
-                        const cores = [];
-                        if(fasesPresentes.has(1)) cores.push('var(--fase-1-bg)');
-                        if(fasesPresentes.has(2)) cores.push('var(--fase-2-bg)');
-                        if(fasesPresentes.has(3)) cores.push('var(--fase-3-bg)');
-                        if(fasesPresentes.has(4)) cores.push('var(--fase-4-bg)');
-                        
-                        let bgStyle = '';
-                        if(cores.length > 0) {
-                            const step = 100 / cores.length;
-                            const gradients = cores.map((cor, i) => `${cor} ${i * step}%, ${cor} ${(i + 1) * step}%`);
-                            bgStyle = `style="background: linear-gradient(to right, ${gradients.join(', ')}), #ffffff;"`; 
-                        }
-
-                        // Lê diretamente do estado imutável (SSOT)
-                        const tipoVicio = topicoAtivo.vicio || 'omissao'; 
-                        let isMature = false;
-
-                        if (tipoVicio === 'omissao') {
-                            // Azul, Verde, Roxo
-                            isMature = fasesPresentes.has(1) && fasesPresentes.has(2) && fasesPresentes.has(3);
-                        } else if (tipoVicio === 'contradicao') {
-                            // Exige Roxo(3) vs Roxo(3). Verifica se o card mestre e correlacionados somam 2 peças da Fase 3
-                            let contadorRoxo = (typeof identificarFaseMetodologica === 'function' && identificarFaseMetodologica(an.documento) === 3) ? 1 : 0;
-                            if (an.itensCorrelacionados) {
-                                contadorRoxo += an.itensCorrelacionados.filter(ic => typeof identificarFaseMetodologica === 'function' && identificarFaseMetodologica(ic.documento) === 3).length;
-                            }
-                            isMature = fasesPresentes.has(1) && fasesPresentes.has(3) && (contadorRoxo >= 2);
-                        } else if (tipoVicio === 'erro') {
-                            isMature = fasesPresentes.has(1) && fasesPresentes.has(3) && fasesPresentes.has(4);
-                        }
-
-                        const matureClass = isMature ? 'mature' : '';
-                        
-                        // Escapa apenas a tese digitada pelo usuário e aciona o novo motor (SSOT)
-                        const teseEscapada = an.tese ? escaparHTML(an.tese) : '';
-                        const textoPainelRenderizado = window.JurisUtils.obterBadgeTeseCompleto(an.vicio || tipoVicio, teseEscapada, true);
-
-                        sumarioHtml += `
-                            <div class="thesis-badge ${matureClass}" onclick="abrirModalTese('${activeTabId}', ${idx})">
-                                <div class="thesis-badge-inner" ${bgStyle}>
-                                    <span class="num" style="background-color: ${_activeTopicoCor}; color: ${corTextoTese};">${idx + 1}</span> 
-                                    <span class="texto-tese">${textoPainelRenderizado}</span>
-                                </div>
-                            </div>`;
+            const novoHtml = preambleHtml + conteudoCentralHtml;
+            
+            if (typeof resizeObserver !== 'undefined') resizeObserver.disconnect();
+            if (typeof morphdom !== 'undefined') {
+                morphdom(contentEl, `<div id="topics-tab-content" class="topics-content-area" style="${contentEl.style.cssText}">${novoHtml}</div>`, {
+                    childrenOnly: true,
+                    getNodeKey: function(node) {
+                        if (node.id) return node.id;
                     }
                 });
-                sumarioHtml += '</div>';
+            } else {
+                contentEl.innerHTML = novoHtml;
             }
             
-            let htmlDiretrizes = '';
-            
-            // Injeta o contexto de renderização isolado para a aba Cedo
-            const renderContext = {
-                romanCounter: 0,
-                romanMap: new Map() // Mapeia grupoId -> Numeral Romano
-            };
+            _sincronizarBtnGlobais(false, false);
+            return;
+        }
 
-            // 1. Diretriz Global (Mantida fixa no topo)
-            const diretrizesGlobaisSeguras = topicoAtivo.diretrizesGlobais || [];
-            htmlDiretrizes += renderizarNivelHierarquico('global', null, diretrizesGlobaisSeguras, activeTabId, [], 0, renderContext);
+        let sumarioHtml = '';
+        const tesesValidas = topicoAtivo.anotacoes.filter(an => an.tese && an.tese.trim() !== '');
+        if (tesesValidas.length > 0) {
+            sumarioHtml = `
+            <div class="thesis-summary-panel">`;
 
-            // 2. Lógica Dinâmica: Cards do Vício (Ocultação Condicional)
-            let cardsHTML = '';
-            let ultimaTeseRenderizada = null;
-
-            topicoAtivo.anotacoes.forEach((anotacao, index) => {
-                // 1. Busca os dados de forma segura (preserva notas já criadas)
-                const chaveTeseCrua = anotacao.tese || "Provas não agrupadas";
-                
-                // 2. Verifica se o usuário de fato escreveu uma tese/grupo
-                const isTesePreenchida = (anotacao.tese && anotacao.tese.trim() !== '');
-
-                // Puxa a chave crua do banco (ex: 'omissao') e formata para exibição
-                const vicioRaw = anotacao.vicio || topicoAtivo.vicio || 'omissao';
-                const vicioFormatado = window.JurisUtils.formatarVicioED(vicioRaw);
-
-                // 3. Se houver quebra de grupo (novo grupo de provas)
-                if (chaveTeseCrua !== ultimaTeseRenderizada) {
-                    // Busca as diretrizes salvas para este vício específico
-                    const diretrizesDoVicio = (topicoAtivo.diretrizesPorVicio && topicoAtivo.diretrizesPorVicio[vicioRaw])
-                                              ? topicoAtivo.diretrizesPorVicio[vicioRaw]
-                                              : [];
-
-                    // 4. Ocultação Segura: Só desenha o card se a tese tiver nome OU se houver notas/diretrizes salvas nela
-                    if (isTesePreenchida || diretrizesDoVicio.length > 0) {
-                        const tituloExibicao = isTesePreenchida ? anotacao.tese.trim() : "Provas não agrupadas";
-                        
-                        // Injeta dinamicamente o card de Vício nativo no topo da Tese
-                        cardsHTML += renderizarNivelHierarquico(
-                            'vicio',
-                            vicioFormatado,     // Nome bonito (com acento)
-                            diretrizesDoVicio,  // Mantém os botões e regras de IA funcionando
-                            activeTabId,
-                            [tituloExibicao],   // Exibe apenas a tese deste grupo específico
-                            index,              // Índice sincronizado para alinhamento (Esquerda/Direita)
-                            renderContext
-                        );
+            topicoAtivo.anotacoes.forEach((an, idx) => {
+                if (an.tese && an.tese.trim() !== '') {
+                    const fasesPresentes = new Set();
+                    
+                    fasesPresentes.add(typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(an.documento) : 4);
+                    
+                    if (an.itensCorrelacionados?.length) {
+                        an.itensCorrelacionados.forEach(ic => fasesPresentes.add(typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(ic.documento) : 4));
                     }
 
-                    // Atualiza a referência do agrupamento atual incondicionalmente
-                    ultimaTeseRenderizada = chaveTeseCrua;
+                    if (an.itensCorrelacionados?.length) {
+                        an.itensCorrelacionados.forEach(ic => {
+                            if (ic.subAnotacoes && ic.subAnotacoes.length > 0) {
+                                fasesPresentes.add(typeof identificarFaseMetodologica === 'function' ? identificarFaseMetodologica(ic.documento) : 4);
+                            }
+                        });
+                    }
+
+                    const cores = [];
+                    if(fasesPresentes.has(1)) cores.push('var(--fase-1-bg)');
+                    if(fasesPresentes.has(2)) cores.push('var(--fase-2-bg)');
+                    if(fasesPresentes.has(3)) cores.push('var(--fase-3-bg)');
+                    if(fasesPresentes.has(4)) cores.push('var(--fase-4-bg)');
+                    
+                    let bgStyle = '';
+                    if(cores.length > 0) {
+                        const step = 100 / cores.length;
+                        const gradients = cores.map((cor, i) => `${cor} ${i * step}%, ${cor} ${(i + 1) * step}%`);
+                        bgStyle = `style="background: linear-gradient(to right, ${gradients.join(', ')}), #ffffff;"`; 
+                    }
+
+                    const tipoVicio = topicoAtivo.vicio || 'omissao'; 
+                    let isMature = false;
+
+                    if (tipoVicio === 'omissao') {
+                        isMature = fasesPresentes.has(1) && fasesPresentes.has(2) && fasesPresentes.has(3);
+                    } else if (tipoVicio === 'contradicao') {
+                        let contadorRoxo = (typeof identificarFaseMetodologica === 'function' && identificarFaseMetodologica(an.documento) === 3) ? 1 : 0;
+                        if (an.itensCorrelacionados) {
+                            contadorRoxo += an.itensCorrelacionados.filter(ic => typeof identificarFaseMetodologica === 'function' && identificarFaseMetodologica(ic.documento) === 3).length;
+                        }
+                        isMature = fasesPresentes.has(1) && fasesPresentes.has(3) && (contadorRoxo >= 2);
+                    } else if (tipoVicio === 'erro') {
+                        isMature = fasesPresentes.has(1) && fasesPresentes.has(3) && fasesPresentes.has(4);
+                    }
+
+                    const matureClass = isMature ? 'mature' : '';
+                    
+                    const teseEscapada = an.tese ? escaparHTML(an.tese) : '';
+                    const textoPainelRenderizado = window.JurisUtils.obterBadgeTeseCompleto(an.vicio || tipoVicio, teseEscapada, true);
+
+                    sumarioHtml += `
+                        <div class="thesis-badge ${matureClass}" onclick="abrirModalTese('${activeTabId}', ${idx})">
+                            <div class="thesis-badge-inner" ${bgStyle}>
+                                <span class="num" style="background-color: ${_activeTopicoCor}; color: ${corTextoTese};">${idx + 1}</span> 
+                                <span class="texto-tese">${textoPainelRenderizado}</span>
+                            </div>
+                        </div>`;
                 }
-
-                // Renderiza a prova (Card 1, 2, 3...)
-                cardsHTML += criarCard(anotacao, index, topicoAtivo.anotacoes, renderContext);
             });
-
-            // MONTAGEM FINAL DA TIMELINE
-            conteudoCentralHtml = sumarioHtml + `
-                <div class="timeline-container" id="timeline-container">
-                    <svg id="connections-canvas"></svg>
-                    ${htmlDiretrizes}
-                    ${cardsHTML}
-                </div>`;
+            sumarioHtml += '</div>';
         }
+        
+        let htmlDiretrizes = '';
+        
+        const renderContext = {
+            romanCounter: 0,
+            romanMap: new Map() 
+        };
+
+        if (temGlobais || forcadoAberto) {
+            const diretrizesGlobaisSeguras = topicoAtivo.diretrizesGlobais || [];
+            htmlDiretrizes += renderizarNivelHierarquico('global', null, diretrizesGlobaisSeguras, activeTabId, [], 0, renderContext);
+        }
+
+        let cardsHTML = '';
+        let ultimaTeseRenderizada = null;
+
+        topicoAtivo.anotacoes.forEach((anotacao, index) => {
+            const chaveTeseCrua = anotacao.tese || "Provas não agrupadas";
+            const isTesePreenchida = (anotacao.tese && anotacao.tese.trim() !== '');
+            const vicioRaw = anotacao.vicio || topicoAtivo.vicio || 'omissao';
+            const vicioFormatado = window.JurisUtils.formatarVicioED(vicioRaw);
+
+            if (chaveTeseCrua !== ultimaTeseRenderizada) {
+                const diretrizesDoVicio = (topicoAtivo.diretrizesPorVicio && topicoAtivo.diretrizesPorVicio[vicioRaw])
+                                          ? topicoAtivo.diretrizesPorVicio[vicioRaw]
+                                          : [];
+
+                if (isTesePreenchida || diretrizesDoVicio.length > 0) {
+                    const tituloExibicao = isTesePreenchida ? anotacao.tese.trim() : "Provas não agrupadas";
+                    cardsHTML += renderizarNivelHierarquico(
+                        'vicio',
+                        vicioFormatado,
+                        diretrizesDoVicio,
+                        activeTabId,
+                        [tituloExibicao],
+                        index,
+                        renderContext
+                    );
+                }
+                ultimaTeseRenderizada = chaveTeseCrua;
+            }
+            cardsHTML += criarCard(anotacao, index, topicoAtivo.anotacoes, renderContext);
+        });
+
+        conteudoCentralHtml = sumarioHtml + `
+            <div class="timeline-container" id="timeline-container">
+                <svg id="connections-canvas"></svg>
+                ${htmlDiretrizes}
+                ${cardsHTML}
+            </div>`;
 
         const novoHtml = preambleHtml + conteudoCentralHtml;
             
-        // Desconecta o observer antes da árvore antiga ser destruída (Gestão de Memória)!
         if (typeof resizeObserver !== 'undefined') resizeObserver.disconnect();
             
-        // KEYED MORPHING
         if (typeof morphdom !== 'undefined') {
             morphdom(contentEl, `<div id="topics-tab-content" class="topics-content-area" style="${contentEl.style.cssText}">${novoHtml}</div>`, {
                 childrenOnly: true,
@@ -1265,7 +1335,6 @@ window.TopicsManager = (function () {
         }
             
         requestAnimationFrame(() => {
-            // Observa APENAS as caixas de texto que podem expandir e o container base
             document.querySelectorAll('.sub-text-content, .card-texto').forEach(el => {
                 if (typeof resizeObserver !== 'undefined') resizeObserver.observe(el);
             });
@@ -1290,6 +1359,8 @@ window.TopicsManager = (function () {
             _atualizarMarcadoresDeIdeia(topicoAtivo);
             atualizarContadorNotasOcultas();
         });
+        
+        _sincronizarBtnGlobais(temGlobais, forcadoAberto);
     }
 
     /**
@@ -1511,8 +1582,8 @@ window.TopicsManager = (function () {
             
             const cardInterno = notaAlvo.querySelector('.sub-annotation-card');
             cardInterno.style.transition = 'box-shadow 0.2s, border-color 0.2s';
-            cardInterno.style.borderColor = '#fbbf24';
-            cardInterno.style.boxShadow = '0 0 0 4px rgba(251, 191, 36, 0.3), 4px 4px 0px rgba(0, 0, 0, 0.15)';
+            cardInterno.style.borderColor = '#D500B5';
+            cardInterno.style.boxShadow = '0 0 0 4px rgba(213, 0, 181, 0.3), 4px 4px 0px rgba(0, 0, 0, 0.15)';
             
             setTimeout(() => {
                 cardInterno.style.borderColor = '';
@@ -1854,6 +1925,8 @@ window.TopicsManager = (function () {
 
     // API pública do módulo
     return {
+        toggleDiretrizesGlobais,
+        resetVisibilidadeGlobais,
         obterCor,
         abrirModalPilha,
         fecharModalPilha,
@@ -1950,7 +2023,10 @@ window.OutlineViewManager = (function() {
                 const role = TopicsManager.escaparHTML(ad.role || ad.oradorStr || 'Orador Desconhecido');
                 const safeFormatTime = (sec) => window.AudioManager?.formatTime ? window.AudioManager.formatTime(sec) : `${Math.floor(sec/60)}' ${Math.floor(sec%60)}''`;
                 const tempoStr = `${safeFormatTime(ad.inicio)} a ${safeFormatTime(ad.fim)}`;
-                const transcricao = ad.transcricao ? `<strong>Degravação:</strong> "${_render(ad.transcricao)}"` : '<em>Sem degravação cadastrada.</em>';
+                // Adicionado .replace(/\n/g, '<br>') para respeitar quebras na Visão Estruturada
+                const transcricao = ad.transcricao 
+                    ? `<strong>Degravação:</strong> "${_render(ad.transcricao).replace(/\n/g, '<br>')}"` 
+                    : '<em>Sem degravação cadastrada.</em>';
                 return `<div class="outline-audio-box"><div>🎙️ <strong>Oitiva de Audiência:</strong> ${role} (⏱️ ${tempoStr})</div><div style="margin-top:4px;">${transcricao}</div></div>`;
             } catch (e) {
                 return `<div class="outline-audio-box" style="color:#d32f2f;">Erro na leitura do áudio.</div>`;

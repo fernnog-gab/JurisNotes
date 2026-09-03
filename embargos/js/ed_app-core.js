@@ -228,48 +228,102 @@ window.toggleLoginMenu = function(event) {
 };
 
 /* ================================================
-   MÓDULO DE ATALHOS FLUTUANTES (SHORTCUT MANAGER)
+   MÓDULO DE ATALHOS FLUTUANTES (SHORTCUT MANAGER V2.1 - SMART FABS REVISED - ED)
    ================================================ */
 window.ShortcutManager = (function() {
-    // Novo formato de estado para o Módulo de Embargos de Declaração
-    let state = { fav1: null, fav2: null, fav3: null, embargosAutora: null, embargosReu: null, embargosReu2: null, acordao: null };
+    let state = { 
+        fav1: null, fav2: null, fav3: null, 
+        embargosAutora: null, embargosReu: null, embargosReu2: null, acordao: null 
+    };
     let currentEditingType = null;
+    let isCustomizing = false;
+    let hoveredType = null;
     
-    // Mapeamento das novas classes CSS criadas no arquivo core.css
-    const colors = { 
-        fav1: 'is-active-fav1', 
-        fav2: 'is-active-fav2', 
-        fav3: 'is-active-fav3', 
-        embargosAutora: 'is-active-alvo-autora', 
-        embargosReu: 'is-active-alvo-re', 
-        embargosReu2: 'is-active-alvo-re2',
-        acordao: 'is-active-acordao' 
+    const originalIcons = {};
+
+    const baseColors = { 
+        fav1: 'is-active-fav1', fav2: 'is-active-fav2', fav3: 'is-active-fav3', 
+        embargosAutora: 'is-active-alvo-autora', embargosReu: 'is-active-alvo-re', 
+        embargosReu2: 'is-active-alvo-re2', acordao: 'is-active-acordao' 
     };
     
-    // Nomenclatura atualizada
-    const rotulos = { 
-        fav1: 'Favorito 1 (Ouro)', 
-        fav2: 'Favorito 2 (Fúcsia)', 
-        fav3: 'Favorito 3 (Pastel)', 
-        embargosAutora: 'Embargos (Autora)', 
-        embargosReu: 'Embargos (Ré 1)', 
-        embargosReu2: 'Embargos (Ré 2)',
-        acordao: 'Acórdão Embargado' 
+    const baseRotulos = { 
+        fav1: 'Favorito 1 (Ouro)', fav2: 'Favorito 2 (Fúcsia)', fav3: 'Favorito 3 (Pastel)', 
+        embargosAutora: 'Embargos (Autora)', embargosReu: 'Embargos (Ré 1)', 
+        embargosReu2: 'Embargos (Ré 2)', acordao: 'Acórdão Embargado' 
     };
 
-    // NOVA ARQUITETURA: Centralizador de Mutação de Estado e Persistência
-    async function _commitShortcut(type, pageNum) {
-        state[type] = pageNum;
+    const STAR_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+
+    function init() {
+        Object.keys(state).forEach(type => {
+            const btn = document.getElementById(getFabId(type));
+            if (btn && !originalIcons[type]) {
+                originalIcons[type] = btn.innerHTML;
+            }
+        });
+        bindSmartFabEvents();
         updateUI();
-        
-        // Mensagem semântica dependendo se é inclusão ou exclusão
-        if (pageNum === null) {
-            exibirToast('Atalho removido.', 'sucesso');
-        } else {
-            exibirToast(`${rotulos[type]} atualizado para fl. ${pageNum}!`, 'sucesso');
-        }
+    }
 
-        // Desacoplamento seguro (Call by string check)
+    function getTypeFromFabId(id) {
+        const map = {
+            fav1: 'fab-fav1', fav2: 'fab-fav2', fav3: 'fab-fav3',
+            embargosAutora: 'fab-embargos-autora', embargosReu: 'fab-embargos-reu',
+            embargosReu2: 'fab-embargos-reu2', acordao: 'fab-acordao'
+        };
+        return Object.keys(map).find(type => map[type] === id) || null;
+    }
+
+    function bindSmartFabEvents() {
+        Object.keys(state).forEach(type => {
+            const btn = document.getElementById(getFabId(type));
+            if (!btn) return;
+
+            btn.addEventListener('mouseenter', () => { hoveredType = type; });
+            btn.addEventListener('mouseleave', () => { if (hoveredType === type) hoveredType = null; });
+
+            btn.addEventListener('contextmenu', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                abrirCustomizacao(type);
+            });
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (!event.ctrlKey || !event.shiftKey || event.code !== 'KeyK') return;
+
+            const activeEl = document.activeElement;
+            if (activeEl && (
+                activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' ||
+                activeEl.tagName === 'SELECT' || activeEl.isContentEditable
+            )) { return; }
+
+            const modal = document.getElementById('shortcut-modal');
+            if (modal && modal.style.display === 'flex') return;
+
+            let targetType = hoveredType;
+            if (!targetType && activeEl && activeEl.classList.contains('fab-shortcut')) {
+                targetType = getTypeFromFabId(activeEl.id);
+            }
+
+            if (!targetType) {
+                exibirToast('Passe o mouse sobre o botão que deseja customizar.', 'aviso');
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            abrirCustomizacao(targetType);
+        });
+    }
+
+    async function _commitShortcut(type, payload) {
+        state[type] = payload;
+        updateUI();
+        const pageNum = payload ? payload.page : null;
+        const msg = pageNum === null ? 'Atalho removido.' : `Atalho atualizado para fl. ${pageNum}!`;
+        exibirToast(msg, 'sucesso');
         if (typeof salvarBackupAutomatico === 'function') await salvarBackupAutomatico();
     }
 
@@ -278,104 +332,159 @@ window.ShortcutManager = (function() {
             const btn = document.getElementById(getFabId(type));
             if (!btn) return;
             
-            // Limpa classes antigas do botão
-            btn.className = 'fab-btn fab-shortcut';
+            if (!originalIcons[type]) originalIcons[type] = btn.innerHTML;
+
+            btn.className = 'fab-btn fab-shortcut'; 
+            btn.removeAttribute('data-tooltip');
+            btn.title = ''; 
             
-            // Single Source of Truth para Tooltips (UX dinâmica)
-            if (state[type] === null) {
+            const data = state[type];
+            const config = (typeof data === 'number') ? { page: data } : data;
+
+            if (!config || !config.page) {
                 btn.classList.add('is-empty');
-                btn.title = `Marcar página: ${rotulos[type]}\n[Ctrl + Clique] p/ capturar a página atual`;
+                btn.setAttribute(
+                    'data-tooltip', 
+                    `${baseRotulos[type]} — sem página\n[Ctrl+Clique] Capturar página atual\n[Botão direito] ou [Ctrl+Shift+K] Customizar`
+                );
+                btn.innerHTML = originalIcons[type];
             } else {
-                btn.classList.add(colors[type]);
-                btn.title = `${rotulos[type]} (Pág. ${state[type]})\n[Shift + Clique] p/ editar\n[Ctrl + Clique] p/ capturar a página atual`;
+                const isCustom = config.isCustom;
+                const corClass = isCustom ? `is-active-${config.color}` : baseColors[type];
+                const rotulo = isCustom ? (config.label || 'Favorito') : baseRotulos[type];
+
+                btn.classList.add(corClass);
+                btn.setAttribute(
+                    'data-tooltip', 
+                    `⭐ ${rotulo} (fl. ${config.page})\n[Shift+Clique] Editar\n[Botão direito] ou [Ctrl+Shift+K] Customizar/Remover`
+                );
+                btn.innerHTML = isCustom ? STAR_SVG : originalIcons[type];
             }
         });
     }
+    
+    function abrirCustomizacao(type) {
+        if (!window.PdfEngine || !PdfEngine.getPdfDoc()) {
+            exibirToast('Carregue um documento primeiro.', 'aviso');
+            return;
+        }
+        const currentPage = PdfEngine.getCurrentPage();
+        const dadoAtual = state[type];
+        const paginaAtualDoAtalho = dadoAtual === null || dadoAtual === undefined
+            ? currentPage
+            : (typeof dadoAtual === 'number' ? dadoAtual : dadoAtual.page);
+
+        abrirModal(type, true, paginaAtualDoAtalho || currentPage);
+    }
 
     async function handleClick(type, event) {
-        if (!window.PdfEngine || !PdfEngine.getPdfDoc()) {
-            exibirToast('Carregue um documento primeiro.', 'aviso'); return;
+        if (!window.PdfEngine || !PdfEngine.getPdfDoc()) { 
+            exibirToast('Carregue um documento primeiro.', 'aviso'); 
+            return; 
         }
 
-        // FLUXO DE CAPTURA RÁPIDA (Early Return com Isolamento de Evento)
-        // Utilizando apenas Ctrl estrito (evitando falsos positivos com AltGr/Shift)
+        const currentPage = PdfEngine.getCurrentPage();
+
         if (event.ctrlKey && !event.shiftKey && !event.altKey) {
-            event.preventDefault();
-            event.stopPropagation(); // Impede o "Event Bubbling" que fecha modais
-            
-            const currentPage = PdfEngine.getCurrentPage();
-            
-            // Validação defensiva rápida
+            event.preventDefault(); 
+            event.stopPropagation();
             if (currentPage > 0) {
-                await _commitShortcut(type, currentPage);
-            } else {
-                exibirToast('Não foi possível identificar a página atual.', 'erro');
+                await _commitShortcut(type, { page: currentPage });
             }
             return; 
         }
 
-        // FLUXO ORIGINAL (Modal de Edição ou Navegação)
         if (state[type] === null || event.shiftKey) {
-            abrirModal(type);
+            const paginaExistente = state[type] === null
+                ? ''
+                : (typeof state[type] === 'number' ? state[type] : state[type].page);
+            abrirModal(type, false, paginaExistente);
         } else {
-            PdfEngine.goToPage(state[type]);
+            const targetPage = typeof state[type] === 'number' ? state[type] : state[type].page;
+            PdfEngine.goToPage(targetPage);
         }
     }
 
-    function abrirModal(type) {
+    function abrirModal(type, customMode = false, suggestedPage = '') {
         currentEditingType = type;
-        document.getElementById('shortcut-modal-title').textContent = `Página para: ${rotulos[type]}`;
-        const input = document.getElementById('shortcut-page-input');
-        input.value = state[type] || '';
+        isCustomizing = customMode || (state[type] && state[type].isCustom);
+
+        const titleEl = document.getElementById('shortcut-modal-title');
+        if(titleEl) titleEl.textContent = isCustomizing ? 'Customizar Favorito - Página:' : `Página para: ${baseRotulos[type]}`;
+        
+        const inputEl = document.getElementById('shortcut-page-input');
+        if(inputEl) inputEl.value = suggestedPage;
+        
+        const customFields = document.getElementById('shortcut-custom-fields');
+        if(customFields) customFields.style.display = isCustomizing ? 'block' : 'none';
+        
+        if (isCustomizing && state[type] && state[type].isCustom) {
+            const labelInput = document.getElementById('shortcut-label-input');
+            if(labelInput) labelInput.value = state[type].label || '';
+            
+            const radio = document.querySelector(`input[name="shortcut_color"][value="${state[type].color}"]`);
+            if(radio) radio.checked = true;
+        } else {
+            const labelInput = document.getElementById('shortcut-label-input');
+            if(labelInput) labelInput.value = '';
+            const firstRadio = document.querySelector('input[name="shortcut_color"]');
+            if(firstRadio) firstRadio.checked = true;
+        }
         
         document.getElementById('shortcut-modal-backdrop').style.display = 'block';
         document.getElementById('shortcut-modal').style.display = 'flex';
-        setTimeout(() => input.focus(), 50);
+        setTimeout(() => inputEl?.focus(), 50);
     }
 
+    async function salvarModal() {
+        if (!currentEditingType) return;
+        const pageVal = document.getElementById('shortcut-page-input').value.trim();
+        const parsedPage = parseInt(pageVal, 10);
+        
+        if (pageVal === '') {
+            await _commitShortcut(currentEditingType, null);
+        } else if (!isNaN(parsedPage) && parsedPage > 0) {
+            let payload = { page: parsedPage };
+            
+            if (isCustomizing) {
+                const label = document.getElementById('shortcut-label-input').value.trim() || 'Favorito';
+                const colorRadio = document.querySelector('input[name="shortcut_color"]:checked');
+                const color = colorRadio ? colorRadio.value : 'fuchsia';
+                payload = { page: parsedPage, isCustom: true, label, color };
+            }
+            
+            await _commitShortcut(currentEditingType, payload);
+        } else {
+            exibirToast('Número de página inválido.', 'erro'); 
+            return;
+        }
+        fecharModal();
+    }
+    
     function fecharModal() {
         currentEditingType = null;
         document.getElementById('shortcut-modal-backdrop').style.display = 'none';
         document.getElementById('shortcut-modal').style.display = 'none';
     }
 
-    async function salvarModal() {
-        if (!currentEditingType) return;
-        const val = document.getElementById('shortcut-page-input').value.trim();
-        const parsed = parseInt(val, 10);
-        
-        // Delegação de mutação para o orquestrador
-        if (val === '') {
-            await _commitShortcut(currentEditingType, null);
-        } else if (!isNaN(parsed) && parsed > 0) {
-            await _commitShortcut(currentEditingType, parsed);
-        } else {
-            exibirToast('Número de página inválido.', 'erro');
-            return;
-        }
-        
-        fecharModal();
-    }
-
     function getFabId(type) {
         const map = { 
-            fav1: 'fab-fav1', 
-            fav2: 'fab-fav2', 
-            fav3: 'fab-fav3', 
-            embargosAutora: 'fab-embargos-autora', 
-            embargosReu: 'fab-embargos-reu', 
-            embargosReu2: 'fab-embargos-reu2',
-            acordao: 'fab-acordao' 
+            fav1: 'fab-fav1', fav2: 'fab-fav2', fav3: 'fab-fav3', 
+            embargosAutora: 'fab-embargos-autora', embargosReu: 'fab-embargos-reu', 
+            embargosReu2: 'fab-embargos-reu2', acordao: 'fab-acordao' 
         };
         return map[type];
     }
 
     return { 
-        handleClick, updateUI, fecharModal, salvarModal,
+        init, handleClick, updateUI, fecharModal, salvarModal,
         getState: () => state,
         setState: (newState) => { if (newState) { state = { ...state, ...newState }; updateUI(); } },
-        reset: () => { state = { fav1: null, fav2: null, fav3: null, embargosAutora: null, embargosReu: null, embargosReu2: null, acordao: null }; updateUI(); },
-        toggleVisibility: (show) => {
+        reset: () => { 
+            state = { fav1: null, fav2: null, fav3: null, embargosAutora: null, embargosReu: null, embargosReu2: null, acordao: null }; 
+            updateUI(); 
+        },
+        toggleVisibility: (show) => { 
             Object.keys(state).forEach(type => {
                 const btn = document.getElementById(getFabId(type));
                 if (btn) btn.style.display = show ? 'flex' : 'none';
@@ -490,6 +599,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (window.AudioManager) AudioManager.init({ getTopicos: () => topicos, exibirToast, salvarAnotacao });
     if (window.ExportManager) ExportManager.init({ getTopicos: () => topicos, exibirToast, getActiveTabId: () => TopicsManager.getActiveTabId() });
+    if (window.ShortcutManager) window.ShortcutManager.init(); // <-- INICIALIZA O ICON REGISTRY E EVENTOS
 
     const historyContainer = document.getElementById('history-container');
     if (historyContainer) historyContainer.addEventListener('scroll', checkScrollFabState, { passive: true });
@@ -563,6 +673,9 @@ function trocarAba(aba) {
     
     const btnAcervo = document.getElementById('btn-acervo-modelos');
     if (btnAcervo) btnAcervo.style.display = isAnotacoes ? 'flex' : 'none';
+
+    const btnGlobais = document.getElementById('btn-toggle-globais');
+    if (btnGlobais) btnGlobais.style.display = isAnotacoes ? 'flex' : 'none';
 
     const btnTexto = document.getElementById('btn-ferramenta-texto');
     if (btnTexto) btnTexto.style.display = isLeitura ? 'flex' : 'none';
@@ -689,6 +802,10 @@ function encerrarSessao() {
     topicos      = [];
     modoRetomada = false;
     sessionStorage.removeItem('juris_active_session');
+
+    if (window.TopicsManager && typeof window.TopicsManager.resetVisibilidadeGlobais === 'function') {
+        window.TopicsManager.resetVisibilidadeGlobais();
+    }
     
     if (window.PdfEngine) window.PdfEngine.encerrar();
     BackupManager.encerrar();
